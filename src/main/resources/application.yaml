@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: deen-sa
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - env
+          - health
+          - metrics
