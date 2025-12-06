@@ -1,11 +1,10 @@
 package com.apps.deen_sa.controller;
 
-import com.apps.deen_sa.entity.ExpenseEntity;
+import com.apps.deen_sa.dto.ExpenseDtoRequest;
 import com.apps.deen_sa.service.ExpenseService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/expenses")
@@ -17,9 +16,14 @@ public class ExpenseController {
         this.expenseService = expenseService;
     }
 
-    @GetMapping
-    public List<ExpenseEntity> getAllExpenses() {
-        return expenseService.getAllExpenses();
+    @PostMapping
+    public ResponseEntity<String> recordExpenses(@RequestBody ExpenseDtoRequest request) {
+
+        String response = expenseService.saveExpenseFromSpeech(request.getText());
+
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(response);
     }
 }
 
