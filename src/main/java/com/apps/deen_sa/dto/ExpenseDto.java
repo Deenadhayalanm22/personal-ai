@@ -11,6 +11,9 @@ import java.util.Map;
 @Setter
 public class ExpenseDto {
 
+    private boolean valid;
+    private String reason;
+
     private BigDecimal amount;            // required
     private String category;
     private String subcategory;

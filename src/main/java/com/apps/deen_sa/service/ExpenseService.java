@@ -22,6 +22,10 @@ public class ExpenseService {
         // 1. Extract structured data using LLM
         ExpenseDto dto = llmService.extractExpense(spokenText);
 
+        if (!dto.isValid()) {
+            throw new IllegalArgumentException("Invalid expense: " + dto.getReason());
+        }
+
         // 2. Attach raw text so we can store it in DB
         dto.setRawText(spokenText);
 

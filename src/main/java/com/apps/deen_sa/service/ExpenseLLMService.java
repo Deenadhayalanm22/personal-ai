@@ -67,6 +67,7 @@ public class ExpenseLLMService {
             
             ### OUTPUT JSON MUST MATCH THIS STRUCTURE:
             {
+              "valid": true,
               "amount": number,
               "category": "string",
               "subcategory": "string",
@@ -79,6 +80,11 @@ public class ExpenseLLMService {
               "details": {}
             }
             
+            WHEN INVALID → RETURN:
+            {
+              "valid": false,
+              "reason": "string"
+            }
             Return only valid JSON.
             """.formatted(today);
     }
