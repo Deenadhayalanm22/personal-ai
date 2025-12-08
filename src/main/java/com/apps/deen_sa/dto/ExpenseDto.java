@@ -1,34 +1,31 @@
 package com.apps.deen_sa.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
+@Data
 public class ExpenseDto {
 
     private boolean valid;
-    private String reason;
+    private String reason;               // Only if valid = false
 
-    private BigDecimal amount;            // required
+    private BigDecimal amount;
     private String category;
     private String subcategory;
-    private String merchant;
-    private String paymentMethod;         // maps to payment_method
-    private String spentAt;       // maps to spent_at
-    private String rawText;               // original spoken text
+    private String merchantName;
+    private String paymentMethod;
 
-    // additional extracted fields
-    private String channel;               // optional (Bike / Car / None)
-    private String notes;                 // optional free text
+    private LocalDate spentAt;           // YYYY-MM-DD from LLM
 
-    // details stored as jsonb
+    private String rawText;
+
     private Map<String, Object> details;
+    private List<String> tags;
 
-    // embedding (optional, filled later if you enable vector search)
-    private float[] embedding;
+    // List of missing fields
+    private List<String> missingFields;
 }
