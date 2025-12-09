@@ -1,44 +1,57 @@
 package com.apps.deen_sa.service;
 
+import com.apps.deen_sa.dto.ExpenseItemDto;
+import com.apps.deen_sa.dto.ExpenseSummaryDto;
 import com.apps.deen_sa.repo.ExpenseRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class ExpenseSummaryService {
 
-    private final ExpenseRepository repository;
+    private final ExpenseRepository repo;
 
-    public ExpenseSummaryService(ExpenseRepository repository) {
-        this.repository = repository;
+    public ExpenseSummaryService(ExpenseRepository repo) {
+        this.repo = repo;
     }
 
-    public Map<String, BigDecimal> getCurrentMonthTotals() {
+    public ExpenseSummaryDto getDashboardSummary() {
 
-        OffsetDateTime now = OffsetDateTime.now();
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = today.withDayOfMonth(1);
 
-        OffsetDateTime startOfMonth = now.withDayOfMonth(1).toLocalDate()
-                .atStartOfDay()
-                .atOffset(now.getOffset());
+        BigDecimal todayTotal =
+                repo.sumAmountByDate(today).orElse(BigDecimal.ZERO);
 
-        OffsetDateTime startOfNextMonth = startOfMonth.plusMonths(1);
+        BigDecimal monthTotal =
+                repo.sumAmountBetweenDates(monthStart, today)
+                        .orElse(BigDecimal.ZERO);
 
-        List<Object[]> rows =
-                repository.getMonthlyTotalsByCategory(startOfMonth, startOfNextMonth);
+        Map<String, BigDecimal> categoryTotals =
+                repo.sumAmountGroupByCategory(monthStart, today);
 
-        Map<String, BigDecimal> result = new LinkedHashMap<>();
+        List<ExpenseItemDto> recent =
+                repo.findTop10ByOrderBySpentAtDesc().stream()
+                        .map(e -> ExpenseItemDto.builder()
+                                .id(e.getId())
+                                .amount(e.getAmount())
+                                .category(e.getCategory())
+                                .subcategory(e.getSubcategory())
+                                .merchantName(e.getMerchantName())
+                                .spentAt(e.getSpentAt().toLocalDate().toString())
+                                .build()
+                        )
+                        .toList();
 
-        for (Object[] row : rows) {
-            String category = (String) row[0];
-            BigDecimal total = (BigDecimal) row[1];
-            result.put(category, total);
-        }
-
-        return result;
+        return ExpenseSummaryDto.builder()
+                .todayTotal(todayTotal)
+                .monthTotal(monthTotal)
+                .categoryTotals(categoryTotals)
+                .recentTransactions(recent)
+                .build();
     }
 }

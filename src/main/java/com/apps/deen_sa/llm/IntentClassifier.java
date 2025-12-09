@@ -33,6 +33,13 @@ public class IntentClassifier {
           "confidence": 0.0 to 1.0
         }
         
+        IMPORTANT:
+        - ALWAYS output raw JSON only.
+        - No markdown.
+        - No backticks.
+        - No explanations.
+        - No surrounding text.
+        
         User message:
         "%s"
         """;
