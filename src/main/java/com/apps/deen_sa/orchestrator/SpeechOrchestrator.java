@@ -1,7 +1,7 @@
 package com.apps.deen_sa.orchestrator;
 
 import com.apps.deen_sa.dto.IntentResult;
-import com.apps.deen_sa.llm.IntentClassifier;
+import com.apps.deen_sa.llm.impl.IntentClassifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

@@ -10,22 +10,56 @@ import java.util.Map;
 @Data
 public class ExpenseDto {
 
+    // ----------------------------
+    // VALIDATION STATUS
+    // ----------------------------
     private boolean valid;
-    private String reason;               // Only if valid = false
+    private String reason; // populated only if valid = false
 
+    // ----------------------------
+    // CORE FINANCIAL DATA
+    // ----------------------------
     private BigDecimal amount;
-    private String category;
-    private String subcategory;
-    private String merchantName;
-    private String paymentMethod;
 
-    private LocalDate spentAt;           // YYYY-MM-DD from LLM
+    // Expense-specific classification
+    private String category;        // Food & Dining, Transportation, etc.
+    private String subcategory;     // Fuel, Groceries, Eating Out, etc.
 
+    // Who was paid
+    private String merchantName;    // Amazon, Swiggy, Indian Oil, etc.
+
+    // From where it was paid
+    private String sourceAccount;   // Credit Card, Cash
+
+    // When it happened
+    private LocalDate transactionDate; // renamed from spentAt
+
+    // ----------------------------
+    // CONTEXT & SEMANTICS
+    // ----------------------------
+    private List<String> tags;      // fuel, grocery, commute, celebration, etc.
+
+    // Flexible extra info
+    private Map<String, Object> details;
+    /*
+        Examples:
+        {
+          "vehicleType": "car",
+          "platform": "Swiggy",
+          "cardLast4": "1234",
+          "fuelLitres": 12.5
+        }
+    */
+
+    // ----------------------------
+    // RAW INPUT (VERY IMPORTANT)
+    // ----------------------------
     private String rawText;
 
-    private Map<String, Object> details;
-    private List<String> tags;
-
-    // List of missing fields
+    // ----------------------------
+    // BACKEND-ONLY HELPERS
+    // ----------------------------
     private List<String> missingFields;
+
+    private boolean sourceResolved;
 }

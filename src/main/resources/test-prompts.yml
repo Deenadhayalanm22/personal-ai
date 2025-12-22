@@ -1,0 +1,81 @@
+prompts:
+  # Housing / Rent / Home
+  - "Paid house rent of 22000 via bank transfer"
+  - "Apartment maintenance charges paid by UPI, 3500"
+  - "Bought a small table for home from IKEA online for 4200 using credit card"
+  - "Paid advance amount for the new house, 50000 through bank transfer"
+
+  # Utilities
+  - "Paid BESCOM electricity bill of 1850 using UPI"
+  - "Water bill for this month is 650 paid by UPI"
+  - "Recharged Airtel broadband for 1299 using credit card"
+  - "Paid Jio postpaid mobile bill 799 through UPI"
+  - "Gas cylinder booked and paid 1120 using bank account"
+
+  # Groceries / Daily Essentials
+  - "Bought groceries from Reliance Smart for 2300 using UPI"
+  - "Vegetables and fruits from local market around 450 paid in cash"
+  - "Monthly ration shopping done 5200 using credit card"
+  - "Milk and bread bought today morning 180 paid by cash"
+
+  # Baby / Child related
+  - "Bought baby products from FirstCry for 1900 using credit card"
+  - "Paid daycare fee for my child 6000 through bank transfer"
+  - "Purchased baby food from pharmacy 780 paid by UPI"
+  - "Ordered items for my kid online around 1200 using credit card"
+
+  # Transportation – Bike & Car
+  - "Filled petrol in bike for 350 paid by UPI"
+  - "Car fuel refill done 2800 using credit card"
+  - "Paid bike service charges 1200 by cash"
+  - "Car insurance renewed 14500 using credit card"
+  - "Paid parking fee near office 120 paid in cash"
+  - "Toll charges paid during highway travel 450 using FASTag linked bank account"
+
+  # Eating Out / Food Delivery
+  - "Ordered lunch from Zomato for 520 using credit card"
+  - "Dinner with family at restaurant 1800 paid by UPI"
+  - "Coffee and snacks outside 260 paid in cash"
+  - "Swiggy order for dinner around 700 using UPI"
+
+  # Entertainment / OTT / Movies
+  - "Watched movie in theatre tickets cost 1400 paid by credit card"
+  - "Netflix subscription renewed for 649 using credit card"
+  - "Amazon Prime yearly subscription paid through credit card"
+  - "Took family to mall and spent 2000 paid by UPI"
+
+  # Shopping / Online Purchases
+  - "Ordered clothes from Myntra for 3200 using credit card"
+  - "Bought shoes online around 2500 paid by UPI"
+  - "Purchased kitchen items from Amazon 1100 using credit card"
+  - "Bought mobile phone online for 18000 paid via credit card EMI"
+
+  # Medical / Health
+  - "Doctor consultation fee paid 600 by cash"
+  - "Medicines bought from Apollo pharmacy 1350 paid by UPI"
+  - "Blood test charges 2200 using credit card"
+  - "Health insurance premium paid 9500 through bank transfer"
+
+  # Travel
+  - "Booked train tickets to hometown for 3600 paid via UPI"
+  - "Flight tickets booked for family visit 12000 using credit card"
+  - "Hotel stay during travel 4500 paid by UPI"
+  - "Cab booked to airport 900 paid by cash"
+
+  # Credit Card / Loan / Repayment
+  - "Paid credit card bill of 18500 through bank transfer"
+  - "Paid personal loan EMI of 15000 using bank account"
+  - "Paid bike loan EMI today through auto debit from bank"
+  - "Advance repayment of loan done 20000 using bank transfer"
+
+  # Subscriptions / Recurring
+  - "Monthly gym fee paid 1200 by UPI"
+  - "Spotify subscription renewed using credit card"
+  - "Kids learning app subscription paid 2400 using credit card"
+
+  # Edge / Mixed / Messy Inputs
+  - "Yesterday after office filled petrol by UPI then ordered food using credit card total spent around 1200"
+  - "Paid rent through bank transfer and electricity bill by UPI today"
+  - "Bought things for home and child around 3000 paid by UPI"
+  - "Weekend expenses like movie using credit card food by UPI shopping by cash"
+  - "Office commute and lunch outside cost me 450 today paid by UPI"

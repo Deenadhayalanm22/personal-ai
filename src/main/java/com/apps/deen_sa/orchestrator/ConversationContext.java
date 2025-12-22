@@ -6,6 +6,8 @@ import java.util.Map;
 @Data
 public class ConversationContext {
 
+    private Long activeTransactionId;
+
     // Which handler currently owns the conversation?
     // e.g., "EXPENSE", "ACCOUNT_TRANSFER", "INVESTMENT"
     private String activeIntent;
