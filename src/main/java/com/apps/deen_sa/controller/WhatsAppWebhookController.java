@@ -1,9 +1,7 @@
 package com.apps.deen_sa.controller;
 
 import com.apps.deen_sa.dto.WhatsAppWebhookPayload;
-import com.apps.deen_sa.orchestrator.ConversationContext;
-import com.apps.deen_sa.orchestrator.SpeechOrchestrator;
-import com.apps.deen_sa.orchestrator.SpeechResult;
+import com.apps.deen_sa.whatsApp.WhatsAppMessageProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class WhatsAppWebhookController {
 
-    private final SpeechOrchestrator orchestrator;
-    private final ConversationContext conversationContext;
+    private final WhatsAppMessageProcessor messageProcessor;
 
     // 🔹 1. Verification endpoint (GET)
     @GetMapping
@@ -26,7 +23,7 @@ public class WhatsAppWebhookController {
     ) {
 
         // keep this token in config, not hardcoded
-        if ("subscribe".equals(mode) && "MY_VERIFY_TOKEN".equals(token)) {
+        if ("subscribe".equals(mode) && "my-tellme-app-token".equals(token)) {
             return ResponseEntity.ok(challenge);
         }
 
@@ -38,18 +35,13 @@ public class WhatsAppWebhookController {
     public ResponseEntity<Void> receiveMessage(@RequestBody WhatsAppWebhookPayload payload) {
 
         payload.extractUserMessages().forEach(msg -> {
-
-            SpeechResult result = orchestrator.process(
-                    msg.text(),
-                    conversationContext
+            messageProcessor.processIncomingMessage(
+                    msg.from(),
+                    msg.text()
             );
-
-            // TODO:
-            // send result.message() back to WhatsApp via Meta Send API
-            // async, never block webhook thread
         });
 
-        // Meta expects 200 OK, nothing else
+        // IMMEDIATE response to Meta
         return ResponseEntity.ok().build();
     }
 }
