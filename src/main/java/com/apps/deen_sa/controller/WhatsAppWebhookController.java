@@ -3,6 +3,7 @@ package com.apps.deen_sa.controller;
 import com.apps.deen_sa.dto.WhatsAppWebhookPayload;
 import com.apps.deen_sa.whatsApp.WhatsAppMessageProcessor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/webhook/whatsapp")
 @RequiredArgsConstructor
+@Log4j2
 public class WhatsAppWebhookController {
 
     private final WhatsAppMessageProcessor messageProcessor;
@@ -33,6 +35,8 @@ public class WhatsAppWebhookController {
     // 🔹 2. Incoming message endpoint (POST)
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody WhatsAppWebhookPayload payload) {
+
+        log.info("Received message - {}", payload);
 
         payload.extractUserMessages().forEach(msg -> {
             messageProcessor.processIncomingMessage(
