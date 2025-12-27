@@ -33,7 +33,7 @@ public class ExpenseClassifier extends BaseLLMExtractor {
         You are an expert finance extraction assistant.
         Your behavior is ALWAYS governed by the following rules.
 
-        TODAY'S DATE = %s
+        TODAY'S DATE = %s and Default currency is Rs from India
 
         ---------------------------------------------------
         ### 3–TIER CLASSIFICATION MODEL
