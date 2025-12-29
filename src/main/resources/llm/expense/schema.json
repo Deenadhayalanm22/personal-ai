@@ -1,0 +1,18 @@
+{
+  "valid": "boolean",
+  "amount": "number | null",
+  "category": "string | null",
+  "subcategory": "string | null",
+  "merchantName": "string | null",
+  "sourceAccount": "string | null",
+  "transactionDate": "YYYY-MM-DD | null",
+  "rawText": "string",
+  "details": {},
+  "tags": []
+}
+
+INVALID CASE:
+{
+  "valid": false,
+  "reason": "string"
+}
