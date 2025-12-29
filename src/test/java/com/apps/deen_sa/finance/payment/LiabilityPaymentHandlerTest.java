@@ -63,15 +63,6 @@ class LiabilityPaymentHandlerTest {
         ValueContainerEntity bankAccount = createBankAccount();
         ValueContainerEntity creditCard = createCreditCard(new BigDecimal("50000"));
 
-        when(llm.extractPayment(userInput)).thenReturn(dto);
-        when(valueContainerService.getActiveContainers(any())).thenReturn(List.of(bankAccount, creditCard));
-
-        TransactionEntity savedTransaction = new TransactionEntity();
-        savedTransaction.setId(1L);
-        savedTransaction.setTransactionType(TransactionTypeEnum.TRANSFER);
-        savedTransaction.setAmount(new BigDecimal("25000"));
-        when(transactionRepository.save(any())).thenReturn(savedTransaction);
-
         // When
         // SpeechResult result = handler.handleSpeech(userInput, ctx);
 
@@ -79,6 +70,12 @@ class LiabilityPaymentHandlerTest {
         // assertEquals(SpeechStatus.SAVED, result.getStatus());
         // verify(transactionRepository, times(2)).save(any()); // Once for creation, once for financiallyApplied=true
         // verify(valueContainerService, atLeastOnce()).UpdateValueContainer(any());
+        
+        // TODO: Implement when handler is properly initialized
+        // Stubbings removed to avoid UnnecessaryStubbingException:
+        // when(llm.extractPayment(userInput)).thenReturn(dto);
+        // when(valueContainerService.getActiveContainers(any())).thenReturn(List.of(bankAccount, creditCard));
+        // when(transactionRepository.save(any())).thenReturn(savedTransaction);
     }
 
     @Test
@@ -97,15 +94,17 @@ class LiabilityPaymentHandlerTest {
         ValueContainerEntity bankAccount = createBankAccount();
         ValueContainerEntity loan = createLoan(new BigDecimal("200000"));
 
-        when(llm.extractPayment(userInput)).thenReturn(dto);
-        when(valueContainerService.getActiveContainers(any())).thenReturn(List.of(bankAccount, loan));
-
         // When
         // SpeechResult result = handler.handleSpeech(userInput, ctx);
 
         // Then
         // Loan outstanding should be reduced by 15,000
         // Bank account should be debited by 15,000
+        
+        // TODO: Implement when handler is properly initialized
+        // Stubbings removed to avoid UnnecessaryStubbingException:
+        // when(llm.extractPayment(userInput)).thenReturn(dto);
+        // when(valueContainerService.getActiveContainers(any())).thenReturn(List.of(bankAccount, loan));
     }
 
     @Test

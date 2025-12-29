@@ -4,6 +4,15 @@ spring:
     username: ${spring.datasource.username:}
     password: ${spring.datasource.password:}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${spring.datasource.hikari.maximum-pool-size:10}
+      minimum-idle: ${spring.datasource.hikari.minimum-idle:2}
+      connection-timeout: ${spring.datasource.hikari.connection-timeout:30000}
+      max-lifetime: ${spring.datasource.hikari.max-lifetime:1800000}
+      idle-timeout: ${spring.datasource.hikari.idle-timeout:600000}
+      leak-detection-threshold: ${spring.datasource.hikari.leak-detection-threshold:60000}
+      validation-timeout: ${spring.datasource.hikari.validation-timeout:5000}
+      connection-test-query: ${spring.datasource.hikari.connection-test-query:SELECT 1}
   jpa:
     hibernate:
       ddl-auto: none
@@ -12,6 +21,13 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+
+openai:
+  api-key: ${OPENAI_API_KEY:test-api-key}
+
+whatsapp:
+  access-token: ${WHATSAPP_ACCESS_TOKEN:test-access-token}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:test-phone-id}
 
 logging:
   level:
