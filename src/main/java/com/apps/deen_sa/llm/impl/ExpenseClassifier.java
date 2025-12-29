@@ -33,10 +33,6 @@ public class ExpenseClassifier extends BaseLLMExtractor {
     private String buildBehaviorPrompt() {
         String today = OffsetDateTime.now().toLocalDate().toString();
 
-        String categoryTypesTemplate = promptLoader.load("llm/expense/category_types.md");
-        String rulesTemplate = promptLoader.load("llm/expense/rules.md");
-        String schemaTemplate = promptLoader.load("llm/expense/schema.json");
-
         String combinedPrompt = promptLoader.combine(
                 "llm/common/global_rules.md",
                 "llm/expense/category_types.md",
