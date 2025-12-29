@@ -3,6 +3,7 @@ package com.apps.deen_sa.llm.impl;
 import com.apps.deen_sa.registry.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.dto.QueryResult;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
+import com.apps.deen_sa.llm.PromptLoader;
 import com.openai.client.OpenAIClient;
 import org.springframework.stereotype.Service;
 
@@ -10,124 +11,31 @@ import org.springframework.stereotype.Service;
 public class QueryClassifier extends BaseLLMExtractor {
 
     private final ExpenseTaxonomyRegistry expenseTaxonomyRegistry;
-
-    private static final String PROMPT = """
-        You are a financial query interpreter.
-        
-        Your task is to understand EXPENSE-RELATED QUESTIONS
-        and configure an expense analytics request.
-        
-        ------------------------------------------------
-        KNOWN CATEGORIES & SUBCATEGORIES
-        ------------------------------------------------
-        %s
-        
-        ------------------------------------------------
-        FILTER EXTRACTION (STRICT)
-        ------------------------------------------------
-        
-        Extract ONLY if explicitly mentioned, else null:
-        
-        - category        → Housing, Food & Dining, Shopping, etc.
-        - subcategory     → Rent, Groceries, Online Purchase, etc.
-        - merchant        → Amazon, Swiggy, Zomato, FirstCry
-        - tag             → child, delivery, subscription
-        
-        ------------------------------------------------
-        SOURCE ACCOUNT (MANDATORY IF PAYMENT MENTIONED)
-        ------------------------------------------------
-        
-        sourceAccount → WHERE the money came from
-        
-        Allowed values:
-        - BANK_ACCOUNT
-        - CREDIT_CARD
-        - WALLET
-        - CASH
-        
-        Rules (NO EXCEPTIONS):
-        - UPI, GPay, PhonePe, NetBanking, Bank Transfer → BANK_ACCOUNT
-        - Credit card, card EMI → CREDIT_CARD
-        - Cash → CASH
-        - Never invent values
-        - If payment is mentioned, sourceAccount MUST be set
-        
-        ------------------------------------------------
-        AGGREGATION RULES
-        ------------------------------------------------
-        
-        If user asks for:
-        - "summary", "overview", "breakdown":
-          queryType = EXPENSE_SUMMARY
-          includeTotal = true
-          groupByCategory = true
-          groupBySourceAccount = true
-        
-        If user asks:
-        - "how much did I spend":
-          queryType = EXPENSE_TOTAL
-          includeTotal = true
-        
-        ------------------------------------------------
-        TIME PERIOD (PATTERN-BASED)
-        ------------------------------------------------
-        
-        Identify the time period ONLY if explicitly mentioned.
-        
-        Supported patterns (examples, not exhaustive):
-        - TODAY
-        - THIS_WEEK, THIS_MONTH, THIS_YEAR
-        - LAST_DAY, LAST_WEEK, LAST_MONTH, LAST_YEAR
-        - LAST_7_DAYS, LAST_3_WEEKS, LAST_6_MONTHS, LAST_2_YEARS
-        
-        Rules:
-        - Use uppercase with underscores
-        - Use singular or plural correctly (DAY/DAYS, MONTH/MONTHS, etc.)
-        - If no time period is mentioned → set timePeriod = null
-        - Never guess or assume a time range
-        
-        ------------------------------------------------
-        OUTPUT FORMAT (STRICT JSON ONLY)
-        ------------------------------------------------
-        
-        {
-          "intent": "QUERY",
-          "queryType": "EXPENSE_SUMMARY | EXPENSE_TOTAL",
-          "timePeriod": string | null,
-        
-          "category": string | null,
-          "subcategory": string | null,
-          "merchant": string | null,
-          "sourceAccount": string | null,
-          "tag": string | null,
-        
-          "includeTotal": boolean,
-          "groupByCategory": boolean,
-          "groupBySourceAccount": boolean,
-        
-          "confidence": 0.0 to 1.0
-        }
-        
-        ------------------------------------------------
-        User question:
-        "%s"
-        """;
-
+    private final String systemPromptTemplate;
 
     protected QueryClassifier(
             OpenAIClient client,
+            PromptLoader promptLoader,
             ExpenseTaxonomyRegistry expenseTaxonomyRegistry
     ) {
         super(client);
         this.expenseTaxonomyRegistry = expenseTaxonomyRegistry;
+
+        this.systemPromptTemplate = promptLoader.combine(
+                "llm/common/global_rules.md",
+                "llm/query/classify.md",
+                "llm/query/schema.json"
+        );
     }
 
     public QueryResult classify(String text) {
+        String systemPrompt = systemPromptTemplate.formatted(
+                renderTaxonomy(expenseTaxonomyRegistry),
+                text
+        );
+
         return callAndParse(
-                PROMPT.formatted(
-                        renderTaxonomy(expenseTaxonomyRegistry),
-                        text
-                ),
+                systemPrompt,
                 text,
                 QueryResult.class
         );
