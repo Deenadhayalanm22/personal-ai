@@ -4,8 +4,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -13,19 +11,23 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 
 import java.time.Duration;
 
-@Testcontainers
 @SpringBootTest
 @ActiveProfiles("integration")
 @AutoConfigureTestDatabase(replace = NONE)
 public abstract class IntegrationTestBase {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
-            .withDatabaseName("integration_db")
-            .withUsername("test")
-            .withPassword("test")
-            .waitingFor(Wait.forListeningPort())
-            .withStartupTimeout(Duration.ofSeconds(60));
+    static PostgreSQLContainer<?> postgres;
+    
+    static {
+        postgres = new PostgreSQLContainer<>("postgres:16")
+                .withDatabaseName("integration_db")
+                .withUsername("test")
+                .withPassword("test")
+                .waitingFor(Wait.forListeningPort())
+                .withStartupTimeout(Duration.ofSeconds(60))
+                .withReuse(true);  // Enable container reuse
+        postgres.start();
+    }
 
     @DynamicPropertySource
     static void registerDatasourceProperties(DynamicPropertyRegistry registry) {
