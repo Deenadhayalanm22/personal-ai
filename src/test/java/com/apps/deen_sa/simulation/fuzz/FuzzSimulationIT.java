@@ -45,8 +45,12 @@ public class FuzzSimulationIT extends IntegrationTestBase {
 
     @Test
     void runFuzzSimulations() {
-        final int runs = 50; // number of seeds
+        // Read fuzz iterations from system property, default to 50 for regular runs
+        final String fuzzIterationsProperty = System.getProperty("fuzz.iterations", "50");
+        final int runs = Integer.parseInt(fuzzIterationsProperty);
         final int actionsPerRun = 30;
+
+        System.out.println("Running " + runs + " fuzz simulations with " + actionsPerRun + " actions each");
 
         for (int i = 0; i < runs; i++) {
             long seed = 1000L + i;
@@ -54,9 +58,14 @@ public class FuzzSimulationIT extends IntegrationTestBase {
             try {
                 runOne(seed, actionsPerRun);
             } catch (AssertionError | Exception e) {
-                System.err.println("Fuzz run failed. Seed: " + seed);
-                // try to print replay log if available
-                throw e;
+                System.err.println("====================================");
+                System.err.println("FUZZ SIMULATION FAILURE");
+                System.err.println("====================================");
+                System.err.println("Seed: " + seed);
+                System.err.println("To reproduce, run:");
+                System.err.println("  mvn -B verify -Pintegration -Dtest=FuzzSimulationIT#testReproduceSeed -Dfuzz.seed=" + seed);
+                System.err.println("====================================");
+                throw new AssertionError("Fuzz test failed with seed " + seed + ". See logs above for reproduction steps.", e);
             }
         }
     }
@@ -110,6 +119,9 @@ public class FuzzSimulationIT extends IntegrationTestBase {
         // run invariants
         FinancialAssertions.assertNoOrphanAdjustments(valueAdjustmentRepository, transactionRepository);
         FinancialAssertions.assertAdjustmentsMatchTransactions(transactionRepository, valueAdjustmentRepository);
+        FinancialAssertions.assertNoNegativeBalances(valueContainerRepo);
+        FinancialAssertions.assertCapacityLimitsRespected(valueContainerRepo);
+        FinancialAssertions.assertAllTransactionsHaveValidStatus(transactionRepository);
 
         // per-container balance integrity
         for (ValueContainerEntity v : valueContainerRepo.findAll()) {
@@ -117,6 +129,29 @@ public class FuzzSimulationIT extends IntegrationTestBase {
         }
 
         FinancialAssertions.assertTotalMoneyConserved(opening, valueContainerRepo);
+    }
+
+    @Test
+    void testReproduceSeed() {
+        // This test allows reproducing a specific failed fuzz scenario
+        final String seedProperty = System.getProperty("fuzz.seed");
+        if (seedProperty == null) {
+            System.out.println("Skipping seed reproduction test - no fuzz.seed property set");
+            return;
+        }
+
+        long seed = Long.parseLong(seedProperty);
+        final int actionsPerRun = 30;
+
+        System.out.println("Reproducing fuzz simulation with seed: " + seed);
+        
+        try {
+            runOne(seed, actionsPerRun);
+            System.out.println("Seed " + seed + " passed successfully");
+        } catch (AssertionError | Exception e) {
+            System.err.println("Seed " + seed + " failed to reproduce");
+            throw e;
+        }
     }
 
     

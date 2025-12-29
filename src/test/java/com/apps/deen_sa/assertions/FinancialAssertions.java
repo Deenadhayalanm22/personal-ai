@@ -112,4 +112,42 @@ public final class FinancialAssertions {
         // This method expects caller to compare counts before/after; if needed, caller can assert equality.
         // We leave this method focused on container values; callers may assert counts separately.
     }
+
+    public static void assertNoNegativeBalances(ValueContainerRepo containerRepo) {
+        List<ValueContainerEntity> containers = containerRepo.findAll();
+        for (ValueContainerEntity c : containers) {
+            BigDecimal currentValue = c.getCurrentValue() == null ? BigDecimal.ZERO : c.getCurrentValue();
+            // Only enforce non-negative for BANK_ACCOUNT and CASH (assets)
+            // Credit cards and loans can be negative (they are liabilities)
+            if ("BANK_ACCOUNT".equals(c.getContainerType()) || "CASH".equals(c.getContainerType())) {
+                assertTrue(currentValue.compareTo(BigDecimal.ZERO) >= 0,
+                    "Container " + c.getId() + " (" + c.getContainerType() + " - " + c.getName() + ") has negative balance: " + currentValue);
+            }
+        }
+    }
+
+    public static void assertCapacityLimitsRespected(ValueContainerRepo containerRepo) {
+        List<ValueContainerEntity> containers = containerRepo.findAll();
+        for (ValueContainerEntity c : containers) {
+            if (c.getCapacityLimit() != null) {
+                BigDecimal currentValue = c.getCurrentValue() == null ? BigDecimal.ZERO : c.getCurrentValue();
+                // For liabilities (credit cards, loans), current value should not exceed capacity
+                if ("CREDIT_CARD".equals(c.getContainerType()) || "LOAN".equals(c.getContainerType())) {
+                    assertTrue(currentValue.compareTo(c.getCapacityLimit()) <= 0,
+                        "Container " + c.getId() + " (" + c.getContainerType() + " - " + c.getName() + 
+                        ") exceeds capacity limit: current=" + currentValue + " limit=" + c.getCapacityLimit());
+                }
+            }
+        }
+    }
+
+    public static void assertAllTransactionsHaveValidStatus(TransactionRepository txRepo) {
+        List<TransactionEntity> txs = txRepo.findAll();
+        for (TransactionEntity tx : txs) {
+            assertNotNull(tx.getTransactionType(), "Transaction " + tx.getId() + " has null transaction type");
+            assertNotNull(tx.getAmount(), "Transaction " + tx.getId() + " has null amount");
+            assertTrue(tx.getAmount().compareTo(BigDecimal.ZERO) >= 0, 
+                "Transaction " + tx.getId() + " has negative amount: " + tx.getAmount());
+        }
+    }
 }

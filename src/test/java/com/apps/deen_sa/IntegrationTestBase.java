@@ -17,7 +17,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 public abstract class IntegrationTestBase {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
             .withDatabaseName("integration_db")
             .withUsername("test")
             .withPassword("test");
