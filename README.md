@@ -10,12 +10,14 @@ This project includes comprehensive documentation to help you understand the arc
 
 | File | Description | What You'll Learn |
 |------|-------------|-------------------|
-| **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
-| **[ENTITIES.md](ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
-| **[SERVICES.md](SERVICES.md)** | Service layer logic and responsibilities | Business logic, service interactions, transaction management |
-| **[LLM_INTEGRATION.md](LLM_INTEGRATION.md)** | AI/LLM components and prompt engineering | OpenAI integration, classifiers, extractors, prompt structure |
-| **[ARCHITECTURE_PATTERNS.md](ARCHITECTURE_PATTERNS.md)** | Design patterns and architectural decisions | Strategy, Factory, Template patterns, key trade-offs |
-| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Quick lookup guide for common tasks | Code patterns, setup, troubleshooting, SQL queries |
+| **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | New domain-first package structure | Domain-driven design, shared kernel, package organization |
+| **[REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Complete refactoring history | All package moves, class relocations, import updates |
+| **[ENTITIES.md](docs/ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
+| **[SERVICES.md](docs/SERVICES.md)** | Service layer logic and responsibilities | Business logic, service interactions, transaction management |
+| **[LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md)** | AI/LLM components and prompt engineering | OpenAI integration, classifiers, extractors, prompt structure |
+| **[ARCHITECTURE_PATTERNS.md](docs/ARCHITECTURE_PATTERNS.md)** | Design patterns and architectural decisions | Strategy, Factory, Template patterns, key trade-offs |
+| **[QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** | Quick lookup guide for common tasks | Code patterns, setup, troubleshooting, SQL queries |
 
 ## 🚀 Quick Start
 
@@ -65,11 +67,30 @@ curl -X POST http://localhost:8080/api/speech \
 
 ## 🏗️ Architecture Highlights
 
-- **Layered Architecture**: Clear separation between controllers, handlers, services, and repositories
+- **Domain-First Design**: Organized by business domains (core, finance, conversation) rather than technical layers
+- **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
 - **LLM-First Approach**: Natural language understanding via OpenAI GPT-4.1 Mini
 - **Strategy Pattern**: Different financial adjustment strategies for different container types
 - **Event Sourcing Ready**: Audit trail via ValueAdjustmentEntity
 - **Multi-tenant Ready**: Built-in userId/businessId support
+
+### Package Structure
+```
+com.apps.deen_sa
+├── core (Shared Kernel)
+│   ├── transaction
+│   └── value
+├── conversation (Speech & WhatsApp)
+├── finance
+│   ├── expense
+│   ├── loan
+│   ├── query
+│   └── account (+ strategy)
+├── llm (AI Integration)
+└── common (Utilities)
+```
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for complete package details.
 
 ## 📖 Use Case: Recording an Expense
 
@@ -110,7 +131,7 @@ The application uses PostgreSQL with the following key tables:
 - `expense`: Legacy expense model (for backward compatibility)
 - `tag_master`: Canonical tag repository
 
-See [ENTITIES.md](ENTITIES.md) for detailed schema documentation.
+See [ENTITIES.md](docs/ENTITIES.md) for detailed schema documentation.
 
 ## 🤖 LLM Integration
 
@@ -120,7 +141,7 @@ The application uses OpenAI GPT-4.1 Mini for:
 - **Query Understanding**: Convert questions into database queries
 - **Natural Language Generation**: Explain results in conversational language
 
-See [LLM_INTEGRATION.md](LLM_INTEGRATION.md) for prompt engineering details.
+See [LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md) for prompt engineering details.
 
 ## 🔧 Configuration
 
@@ -133,7 +154,7 @@ Main configuration in `src/main/resources/application.yaml`:
 ## 📝 Contributing
 
 When adding new features:
-1. Follow existing patterns (see [ARCHITECTURE_PATTERNS.md](ARCHITECTURE_PATTERNS.md))
+1. Follow existing patterns (see [ARCHITECTURE_PATTERNS.md](docs/ARCHITECTURE_PATTERNS.md))
 2. Keep business logic separate from LLM calls
 3. Ensure financial operations are idempotent
 4. Add tests for new functionality
@@ -149,4 +170,4 @@ When adding new features:
 
 ---
 
-**💡 Tip**: Start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) for a high-level understanding, then dive into specific documentation files based on your needs.
+**💡 Tip**: Start with [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) for a high-level understanding, then check [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the new package structure, and dive into specific documentation files based on your needs.

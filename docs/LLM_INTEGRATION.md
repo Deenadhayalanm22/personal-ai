@@ -1,5 +1,8 @@
 # LLM Integration Documentation
 
+> **Note**: LLM integration layer remains mostly unchanged in the refactoring.
+> Package: `com.apps.deen_sa.llm` - See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
+
 ## Overview
 The application uses OpenAI's GPT-4.1 Mini for natural language understanding and generation. LLM components are separated into classifiers, extractors, and explainers, each with specific, focused responsibilities.
 

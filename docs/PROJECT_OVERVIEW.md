@@ -52,39 +52,88 @@ A Spring Boot-based financial management application with AI/LLM integration for
 
 ## Project Structure
 
+> **Note**: The project has been refactored to follow Domain-Driven Design (DDD) principles.
+> See [ARCHITECTURE.md](ARCHITECTURE.md) and [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for complete details.
+
 ```
 src/main/java/com/apps/deen_sa/
 ├── PersonalAiApplication.java          # Main application entry point
-├── cache/                               # Caching implementations
-├── config/                              # Spring configuration classes
-├── controller/                          # REST endpoints
-│   ├── ExpenseSummaryController.java
-│   ├── HealthController.java
-│   ├── SpeechController.java
-│   └── WhatsAppWebhookController.java
-├── dto/                                 # Data Transfer Objects
-│   ├── ExpenseDto.java
-│   ├── AccountSetupDto.java
-│   ├── QueryResult.java
-│   └── [18 more DTOs]
-├── entity/                              # JPA Entities (Domain Models)
-│   ├── ExpenseEntity.java
-│   ├── TransactionEntity.java
-│   ├── ValueContainerEntity.java
-│   ├── ValueAdjustmentEntity.java
-│   └── TagMasterEntity.java
-├── evaluator/                           # Business rule evaluators
-│   └── ExpenseCompletenessEvaluator.java
-├── exception/                           # Custom exceptions
-├── formatter/                           # Data formatters
-├── handler/                             # Intent-specific handlers
-│   ├── ExpenseHandler.java
-│   ├── QueryHandler.java
-│   └── AccountSetupHandler.java
-├── llm/                                 # LLM integration
+│
+├── core/                                # 🏛️ SHARED KERNEL (no domain dependencies)
+│   ├── transaction/                    # Transaction domain concepts
+│   │   ├── TransactionEntity.java
+│   │   ├── TransactionRepository.java
+│   │   └── TransactionTypeEnum.java
+│   └── value/                          # Value & adjustment concepts
+│       ├── ValueContainerEntity.java
+│       ├── ValueAdjustmentEntity.java
+│       ├── ValueContainerRepo.java
+│       ├── ValueAdjustmentRepository.java
+│       ├── CompletenessLevelEnum.java
+│       └── AdjustmentTypeEnum.java
+│
+├── conversation/                        # 💬 CONVERSATION DOMAIN
+│   ├── SpeechOrchestrator.java        # Main conversation orchestrator
+│   ├── ConversationContext.java       # Conversation state management
+│   ├── SpeechHandler.java             # Handler interface
+│   ├── SpeechResult.java              # Result wrapper
+│   ├── SpeechStatus.java              # Status enum
+│   ├── SpeechController.java          # REST endpoint
+│   ├── WhatsAppWebhookController.java # WhatsApp webhook
+│   ├── WhatsAppMessageProcessor.java  # WhatsApp message handling
+│   └── WhatsAppReplySender.java       # WhatsApp response sender
+│
+├── finance/                             # 💰 FINANCE DOMAIN
+│   ├── expense/                        # Expense management subdomain
+│   │   ├── ExpenseHandler.java        # Main expense handler
+│   │   ├── ExpenseCompletenessEvaluator.java
+│   │   ├── ExpenseSummaryService.java
+│   │   ├── ExpenseAnalyticsService.java
+│   │   ├── ExpenseMerger.java
+│   │   ├── ExpenseDtoToEntityMapper.java
+│   │   ├── ExpenseValidator.java
+│   │   ├── ExpenseEntity.java
+│   │   ├── ExpenseRepository.java
+│   │   ├── ExpenseSummaryController.java
+│   │   ├── ExpenseTaxonomyRegistry.java
+│   │   ├── TagMasterEntity.java
+│   │   ├── TagMasterRepository.java
+│   │   └── TagNormalizationService.java
+│   │
+│   ├── loan/                           # Loan analysis subdomain
+│   │   └── LoanAnalysisService.java
+│   │
+│   ├── query/                          # Query & analytics subdomain
+│   │   ├── QueryHandler.java
+│   │   ├── ExpenseQueryBuilder.java
+│   │   ├── TimeRangeResolver.java
+│   │   └── QueryContextFormatter.java
+│   │
+│   └── account/                        # Account/container management
+│       ├── ValueContainerService.java
+│       ├── ValueAdjustmentService.java
+│       ├── AccountSetupHandler.java
+│       ├── AccountSetupValidator.java
+│       ├── ValueContainerCache.java
+│       ├── InMemoryValueContainerCache.java
+│       └── strategy/                   # Adjustment strategies
+│           ├── ValueAdjustmentStrategy.java
+│           ├── ValueAdjustmentStrategyResolver.java
+│           ├── AdjustmentCommandFactory.java
+│           ├── CreditSettlementStrategy.java
+│           ├── CashLikeStrategy.java
+│           └── CreditCardStrategy.java
+│
+├── food/                                # 🥘 FOOD DOMAIN (reserved for future)
+│   ├── recipe/                         # (empty)
+│   ├── inventory/                      # (empty)
+│   ├── grocery/                        # (empty)
+│   └── planner/                        # (empty)
+│
+├── llm/                                 # 🤖 LLM INTEGRATION
 │   ├── BaseLLMExtractor.java
 │   ├── PromptLoader.java
-│   └── impl/                            # LLM service implementations
+│   └── impl/
 │       ├── IntentClassifier.java
 │       ├── ExpenseClassifier.java
 │       ├── QueryClassifier.java
@@ -92,42 +141,29 @@ src/main/java/com/apps/deen_sa/
 │       ├── TagSemanticMatcher.java
 │       ├── LoanQueryExplainer.java
 │       └── ExpenseSummaryExplainer.java
-├── mapper/                              # DTO ↔ Entity mappers
-├── orchestrator/                        # Conversation orchestration
-│   ├── SpeechOrchestrator.java
-│   ├── SpeechHandler.java
-│   ├── ConversationContext.java
-│   └── SpeechResult.java
-├── registry/                            # Component registries
-├── repo/                                # JPA Repositories
-│   ├── ExpenseRepository.java
-│   ├── TransactionRepository.java
-│   ├── ValueContainerRepo.java
-│   ├── ValueAdjustmentRepository.java
-│   └── TagMasterRepository.java
-├── resolver/                            # Resolvers for queries and adjustments
-│   ├── TimeRangeResolver.java
-│   ├── ExpenseQueryBuilder.java
-│   ├── ValueAdjustmentStrategyResolver.java
-│   └── AdjustmentCommandFactory.java
-├── scheduler/                           # Background jobs
-├── service/                             # Business logic services
-│   ├── ExpenseSummaryService.java
-│   ├── ExpenseAnalyticsService.java
-│   ├── LoanAnalysisService.java
-│   ├── TagNormalizationService.java
-│   ├── ValueContainerService.java
-│   └── ValueAdjustmentService.java
-├── strategy/                            # Strategy pattern implementations
-│   └── impl/                            # Concrete strategies
-├── utils/                               # Utilities and enums
-│   ├── AdjustmentTypeEnum.java
-│   ├── TransactionTypeEnum.java
-│   ├── CompletenessLevelEnum.java
-│   └── ExpenseMerger.java
-├── validator/                           # Validation logic
-└── whatsApp/                            # WhatsApp integration
-    └── WhatsAppMessageProcessor.java
+│
+├── common/                              # 🔧 COMMON UTILITIES
+│   └── exception/
+│       └── LLMParsingException.java
+│
+├── dto/                                 # Data Transfer Objects (cross-cutting)
+│   ├── ExpenseDto.java
+│   ├── AccountSetupDto.java
+│   ├── QueryResult.java
+│   └── [18 more DTOs]
+│
+├── config/                              # Infrastructure configuration
+│   ├── AsyncConfig.java
+│   ├── ConversationConfig.java
+│   ├── CorsConfig.java
+│   ├── HttpClientConfig.java
+│   └── LLMConfig.java
+│
+├── controller/                          # Infrastructure controllers
+│   └── HealthController.java
+│
+└── schduler/                            # Background jobs
+    └── LoadTestData.java
 
 src/main/resources/
 ├── llm/                                 # LLM Prompts
@@ -150,6 +186,31 @@ src/main/resources/
 ├── subcategory-contracts.yaml          # Subcategory rules
 └── test-prompts.yml                    # Test prompts
 ```
+
+### Domain Dependencies
+
+```
+core ← finance, conversation, llm     (Shared kernel used by all)
+common ← all domains                   (Common utilities)
+finance → core, common, llm, conversation
+conversation → core, common, llm
+llm → core, common
+```
+
+**Eliminated Packages** (moved to domains):
+- ❌ `entity/` → Distributed to `core` and domain packages
+- ❌ `repo/` → Distributed to `core` and domain packages
+- ❌ `service/` → Moved to `finance.*`
+- ❌ `handler/` → Moved to `conversation` and `finance.*`
+- ❌ `orchestrator/` → Renamed to `conversation`
+- ❌ `resolver/` → Moved to `finance.query` and `finance.account.strategy`
+- ❌ `evaluator/`, `mapper/`, `validator/` → Moved to respective domains
+- ❌ `strategy/` → Moved to `finance.account.strategy`
+- ❌ `utils/` → Enums moved to `core`, utilities to domains
+- ❌ `cache/` → Moved to `finance.account`
+- ❌ `formatter/`, `registry/` → Moved to `finance.expense`
+- ❌ `whatsApp/` → Moved to `conversation`
+- ❌ `exception/` → Moved to `common.exception`
 
 ## Core Workflows
 

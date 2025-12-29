@@ -1,7 +1,12 @@
 # Service Layer Documentation
 
+> **Note**: Following the domain-first refactoring, services are now organized by domain:
+> - **Finance Domain**: `com.apps.deen_sa.finance.*` (expense, loan, query, account)
+> - **Conversation Domain**: `com.apps.deen_sa.conversation`
+> - See [ARCHITECTURE.md](ARCHITECTURE.md) and [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for complete details.
+
 ## Overview
-The service layer contains business logic, orchestrating interactions between repositories, LLM services, and other components. Services are located in `com.apps.deen_sa.service`.
+The service layer contains business logic, orchestrating interactions between repositories, LLM services, and other components.
 
 ---
 

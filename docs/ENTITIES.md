@@ -1,7 +1,12 @@
 # Entity Layer Documentation
 
+> **Note**: Following the domain-first refactoring, entities are now organized by domain:
+> - **Core (Shared Kernel)**: `com.apps.deen_sa.core.transaction` and `com.apps.deen_sa.core.value`
+> - **Finance Domain**: `com.apps.deen_sa.finance.expense`
+> - See [ARCHITECTURE.md](ARCHITECTURE.md) and [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for complete details.
+
 ## Overview
-The entity layer represents the domain model and database schema using JPA annotations. All entities are located in `com.apps.deen_sa.entity`.
+The entity layer represents the domain model and database schema using JPA annotations.
 
 ## Entity Relationships
 

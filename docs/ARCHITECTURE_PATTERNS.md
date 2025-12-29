@@ -1,5 +1,8 @@
 # Architecture Patterns & Key Decisions
 
+> **Note**: This document describes the design patterns used in the application.
+> For the new domain-first package structure, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Overview
 This document outlines the architectural patterns, design decisions, and development practices used throughout the Personal AI Finance Application.
 
@@ -7,9 +10,19 @@ This document outlines the architectural patterns, design decisions, and develop
 
 ## 1. Architectural Patterns
 
-### 1.1 Layered Architecture
+### 1.1 Domain-Driven Design (DDD)
 
-**Structure**:
+**Current Structure** (after refactoring):
+The application now follows Domain-Driven Design with:
+- **Shared Kernel**: `core.transaction` and `core.value` (reused across domains)
+- **Domain Packages**: `conversation`, `finance.*`, `food.*` (future)
+- **Clean Dependencies**: Core has no domain dependencies
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for complete package structure.
+
+### 1.2 Previous Layered Architecture
+
+**Legacy Structure** (before refactoring):
 ```
 Presentation Layer (Controllers)
     ↓
@@ -24,10 +37,7 @@ Repository Layer (Data Access)
 Database Layer (PostgreSQL)
 ```
 
-**Benefits**:
-- Clear separation of concerns
-- Testability at each layer
-- Independent scaling possibilities
+**Note**: While the layering concept remains, classes are now organized by domain rather than technical layer.
 - Easy to understand and maintain
 
 **Implementation**:

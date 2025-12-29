@@ -1,5 +1,8 @@
 # Quick Reference Guide
 
+> **Note**: The project has been refactored to follow Domain-Driven Design (DDD).
+> See [ARCHITECTURE.md](ARCHITECTURE.md) and [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for the new package structure.
+
 ## Overview
 This is a quick reference for understanding and working with the Personal AI Finance Application. For detailed documentation, see the other .md files.
 
