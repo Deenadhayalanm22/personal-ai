@@ -3,6 +3,7 @@ package com.apps.deen_sa.core.transaction;
 public enum TransactionTypeEnum {
     EXPENSE,
     INCOME,
+    TRANSFER,
     SALE,
     PURCHASE,
     STOCK_IN,

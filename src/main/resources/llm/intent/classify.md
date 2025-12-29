@@ -8,6 +8,7 @@ Your task is to classify the user's message into EXACTLY ONE of the following in
 - INVESTMENT
 - TRANSFER
 - ACCOUNT_SETUP
+- LIABILITY_PAYMENT
 - UNKNOWN
         
 ----------------------------------------
@@ -42,17 +43,45 @@ DOES NOT mean a payment is happening.
 
 ----------------------------------------
 
+LIABILITY_PAYMENT:
+Use this intent when the user is PAYING OFF a liability such as:
+- Credit card bills
+- Loan EMI payments
+- Loan principal repayments
+
+This is DISTINCT from EXPENSE. These payments reduce outstanding liabilities
+and should NOT be treated as expenses.
+
+Payment verbs that indicate LIABILITY_PAYMENT:
+- "paid credit card"
+- "paid EMI"
+- "paid loan"
+- "transferred to credit card"
+- "cleared credit card bill"
+- "paid off loan"
+
+Examples (ALL are LIABILITY_PAYMENT):
+- "Paid 25,000 to credit card"
+- "Paid EMI of 15,000"
+- "Transferred 40k from bank to loan"
+- "Cleared credit card bill of 50k"
+- "Paid loan installment"
+
+----------------------------------------
+
 EXPENSE:
-Use this intent ONLY when the user is SPENDING money or MAKING A PAYMENT.
+Use this intent ONLY when the user is SPENDING money or MAKING A PAYMENT
+on goods, services, or bills that are NOT liability payments.
 
 This includes:
 - Purchases
-- Bills
-- EMI payments
+- Bills (electricity, phone, etc.)
 - Fees
 - Subscriptions
+- Regular spending
 
-A message is an EXPENSE only if it contains an EXPLICIT PAYMENT ACTION.
+A message is an EXPENSE only if it contains an EXPLICIT PAYMENT ACTION
+for goods or services.
 
 Payment verbs include (not exhaustive):
 - paid
@@ -61,15 +90,16 @@ Payment verbs include (not exhaustive):
 - spent
 - debited
 - deducted
-- transferred
-- sent
 - charged
 
 Examples (ALL are EXPENSE):
-- "Paid my loan EMI today"
-- "EMI of 15k got deducted"
 - "Spent 500 on groceries"
-- "Paid credit card bill"
+- "Paid electricity bill"
+- "Bought shoes for 2000"
+
+CRITICAL DISTINCTION:
+- Paying for goods/services → EXPENSE
+- Paying credit card/loan → LIABILITY_PAYMENT
 
 ----------------------------------------
 
@@ -103,12 +133,14 @@ Examples:
 CRITICAL RULES (NON-NEGOTIABLE)
 
 1. If the user is DESCRIBING EXISTENCE or STATE → ACCOUNT_SETUP
-2. If the user is PERFORMING AN ACTION → EXPENSE / INCOME / TRANSFER
-3. EMI mentioned WITHOUT a payment verb → ACCOUNT_SETUP
-4. EMI mentioned WITH a payment verb → EXPENSE
-5. If intent is unclear → UNKNOWN
-6. NEVER guess user intent
-7. NEVER output anything except raw JSON
+2. If the user is PAYING A CREDIT CARD or LOAN → LIABILITY_PAYMENT
+3. If the user is SPENDING on goods/services → EXPENSE
+4. If the user is PERFORMING AN ACTION → EXPENSE / INCOME / TRANSFER / LIABILITY_PAYMENT
+5. EMI mentioned WITHOUT a payment verb → ACCOUNT_SETUP
+6. EMI mentioned WITH a payment verb → LIABILITY_PAYMENT
+7. If intent is unclear → UNKNOWN
+8. NEVER guess user intent
+9. NEVER output anything except raw JSON
 
 ----------------------------------------
 
