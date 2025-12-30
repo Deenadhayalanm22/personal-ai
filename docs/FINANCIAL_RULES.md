@@ -52,15 +52,11 @@ Example:
 
 ## 2. Value Container Behavior Rules
 
-### Cash Container
+### Cash & Bank Containers (Asset Containers)
 - Debit reduces currentValue
 - Credit increases currentValue
 - currentValue must never be negative
-
-### Bank Container
-- Debit reduces currentValue
-- Credit increases currentValue
-- currentValue must never be negative
+- Both Cash and Bank containers follow identical asset container rules
 
 ### Credit Card Container
 - Debit (expense) increases outstanding balance
@@ -125,7 +121,7 @@ When writing integration tests:
 Example:
 ```java
 /**
- * Tests enforcement of Core Invariant 1 from FINANCIAL_RULES.md:
+ * Tests enforcement of FINANCIAL_RULES.md - Section 1, Invariant 1:
  * "A transaction marked financiallyApplied = true must never 
  *  produce additional value adjustments"
  */
@@ -411,7 +407,7 @@ From `MonthlySimulationIT.java`:
 
 ```java
 /**
- * Enforces: FINANCIAL_RULES.md - Core Invariant 1
+ * Enforces: FINANCIAL_RULES.md - Section 1, Invariant 1: No Duplicate Financial Application
  * Rerunning simulation should not change balances
  */
 @Test
