@@ -407,8 +407,8 @@ From `MonthlySimulationIT.java`:
 
 ```java
 /**
- * Enforces: FINANCIAL_RULES.md - Section 1, Invariant 1: No Duplicate Financial Application
- * Rerunning simulation should not change balances
+ * Enforces: FINANCIAL_RULES.md - Section 1, Invariant 1:
+ * "No Duplicate Financial Application - Rerunning simulation should not change balances"
  */
 @Test
 void rerunSimulationIsIdempotent() {
