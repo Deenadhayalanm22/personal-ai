@@ -15,9 +15,9 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.value.ValueAdjustmentRepository;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
+import com.apps.deen_sa.core.state.StateContainerRepository;
 import com.apps.deen_sa.assertions.FinancialAssertions;
 
 @Import(LLMTestConfiguration.class)
@@ -36,13 +36,13 @@ public class MonthlySimulationIT extends IntegrationTestBase {
     ValueContainerService valueContainerService;
 
     @Autowired
-    TransactionRepository transactionRepository;
+    StateChangeRepository transactionRepository;
 
     @Autowired
-    ValueAdjustmentRepository valueAdjustmentRepository;
+    StateMutationRepository valueAdjustmentRepository;
 
     @Autowired
-    ValueContainerRepo valueContainerRepo;
+    StateContainerRepository valueContainerRepo;
 
     @Test
     void runSimpleMonthlySimulation() {

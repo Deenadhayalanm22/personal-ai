@@ -1,7 +1,7 @@
 package com.apps.deen_sa.finance.expense;
 
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.core.value.CompletenessLevelEnum;
+import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import org.springframework.stereotype.Component;
 
 @Component

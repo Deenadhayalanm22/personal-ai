@@ -1,8 +1,8 @@
 package com.apps.deen_sa.finance.expense;
 
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.transaction.TransactionTypeEnum;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.state.StateChangeTypeEnum;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -15,18 +15,18 @@ public class ExpenseDtoToEntityMapper {
         // utility class, no instantiation
     }
 
-    public static TransactionEntity toEntity(
+    public static StateChangeEntity toEntity(
             ExpenseDto dto,
             Long userId
     ) {
 
-        TransactionEntity entity = new TransactionEntity();
+        StateChangeEntity entity = new StateChangeEntity();
 
         // ----------------------------
         // IDENTITY
         // ----------------------------
         entity.setUserId(userId.toString());
-        entity.setTransactionType(TransactionTypeEnum.EXPENSE);
+        entity.setTransactionType(StateChangeTypeEnum.EXPENSE);
 
         // ----------------------------
         // CORE FINANCIAL DATA
@@ -77,7 +77,7 @@ public class ExpenseDtoToEntityMapper {
         return entity;
     }
 
-    public static void updateEntity(TransactionEntity entity, ExpenseDto dto) {
+    public static void updateEntity(StateChangeEntity entity, ExpenseDto dto) {
 
         // ----------------------------
         // CORE FINANCIAL DATA

@@ -1,11 +1,11 @@
 package com.apps.deen_sa.finance.loan;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.llm.impl.LoanQueryExplainer;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 @Service
 public class LoanAnalysisService {
 
-    private final ValueContainerRepo valueContainerRepo;
+    private final StateContainerRepository valueContainerRepo;
 
-    private final TransactionRepository transactionRepo;
+    private final StateChangeRepository transactionRepo;
 
     private final LoanQueryExplainer llm;
 
-    public LoanAnalysisService(ValueContainerRepo valueContainerRepo, TransactionRepository transactionRepo, LoanQueryExplainer llm) {
+    public LoanAnalysisService(StateContainerRepository valueContainerRepo, StateChangeRepository transactionRepo, LoanQueryExplainer llm) {
         this.valueContainerRepo = valueContainerRepo;
         this.transactionRepo = transactionRepo;
         this.llm = llm;
@@ -36,7 +36,7 @@ public class LoanAnalysisService {
      */
     public SpeechResult handleEmiRemaining(String userText, ConversationContext ctx) {
 
-        List<ValueContainerEntity> activeLoans =
+        List<StateContainerEntity> activeLoans =
                 valueContainerRepo.findActiveLoansForUser(1L); // replace userId
 
         // 1️⃣ No loans at all
@@ -51,12 +51,12 @@ public class LoanAnalysisService {
             ctx.setWaitingForField("loanSelection");
             ctx.setMetadata(Map.of(
                     "loanIds", activeLoans.stream()
-                            .map(ValueContainerEntity::getId)
+                            .map(StateContainerEntity::getId)
                             .toList()
             ));
 
             String options = activeLoans.stream()
-                    .map(ValueContainerEntity::getName)
+                    .map(StateContainerEntity::getName)
                     .collect(Collectors.joining(", "));
 
             return SpeechResult.followup(
@@ -67,7 +67,7 @@ public class LoanAnalysisService {
         }
 
         // 3️⃣ Single loan or already resolved
-        ValueContainerEntity loan = activeLoans.getFirst();
+        StateContainerEntity loan = activeLoans.getFirst();
 
         return computeAndRespond(loan);
     }
@@ -76,7 +76,7 @@ public class LoanAnalysisService {
     // CORE COMPUTATION (NO LLM HERE)
     // -------------------------------------------------------
 
-    private SpeechResult computeAndRespond(ValueContainerEntity loan) {
+    private SpeechResult computeAndRespond(StateContainerEntity loan) {
 
         // A️⃣ Count EMIs already paid
         int emiPaid = transactionRepo.countLoanEmis(loan.getId());

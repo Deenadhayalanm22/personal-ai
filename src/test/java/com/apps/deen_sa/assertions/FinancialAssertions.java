@@ -1,11 +1,11 @@
 package com.apps.deen_sa.assertions;
 
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.value.ValueAdjustmentEntity;
-import com.apps.deen_sa.core.value.ValueAdjustmentRepository;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.mutation.StateMutationEntity;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
+import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,21 +22,21 @@ public final class FinancialAssertions {
 
     private FinancialAssertions() {}
 
-    public static void assertNoOrphanAdjustments(ValueAdjustmentRepository adjRepo, TransactionRepository txRepo) {
-        List<ValueAdjustmentEntity> all = adjRepo.findAll();
-        for (ValueAdjustmentEntity a : all) {
+    public static void assertNoOrphanAdjustments(StateMutationRepository adjRepo, StateChangeRepository txRepo) {
+        List<StateMutationEntity> all = adjRepo.findAll();
+        for (StateMutationEntity a : all) {
             assertNotNull(a.getTransactionId(), "Adjustment " + a.getId() + " has null transactionId");
             assertTrue(txRepo.existsById(a.getTransactionId()), "Adjustment " + a.getId() + " references missing tx " + a.getTransactionId());
         }
     }
 
-    public static void assertAdjustmentsMatchTransactions(TransactionRepository txRepo, ValueAdjustmentRepository adjRepo) {
-        List<TransactionEntity> txs = txRepo.findAll().stream()
-                .filter(TransactionEntity::isFinanciallyApplied)
+    public static void assertAdjustmentsMatchTransactions(StateChangeRepository txRepo, StateMutationRepository adjRepo) {
+        List<StateChangeEntity> txs = txRepo.findAll().stream()
+                .filter(StateChangeEntity::isFinanciallyApplied)
                 .collect(Collectors.toList());
 
-        for (TransactionEntity tx : txs) {
-            List<ValueAdjustmentEntity> adjustments = adjRepo.findAll().stream()
+        for (StateChangeEntity tx : txs) {
+            List<StateMutationEntity> adjustments = adjRepo.findAll().stream()
                     .filter(a -> a.getTransactionId() != null && a.getTransactionId().equals(tx.getId()))
                     .collect(Collectors.toList());
 
@@ -63,31 +63,31 @@ public final class FinancialAssertions {
         }
     }
 
-    public static void assertContainerBalance(Long containerId, BigDecimal openingValue, ValueAdjustmentRepository adjRepo, ValueContainerRepo containerRepo) {
-        List<ValueAdjustmentEntity> adjustments = adjRepo.findAll().stream()
+    public static void assertContainerBalance(Long containerId, BigDecimal openingValue, StateMutationRepository adjRepo, StateContainerRepository containerRepo) {
+        List<StateMutationEntity> adjustments = adjRepo.findAll().stream()
                 .filter(a -> a.getContainerId() != null && a.getContainerId().equals(containerId))
                 .collect(Collectors.toList());
 
         BigDecimal credits = adjustments.stream()
                 .filter(a -> a.getAdjustmentType() != null && a.getAdjustmentType().name().equals("CREDIT"))
-                .map(ValueAdjustmentEntity::getAmount)
+                .map(StateMutationEntity::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal debits = adjustments.stream()
                 .filter(a -> a.getAdjustmentType() != null && a.getAdjustmentType().name().equals("DEBIT"))
-                .map(ValueAdjustmentEntity::getAmount)
+                .map(StateMutationEntity::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal expected = openingValue.add(credits).subtract(debits);
 
-        ValueContainerEntity current = containerRepo.findById(containerId).orElseThrow(() -> new IllegalStateException("Container missing: " + containerId));
+        StateContainerEntity current = containerRepo.findById(containerId).orElseThrow(() -> new IllegalStateException("Container missing: " + containerId));
 
         BigDecimal currentValue = current.getCurrentValue() == null ? BigDecimal.ZERO : current.getCurrentValue();
 
         assertEquals(0, expected.compareTo(currentValue), "Container " + containerId + " balance mismatch: expected=" + expected + " actual=" + currentValue);
     }
 
-    public static void assertTotalMoneyConserved(Map<Long, BigDecimal> openingBalances, ValueContainerRepo containerRepo) {
+    public static void assertTotalMoneyConserved(Map<Long, BigDecimal> openingBalances, StateContainerRepository containerRepo) {
         BigDecimal openingTotal = openingBalances.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal closingTotal = containerRepo.findAll().stream()
@@ -97,7 +97,7 @@ public final class FinancialAssertions {
         assertEquals(0, openingTotal.compareTo(closingTotal), "Total money changed across containers: opening=" + openingTotal + " closing=" + closingTotal);
     }
 
-    public static void assertIdempotentOnRerun(Map<Long, BigDecimal> snapshotBeforeRerun, ValueContainerRepo containerRepo, ValueAdjustmentRepository adjRepo) {
+    public static void assertIdempotentOnRerun(Map<Long, BigDecimal> snapshotBeforeRerun, StateContainerRepository containerRepo, StateMutationRepository adjRepo) {
         // Verify container values unchanged
         for (Map.Entry<Long, BigDecimal> e : snapshotBeforeRerun.entrySet()) {
             Long cid = e.getKey();
@@ -113,9 +113,9 @@ public final class FinancialAssertions {
         // We leave this method focused on container values; callers may assert counts separately.
     }
 
-    public static void assertNoNegativeBalances(ValueContainerRepo containerRepo) {
-        List<ValueContainerEntity> containers = containerRepo.findAll();
-        for (ValueContainerEntity c : containers) {
+    public static void assertNoNegativeBalances(StateContainerRepository containerRepo) {
+        List<StateContainerEntity> containers = containerRepo.findAll();
+        for (StateContainerEntity c : containers) {
             BigDecimal currentValue = c.getCurrentValue() == null ? BigDecimal.ZERO : c.getCurrentValue();
             // Only enforce non-negative for BANK_ACCOUNT and CASH (assets)
             // Credit cards and loans can be negative (they are liabilities)
@@ -126,9 +126,9 @@ public final class FinancialAssertions {
         }
     }
 
-    public static void assertCapacityLimitsRespected(ValueContainerRepo containerRepo) {
-        List<ValueContainerEntity> containers = containerRepo.findAll();
-        for (ValueContainerEntity c : containers) {
+    public static void assertCapacityLimitsRespected(StateContainerRepository containerRepo) {
+        List<StateContainerEntity> containers = containerRepo.findAll();
+        for (StateContainerEntity c : containers) {
             if (c.getCapacityLimit() != null) {
                 BigDecimal currentValue = c.getCurrentValue() == null ? BigDecimal.ZERO : c.getCurrentValue();
                 // For liabilities (credit cards, loans), current value should not exceed capacity
@@ -141,9 +141,9 @@ public final class FinancialAssertions {
         }
     }
 
-    public static void assertAllTransactionsHaveValidStatus(TransactionRepository txRepo) {
-        List<TransactionEntity> txs = txRepo.findAll();
-        for (TransactionEntity tx : txs) {
+    public static void assertAllTransactionsHaveValidStatus(StateChangeRepository txRepo) {
+        List<StateChangeEntity> txs = txRepo.findAll();
+        for (StateChangeEntity tx : txs) {
             assertNotNull(tx.getTransactionType(), "Transaction " + tx.getId() + " has null transaction type");
             assertNotNull(tx.getAmount(), "Transaction " + tx.getId() + " has null amount");
             assertTrue(tx.getAmount().compareTo(BigDecimal.ZERO) >= 0, 

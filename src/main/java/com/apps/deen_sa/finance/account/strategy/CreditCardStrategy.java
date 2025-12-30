@@ -1,7 +1,7 @@
 package com.apps.deen_sa.finance.account.strategy;
 
-import com.apps.deen_sa.dto.AdjustmentCommand;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.dto.StateMutationCommand;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
 import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
 import org.springframework.stereotype.Component;
@@ -13,7 +13,7 @@ import java.time.Instant;
 public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettlementStrategy {
 
     @Override
-    public boolean supports(ValueContainerEntity container) {
+    public boolean supports(StateContainerEntity container) {
         return container.getContainerType().equals("CREDIT_CARD");
     }
 
@@ -21,7 +21,7 @@ public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettle
      * Expense on credit card → increases outstanding amount
      */
     @Override
-    public void apply(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void apply(StateContainerEntity container, StateMutationCommand cmd) {
 
         BigDecimal outstanding = defaultZero(container.getCurrentValue());
         BigDecimal newOutstanding = outstanding.add(cmd.getAmount());
@@ -35,7 +35,7 @@ public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettle
      * Refund / reversal → reduces outstanding amount
      */
     @Override
-    public void reverse(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void reverse(StateContainerEntity container, StateMutationCommand cmd) {
 
         BigDecimal outstanding = defaultZero(container.getCurrentValue());
         BigDecimal newOutstanding = outstanding.subtract(cmd.getAmount());
@@ -54,7 +54,7 @@ public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettle
      * Exists only for credit cards
      */
     @Override
-    public void applyPayment(ValueContainerEntity container, BigDecimal amount) {
+    public void applyPayment(StateContainerEntity container, BigDecimal amount) {
 
         BigDecimal outstanding = defaultZero(container.getCurrentValue());
         BigDecimal newOutstanding = outstanding.subtract(amount);
@@ -75,7 +75,7 @@ public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettle
     /**
      * Determines over-limit state without blocking persistence
      */
-    private void evaluateOverLimit(ValueContainerEntity container,
+    private void evaluateOverLimit(StateContainerEntity container,
                                    BigDecimal outstanding) {
 
         BigDecimal limit = container.getCapacityLimit();

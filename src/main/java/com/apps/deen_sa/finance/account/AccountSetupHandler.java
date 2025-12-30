@@ -1,12 +1,12 @@
 package com.apps.deen_sa.finance.account;
 
 import com.apps.deen_sa.dto.AccountSetupDto;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.llm.impl.AccountSetupClassifier;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
+import com.apps.deen_sa.core.state.StateContainerRepository;
 import com.apps.deen_sa.finance.account.AccountSetupValidator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
@@ -22,9 +22,9 @@ import java.util.List;
 public class AccountSetupHandler implements SpeechHandler {
 
     private final AccountSetupClassifier llm;
-    private final ValueContainerRepo repo;
+    private final StateContainerRepository repo;
 
-    public AccountSetupHandler(AccountSetupClassifier llm, ValueContainerRepo repo) {
+    public AccountSetupHandler(AccountSetupClassifier llm, StateContainerRepository repo) {
         this.llm = llm;
         this.repo = repo;
     }
@@ -56,7 +56,7 @@ public class AccountSetupHandler implements SpeechHandler {
             );
         }
 
-        ValueContainerEntity saved = save(dto);
+        StateContainerEntity saved = save(dto);
         ctx.reset();
 
         return SpeechResult.saved(saved);
@@ -88,15 +88,15 @@ public class AccountSetupHandler implements SpeechHandler {
             );
         }
 
-        ValueContainerEntity saved = save(dto);
+        StateContainerEntity saved = save(dto);
         ctx.reset();
 
         return SpeechResult.saved(saved);
     }
 
-    private ValueContainerEntity save(AccountSetupDto dto) {
+    private StateContainerEntity save(AccountSetupDto dto) {
 
-        ValueContainerEntity e = new ValueContainerEntity();
+        StateContainerEntity e = new StateContainerEntity();
 
         e.setOwnerType(dto.getOwnerType() != null ? dto.getOwnerType() : "USER");
         e.setOwnerId(1L); // replace with auth user

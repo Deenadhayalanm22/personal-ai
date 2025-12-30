@@ -1,8 +1,8 @@
 package com.apps.deen_sa.finance.account.strategy;
 
-import com.apps.deen_sa.dto.AdjustmentCommand;
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.value.AdjustmentTypeEnum;
+import com.apps.deen_sa.dto.StateMutationCommand;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.mutation.MutationTypeEnum;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -11,22 +11,22 @@ import java.time.Instant;
 @Component
 public class AdjustmentCommandFactory {
 
-    public AdjustmentCommand forExpense(TransactionEntity tx) {
+    public StateMutationCommand forExpense(StateChangeEntity tx) {
 
-        return new AdjustmentCommand(
+        return new StateMutationCommand(
                 tx.getAmount(),
-                AdjustmentTypeEnum.DEBIT,
+                MutationTypeEnum.DEBIT,
                 "EXPENSE",
                 tx.getId(),
                 Instant.now()
         );
     }
 
-    public AdjustmentCommand forExpenseReversal(TransactionEntity tx) {
+    public StateMutationCommand forExpenseReversal(StateChangeEntity tx) {
 
-        return new AdjustmentCommand(
+        return new StateMutationCommand(
                 tx.getAmount(),
-                AdjustmentTypeEnum.CREDIT,
+                MutationTypeEnum.CREDIT,
                 "EXPENSE_REVERSAL",
                 tx.getId(),
                 Instant.now()
@@ -37,10 +37,10 @@ public class AdjustmentCommandFactory {
      * Create DEBIT adjustment for source container in a transfer.
      * Used when money leaves the source container (e.g., bank account).
      */
-    public AdjustmentCommand forTransferDebit(TransactionEntity tx, String reason) {
-        return new AdjustmentCommand(
+    public StateMutationCommand forTransferDebit(StateChangeEntity tx, String reason) {
+        return new StateMutationCommand(
                 tx.getAmount(),
-                AdjustmentTypeEnum.DEBIT,
+                MutationTypeEnum.DEBIT,
                 reason,
                 tx.getId(),
                 tx.getTimestamp() != null ? tx.getTimestamp() : Instant.now()
@@ -51,10 +51,10 @@ public class AdjustmentCommandFactory {
      * Create CREDIT adjustment for target container in a transfer.
      * Used when money enters the target container (e.g., credit card payment).
      */
-    public AdjustmentCommand forTransferCredit(TransactionEntity tx, String reason) {
-        return new AdjustmentCommand(
+    public StateMutationCommand forTransferCredit(StateChangeEntity tx, String reason) {
+        return new StateMutationCommand(
                 tx.getAmount(),
-                AdjustmentTypeEnum.CREDIT,
+                MutationTypeEnum.CREDIT,
                 reason,
                 tx.getId(),
                 tx.getTimestamp() != null ? tx.getTimestamp() : Instant.now()

@@ -1,6 +1,5 @@
-package com.apps.deen_sa.core.transaction;
+package com.apps.deen_sa.core.state;
 
-import com.apps.deen_sa.core.value.CompletenessLevelEnum;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,7 +19,7 @@ import java.util.Map;
 @Getter
 @Setter
 @EntityListeners(AuditingEntityListener.class)
-public class TransactionEntity {
+public class StateChangeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +34,7 @@ public class TransactionEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 50)
-    private TransactionTypeEnum transactionType;
+    private StateChangeTypeEnum transactionType;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
