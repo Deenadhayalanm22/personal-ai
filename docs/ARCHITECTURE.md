@@ -5,17 +5,17 @@
 ```
 com.apps.deen_sa
 ├── core (Shared Kernel - No domain dependencies)
-│   ├── transaction
-│   │   ├── TransactionEntity
-│   │   ├── TransactionRepository
-│   │   └── TransactionTypeEnum
-│   └── value
-│       ├── CompletenessLevelEnum
-│       ├── AdjustmentTypeEnum
-│       ├── ValueContainerEntity
-│       ├── ValueAdjustmentEntity
-│       ├── ValueContainerRepo
-│       └── ValueAdjustmentRepository
+│   ├── state
+│   │   ├── StateChangeEntity
+│   │   ├── StateChangeRepository
+│   │   ├── StateChangeTypeEnum
+│   │   ├── StateContainerEntity
+│   │   ├── StateContainerRepository
+│   │   └── CompletenessLevelEnum
+│   └── mutation
+│       ├── StateMutationEntity
+│       ├── StateMutationRepository
+│       └── MutationTypeEnum
 │
 ├── conversation (Conversational Orchestration)
 │   ├── SpeechOrchestrator
@@ -65,7 +65,7 @@ com.apps.deen_sa
 │       ├── ValueContainerCache
 │       ├── InMemoryValueContainerCache
 │       └── strategy
-│           ├── AdjustmentCommandFactory
+│           ├── AdjustmentCommandFactory (creates StateMutationCommands)
 │           ├── ValueAdjustmentStrategyResolver
 │           ├── ValueAdjustmentStrategy
 │           ├── CreditSettlementStrategy

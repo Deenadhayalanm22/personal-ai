@@ -1,6 +1,6 @@
 package com.apps.deen_sa.simulation.fuzz;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,9 +19,9 @@ public class RandomFinancialScenarioGenerator {
 
     private final Random rnd;
     private final int daysInMonth;
-    private final Map<String, ValueContainerEntity> containersByType;
+    private final Map<String, StateContainerEntity> containersByType;
 
-    public RandomFinancialScenarioGenerator(long seed, int daysInMonth, Map<String, ValueContainerEntity> containersByType) {
+    public RandomFinancialScenarioGenerator(long seed, int daysInMonth, Map<String, StateContainerEntity> containersByType) {
         this.rnd = new Random(seed);
         this.daysInMonth = daysInMonth;
         this.containersByType = containersByType;
@@ -43,7 +43,7 @@ public class RandomFinancialScenarioGenerator {
                 actions.add(new ScenarioAction(day, ActionType.EXPENSE, source, desc, amount, null));
             } else {
                 // pay credit card
-                ValueContainerEntity cc = containersByType.get("CREDIT_CARD");
+                StateContainerEntity cc = containersByType.get("CREDIT_CARD");
                 if (cc != null) {
                     long amount = pickAmountForPayment(cc);
                     actions.add(new ScenarioAction(day, ActionType.PAY_CREDIT_CARD, "BANK_ACCOUNT", "pay", amount, cc.getName()));
@@ -71,7 +71,7 @@ public class RandomFinancialScenarioGenerator {
     }
 
     private long pickAmountForSource(String source) {
-        ValueContainerEntity c = containersByType.get(source);
+        StateContainerEntity c = containersByType.get(source);
         BigDecimal cap = c != null && c.getCapacityLimit() != null ? c.getCapacityLimit() : BigDecimal.valueOf(100000L);
         BigDecimal curr = c != null && c.getCurrentValue() != null ? c.getCurrentValue() : BigDecimal.ZERO;
 
@@ -81,7 +81,7 @@ public class RandomFinancialScenarioGenerator {
         return amt;
     }
 
-    private long pickAmountForPayment(ValueContainerEntity cc) {
+    private long pickAmountForPayment(StateContainerEntity cc) {
         BigDecimal outstanding = cc.getCurrentValue() == null ? BigDecimal.ZERO : cc.getCurrentValue();
         long base = Math.max(100L, Math.min( (outstanding.longValue()), 5000));
         return  base > 0 ? (50 + rnd.nextInt((int)base)) : (50 + rnd.nextInt(5000));

@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.value;
+package com.apps.deen_sa.core.state;
 
 public enum CompletenessLevelEnum {
     MINIMAL,        // history-safe

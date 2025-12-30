@@ -1,6 +1,6 @@
-package com.apps.deen_sa.core.transaction;
+package com.apps.deen_sa.core.state;
 
-public enum TransactionTypeEnum {
+public enum StateChangeTypeEnum {
     EXPENSE,
     INCOME,
     TRANSFER,

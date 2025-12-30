@@ -1,9 +1,9 @@
 package com.apps.deen_sa.finance.account;
 
-import com.apps.deen_sa.dto.AdjustmentCommand;
-import com.apps.deen_sa.core.value.ValueAdjustmentEntity;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
-import com.apps.deen_sa.core.value.ValueAdjustmentRepository;
+import com.apps.deen_sa.dto.StateMutationCommand;
+import com.apps.deen_sa.core.mutation.StateMutationEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
 import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategyResolver;
 import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
 import jakarta.transaction.Transactional;
@@ -14,12 +14,12 @@ import java.time.Instant;
 @Service
 public class ValueAdjustmentService {
 
-    private final ValueAdjustmentRepository adjustmentRepository;
+    private final StateMutationRepository adjustmentRepository;
     private final ValueAdjustmentStrategyResolver strategyResolver;
     private final ValueContainerService valueContainerService;
 
     public ValueAdjustmentService(
-            ValueAdjustmentRepository adjustmentRepository,
+            StateMutationRepository adjustmentRepository,
             ValueAdjustmentStrategyResolver strategyResolver,
             ValueContainerService valueContainerService
     ) {
@@ -29,11 +29,11 @@ public class ValueAdjustmentService {
     }
 
     @Transactional
-    public void apply(ValueContainerEntity container,
-                      AdjustmentCommand command) {
+    public void apply(StateContainerEntity container,
+                      StateMutationCommand command) {
 
         // 1️⃣ Persist audit record
-        ValueAdjustmentEntity audit = new ValueAdjustmentEntity();
+        StateMutationEntity audit = new StateMutationEntity();
         audit.setTransactionId(command.getReferenceTxId());
         audit.setContainerId(container.getId());
         audit.setAdjustmentType(command.getType());

@@ -3,15 +3,15 @@ package com.apps.deen_sa.finance.expense;
 import com.apps.deen_sa.dto.ExpenseQuery;
 import com.apps.deen_sa.dto.ExpenseSummary;
 import com.apps.deen_sa.dto.TimeRange;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
+import com.apps.deen_sa.core.state.StateChangeRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ExpenseAnalyticsService {
 
-    private final TransactionRepository repo;
+    private final StateChangeRepository repo;
 
-    public ExpenseAnalyticsService(TransactionRepository repo) {
+    public ExpenseAnalyticsService(StateChangeRepository repo) {
         this.repo = repo;
     }
 

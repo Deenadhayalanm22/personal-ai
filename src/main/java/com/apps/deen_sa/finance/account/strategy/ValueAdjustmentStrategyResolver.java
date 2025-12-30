@@ -1,6 +1,6 @@
 package com.apps.deen_sa.finance.account.strategy;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +15,7 @@ public class ValueAdjustmentStrategyResolver {
         this.strategies = strategies;
     }
 
-    public ValueAdjustmentStrategy resolve(ValueContainerEntity container) {
+    public ValueAdjustmentStrategy resolve(StateContainerEntity container) {
         return strategies.stream()
                 .filter(s -> s.supports(container))
                 .findFirst()

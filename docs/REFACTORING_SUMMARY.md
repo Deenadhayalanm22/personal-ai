@@ -11,15 +11,15 @@ December 29, 2025
 ### 1. CORE (Shared Kernel) ✅
 **Package:** `com.apps.deen_sa.core`
 
-#### core.transaction
-- **TransactionEntity** (from entity)
+#### core.state
+- **StateChangeEntity** (from entity)
 - **TransactionRepository** (from repo)
 - **TransactionTypeEnum** (from utils)
 
-#### core.value  
+#### core.mutation  
 - **CompletenessLevelEnum** (from utils)
-- **ValueContainerEntity** (from entity)
-- **ValueAdjustmentEntity** (from entity)
+- **StateContainerEntity** (from entity)
+- **StateMutationEntity** (from entity)
 - **AdjustmentTypeEnum** (from utils)
 - **ValueContainerRepo** (from repo)
 - **ValueAdjustmentRepository** (from repo)
@@ -88,7 +88,7 @@ December 29, 2025
 
 #### finance.account.strategy
 **Classes Moved:**
-- **AdjustmentCommandFactory** (from resolver)
+- **StateMutationCommandFactory** (from resolver)
 - **ValueAdjustmentStrategyResolver** (from resolver)
 - **ValueAdjustmentStrategy** (from strategy)
 - **CreditSettlementStrategy** (from strategy)
@@ -162,8 +162,8 @@ The following packages remain in their original location:
 ## Import Updates
 
 All imports across the codebase have been updated automatically:
-- Updated references to core.transaction.*
-- Updated references to core.value.*
+- Updated references to core.state.*
+- Updated references to core.mutation.*
 - Updated references to conversation.*
 - Updated references to finance.*
 - Updated references to common.exception.*

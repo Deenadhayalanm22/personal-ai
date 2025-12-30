@@ -1,6 +1,6 @@
 package com.apps.deen_sa.dto;
 
-import com.apps.deen_sa.core.value.CompletenessLevelEnum;
+import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;

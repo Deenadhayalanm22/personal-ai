@@ -55,7 +55,7 @@ public class InvestmentHandler implements SpeechHandler {
 ### 2. Adding a New Container Type
 
 **Files to Modify**:
-1. Update `ValueContainerEntity` (no schema change needed - uses containerType string)
+1. Update `StateContainerEntity` (no schema change needed - uses containerType string)
 2. Create new strategy: `com.apps.deen_sa.strategy.impl/NewContainerStrategy.java`
 3. Register strategy in `ValueAdjustmentStrategyResolver`
 
@@ -64,7 +64,7 @@ public class InvestmentHandler implements SpeechHandler {
 @Component
 public class WalletStrategy implements ValueAdjustmentStrategy {
     @Override
-    public void apply(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void apply(StateContainerEntity container, StateMutationCommand cmd) {
         if (cmd.getType() == DEBIT) {
             container.setCurrentValue(
                 container.getCurrentValue().subtract(cmd.getAmount())
@@ -114,14 +114,14 @@ public class BudgetClassifier extends BaseLLMExtractor {
 
 ```java
 // By user and date range
-List<TransactionEntity> txs = repo.findByUserIdAndTimestampBetween(
+List<StateChangeEntity> txs = repo.findByUserIdAndTimestampBetween(
     userId, 
     startTime, 
     endTime
 );
 
 // By category
-List<TransactionEntity> txs = repo.findByUserIdAndCategory(
+List<StateChangeEntity> txs = repo.findByUserIdAndCategory(
     userId, 
     "food"
 );

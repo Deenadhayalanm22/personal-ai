@@ -1,14 +1,14 @@
 package com.apps.deen_sa.finance.account;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 
 import java.util.List;
 
 public interface ValueContainerCache {
 
-    List<ValueContainerEntity> getActiveContainers(Long ownerId);
+    List<StateContainerEntity> getActiveContainers(Long ownerId);
 
-    void putActiveContainers(Long ownerId, List<ValueContainerEntity> containers);
+    void putActiveContainers(Long ownerId, List<StateContainerEntity> containers);
 
     void evict(Long ownerId);
 

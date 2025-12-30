@@ -37,14 +37,14 @@ A financial management system that uses natural language processing to allow use
 - **Strategy Pattern**: Different adjustment strategies for different container types
 - **Template Method**: BaseLLMExtractor for standardized LLM interaction
 - **State Pattern**: ConversationContext for multi-turn conversations
-- **Factory Pattern**: AdjustmentCommandFactory for creating commands
+- **Factory Pattern**: AdjustmentCommandFactory (creates StateMutationCommands) for creating commands
 - **Repository Pattern**: JPA repositories for data access
 
 ---
 
 ## Data Model (5 Core Entities)
 
-### 1. TransactionEntity (transaction_rec)
+### 1. StateChangeEntity (transaction_rec)
 **Purpose**: Universal transaction recording  
 **Key Fields**:
 - amount, quantity, unit
@@ -57,7 +57,7 @@ A financial management system that uses natural language processing to allow use
 - details (JSONB for flexible metadata)
 - tags (JSONB array)
 
-### 2. ValueContainerEntity (value_container)
+### 2. StateContainerEntity (value_container)
 **Purpose**: Universal container for all value-holding entities  
 **Container Types**: CASH, BANK, CREDIT, INVENTORY, PAYABLE, RECEIVABLE  
 **Key Fields**:
@@ -68,7 +68,7 @@ A financial management system that uses natural language processing to allow use
 - overLimit, overLimitAmount (credit overflow tracking)
 - details (JSONB for type-specific data like EMI details)
 
-### 3. ValueAdjustmentEntity (value_adjustments)
+### 3. StateMutationEntity (value_adjustments)
 **Purpose**: Audit trail for all container balance changes  
 **Key Fields**:
 - transactionId (which transaction caused this)
@@ -169,7 +169,7 @@ A financial management system that uses natural language processing to allow use
 4. ExpenseHandler processes:
    a. ExpenseClassifier extracts: amount=500, category=groceries
    b. ExpenseCompletenessEvaluator → MINIMAL level
-   c. Save TransactionEntity (needsEnrichment=true, financiallyApplied=false)
+   c. Save StateChangeEntity (needsEnrichment=true, financiallyApplied=false)
    d. Ask follow-up: "Which account did you pay from?"
 5. User: "Cash"
 6. ExpenseHandler handleFollowup:
@@ -178,7 +178,7 @@ A financial management system that uses natural language processing to allow use
    c. Resolve cash container
    d. Apply financial impact (debit cash)
    e. Mark financiallyApplied=true
-   f. Create ValueAdjustmentEntity (audit trail)
+   f. Create StateMutationEntity (audit trail)
 7. Response: "Recorded ₹500 groceries expense from Cash"
 ```
 
@@ -204,7 +204,7 @@ A financial management system that uses natural language processing to allow use
    - containerType: LOAN (or CREDIT)
    - currentValue: 500000
    - details: {emiAmount: 15000}
-4. AccountSetupHandler creates ValueContainerEntity
+4. AccountSetupHandler creates StateContainerEntity
 5. Response: "Recorded your loan of ₹5,00,000"
 ```
 
@@ -299,7 +299,7 @@ return callAndParse(systemPrompt, formatted, ExpenseDto.class);
 2. Resolve source container
 3. Use Strategy pattern based on container type
 4. Update container balance
-5. Create ValueAdjustmentEntity (audit)
+5. Create StateMutationEntity (audit)
 6. Set `financiallyApplied=true`
 
 ---
@@ -398,7 +398,7 @@ src/main/resources/
 
 **Prompt 3**: "What are the potential security vulnerabilities in this architecture? Focus on the LLM integration and financial transaction handling."
 
-**Prompt 4**: "Suggest a migration strategy to move all ExpenseEntity records to TransactionEntity without downtime."
+**Prompt 4**: "Suggest a migration strategy to move all ExpenseEntity records to StateChangeEntity without downtime."
 
 **Prompt 5**: "How can I add support for multi-currency transactions? What entities and services need modification?"
 

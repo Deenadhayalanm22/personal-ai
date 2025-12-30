@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.value;
+package com.apps.deen_sa.core.state;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -16,7 +16,7 @@ import java.util.Map;
 @Setter
 @Entity
 @Table(name = "value_container")
-public class ValueContainerEntity {
+public class StateContainerEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

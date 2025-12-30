@@ -1,13 +1,13 @@
 package com.apps.deen_sa.finance.account.strategy;
 
-import com.apps.deen_sa.dto.AdjustmentCommand;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.dto.StateMutationCommand;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 
 public interface ValueAdjustmentStrategy {
 
-    boolean supports(ValueContainerEntity container);
+    boolean supports(StateContainerEntity container);
 
-    void apply(ValueContainerEntity container, AdjustmentCommand command);
+    void apply(StateContainerEntity container, StateMutationCommand command);
 
-    void reverse(ValueContainerEntity container, AdjustmentCommand command);
+    void reverse(StateContainerEntity container, StateMutationCommand command);
 }

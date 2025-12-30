@@ -60,17 +60,17 @@ src/main/java/com/apps/deen_sa/
 ├── PersonalAiApplication.java          # Main application entry point
 │
 ├── core/                                # 🏛️ SHARED KERNEL (no domain dependencies)
-│   ├── transaction/                    # Transaction domain concepts
-│   │   ├── TransactionEntity.java
-│   │   ├── TransactionRepository.java
-│   │   └── TransactionTypeEnum.java
-│   └── value/                          # Value & adjustment concepts
-│       ├── ValueContainerEntity.java
-│       ├── ValueAdjustmentEntity.java
-│       ├── ValueContainerRepo.java
-│       ├── ValueAdjustmentRepository.java
-│       ├── CompletenessLevelEnum.java
-│       └── AdjustmentTypeEnum.java
+│   ├── state/                          # State management concepts
+│   │   ├── StateChangeEntity.java
+│   │   ├── StateChangeRepository.java
+│   │   ├── StateChangeTypeEnum.java
+│   │   ├── StateContainerEntity.java
+│   │   ├── StateContainerRepository.java
+│   │   └── CompletenessLevelEnum.java
+│   └── mutation/                       # State mutation concepts
+│       ├── StateMutationEntity.java
+│       ├── StateMutationRepository.java
+│       └── MutationTypeEnum.java
 │
 ├── conversation/                        # 💬 CONVERSATION DOMAIN
 │   ├── SpeechOrchestrator.java        # Main conversation orchestrator
@@ -119,10 +119,10 @@ src/main/java/com/apps/deen_sa/
 │       ├── AccountSetupValidator.java
 │       ├── ValueContainerCache.java
 │       ├── InMemoryValueContainerCache.java
-│       └── strategy/                   # Adjustment strategies
+│       └── strategy/                   # State mutation strategies
 │           ├── ValueAdjustmentStrategy.java
 │           ├── ValueAdjustmentStrategyResolver.java
-│           ├── AdjustmentCommandFactory.java
+│           ├── AdjustmentCommandFactory.java (creates StateMutationCommands)
 │           ├── CreditSettlementStrategy.java
 │           ├── CashLikeStrategy.java
 │           ├── CreditCardStrategy.java
@@ -231,7 +231,7 @@ User Input (Voice/Text)
   → ExpenseHandler
   → ExpenseClassifier (LLM) - Extract fields
   → ExpenseCompletenessEvaluator
-  → Save TransactionEntity
+  → Save StateChangeEntity
   → Apply Financial Impact (if container available)
   → Return SpeechResult
 ```
@@ -246,12 +246,12 @@ User Input: "Paid 25,000 to credit card"
   → LiabilityPaymentClassifier (LLM) - Extract payment details
   → Resolve Source Container (Bank Account)
   → Resolve Target Container (Credit Card/Loan)
-  → Create TransactionEntity (type=TRANSFER)
+  → Create StateChangeEntity (type=TRANSFER)
   → Apply Financial Impact:
       • DEBIT source (bank account reduces)
       • CREDIT target (liability outstanding reduces)
-  → Create ValueAdjustmentEntity audit trail
-  → Mark Transaction as financiallyApplied=true
+  → Create StateMutationEntity audit trail
+  → Mark StateChange as financiallyApplied=true
   → Return SpeechResult
 ```
 
@@ -276,22 +276,22 @@ Transactions are evaluated for completeness:
 
 ### 4. Financial Impact Application
 ```
-Transaction Created
+StateChange Created
   → Resolve Source Container (Bank/Credit/Cash)
-  → Create AdjustmentCommand
+  → Create StateMutationCommand
   → Apply ValueAdjustmentStrategy
   → Update Container Balance
-  → Create ValueAdjustmentEntity (audit trail)
-  → Mark Transaction as financiallyApplied=true
+  → Create StateMutationEntity (audit trail)
+  → Mark StateChange as financiallyApplied=true
 ```
 
 ## Key Design Decisions
 
 ### 1. Multi-Entity Data Model
-- **TransactionEntity**: New comprehensive transaction model
-- **ExpenseEntity**: Legacy/simple expense model
-- **ValueContainerEntity**: Universal container for all value-holding entities (accounts, loans, inventory)
-- **ValueAdjustmentEntity**: Audit trail for all container adjustments
+- **StateChangeEntity**: Comprehensive state change model (core kernel)
+- **ExpenseEntity**: Legacy/simple expense model (finance domain)
+- **StateContainerEntity**: Universal container for all value-holding entities (core kernel)
+- **StateMutationEntity**: Audit trail for all container mutations (core kernel)
 
 ### 2. LLM-First Approach
 - Natural language processing for expense extraction
