@@ -80,7 +80,7 @@ All integration tests enforce the following financial invariants after each simu
 - `FinancialAssertions`: Comprehensive invariant checks
 
 ### Test Classes
-- `ValueContainerRepositoryIT`: Basic database connectivity test
+- `StateContainerRepositoryIT`: Basic database connectivity test
 - `MonthlySimulationIT`: Deterministic monthly financial scenarios
 - `FuzzSimulationIT`: Property-based randomized testing with reproducible seeds
 

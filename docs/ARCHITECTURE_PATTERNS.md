@@ -14,7 +14,7 @@ This document outlines the architectural patterns, design decisions, and develop
 
 **Current Structure** (after refactoring):
 The application now follows Domain-Driven Design with:
-- **Shared Kernel**: `core.transaction` and `core.value` (reused across domains)
+- **Shared Kernel**: `core.state` and `core.mutation` (reused across domains)
 - **Domain Packages**: `conversation`, `finance.*`, `food.*` (future)
 - **Clean Dependencies**: Core has no domain dependencies
 
@@ -57,7 +57,7 @@ Database Layer (PostgreSQL)
 **Implementation**:
 ```java
 interface ValueAdjustmentStrategy {
-    void apply(ValueContainerEntity container, AdjustmentCommand cmd);
+    void apply(StateContainerEntity container, StateMutationCommand cmd);
 }
 
 class CashStrategy implements ValueAdjustmentStrategy {
@@ -133,8 +133,8 @@ class IntentClassifier extends BaseLLMExtractor {
 
 **Implementation**:
 ```java
-interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
-    @Query("SELECT COUNT(t) FROM TransactionEntity t WHERE ...")
+interface StateChangeRepository extends JpaRepository<StateChangeEntity, Long> {
+    @Query("SELECT COUNT(t) FROM StateChangeEntity t WHERE ...")
     int countLoanEmis(Long loanId);
 }
 ```
@@ -149,16 +149,16 @@ interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
 
 ### 1.5 Factory Pattern
 
-**Used In**: AdjustmentCommandFactory
+**Used In**: StateMutationCommandFactory
 
 **Purpose**: Create adjustment commands from transactions
 
 **Implementation**:
 ```java
 @Component
-class AdjustmentCommandFactory {
-    public AdjustmentCommand forExpense(TransactionEntity tx) {
-        return AdjustmentCommand.builder()
+class StateMutationCommandFactory {
+    public StateMutationCommand forExpense(StateChangeEntity tx) {
+        return StateMutationCommand.builder()
             .transactionId(tx.getId())
             .type(AdjustmentTypeEnum.DEBIT)
             .amount(tx.getAmount())
@@ -166,8 +166,8 @@ class AdjustmentCommandFactory {
             .build();
     }
     
-    public AdjustmentCommand forIncome(TransactionEntity tx) { ... }
-    public AdjustmentCommand forTransfer(TransactionEntity tx) { ... }
+    public StateMutationCommand forIncome(StateChangeEntity tx) { ... }
+    public StateMutationCommand forTransfer(StateChangeEntity tx) { ... }
 }
 ```
 
@@ -364,7 +364,7 @@ if (!transaction.isFinanciallyApplied()) {
 **Safeguards**:
 - Database flag (`financially_applied`)
 - Check before apply
-- Audit trail (ValueAdjustmentEntity)
+- Audit trail (StateMutationEntity)
 
 ---
 
@@ -402,8 +402,8 @@ if (!transaction.isFinanciallyApplied()) {
 **Decision**: Use PostgreSQL JSONB for extensible metadata
 
 **Used In**:
-- `TransactionEntity.details`
-- `ValueContainerEntity.details`
+- `StateChangeEntity.details`
+- `StateContainerEntity.details`
 - `ExpenseEntity.details`
 
 **Benefits**:
@@ -439,14 +439,14 @@ if (!transaction.isFinanciallyApplied()) {
 
 ### 2.6 Dual Entity Models
 
-**Decision**: Maintain both ExpenseEntity and TransactionEntity
+**Decision**: Maintain both ExpenseEntity and StateChangeEntity
 
 **Rationale**:
 - **ExpenseEntity**: Simple, legacy, UI-focused
-- **TransactionEntity**: Comprehensive, new, business-focused
+- **StateChangeEntity**: Comprehensive, new, business-focused
 
 **Migration Strategy**:
-- New features use TransactionEntity
+- New features use StateChangeEntity
 - Legacy features use ExpenseEntity
 - Gradual migration over time
 - No breaking changes
@@ -548,7 +548,7 @@ record QueryResult(String queryType, TimeRange timeRange, Map<String, Object> fi
 @RequiredArgsConstructor
 public class ExpenseHandler implements SpeechHandler {
     private final ExpenseClassifier llm;
-    private final TransactionRepository repo;
+    private final StateChangeRepository repo;
     private final TagNormalizationService tagService;
     // All injected via constructor
 }
@@ -765,8 +765,8 @@ Never commit secrets!
 **Pattern**: Parameterized queries (JPA/JPQL)
 
 ```java
-@Query("SELECT t FROM TransactionEntity t WHERE t.userId = :userId")
-List<TransactionEntity> findByUserId(@Param("userId") String userId);
+@Query("SELECT t FROM StateChangeEntity t WHERE t.userId = :userId")
+List<StateChangeEntity> findByUserId(@Param("userId") String userId);
 ```
 
 ---
@@ -817,4 +817,4 @@ Use `test-prompts.yml` for regression
 - Keep business logic out of LLM
 - Design for conversation (not forms)
 - Embrace incompleteness (progressive enhancement)
-- Audit everything (ValueAdjustmentEntity)
+- Audit everything (StateMutationEntity)

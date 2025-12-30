@@ -80,7 +80,7 @@ List<ExpenseItemDto> recent = repo.findTop10ByOrderBySpentAtDesc();
 Handles queries like "How many EMIs are left?"
 
 **Flow**:
-1. **Retrieve Active Loans**: Query ValueContainerRepo for active loans
+1. **Retrieve Active Loans**: Query StateContainerRepository for active loans
 2. **No Loans**: Return info message
 3. **Multiple Loans**: Ask user to clarify which loan
    - Store loan IDs in context metadata
@@ -88,7 +88,7 @@ Handles queries like "How many EMIs are left?"
    - Return follow-up question
 4. **Single Loan or Resolved**: Call `computeAndRespond()`
 
-#### `computeAndRespond(ValueContainerEntity loan): SpeechResult`
+#### `computeAndRespond(StateContainerEntity loan): SpeechResult`
 **Computation Logic** (NO LLM here - pure calculation):
 
 1. **Count Paid EMIs**: Query transaction repository
@@ -133,8 +133,8 @@ Handles queries like "How many EMIs are left?"
 - **Separation**: Business logic separate from presentation
 
 ### Dependencies
-- `ValueContainerRepo`: Loan data access
-- `TransactionRepository`: EMI payment history
+- `StateContainerRepository`: Loan data access
+- `StateChangeRepository`: EMI payment history
 - `LoanQueryExplainer`: Natural language generation
 
 ---
@@ -175,14 +175,14 @@ List<String> normalized = tagNormalizationService.normalizeTags(userTags);
 
 ### Key Methods (Inferred)
 
-#### `getActiveContainers(Long userId): List<ValueContainerEntity>`
+#### `getActiveContainers(Long userId): List<StateContainerEntity>`
 Returns all active containers for a user
 - Filters by `ownerType=USER`, `ownerId=userId`, `status=ACTIVE`
 
-#### `findValueContainerById(Long id): ValueContainerEntity`
+#### `findValueContainerById(Long id): StateContainerEntity`
 Retrieves a specific container by ID
 
-#### `createContainer(AccountSetupDto dto): ValueContainerEntity`
+#### `createContainer(AccountSetupDto dto): StateContainerEntity`
 Creates a new container from account setup data
 
 ### Use Cases
@@ -198,13 +198,13 @@ Creates a new container from account setup data
 
 ### Responsibilities
 - Execute balance changes
-- Create audit trail (ValueAdjustmentEntity)
+- Create audit trail (StateMutationEntity)
 - Handle different container types via strategies
 - Enforce business rules (over-limit detection)
 
 ### Key Methods
 
-#### `apply(ValueContainerEntity container, AdjustmentCommand command): void`
+#### `apply(StateContainerEntity container, StateMutationCommand command): void`
 
 **Flow**:
 1. **Resolve Strategy**: Get appropriate strategy for container type
@@ -224,7 +224,7 @@ Creates a new container from account setup data
 
 4. **Create Audit Record**: Log adjustment
    ```java
-   ValueAdjustmentEntity adjustment = new ValueAdjustmentEntity();
+   StateMutationEntity adjustment = new StateMutationEntity();
    adjustment.setTransactionId(command.getTransactionId());
    adjustment.setContainerId(container.getId());
    adjustment.setAdjustmentType(command.getType());
@@ -242,7 +242,7 @@ Different strategies for different container types:
 - **InventoryStrategy**: Quantity-based adjustments
 
 ### Dependencies
-- `ValueContainerRepo`: Container persistence
+- `StateContainerRepository`: Container persistence
 - `ValueAdjustmentRepository`: Audit trail
 - `ValueAdjustmentStrategyResolver`: Strategy selection
 
@@ -259,7 +259,7 @@ Different strategies for different container types:
 ```
 ExpenseHandler
   → ValueContainerService.getActiveContainers()
-  → ValueContainerRepo.findByOwnerIdAndStatus()
+  → StateContainerRepository.findByOwnerIdAndStatus()
 ```
 
 ### Pattern 2: Service → LLM → Service
@@ -337,12 +337,12 @@ Services use Spring's declarative transaction management:
 public class ValueAdjustmentService {
     
     @Transactional(readOnly = true)
-    public ValueContainerEntity findById(Long id) {
+    public StateContainerEntity findById(Long id) {
         // Read-only for performance
     }
     
     @Transactional // Read-write for modifications
-    public void apply(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void apply(StateContainerEntity container, StateMutationCommand cmd) {
         // Atomic: both container update and audit record
     }
 }
@@ -403,10 +403,10 @@ These are caught by:
 class LoanAnalysisServiceTest {
     
     @MockBean
-    private TransactionRepository transactionRepo;
+    private StateChangeRepository transactionRepo;
     
     @MockBean
-    private ValueContainerRepo containerRepo;
+    private StateContainerRepository containerRepo;
     
     @Autowired
     private LoanAnalysisService service;
