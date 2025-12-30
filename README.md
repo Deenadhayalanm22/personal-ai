@@ -12,9 +12,8 @@ This project includes comprehensive documentation to help you understand the arc
 |------|-------------|-------------------|
 | **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | New domain-first package structure | Domain-driven design, shared kernel, package organization |
-| **[testing-strategy.md](docs/testing-strategy.md)** | Testing philosophy and requirements | Unit vs integration vs fuzz tests, why real databases, why no mocks |
+| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Testing philosophy, strategy, and infrastructure | Unit vs integration vs fuzz tests, why real databases, why no mocks, Testcontainers setup, HikariCP config |
 | **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** | Financial rules & invariants (authoritative) | Core invariants, container behavior, scenarios, edge cases |
-| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Integration testing infrastructure | Testcontainers setup, HikariCP config, fuzz testing |
 | **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** | Financial rules coverage analysis | Rule-by-rule mapping to tests, compliance verification |
 | **[REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Complete refactoring history | All package moves, class relocations, import updates |
 | **[ENTITIES.md](docs/ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
@@ -197,10 +196,9 @@ mvn verify -Pintegration -Dfuzz.iterations=100
 
 ### Documentation
 
-- **[testing-strategy.md](docs/testing-strategy.md)** - Complete testing philosophy
+- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Complete testing philosophy and integration test guide
 - **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** - Financial rules & how to add/update them
 - **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** - Coverage analysis
-- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Integration test guide
 
 **Financial correctness protects against regressions. Tests are our contract.**
 
