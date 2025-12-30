@@ -5,6 +5,7 @@ import com.apps.deen_sa.conversation.SpeechOrchestrator;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @Component
 @Log4j2
+@Profile("!integration")
 public class LoadTestData {
 
     private final SpeechOrchestrator orchestrator;

@@ -13,80 +13,86 @@ import org.springframework.context.annotation.Primary;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import static org.mockito.Mockito.*;
+
 @TestConfiguration
 public class LLMTestConfiguration {
 
     @Bean
     @Primary
     public AccountSetupClassifier accountSetupClassifier() {
-        return new AccountSetupClassifier(null) {
-            @Override
-            public AccountSetupDto extractAccount(String text) {
-                // Expect SIM:ACCOUNT;type=...;name=...;current=...;date=YYYY-MM-DD
-                AccountSetupDto dto = new AccountSetupDto();
-                dto.setValid(true);
+        AccountSetupClassifier mock = mock(AccountSetupClassifier.class);
+        
+        when(mock.extractAccount(anyString())).thenAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            // Expect SIM:ACCOUNT;type=...;name=...;current=...;date=YYYY-MM-DD
+            AccountSetupDto dto = new AccountSetupDto();
+            dto.setValid(true);
 
-                String[] parts = text.split(";");
-                for (String p : parts) {
-                    if (p.startsWith("type=")) dto.setContainerType(p.substring(5));
-                    if (p.startsWith("name=")) dto.setName(p.substring(5));
-                    if (p.startsWith("current=")) dto.setCurrentValue(new BigDecimal(p.substring(8)));
-                }
-                return dto;
+            String[] parts = text.split(";");
+            for (String p : parts) {
+                if (p.startsWith("type=")) dto.setContainerType(p.substring(5));
+                if (p.startsWith("name=")) dto.setName(p.substring(5));
+                if (p.startsWith("current=")) dto.setCurrentValue(new BigDecimal(p.substring(8)));
             }
-        };
+            return dto;
+        });
+        
+        return mock;
     }
 
     @Bean
     @Primary
     public ExpenseClassifier expenseClassifier() {
-        return new ExpenseClassifier(null, null, null) {
-            @Override
-            public ExpenseDto extractExpense(String text) {
-                // SIM:EXPENSE;amount=1200;desc=Groceries;source=CREDIT_CARD;date=YYYY-MM-DD
-                ExpenseDto dto = new ExpenseDto();
-                dto.setValid(true);
-                String[] parts = text.split(";");
-                for (String p : parts) {
-                    if (p.startsWith("amount=")) dto.setAmount(new BigDecimal(p.substring(7)));
-                    if (p.startsWith("desc=")) dto.setMerchantName(p.substring(5));
-                    if (p.startsWith("source=")) dto.setSourceAccount(p.substring(7));
-                    if (p.startsWith("date=")) dto.setTransactionDate(LocalDate.parse(p.substring(5)));
-                }
-                return dto;
+        ExpenseClassifier mock = mock(ExpenseClassifier.class);
+        
+        when(mock.extractExpense(anyString())).thenAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            // SIM:EXPENSE;amount=1200;desc=Groceries;source=CREDIT_CARD;date=YYYY-MM-DD
+            ExpenseDto dto = new ExpenseDto();
+            dto.setValid(true);
+            String[] parts = text.split(";");
+            for (String p : parts) {
+                if (p.startsWith("amount=")) dto.setAmount(new BigDecimal(p.substring(7)));
+                if (p.startsWith("desc=")) dto.setMerchantName(p.substring(5));
+                if (p.startsWith("source=")) dto.setSourceAccount(p.substring(7));
+                if (p.startsWith("date=")) dto.setTransactionDate(LocalDate.parse(p.substring(5)));
             }
+            return dto;
+        });
 
-            @Override
-            public ExpenseDto extractFieldFromFollowup(ExpenseDto existing, String missingField, String userAnswer) {
-                return existing;
-            }
+        when(mock.extractFieldFromFollowup(any(), anyString(), anyString())).thenAnswer(invocation ->
+            invocation.getArgument(0)
+        );
 
-            @Override
-            public String generateFollowupQuestionForExpense(String field, ExpenseDto dto) {
-                return "Please provide " + field;
-            }
-        };
+        when(mock.generateFollowupQuestionForExpense(anyString(), any())).thenAnswer(invocation ->
+            "Please provide " + invocation.getArgument(0)
+        );
+        
+        return mock;
     }
 
     @Bean
     @Primary
     public LiabilityPaymentClassifier liabilityPaymentClassifier() {
-        return new LiabilityPaymentClassifier(null, null) {
-            @Override
-            public LiabilityPaymentDto extractPayment(String text) {
-                // SIM:PAYMENT;amount=3000;target= CREDIT_CARD;targetName=Card;date=YYYY-MM-DD;source=BANK_ACCOUNT
-                LiabilityPaymentDto dto = new LiabilityPaymentDto();
-                dto.setValid(true);
-                String[] parts = text.split(";");
-                for (String p : parts) {
-                    if (p.startsWith("amount=")) dto.setAmount(new BigDecimal(p.substring(7)));
-                    if (p.startsWith("targetName=")) dto.setTargetName(p.substring(11));
-                    if (p.startsWith("date=")) dto.setPaymentDate(LocalDate.parse(p.substring(5)));
-                    if (p.startsWith("source=")) dto.setSourceAccount(p.substring(7));
-                    if (p.startsWith("target= ")) dto.setTargetLiability("CREDIT_CARD");
-                }
-                return dto;
+        LiabilityPaymentClassifier mock = mock(LiabilityPaymentClassifier.class);
+        
+        when(mock.extractPayment(anyString())).thenAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            // SIM:PAYMENT;amount=3000;target=CREDIT_CARD;targetName=Card;date=YYYY-MM-DD;source=BANK_ACCOUNT
+            LiabilityPaymentDto dto = new LiabilityPaymentDto();
+            dto.setValid(true);
+            String[] parts = text.split(";");
+            for (String p : parts) {
+                if (p.startsWith("amount=")) dto.setAmount(new BigDecimal(p.substring(7)));
+                if (p.startsWith("targetName=")) dto.setTargetName(p.substring(11));
+                if (p.startsWith("date=")) dto.setPaymentDate(LocalDate.parse(p.substring(5)));
+                if (p.startsWith("source=")) dto.setSourceAccount(p.substring(7));
+                if (p.startsWith("target=")) dto.setTargetLiability(p.substring(7).trim());
             }
-        };
+            return dto;
+        });
+        
+        return mock;
     }
 }

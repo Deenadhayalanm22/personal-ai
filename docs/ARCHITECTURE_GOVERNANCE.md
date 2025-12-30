@@ -22,6 +22,8 @@ Documentation sprawl leads to:
 | Entities & database schema | `ENTITIES.md` | Data model, relationships, lifecycle |
 | Refactoring history | `REFACTORING_SUMMARY.md` | Package moves, class renames |
 | LLM behavior & prompts | `LLM_PROMPT_CONTEXT.md` | LLM integration patterns |
+| Integration testing | `INTEGRATION_TESTING.md` | Testing framework, patterns, rules |
+| Integration testing rules template | `INTEGRATION_TESTING_RULES_TEMPLATE.md` | Template for adding new testing rules |
 
 ## Prohibited Documentation Patterns
 

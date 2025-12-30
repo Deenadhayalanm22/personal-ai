@@ -1,0 +1,26 @@
+-- Initial schema for integration tests
+CREATE TABLE IF NOT EXISTS value_container (
+    id BIGSERIAL PRIMARY KEY,
+    owner_type VARCHAR(30) NOT NULL,
+    owner_id BIGINT NOT NULL,
+    container_type VARCHAR(30) NOT NULL,
+    name TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    currency VARCHAR(10),
+    current_value NUMERIC(19,4),
+    available_value NUMERIC(19,4),
+    unit VARCHAR(20),
+    capacity_limit NUMERIC(19,4),
+    min_threshold NUMERIC(19,4),
+    priority_order INTEGER,
+    opened_at TIMESTAMP,
+    closed_at TIMESTAMP,
+    last_activity_at TIMESTAMP,
+    external_ref_type VARCHAR(30),
+    external_ref_id TEXT,
+    details JSONB,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    over_limit BOOLEAN DEFAULT FALSE,
+    over_limit_amount NUMERIC(19,4)
+);

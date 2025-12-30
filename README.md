@@ -12,6 +12,10 @@ This project includes comprehensive documentation to help you understand the arc
 |------|-------------|-------------------|
 | **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | New domain-first package structure | Domain-driven design, shared kernel, package organization |
+| **[testing-strategy.md](docs/testing-strategy.md)** | Testing philosophy and requirements | Unit vs integration vs fuzz tests, why real databases, why no mocks |
+| **[financial-rules/README.md](docs/financial-rules/README.md)** | Financial rules documentation guide | Rule hierarchy, how to add rules, production bug process |
+| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Integration testing infrastructure | Testcontainers setup, HikariCP config, fuzz testing |
+| **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** | Financial rules coverage analysis | Rule-by-rule mapping to tests, compliance verification |
 | **[REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Complete refactoring history | All package moves, class relocations, import updates |
 | **[ENTITIES.md](docs/ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
 | **[SERVICES.md](docs/SERVICES.md)** | Service layer logic and responsibilities | Business logic, service interactions, transaction management |
@@ -109,11 +113,107 @@ User: "Cash"
   → Confirms: "Recorded ₹500 expense from Cash"
 ```
 
-## 🧪 Testing
+## 💰 Financial Correctness & Testing Philosophy
+
+This is a **production-grade finance application**. Financial correctness is non-negotiable.
+
+### Rule Hierarchy
+
+```
+Documents > Tests > Code
+```
+
+**Financial rules are defined in natural language** in `/docs/financial-rules/`:
+- `01-core-invariants.md` - Fundamental financial laws (idempotency, no duplicate application)
+- `02-container-behavior.md` - Account/container behavior rules
+- `03-transaction-scenarios.md` - Canonical test scenarios
+- `04-edge-cases.md` - Edge case handling
+- `05-assumptions.md` - System assumptions
+
+**Integration tests enforce these rules.** Production code must pass tests that enforce documented rules.
+
+### Testing Strategy
+
+**Unit Tests**: Fast feedback on business logic (mocks allowed)
+```bash
+mvn clean test
+```
+
+**Integration Tests**: Enforce financial correctness (NO mocks, real PostgreSQL via Testcontainers)
+```bash
+mvn clean verify -Pintegration
+```
+
+**Fuzz Tests**: Discover edge cases via randomized scenarios (50+ iterations, deterministic seeds)
+```bash
+mvn verify -Pintegration -Dfuzz.iterations=100
+```
+
+### Financial Invariants
+
+Every integration test verifies **8 financial invariants**:
+
+1. **No Orphan Adjustments** - Every adjustment references valid transaction
+2. **Adjustment-Transaction Consistency** - Applied transactions have adjustments
+3. **Balance Integrity** - Balance = opening + credits - debits
+4. **Money Conservation** - Total money across containers constant
+5. **No Negative Balances** - Assets (CASH, BANK_ACCOUNT) ≥ 0
+6. **Capacity Limits** - Liabilities respect capacity limits
+7. **Transaction Validity** - Valid type, non-null amount, non-negative
+8. **Idempotency** - Rerunning simulation produces identical results
+
+### Why Real Databases?
+
+**Testcontainers + PostgreSQL 16 is mandatory for integration tests.**
+
+- ❌ **NO H2/HSQLDB/Derby** - In-memory databases hide financial bugs
+- ❌ **NO Mocks in Integration Tests** - Mocks bypass invariant checks
+- ✅ **Real PostgreSQL** - Same behavior as production
+- ✅ **Real Services** - Test actual transaction boundaries
+- ✅ **Real Constraints** - Foreign keys, triggers, precision
+
+### Deterministic Simulations
+
+All financial scenarios are reproducible:
 
 ```bash
-# Run all tests
-mvn test
+# Test fails with seed 1042
+mvn verify -Pintegration -Dtest=FuzzSimulationIT#testReproduceSeed -Dfuzz.seed=1042
+```
+
+### CI Enforcement
+
+**GitHub Actions blocks PR merges on rule violations.**
+
+Pull request validation:
+```bash
+mvn clean verify -Pintegration -Dfuzz.iterations=50
+```
+
+Nightly comprehensive testing:
+```bash
+mvn verify -Pintegration -Dfuzz.iterations=100
+```
+
+### Documentation
+
+- **[testing-strategy.md](docs/testing-strategy.md)** - Complete testing philosophy
+- **[financial-rules/README.md](docs/financial-rules/README.md)** - How to add/update rules
+- **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** - Coverage analysis
+- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Integration test guide
+
+**Financial correctness protects against regressions. Tests are our contract.**
+
+---
+
+## 🧪 Testing (General)
+
+```bash
+# Run unit tests only
+mvn clean test
+
+# Run integration tests (requires Docker)
+mvn clean verify -Pintegration
 
 # Run specific test
 mvn test -Dtest=ExpenseHandlerTest
