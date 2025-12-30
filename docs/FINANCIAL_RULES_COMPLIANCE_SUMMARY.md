@@ -16,13 +16,13 @@ No additional test coverage required. System is production-ready from financial 
 
 ## What Was Audited
 
-Mapped each rule in `/docs/financial-rules/` to test coverage:
+Mapped each section of `/docs/FINANCIAL_RULES.md` to test coverage:
 
-1. ✅ **01-core-invariants.md** - No duplicate financial application
-2. ✅ **02-container-behavior.md** - Cash & credit card rules
-3. ✅ **03-transaction-scenarios.md** - Canonical credit card month
-4. ✅ **04-edge-cases.md** - Duplicates, ordering, partial failures
-5. ✅ **05-assumptions.md** - Determinism, database as truth
+1. ✅ **Section 1: Core Invariants** - No duplicate financial application, idempotency
+2. ✅ **Section 2: Container Behavior** - Cash, bank & credit card rules
+3. ✅ **Section 3: Canonical Scenarios** - Typical credit card month scenario
+4. ✅ **Section 4: Edge Cases** - Duplicates, ordering, partial failures
+5. ✅ **Section 5: System Assumptions** - Determinism, database as truth
 
 ---
 

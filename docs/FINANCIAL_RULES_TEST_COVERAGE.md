@@ -10,7 +10,7 @@ This document maps documented financial rules to integration test coverage.
 
 ## Coverage Matrix
 
-### 01-core-invariants.md
+### Section 1: Core Invariants (FINANCIAL_RULES.md)
 
 #### Invariant 1: No Duplicate Financial Application
 
@@ -30,7 +30,7 @@ This document maps documented financial rules to integration test coverage.
 
 ---
 
-### 02-container-behavior.md
+### Section 2: Container Behavior (FINANCIAL_RULES.md)
 
 #### Cash Container Rules
 
@@ -62,7 +62,7 @@ This document maps documented financial rules to integration test coverage.
 
 ---
 
-### 03-transaction-scenarios.md
+### Section 3: Canonical Scenarios (FINANCIAL_RULES.md)
 
 #### Canonical Credit Card Month
 
@@ -86,7 +86,7 @@ This document maps documented financial rules to integration test coverage.
 
 ---
 
-### 04-edge-cases.md
+### Section 4: Edge Cases (FINANCIAL_RULES.md)
 
 #### Duplicate Events
 
@@ -122,7 +122,7 @@ This document maps documented financial rules to integration test coverage.
 
 ---
 
-### 05-assumptions.md
+### Section 5: System Assumptions (FINANCIAL_RULES.md)
 
 #### Deterministic Calculations
 
@@ -208,11 +208,11 @@ All integration tests enforce these invariants after each simulation:
 
 ## Compliance Statement
 
-**All documented financial rules from docs/financial-rules/ are enforced by integration tests.**
+**All documented financial rules from docs/FINANCIAL_RULES.md are enforced by integration tests.**
 
-- Core invariants: ✅ Fully tested
-- Container behavior: ✅ Fully tested
-- Transaction scenarios: ✅ Tested with minor variation
+- Core invariants (Section 1): ✅ Fully tested
+- Container behavior (Section 2): ✅ Fully tested
+- Transaction scenarios (Section 3): ✅ Tested with minor variation
 - Edge cases: ✅ Covered via idempotency + fuzz tests
 - Assumptions: ✅ Verified
 

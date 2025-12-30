@@ -179,12 +179,12 @@ when(repo.save(tx)).thenReturn(tx);
 
 ### 1. Documents > Tests > Code
 
-Financial rules are defined in natural language first:
-- `/docs/financial-rules/01-core-invariants.md`
-- `/docs/financial-rules/02-container-behavior.md`
-- `/docs/financial-rules/03-transaction-scenarios.md`
-- `/docs/financial-rules/04-edge-cases.md`
-- `/docs/financial-rules/05-assumptions.md`
+Financial rules are defined in natural language first in `/docs/FINANCIAL_RULES.md`:
+- Section 1: Core Invariants
+- Section 2: Container Behavior
+- Section 3: Canonical Scenarios
+- Section 4: Edge Cases
+- Section 5: System Assumptions
 
 **Integration tests enforce these documents.**
 
