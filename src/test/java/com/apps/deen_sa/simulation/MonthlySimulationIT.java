@@ -47,9 +47,6 @@ public class MonthlySimulationIT extends IntegrationTestBase {
     
     @Autowired
     TransactionTemplate transactionTemplate;
-    
-    @Autowired
-    StateContainerService stateContainerService;
 
     @org.junit.jupiter.api.BeforeEach
     @org.junit.jupiter.api.AfterEach
@@ -61,8 +58,6 @@ public class MonthlySimulationIT extends IntegrationTestBase {
             valueContainerRepo.deleteAll();
             return null;
         });
-        // Clear cache to prevent stale container references
-        // Note: stateContainerService has access to the cache
     }
 
     @Test
@@ -94,13 +89,17 @@ public class MonthlySimulationIT extends IntegrationTestBase {
 
         // Capture opening balances BEFORE any financial operations (from setup)
         // Bank account starts with 100,000, credit card starts with 0
-        Map<Long, BigDecimal> opening = Map.of(
-            valueContainerRepo.findAll().stream()
+        List<StateContainerEntity> containers = valueContainerRepo.findAll();
+        Long bankId = containers.stream()
                 .filter(c -> c.getContainerType().equals("BANK_ACCOUNT"))
-                .findFirst().orElseThrow().getId(), new BigDecimal("100000"),
-            valueContainerRepo.findAll().stream()
+                .findFirst().orElseThrow(() -> new IllegalStateException("Bank account not found")).getId();
+        Long creditCardId = containers.stream()
                 .filter(c -> c.getContainerType().equals("CREDIT_CARD"))
-                .findFirst().orElseThrow().getId(), BigDecimal.ZERO
+                .findFirst().orElseThrow(() -> new IllegalStateException("Credit card not found")).getId();
+        
+        Map<Long, BigDecimal> opening = Map.of(
+            bankId, new BigDecimal("100000"),
+            creditCardId, BigDecimal.ZERO
         );
 
         // For each container assert balance integrity
@@ -114,6 +113,14 @@ public class MonthlySimulationIT extends IntegrationTestBase {
 
         @Test
         void rerunSimulationIsIdempotent() {
+        // Clean state before this test
+        transactionTemplate.execute(status -> {
+            valueAdjustmentRepository.deleteAll();
+            transactionRepository.deleteAll();
+            valueContainerRepo.deleteAll();
+            return null;
+        });
+        
         FinancialSimulationContext ctx = new FinancialSimulationContext(
             accountSetupHandler,
             expenseHandler,
