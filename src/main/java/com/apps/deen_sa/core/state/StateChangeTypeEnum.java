@@ -11,6 +11,7 @@ public enum StateChangeTypeEnum {
     LOAN_TAKEN,
     LOAN_PAYMENT,
     INVESTMENT,
+    ASSET_BUY,
     PAYROLL,
     ADVANCE,
     DEDUCTION,
