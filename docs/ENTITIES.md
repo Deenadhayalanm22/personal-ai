@@ -13,7 +13,7 @@ The entity layer represents the domain model and database schema using JPA annot
 ```
 ┌─────────────────────┐
 │  StateChangeEntity  │◄────────┐
-│  (transaction_rec)  │         │
+│  (state_change)     │         │
 └─────────────────────┘         │
          │                      │
          │ sourceContainerId    │ transactionId
@@ -21,14 +21,14 @@ The entity layer represents the domain model and database schema using JPA annot
          ↓                      │
 ┌─────────────────────┐         │
 │ StateContainerEntity│         │
-│  (value_container)  │         │
+│  (state_container)  │         │
 └─────────────────────┘         │
          ↑                      │
          │ containerId          │
          │                      │
 ┌─────────────────────┐         │
 │ StateMutationEntity │─────────┘
-│ (value_adjustments) │
+│ (state_mutation)    │
 └─────────────────────┘
 
 ┌─────────────────────┐
@@ -46,7 +46,7 @@ The entity layer represents the domain model and database schema using JPA annot
 
 ## 1. StateChangeEntity
 
-**Table**: `transaction_rec`  
+**Table**: `state_change`  
 **Package**: `com.apps.deen_sa.core.state`  
 **Purpose**: Core state change recording with flexible design supporting multiple transaction types across domains.
 
@@ -105,7 +105,7 @@ The entity layer represents the domain model and database schema using JPA annot
 
 ## 2. StateContainerEntity
 
-**Table**: `value_container`  
+**Table**: `state_container`  
 **Package**: `com.apps.deen_sa.core.state`  
 **Purpose**: Universal container for all value-holding entities (accounts, loans, inventory, receivables, etc.) across domains.
 
@@ -205,7 +205,7 @@ currency: null
 
 ## 3. StateMutationEntity
 
-**Table**: `value_adjustments`  
+**Table**: `state_mutation`  
 **Package**: `com.apps.deen_sa.core.mutation`  
 **Purpose**: Audit trail for all mutations to state containers across domains
 
@@ -343,10 +343,10 @@ CREDIT  // Increases container value
 
 ### Indexes
 Recommended indexes (not shown in entity code):
-- `transaction_rec(user_id, timestamp)`
-- `value_container(owner_id, container_type, status)`
-- `value_adjustments(transaction_id)`
-- `value_adjustments(container_id, occurred_at)`
+- `state_change(user_id, timestamp)`
+- `state_container(owner_id, container_type, status)`
+- `state_mutation(transaction_id)`
+- `state_mutation(container_id, occurred_at)`
 
 ---
 

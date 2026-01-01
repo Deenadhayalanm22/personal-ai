@@ -79,18 +79,18 @@ December 29, 2025
 
 #### finance.account
 **Classes Moved:**
-- **ValueContainerService** (from service)
-- **ValueAdjustmentService** (from service)
+- **StateContainerService** (from service)
+- **StateMutationService** (from service)
 - **AccountSetupHandler** (from handler)
 - **AccountSetupValidator** (from validator)
-- **ValueContainerCache** (from cache)
-- **InMemoryValueContainerCache** (from cache)
+- **StateContainerCache** (from cache)
+- **InMemoryStateContainerCache** (from cache)
 
 #### finance.account.strategy
 **Classes Moved:**
 - **StateMutationCommandFactory** (from resolver)
-- **ValueAdjustmentStrategyResolver** (from resolver)
-- **ValueAdjustmentStrategy** (from strategy)
+- **StateMutationStrategyResolver** (from resolver)
+- **StateMutationStrategy** (from strategy)
 - **CreditSettlementStrategy** (from strategy)
 - **CashLikeStrategy** (from strategy.impl)
 - **CreditCardStrategy** (from strategy.impl)

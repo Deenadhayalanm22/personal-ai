@@ -28,7 +28,7 @@ This framework enables **deterministic, repeatable financial simulations** for i
 │  Real Production Services           │  AccountSetupHandler
 │  (No Mocks!)                        │  ExpenseHandler
 │                                     │  LiabilityPaymentHandler
-│                                     │  ValueContainerService
+│                                     │  StateContainerService
 └─────────────────────────────────────┘
 ```
 
@@ -342,9 +342,9 @@ for (ScenarioAction action : scenario) {
 ### Step 4: Inspect Database
 Add breakpoint after `runner.run()` and inspect:
 ```sql
-SELECT * FROM value_container;
-SELECT * FROM transaction;
-SELECT * FROM value_adjustment;
+SELECT * FROM state_container;
+SELECT * FROM state_change;
+SELECT * FROM state_mutation;
 ```
 
 ## Extending the Framework

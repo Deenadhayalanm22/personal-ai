@@ -64,15 +64,15 @@ class CashStrategy implements StateMutationStrategy {
     // Simple debit/credit
 }
 
-class CreditStrategy implements ValueAdjustmentStrategy {
+class CreditStrategy implements StateMutationStrategy {
     // Credit limit checks, over-limit detection
 }
 
-class BankStrategy implements ValueAdjustmentStrategy {
+class BankStrategy implements StateMutationStrategy {
     // Minimum balance checks
 }
 
-class InventoryStrategy implements ValueAdjustmentStrategy {
+class InventoryStrategy implements StateMutationStrategy {
     // Quantity-based adjustments
 }
 ```
@@ -80,8 +80,8 @@ class InventoryStrategy implements ValueAdjustmentStrategy {
 **Resolver**:
 ```java
 @Component
-class ValueAdjustmentStrategyResolver {
-    public ValueAdjustmentStrategy resolve(String containerType) {
+class StateMutationStrategyResolver {
+    public StateMutationStrategy resolve(String containerType) {
         return strategies.get(containerType);
     }
 }
@@ -715,10 +715,10 @@ private String businessId;
 
 **Critical Indexes**:
 ```sql
-CREATE INDEX idx_transaction_user_time ON transaction_rec(user_id, timestamp);
-CREATE INDEX idx_container_owner ON value_container(owner_id, container_type, status);
-CREATE INDEX idx_adjustment_tx ON value_adjustments(transaction_id);
-CREATE INDEX idx_adjustment_container ON value_adjustments(container_id, occurred_at);
+CREATE INDEX idx_statechange_user_time ON state_change(user_id, timestamp);
+CREATE INDEX idx_container_owner ON state_container(owner_id, container_type, status);
+CREATE INDEX idx_mutation_tx ON state_mutation(transaction_id);
+CREATE INDEX idx_mutation_container ON state_mutation(container_id, occurred_at);
 ```
 
 ---
