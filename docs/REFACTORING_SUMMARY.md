@@ -17,29 +17,24 @@ December 29, 2025
 - **StateChangeTypeEnum** (from utils)
 - **StateContainerEntity** (from entity)
 - **StateContainerRepository** (from repo)
-- **StateContainerService** (from finance.account)
+- **StateContainerService** (domain-agnostic CRUD service)
 - **CompletenessLevelEnum** (from utils)
 
 #### core.state.cache
-- **StateContainerCache** (from finance.account)
-- **InMemoryStateContainerCache** (from finance.account)
+- **StateContainerCache** (caching interface)
+- **InMemoryStateContainerCache** (generic cache implementation)
 
 #### core.mutation  
 - **StateMutationEntity** (from entity)
 - **StateMutationRepository** (from repo)
-- **StateMutationService** (from finance.account)
+- **StateMutationService** (orchestration/pipeline service)
 - **MutationTypeEnum** (from utils)
 
 #### core.mutation.strategy
-- **AdjustmentCommandFactory** (from finance.account.strategy)
-- **StateMutationStrategyResolver** (from finance.account.strategy)
-- **StateMutationStrategy** (from finance.account.strategy)
-- **CreditSettlementStrategy** (from finance.account.strategy)
-- **CashLikeStrategy** (from finance.account.strategy)
-- **CreditCardStrategy** (from finance.account.strategy)
-- **LoanStrategy** (from finance.account.strategy)
+- **StateMutationStrategy** (SPI interface - domain-agnostic contract)
+- **StateMutationStrategyResolver** (generic resolver, no domain logic)
 
-**Rationale:** These are foundational business concepts used across multiple domains. Services and strategies that operate on core entities belong in the core package to maintain the shared kernel pattern. No dependencies on finance, food, or conversation domains.
+**Rationale:** The kernel contains ONLY domain-agnostic mechanisms. Strategy implementations with finance-specific logic (cash, credit, loans) have been moved to finance.account.strategy. Core provides only the SPI (interface) and generic resolver. No dependencies on finance, food, or any other domain.
 
 ---
 
@@ -97,7 +92,15 @@ December 29, 2025
 - **AccountSetupHandler** (from handler)
 - **AccountSetupValidator** (from validator)
 
-**Rationale:** Account setup is finance-domain specific, handling user onboarding for financial accounts.
+#### finance.account.strategy
+**Finance-Specific Strategy Implementations:**
+- **AdjustmentCommandFactory** (creates finance-specific commands)
+- **CreditSettlementStrategy** (finance-specific interface for credit/loan payments)
+- **CashLikeStrategy** (implements core.mutation.strategy.StateMutationStrategy)
+- **CreditCardStrategy** (implements core.mutation.strategy.StateMutationStrategy)
+- **LoanStrategy** (implements core.mutation.strategy.StateMutationStrategy)
+
+**Rationale:** Account setup is finance-domain specific. Strategy implementations contain finance business logic (cash, credit cards, loans, EMI, over-limit detection) and belong in the finance domain. They implement the core SPI contract (StateMutationStrategy) but encode finance-specific rules.
 
 ---
 

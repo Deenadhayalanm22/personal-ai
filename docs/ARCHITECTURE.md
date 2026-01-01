@@ -22,13 +22,8 @@ com.apps.deen_sa
 │       ├── StateMutationService
 │       ├── MutationTypeEnum
 │       └── strategy
-│           ├── AdjustmentCommandFactory (creates StateMutationCommands)
-│           ├── StateMutationStrategyResolver
-│           ├── StateMutationStrategy
-│           ├── CreditSettlementStrategy
-│           ├── CashLikeStrategy
-│           ├── CreditCardStrategy
-│           └── LoanStrategy
+│           ├── StateMutationStrategy (interface - SPI contract)
+│           └── StateMutationStrategyResolver (generic resolver)
 │
 ├── conversation (Conversational Orchestration)
 │   ├── SpeechOrchestrator
@@ -72,7 +67,13 @@ com.apps.deen_sa
 │   │
 │   └── account
 │       ├── AccountSetupHandler
-│       └── AccountSetupValidator
+│       ├── AccountSetupValidator
+│       └── strategy
+│           ├── AdjustmentCommandFactory (finance-specific)
+│           ├── CreditSettlementStrategy (finance-specific interface)
+│           ├── CashLikeStrategy (implements core.mutation.strategy.StateMutationStrategy)
+│           ├── CreditCardStrategy (implements core.mutation.strategy.StateMutationStrategy)
+│           └── LoanStrategy (implements core.mutation.strategy.StateMutationStrategy)
 │
 ├── food (Reserved for Future)
 │   ├── recipe (empty)

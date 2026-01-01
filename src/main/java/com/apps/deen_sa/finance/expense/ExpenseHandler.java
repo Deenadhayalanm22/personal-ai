@@ -11,7 +11,7 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.core.state.StateChangeRepository;
-import com.apps.deen_sa.core.mutation.strategy.AdjustmentCommandFactory;
+import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategyResolver;
 import com.apps.deen_sa.finance.expense.TagNormalizationService;
 import com.apps.deen_sa.core.mutation.StateMutationService;

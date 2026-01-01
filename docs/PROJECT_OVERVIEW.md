@@ -76,14 +76,9 @@ src/main/java/com/apps/deen_sa/
 │       ├── StateMutationRepository.java
 │       ├── StateMutationService.java
 │       ├── MutationTypeEnum.java
-│       └── strategy/                   # State mutation strategies
-│           ├── StateMutationStrategy.java
-│           ├── StateMutationStrategyResolver.java
-│           ├── AdjustmentCommandFactory.java (creates StateMutationCommands)
-│           ├── CreditSettlementStrategy.java
-│           ├── CashLikeStrategy.java
-│           ├── CreditCardStrategy.java
-│           └── LoanStrategy.java
+│       └── strategy/                   # SPI contracts only
+│           ├── StateMutationStrategy.java (interface)
+│           └── StateMutationStrategyResolver.java (generic resolver)
 │
 ├── conversation/                        # 💬 CONVERSATION DOMAIN
 │   ├── SpeechOrchestrator.java        # Main conversation orchestrator
@@ -127,7 +122,13 @@ src/main/java/com/apps/deen_sa/
 │   │
 │   └── account/                        # Account setup subdomain
 │       ├── AccountSetupHandler.java
-│       └── AccountSetupValidator.java
+│       ├── AccountSetupValidator.java
+│       └── strategy/                   # Finance-specific strategies
+│           ├── AdjustmentCommandFactory.java (creates finance commands)
+│           ├── CreditSettlementStrategy.java (finance-specific interface)
+│           ├── CashLikeStrategy.java (implements core SPI)
+│           ├── CreditCardStrategy.java (implements core SPI)
+│           └── LoanStrategy.java (implements core SPI)
 │
 ├── food/                                # 🥘 FOOD DOMAIN (reserved for future)
 │   ├── recipe/                         # (empty)
