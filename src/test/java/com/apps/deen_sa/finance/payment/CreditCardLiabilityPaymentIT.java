@@ -73,6 +73,7 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
     @PersistenceContext
     EntityManager entityManager;
 
+    @org.junit.jupiter.api.BeforeEach
     @org.junit.jupiter.api.AfterEach
     void cleanupTestData() {
         transactionTemplate.execute(status -> {
