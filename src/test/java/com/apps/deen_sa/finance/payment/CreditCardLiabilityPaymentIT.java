@@ -11,6 +11,8 @@ import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.account.AccountSetupHandler;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import com.apps.deen_sa.simulation.LLMTestConfiguration;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,8 +69,11 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
 
     @Autowired
     TransactionTemplate transactionTemplate;
+    
+    @PersistenceContext
+    EntityManager entityManager;
 
-    @BeforeEach
+    @org.junit.jupiter.api.AfterEach
     void cleanupTestData() {
         transactionTemplate.execute(status -> {
             // Delete in reverse order of dependencies
@@ -98,24 +104,40 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
      */
     @Test
     void creditCardUsageWithinLimit_thenFullPayment_restoresCapacity() {
-        // ============================================
-        // SETUP: Create containers
-        // ============================================
-        ConversationContext ctx = new ConversationContext();
         
-        // Create bank account with 200,000
-        accountSetupHandler.handleSpeech(
-            "SIM:ACCOUNT;type=BANK_ACCOUNT;name=My Bank;current=200000;date=2024-01-01",
-            ctx
-        );
+        // Setup containers and capture IDs in a single transaction
+        Long bankAccountId = transactionTemplate.execute(status -> {
+            // Create bank account with 200,000
+            StateContainerEntity bankAccount = new StateContainerEntity();
+            bankAccount.setOwnerType("USER");
+            bankAccount.setOwnerId(1L);
+            bankAccount.setContainerType("BANK_ACCOUNT");
+            bankAccount.setName("My Bank");
+            bankAccount.setStatus("ACTIVE");
+            bankAccount.setCurrency("INR");
+            bankAccount.setCurrentValue(new BigDecimal("200000"));
+            bankAccount.setOpenedAt(Instant.now());
+            bankAccount = valueContainerRepo.save(bankAccount);
+            
+            // Create credit card with 50,000 limit and 0 outstanding
+            StateContainerEntity creditCard = new StateContainerEntity();
+            creditCard.setOwnerType("USER");
+            creditCard.setOwnerId(1L);
+            creditCard.setContainerType("CREDIT_CARD");
+            creditCard.setName("My Card");
+            creditCard.setStatus("ACTIVE");
+            creditCard.setCurrency("INR");
+            creditCard.setCurrentValue(BigDecimal.ZERO);
+            creditCard.setCapacityLimit(new BigDecimal("50000"));
+            creditCard.setOverLimit(false);
+            creditCard.setOverLimitAmount(BigDecimal.ZERO);
+            creditCard.setOpenedAt(Instant.now());
+            creditCard = valueContainerRepo.save(creditCard);
+            
+            return bankAccount.getId();
+        });
         
-        // Create credit card with 50,000 limit and 0 outstanding
-        accountSetupHandler.handleSpeech(
-            "SIM:ACCOUNT;type=CREDIT_CARD;name=My Card;current=0;date=2024-01-01",
-            ctx
-        );
-        
-        // Fetch containers
+        // Fetch containers outside transaction
         List<StateContainerEntity> containers = stateContainerService.getActiveContainers(1L);
         StateContainerEntity bankAccount = containers.stream()
             .filter(c -> c.getContainerType().equals("BANK_ACCOUNT"))
@@ -127,9 +149,12 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Credit card not created"));
         
-        // Set credit limit on credit card
-        creditCard.setCapacityLimit(new BigDecimal("50000"));
-        stateContainerService.UpdateValueContainer(creditCard);
+        // Capture opening balances BEFORE any operations
+        Map<Long, BigDecimal> openingBalances = valueContainerRepo.findAll().stream()
+            .collect(Collectors.toMap(
+                StateContainerEntity::getId,
+                v -> v.getCurrentValue() == null ? BigDecimal.ZERO : v.getCurrentValue()
+            ));
         
         // Verify initial state
         assertEquals(0, new BigDecimal("200000").compareTo(bankAccount.getCurrentValue()),
@@ -158,7 +183,7 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
         for (int i = 0; i < expenseAmounts.length; i++) {
             BigDecimal amount = expenseAmounts[i];
             expenseHandler.handleSpeech(
-                String.format("SIM:EXPENSE;amount=%s;desc=Expense%d;source=CREDIT_CARD;date=2024-01-%02d",
+                String.format("SIM:EXPENSE;amount=%s;desc=Expense%d;source=CREDIT_CARD;category=Shopping;date=2024-01-%02d",
                     amount, i+1, i+2),
                 new ConversationContext()
             );
@@ -231,20 +256,14 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
         // (which is enforced by the handler implementation)
         
         // 7. All financial invariants pass
-        Map<Long, BigDecimal> opening = valueContainerRepo.findAll().stream()
-            .collect(Collectors.toMap(
-                StateContainerEntity::getId,
-                v -> v.getCurrentValue() == null ? BigDecimal.ZERO : v.getCurrentValue()
-            ));
-        
         FinancialAssertions.assertNoOrphanAdjustments(valueAdjustmentRepository, transactionRepository);
         FinancialAssertions.assertAdjustmentsMatchTransactions(transactionRepository, valueAdjustmentRepository);
         FinancialAssertions.assertNoNegativeBalances(valueContainerRepo);
         FinancialAssertions.assertAllTransactionsHaveValidStatus(transactionRepository);
         
-        // Verify each container's balance integrity
-        for (Long cid : opening.keySet()) {
-            FinancialAssertions.assertContainerBalance(cid, opening.get(cid), valueAdjustmentRepository, valueContainerRepo);
+        // Verify each container's balance integrity using opening balances
+        for (Long cid : openingBalances.keySet()) {
+            FinancialAssertions.assertContainerBalance(cid, openingBalances.get(cid), valueAdjustmentRepository, valueContainerRepo);
         }
     }
 
@@ -269,24 +288,40 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
      */
     @Test
     void creditCardOverLimit_thenPartialPayment_remainingOutstanding() {
-        // ============================================
-        // SETUP: Create containers
-        // ============================================
-        ConversationContext ctx = new ConversationContext();
         
-        // Create bank account with 200,000
-        accountSetupHandler.handleSpeech(
-            "SIM:ACCOUNT;type=BANK_ACCOUNT;name=My Bank;current=200000;date=2024-01-01",
-            ctx
-        );
+        // Setup containers in a single transaction
+        transactionTemplate.execute(status -> {
+            // Create bank account with 200,000
+            StateContainerEntity bankAccount = new StateContainerEntity();
+            bankAccount.setOwnerType("USER");
+            bankAccount.setOwnerId(1L);
+            bankAccount.setContainerType("BANK_ACCOUNT");
+            bankAccount.setName("My Bank");
+            bankAccount.setStatus("ACTIVE");
+            bankAccount.setCurrency("INR");
+            bankAccount.setCurrentValue(new BigDecimal("200000"));
+            bankAccount.setOpenedAt(Instant.now());
+            bankAccount = valueContainerRepo.save(bankAccount);
+            
+            // Create credit card with 50,000 limit and 0 outstanding
+            StateContainerEntity creditCard = new StateContainerEntity();
+            creditCard.setOwnerType("USER");
+            creditCard.setOwnerId(1L);
+            creditCard.setContainerType("CREDIT_CARD");
+            creditCard.setName("My Card");
+            creditCard.setStatus("ACTIVE");
+            creditCard.setCurrency("INR");
+            creditCard.setCurrentValue(BigDecimal.ZERO);
+            creditCard.setCapacityLimit(new BigDecimal("50000"));
+            creditCard.setOverLimit(false);
+            creditCard.setOverLimitAmount(BigDecimal.ZERO);
+            creditCard.setOpenedAt(Instant.now());
+            creditCard = valueContainerRepo.save(creditCard);
+            
+            return null;
+        });
         
-        // Create credit card with 50,000 limit and 0 outstanding
-        accountSetupHandler.handleSpeech(
-            "SIM:ACCOUNT;type=CREDIT_CARD;name=My Card;current=0;date=2024-01-01",
-            ctx
-        );
-        
-        // Fetch containers
+        // Fetch containers outside transaction
         List<StateContainerEntity> containers = stateContainerService.getActiveContainers(1L);
         StateContainerEntity bankAccount = containers.stream()
             .filter(c -> c.getContainerType().equals("BANK_ACCOUNT"))
@@ -298,9 +333,12 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Credit card not created"));
         
-        // Set credit limit on credit card
-        creditCard.setCapacityLimit(new BigDecimal("50000"));
-        stateContainerService.UpdateValueContainer(creditCard);
+        // Capture opening balances BEFORE any operations
+        Map<Long, BigDecimal> openingBalances = valueContainerRepo.findAll().stream()
+            .collect(Collectors.toMap(
+                StateContainerEntity::getId,
+                v -> v.getCurrentValue() == null ? BigDecimal.ZERO : v.getCurrentValue()
+            ));
         
         BigDecimal initialBankBalance = bankAccount.getCurrentValue();
         
@@ -326,7 +364,7 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
         for (int i = 0; i < expenseAmounts.length; i++) {
             BigDecimal amount = expenseAmounts[i];
             expenseHandler.handleSpeech(
-                String.format("SIM:EXPENSE;amount=%s;desc=OverLimitExpense%d;source=CREDIT_CARD;date=2024-01-%02d",
+                String.format("SIM:EXPENSE;amount=%s;desc=OverLimitExpense%d;source=CREDIT_CARD;category=Shopping;date=2024-01-%02d",
                     amount, i+1, i+2),
                 new ConversationContext()
             );
@@ -382,7 +420,7 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
         // 1. Credit card outstanding = (totalExpenses - 30,000)
         BigDecimal expectedOutstanding = totalExpenses.subtract(partialPayment);
         assertEquals(0, expectedOutstanding.compareTo(creditCard.getCurrentValue()),
-            "Outstanding should be " + expectedOutstanding + " after partial payment");
+            "Outstanding should be " + expectedOutstanding + " after partial payment, but was " + creditCard.getCurrentValue());
         
         // 2. Credit card is still NOT fully settled
         assertTrue(creditCard.getCurrentValue().compareTo(BigDecimal.ZERO) > 0,
@@ -412,20 +450,14 @@ public class CreditCardLiabilityPaymentIT extends IntegrationTestBase {
         assertTrue(financiallyAppliedCount > 0, "At least one transaction should be marked financiallyApplied");
         
         // 8. All financial invariants pass
-        Map<Long, BigDecimal> opening = valueContainerRepo.findAll().stream()
-            .collect(Collectors.toMap(
-                StateContainerEntity::getId,
-                v -> v.getCurrentValue() == null ? BigDecimal.ZERO : v.getCurrentValue()
-            ));
-        
         FinancialAssertions.assertNoOrphanAdjustments(valueAdjustmentRepository, transactionRepository);
         FinancialAssertions.assertAdjustmentsMatchTransactions(transactionRepository, valueAdjustmentRepository);
         FinancialAssertions.assertNoNegativeBalances(valueContainerRepo);
         FinancialAssertions.assertAllTransactionsHaveValidStatus(transactionRepository);
         
-        // Verify each container's balance integrity
-        for (Long cid : opening.keySet()) {
-            FinancialAssertions.assertContainerBalance(cid, opening.get(cid), valueAdjustmentRepository, valueContainerRepo);
+        // Verify each container's balance integrity using opening balances
+        for (Long cid : openingBalances.keySet()) {
+            FinancialAssertions.assertContainerBalance(cid, openingBalances.get(cid), valueAdjustmentRepository, valueContainerRepo);
         }
     }
 }

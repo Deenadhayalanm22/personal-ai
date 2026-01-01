@@ -48,7 +48,7 @@ public class LLMTestConfiguration {
         
         when(mock.extractExpense(anyString())).thenAnswer(invocation -> {
             String text = invocation.getArgument(0);
-            // SIM:EXPENSE;amount=1200;desc=Groceries;source=CREDIT_CARD;date=YYYY-MM-DD
+            // SIM:EXPENSE;amount=1200;desc=Groceries;source=CREDIT_CARD;category=Shopping;date=YYYY-MM-DD
             ExpenseDto dto = new ExpenseDto();
             dto.setValid(true);
             String[] parts = text.split(";");
@@ -56,6 +56,7 @@ public class LLMTestConfiguration {
                 if (p.startsWith("amount=")) dto.setAmount(new BigDecimal(p.substring(7)));
                 if (p.startsWith("desc=")) dto.setMerchantName(p.substring(5));
                 if (p.startsWith("source=")) dto.setSourceAccount(p.substring(7));
+                if (p.startsWith("category=")) dto.setCategory(p.substring(9));
                 if (p.startsWith("date=")) dto.setTransactionDate(LocalDate.parse(p.substring(5)));
             }
             return dto;
