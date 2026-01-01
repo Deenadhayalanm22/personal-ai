@@ -18,8 +18,8 @@ public class CashLikeStrategy implements StateMutationStrategy {
     @Override
     public void apply(StateContainerEntity container, StateMutationCommand cmd) {
         switch (cmd.getType()) {
-            case DEBIT -> {
-                // DEBIT: money leaves (expenses, transfers out)
+            case DEBIT, PAYMENT -> {
+                // DEBIT/PAYMENT: money leaves (expenses, transfers out, payments)
                 container.setCurrentValue(
                         container.getCurrentValue().subtract(cmd.getAmount())
                 );
@@ -40,8 +40,8 @@ public class CashLikeStrategy implements StateMutationStrategy {
     @Override
     public void reverse(StateContainerEntity container, StateMutationCommand cmd) {
         switch (cmd.getType()) {
-            case DEBIT -> {
-                // Reverse DEBIT: add money back
+            case DEBIT, PAYMENT -> {
+                // Reverse DEBIT/PAYMENT: add money back
                 container.setCurrentValue(
                         container.getCurrentValue().add(cmd.getAmount())
                 );
