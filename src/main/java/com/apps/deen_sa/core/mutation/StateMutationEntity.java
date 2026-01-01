@@ -10,7 +10,7 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "value_adjustments")
+@Table(name = "state_mutation")
 public class StateMutationEntity {
 
     @Id

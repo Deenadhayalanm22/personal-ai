@@ -1,8 +1,8 @@
 -- Initial schema for integration tests
 -- All tables required by JPA entities
 
--- Value Container (accounts, credit cards, cash, etc.)
-CREATE TABLE IF NOT EXISTS value_container (
+-- State Container (accounts, credit cards, cash, etc.)
+CREATE TABLE IF NOT EXISTS state_container (
     id BIGSERIAL PRIMARY KEY,
     owner_type VARCHAR(30) NOT NULL,
     owner_id BIGINT NOT NULL,
@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS value_container (
     over_limit_amount NUMERIC(19,4)
 );
 
--- Transaction Records
-CREATE TABLE IF NOT EXISTS transaction_rec (
+-- State Change Records
+CREATE TABLE IF NOT EXISTS state_change (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     business_id VARCHAR(255),
@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS transaction_rec (
     application_status VARCHAR(50),
     failure_reason TEXT,
     applied_at TIMESTAMP,
-    CONSTRAINT fk_transaction_source_container FOREIGN KEY (source_container_id) REFERENCES value_container(id),
-    CONSTRAINT fk_transaction_target_container FOREIGN KEY (target_container_id) REFERENCES value_container(id)
+    CONSTRAINT fk_statechange_source_container FOREIGN KEY (source_container_id) REFERENCES state_container(id),
+    CONSTRAINT fk_statechange_target_container FOREIGN KEY (target_container_id) REFERENCES state_container(id)
 );
 
--- Value Adjustments (debits/credits to containers)
-CREATE TABLE IF NOT EXISTS value_adjustments (
+-- State Mutations (debits/credits to containers)
+CREATE TABLE IF NOT EXISTS state_mutation (
     id BIGSERIAL PRIMARY KEY,
     transaction_id BIGINT,
     container_id BIGINT,
@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS value_adjustments (
     reason VARCHAR(100),
     occurred_at TIMESTAMP,
     created_at TIMESTAMP,
-    CONSTRAINT fk_adjustment_transaction FOREIGN KEY (transaction_id) REFERENCES transaction_rec(id),
-    CONSTRAINT fk_adjustment_container FOREIGN KEY (container_id) REFERENCES value_container(id)
+    CONSTRAINT fk_mutation_statechange FOREIGN KEY (transaction_id) REFERENCES state_change(id),
+    CONSTRAINT fk_mutation_container FOREIGN KEY (container_id) REFERENCES state_container(id)
 );
 
 -- Expense Records
@@ -110,12 +110,12 @@ CREATE TABLE IF NOT EXISTS tag_master (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_value_container_owner ON value_container(owner_type, owner_id);
-CREATE INDEX IF NOT EXISTS idx_value_container_type ON value_container(container_type);
-CREATE INDEX IF NOT EXISTS idx_transaction_user ON transaction_rec(user_id);
-CREATE INDEX IF NOT EXISTS idx_transaction_type ON transaction_rec(transaction_type);
-CREATE INDEX IF NOT EXISTS idx_value_adjustments_transaction ON value_adjustments(transaction_id);
-CREATE INDEX IF NOT EXISTS idx_value_adjustments_container ON value_adjustments(container_id);
+CREATE INDEX IF NOT EXISTS idx_state_container_owner ON state_container(owner_type, owner_id);
+CREATE INDEX IF NOT EXISTS idx_state_container_type ON state_container(container_type);
+CREATE INDEX IF NOT EXISTS idx_state_change_user ON state_change(user_id);
+CREATE INDEX IF NOT EXISTS idx_state_change_type ON state_change(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_state_mutation_statechange ON state_mutation(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_state_mutation_container ON state_mutation(container_id);
 CREATE INDEX IF NOT EXISTS idx_expense_user ON expense(user_id);
 CREATE INDEX IF NOT EXISTS idx_expense_category ON expense(category);
 CREATE INDEX IF NOT EXISTS idx_expense_spent_at ON expense(spent_at);

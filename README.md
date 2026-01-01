@@ -74,7 +74,7 @@ curl -X POST http://localhost:8080/api/speech \
 - **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
 - **LLM-First Approach**: Natural language understanding via OpenAI GPT-4.1 Mini
 - **Strategy Pattern**: Different financial adjustment strategies for different container types
-- **Event Sourcing Ready**: Audit trail via ValueAdjustmentEntity
+- **Event Sourcing Ready**: Audit trail via StateMutationEntity
 - **Multi-tenant Ready**: Built-in userId/businessId support
 
 ### Package Structure

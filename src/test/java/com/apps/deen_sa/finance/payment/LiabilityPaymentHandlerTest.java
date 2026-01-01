@@ -7,7 +7,7 @@ import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.core.state.StateChangeTypeEnum;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.finance.account.StateContainerService;
 import com.apps.deen_sa.llm.impl.LiabilityPaymentClassifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,7 @@ class LiabilityPaymentHandlerTest {
     private StateChangeRepository transactionRepository;
 
     @Mock
-    private ValueContainerService valueContainerService;
+    private StateContainerService stateContainerService;
 
     private LiabilityPaymentHandler handler;
 

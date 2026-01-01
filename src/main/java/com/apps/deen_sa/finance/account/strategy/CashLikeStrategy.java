@@ -2,11 +2,11 @@ package com.apps.deen_sa.finance.account.strategy;
 
 import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategy;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CashLikeStrategy implements ValueAdjustmentStrategy {
+public class CashLikeStrategy implements StateMutationStrategy {
 
     @Override
     public boolean supports(StateContainerEntity container) {

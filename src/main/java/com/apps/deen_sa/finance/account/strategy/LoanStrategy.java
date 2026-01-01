@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Component
-public class LoanStrategy implements ValueAdjustmentStrategy, CreditSettlementStrategy {
+public class LoanStrategy implements StateMutationStrategy, CreditSettlementStrategy {
 
     @Override
     public boolean supports(StateContainerEntity container) {

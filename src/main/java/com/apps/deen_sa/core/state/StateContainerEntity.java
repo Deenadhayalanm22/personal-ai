@@ -15,7 +15,7 @@ import java.util.Map;
 @Getter
 @Setter
 @Entity
-@Table(name = "value_container")
+@Table(name = "state_container")
 public class StateContainerEntity {
 
     @Id

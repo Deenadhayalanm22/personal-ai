@@ -3,14 +3,14 @@ package com.apps.deen_sa.finance.account.strategy;
 import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategy;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Component
-public class CreditCardStrategy implements ValueAdjustmentStrategy, CreditSettlementStrategy {
+public class CreditCardStrategy implements StateMutationStrategy, CreditSettlementStrategy {
 
     @Override
     public boolean supports(StateContainerEntity container) {

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Entity
-@Table(name = "transaction_rec")
+@Table(name = "state_change")
 @Getter
 @Setter
 @EntityListeners(AuditingEntityListener.class)

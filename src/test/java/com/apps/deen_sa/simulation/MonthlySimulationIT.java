@@ -4,7 +4,7 @@ import com.apps.deen_sa.IntegrationTestBase;
 import com.apps.deen_sa.finance.account.AccountSetupHandler;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import com.apps.deen_sa.finance.payment.LiabilityPaymentHandler;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.finance.account.StateContainerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -33,7 +33,7 @@ public class MonthlySimulationIT extends IntegrationTestBase {
     LiabilityPaymentHandler liabilityPaymentHandler;
 
     @Autowired
-    ValueContainerService valueContainerService;
+    StateContainerService stateContainerService;
 
     @Autowired
     StateChangeRepository transactionRepository;
@@ -50,7 +50,7 @@ public class MonthlySimulationIT extends IntegrationTestBase {
                 accountSetupHandler,
                 expenseHandler,
                 liabilityPaymentHandler,
-                valueContainerService
+                stateContainerService
         );
 
         // start simulation at first of current month
@@ -90,7 +90,7 @@ public class MonthlySimulationIT extends IntegrationTestBase {
             accountSetupHandler,
             expenseHandler,
             liabilityPaymentHandler,
-            valueContainerService
+            stateContainerService
         );
 
         ctx.setCurrentDate(LocalDate.now().withDayOfMonth(1));

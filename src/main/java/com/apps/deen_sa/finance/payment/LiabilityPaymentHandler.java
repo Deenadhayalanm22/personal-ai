@@ -10,12 +10,12 @@ import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
-import com.apps.deen_sa.finance.account.ValueAdjustmentService;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.finance.account.StateMutationService;
+import com.apps.deen_sa.finance.account.StateContainerService;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategyResolver;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategy;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategyResolver;
 import com.apps.deen_sa.llm.impl.LiabilityPaymentClassifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,10 +35,10 @@ public class LiabilityPaymentHandler implements SpeechHandler {
 
     private final LiabilityPaymentClassifier llm;
     private final StateChangeRepository transactionRepository;
-    private final ValueContainerService valueContainerService;
-    private final ValueAdjustmentService valueAdjustmentService;
+    private final StateContainerService stateContainerService;
+    private final StateMutationService stateMutationService;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
-    private final ValueAdjustmentStrategyResolver strategyResolver;
+    private final StateMutationStrategyResolver strategyResolver;
 
     @Override
     public String intentType() {
@@ -118,7 +118,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
      * Defaults to BANK_ACCOUNT if not specified.
      */
     private StateContainerEntity resolveSourceContainer(LiabilityPaymentDto dto, Long userId) {
-        List<StateContainerEntity> containers = valueContainerService.getActiveContainers(userId);
+        List<StateContainerEntity> containers = stateContainerService.getActiveContainers(userId);
 
         String sourceType = dto.getSourceAccount() != null ? dto.getSourceAccount() : "BANK_ACCOUNT";
 
@@ -135,7 +135,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
      * Resolve target liability container (credit card or loan).
      */
     private StateContainerEntity resolveTargetLiability(LiabilityPaymentDto dto, Long userId) {
-        List<StateContainerEntity> containers = valueContainerService.getActiveContainers(userId);
+        List<StateContainerEntity> containers = stateContainerService.getActiveContainers(userId);
 
         String targetType = dto.getTargetLiability();
 
@@ -223,29 +223,29 @@ public class LiabilityPaymentHandler implements SpeechHandler {
 
         // 1. Debit source container (money leaves bank account)
         StateMutationCommand debitCommand = adjustmentCommandFactory.forTransferDebit(tx, reason);
-        valueAdjustmentService.apply(sourceContainer, debitCommand);
+        stateMutationService.apply(sourceContainer, debitCommand);
 
         // 2. Credit target liability (payment reduces outstanding)
         // Use the specialized payment method for credit settlement
-        ValueAdjustmentStrategy strategy = strategyResolver.resolve(targetContainer);
+        StateMutationStrategy strategy = strategyResolver.resolve(targetContainer);
 
         if (strategy instanceof CreditSettlementStrategy) {
             // Use specialized payment method that reduces outstanding
             StateMutationCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
             
             // Create audit trail
-            valueAdjustmentService.apply(targetContainer, creditCommand);
+            stateMutationService.apply(targetContainer, creditCommand);
             
             // Apply payment to reduce outstanding
             ((CreditSettlementStrategy) strategy).applyPayment(targetContainer, tx.getAmount());
             
             // Save updated container
             targetContainer.setLastActivityAt(Instant.now());
-            valueContainerService.UpdateValueContainer(targetContainer);
+            stateContainerService.UpdateValueContainer(targetContainer);
         } else {
             // Fallback: use regular credit adjustment
             StateMutationCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
-            valueAdjustmentService.apply(targetContainer, creditCommand);
+            stateMutationService.apply(targetContainer, creditCommand);
         }
     }
 }

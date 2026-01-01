@@ -12,11 +12,11 @@ import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategyResolver;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategyResolver;
 import com.apps.deen_sa.finance.expense.TagNormalizationService;
-import com.apps.deen_sa.finance.account.ValueAdjustmentService;
-import com.apps.deen_sa.finance.account.ValueContainerService;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
+import com.apps.deen_sa.finance.account.StateMutationService;
+import com.apps.deen_sa.finance.account.StateContainerService;
+import com.apps.deen_sa.finance.account.strategy.StateMutationStrategy;
 import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import com.apps.deen_sa.finance.expense.ExpenseMerger;
 import com.apps.deen_sa.finance.expense.ExpenseValidator;
@@ -36,10 +36,10 @@ public class ExpenseHandler implements SpeechHandler {
     private final ExpenseClassifier llm;
     private final StateChangeRepository repo;
     private final TagNormalizationService tagNormalizationService;
-    private final ValueContainerService valueContainerService;
+    private final StateContainerService stateContainerService;
     private final ExpenseCompletenessEvaluator completenessEvaluator;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
-    private final ValueAdjustmentService valueAdjustmentService;
+    private final StateMutationService stateMutationService;
 
     @Override
     public String intentType() {
@@ -281,7 +281,7 @@ public class ExpenseHandler implements SpeechHandler {
         if (dto.getSourceAccount() == null) return null;
 
         List<StateContainerEntity> containers =
-                valueContainerService.getActiveContainers(userId);
+                stateContainerService.getActiveContainers(userId);
 
         List<StateContainerEntity> matching =
                 containers.stream()
@@ -305,13 +305,13 @@ public class ExpenseHandler implements SpeechHandler {
         }
 
         StateContainerEntity container =
-                valueContainerService.findValueContainerById(
+                stateContainerService.findValueContainerById(
                         tx.getSourceContainerId()
                 );
 
         StateMutationCommand command =
                 adjustmentCommandFactory.forExpense(tx);
 
-        valueAdjustmentService.apply(container, command);
+        stateMutationService.apply(container, command);
     }
 }

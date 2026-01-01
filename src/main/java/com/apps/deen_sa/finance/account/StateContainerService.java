@@ -1,6 +1,6 @@
 package com.apps.deen_sa.finance.account;
 
-import com.apps.deen_sa.finance.account.ValueContainerCache;
+import com.apps.deen_sa.finance.account.StateContainerCache;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.core.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
@@ -8,13 +8,13 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class ValueContainerService {
+public class StateContainerService {
 
     private final StateContainerRepository repository;
-    private final ValueContainerCache cache;
+    private final StateContainerCache cache;
 
-    public ValueContainerService(StateContainerRepository repository,
-                                 ValueContainerCache cache) {
+    public StateContainerService(StateContainerRepository repository,
+                                 StateContainerCache cache) {
         this.repository = repository;
         this.cache = cache;
     }

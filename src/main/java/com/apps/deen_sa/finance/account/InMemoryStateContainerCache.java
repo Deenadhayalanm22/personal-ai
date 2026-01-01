@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class InMemoryValueContainerCache implements ValueContainerCache {
+public class InMemoryStateContainerCache implements StateContainerCache {
 
     private final Map<Long, CacheEntry> cache = new ConcurrentHashMap<>();
 

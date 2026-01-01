@@ -45,7 +45,7 @@ public class FuzzSimulationIT extends IntegrationTestBase {
     com.apps.deen_sa.finance.payment.LiabilityPaymentHandler liabilityPaymentHandler;
 
     @Autowired
-    com.apps.deen_sa.finance.account.ValueContainerService valueContainerService;
+    com.apps.deen_sa.finance.account.StateContainerService stateContainerService;
 
     @Test
     void runFuzzSimulations() {
@@ -83,7 +83,7 @@ public class FuzzSimulationIT extends IntegrationTestBase {
             accountSetupHandler,
             expenseHandler,
             liabilityPaymentHandler,
-            valueContainerService
+            stateContainerService
         );
 
         ctx.setCurrentDate(LocalDate.now().withDayOfMonth(1));
