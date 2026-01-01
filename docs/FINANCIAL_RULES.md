@@ -1,22 +1,24 @@
-# Financial Rules Documentation
+# Financial Rules & Invariants
 
-## Purpose
+**This document is the authoritative source of financial truth for this application.**
 
-This directory contains the authoritative source of financial truth for this application.
+Code and tests must comply with this document.
+
+---
+
+## Purpose and Rule Hierarchy
 
 **Financial rules are defined in natural language.**
 
 Integration tests enforce these rules. Production code must pass tests that enforce these rules.
 
----
-
-## Rule Hierarchy
+### Rule Hierarchy
 
 ```
 Documents > Tests > Code
 ```
 
-1. **Documents** (this directory): Define financial correctness rules in natural language
+1. **Documents** (this file): Define financial correctness rules in natural language
 2. **Tests** (`src/test/java/.../simulation/`): Enforce rules via integration tests
 3. **Code** (`src/main/java/.../finance/`): Implements rules, verified by tests
 
@@ -24,35 +26,102 @@ Documents > Tests > Code
 
 If code contradicts a documented rule, the code is wrong.
 
----
-
-## Files in This Directory
-
-| File | Purpose | What It Defines |
-|------|---------|-----------------|
-| `01-core-invariants.md` | Fundamental financial laws | Idempotency, no duplicate application |
-| `02-container-behavior.md` | Account/container rules | Cash debit/credit, credit card limits |
-| `03-transaction-scenarios.md` | Canonical test scenarios | Expected behavior for common workflows |
-| `04-edge-cases.md` | Edge case handling | Duplicates, ordering, partial failures |
-| `05-assumptions.md` | System assumptions | Determinism, database as truth, retries |
+**Never implement financial logic without a corresponding rule and test.**
 
 ---
 
-## Using These Documents
+## 1. Core Invariants
+
+These rules must hold true for all financial flows.
+Violating any rule is a system defect.
+
+### Invariant 1: No Duplicate Financial Application
+
+A transaction must apply financial impact at most once.
+
+- A transaction marked `financiallyApplied = true`
+  must never produce additional value adjustments.
+- Reprocessing the same transaction must be idempotent.
+
+Example:
+- Given a credit card expense of ₹1,000
+- When the system retries processing
+- Then the credit outstanding increases only once
+
+---
+
+## 2. Value Container Behavior Rules
+
+### Cash & Bank Containers (Asset Containers)
+- Debit reduces currentValue
+- Credit increases currentValue
+- currentValue must never be negative
+- Both Cash and Bank containers follow identical asset container rules
+
+### Credit Card Container
+- Debit (expense) increases outstanding balance
+- Payment reduces outstanding balance
+- Outstanding must not exceed credit limit unless explicitly allowed
+- Over-limit flag must reflect actual state
+
+---
+
+## 3. Canonical Transaction Scenarios
+
+### Scenario: Typical Credit Card Month
+
+- Day 1: Grocery expense ₹1,200 (credit card)
+- Day 5: Fuel expense ₹2,000 (credit card)
+- Day 15: Credit card payment ₹3,000
+
+Expected outcomes:
+- Credit outstanding = ₹200
+- No cash balance change
+- Exactly 3 transactions
+- Exactly 3 value adjustments
+
+---
+
+## 4. Edge Cases to Always Support
+
+### Duplicate Events
+- Same transaction processed twice
+- Same payment received twice
+
+### Ordering Issues
+- Payment before expense
+- Expense after statement close
+
+### Partial Failures
+- Adjustment succeeds but transaction save fails
+- Retry after crash
+
+---
+
+## 5. System Assumptions
+
+- All financial calculations are deterministic
+- LLMs never perform calculations
+- Database is the source of truth
+- Event retries are expected and normal
+
+---
+
+## Using These Financial Rules
 
 ### For Integration Test Development
 
 When writing integration tests:
 
-1. Read the relevant rule file
+1. Read the relevant rule section in this document
 2. Map rule to test scenario
 3. Write test that fails if rule violated
-4. Reference rule file in test documentation
+4. Reference this document in test documentation
 
 Example:
 ```java
 /**
- * Tests enforcement of rule from 01-core-invariants.md:
+ * Tests enforcement of FINANCIAL_RULES.md - Section 1, Invariant 1
  * "A transaction marked financiallyApplied = true must never 
  *  produce additional value adjustments"
  */
@@ -66,12 +135,10 @@ void testIdempotency() {
 
 When implementing financial features:
 
-1. Check if relevant rule exists
-2. If not, write rule first (see "Adding New Rules" below)
+1. Check if relevant rule exists in this document
+2. If not, write rule first (add to this document)
 3. Write integration test enforcing rule
 4. Implement code that passes test
-
-**Never implement financial logic without a corresponding rule and test.**
 
 ---
 
@@ -88,12 +155,12 @@ Add a rule when:
 
 ### How to Add a Rule
 
-1. **Choose the right file**:
-   - Core financial law → `01-core-invariants.md`
-   - Account behavior → `02-container-behavior.md`
-   - Standard workflow → `03-transaction-scenarios.md`
-   - Edge case → `04-edge-cases.md`
-   - System assumption → `05-assumptions.md`
+1. **Choose the right section**:
+   - Core financial law → Section 1 (Core Invariants)
+   - Account behavior → Section 2 (Container Behavior)
+   - Standard workflow → Section 3 (Canonical Scenarios)
+   - Edge case → Section 4 (Edge Cases)
+   - System assumption → Section 5 (Assumptions)
 
 2. **Write the rule clearly**:
    - Use simple language
@@ -109,7 +176,7 @@ Add a rule when:
 
 5. **Add integration test**:
    - Test must enforce new rule
-   - Reference rule in test documentation
+   - Reference this document in test documentation
    - Verify test fails when rule violated
 
 6. **Update production code**:
@@ -124,7 +191,7 @@ Add a rule when:
 When a production financial bug is discovered:
 
 1. **Reproduce the bug** in integration test (should fail)
-2. **Add or clarify rule** in appropriate `.md` file
+2. **Add or clarify rule** in appropriate section of this document
 3. **Update integration test** to enforce clarified rule
 4. **Fix production code** to pass test
 5. **Verify** all financial invariants still hold
@@ -137,7 +204,7 @@ When a production financial bug is discovered:
 
 **Process**:
 1. Add failing test: `testPaymentIdempotency()`
-2. Add rule to `01-core-invariants.md`:
+2. Add rule to this document (Section 1: Core Invariants):
    ```markdown
    ## Invariant: Payment Idempotency
    
@@ -170,7 +237,7 @@ If a rule is unclear:
 
 1. **Flag it** in code review or team discussion
 2. **Clarify the rule** with examples
-3. **Update the document**
+3. **Update this document**
 4. **Update tests** to match clarification
 
 **Do NOT implement ambiguous rules.** Clarify first.
@@ -225,24 +292,24 @@ Rules must be updated when:
 
 ### Don't Duplicate Rules
 
-**DO NOT** duplicate rules across multiple files.
+**DO NOT** duplicate rules across multiple files or sections.
 
 **Wrong**:
 ```markdown
-# In 01-core-invariants.md
+# In Section 1: Core Invariants
 Payment must be idempotent
 
-# In 04-edge-cases.md  
+# In Section 4: Edge Cases
 Payment processed twice should not double-deduct
 ```
 
 **Right**:
 ```markdown
-# In 01-core-invariants.md
+# In Section 1: Core Invariants
 Payment must be idempotent
 
-# In 04-edge-cases.md
-See 01-core-invariants.md for payment idempotency rule
+# In Section 4: Edge Cases
+See Section 1 for payment idempotency rule
 ```
 
 ### Keep Rules Concise
@@ -311,7 +378,7 @@ Failures create GitHub issues automatically.
 
 ### Good Rule Definition
 
-From `01-core-invariants.md`:
+From Section 1 (Core Invariants):
 
 ```markdown
 ## Invariant 1: No Duplicate Financial Application
@@ -340,8 +407,8 @@ From `MonthlySimulationIT.java`:
 
 ```java
 /**
- * Enforces: 01-core-invariants.md - Invariant 1
- * Rerunning simulation should not change balances
+ * Enforces: FINANCIAL_RULES.md - Section 1, Invariant 1
+ * "No Duplicate Financial Application - Rerunning simulation should not change balances"
  */
 @Test
 void rerunSimulationIsIdempotent() {
@@ -372,11 +439,11 @@ void rerunSimulationIsIdempotent() {
 
 **Financial rules are the contract.**
 
-- Defined in this directory
+- Defined in this document
 - Enforced by integration tests
 - Implemented by production code
 - Verified by CI/CD
 
 **Documents > Tests > Code**
 
-When in doubt, trust the documents.
+When in doubt, trust this document.

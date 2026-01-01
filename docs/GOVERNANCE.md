@@ -1,7 +1,26 @@
-# Documentation Editing Rules (Authoritative)
+# Repository Governance Rules
 
 ## Purpose
-This document establishes **THE SINGLE SOURCE OF TRUTH** for documentation governance in this repository. All contributors MUST follow these rules when updating or creating documentation.
+This document establishes **THE SINGLE SOURCE OF TRUTH** for repository governance. All contributors MUST follow these rules.
+
+---
+
+## File Creation Rules
+- The repository has a hard limit of 25 documentation files.
+- No new files may be added unless explicitly approved.
+- Existing files must be extended or consolidated instead.
+
+## Documentation Rules
+- Financial rules must live ONLY in `FINANCIAL_RULES.md`.
+- No duplicate rule definitions across files.
+- Documentation sprawl is considered technical debt.
+
+## Copilot / AI Rules
+- AI tools must not create new files by default.
+- AI tools must prefer modifying existing files.
+- If a new file seems necessary, AI must stop and explain why.
+
+---
 
 ## Core Principle: One Topic, One File
 
@@ -22,8 +41,14 @@ Documentation sprawl leads to:
 | Entities & database schema | `ENTITIES.md` | Data model, relationships, lifecycle |
 | Refactoring history | `REFACTORING_SUMMARY.md` | Package moves, class renames |
 | LLM behavior & prompts | `LLM_PROMPT_CONTEXT.md` | LLM integration patterns |
+| LLM technical details | `LLM_INTEGRATION.md` | Implementation details, code examples |
 | Integration testing | `INTEGRATION_TESTING.md` | Testing framework, patterns, rules |
-| Integration testing rules template | `INTEGRATION_TESTING_RULES_TEMPLATE.md` | Template for adding new testing rules |
+| Financial rules | `FINANCIAL_RULES.md` | Authoritative financial rules |
+| Financial test coverage | `FINANCIAL_RULES_TEST_COVERAGE.md` | Rule-to-test mapping |
+| Service layer | `SERVICES.md` | Business logic, service responsibilities |
+| Design patterns | `ARCHITECTURE_PATTERNS.md` | Patterns used in the codebase |
+| Quick reference | `QUICK_REFERENCE.md` | Common tasks, troubleshooting |
+| Simulation framework | `SIMULATION_FRAMEWORK.md` | Testing simulation infrastructure |
 
 ## Prohibited Documentation Patterns
 
@@ -35,6 +60,8 @@ The following are **STRICTLY FORBIDDEN**:
 - `*_V2.md` or versioned docs (use git history for versions)
 - `*_IMPLEMENTATION.md` for features (merge into appropriate canonical doc)
 - `*_FINAL.md` files (there is no "final", only current)
+- `*_COMPLIANCE.md` or `*_AUDIT.md` files (historical audits don't belong in main docs)
+- `*_TEMPLATE.md` files (meta-documentation about how to write docs)
 - Duplicate architecture or overview files
 
 ### ❌ DO NOT Duplicate
@@ -93,6 +120,7 @@ Even then, the new file must be added to the canonical map above.
 ## Governance History
 
 - **2025-12-29**: Initial governance established due to documentation sprawl
+- **2025-12-30**: Consolidated ARCHITECTURE_GOVERNANCE.md into GOVERNANCE.md, deleted 6 files
 - This file is the authority; update this file when governance changes
 
 ---

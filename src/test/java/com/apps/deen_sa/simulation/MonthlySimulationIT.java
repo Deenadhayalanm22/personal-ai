@@ -4,7 +4,7 @@ import com.apps.deen_sa.IntegrationTestBase;
 import com.apps.deen_sa.finance.account.AccountSetupHandler;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import com.apps.deen_sa.finance.payment.LiabilityPaymentHandler;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.core.state.StateContainerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -15,9 +15,9 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.value.ValueAdjustmentRepository;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
+import com.apps.deen_sa.core.state.StateContainerRepository;
 import com.apps.deen_sa.assertions.FinancialAssertions;
 
 @Import(LLMTestConfiguration.class)
@@ -33,16 +33,16 @@ public class MonthlySimulationIT extends IntegrationTestBase {
     LiabilityPaymentHandler liabilityPaymentHandler;
 
     @Autowired
-    ValueContainerService valueContainerService;
+    StateContainerService stateContainerService;
 
     @Autowired
-    TransactionRepository transactionRepository;
+    StateChangeRepository transactionRepository;
 
     @Autowired
-    ValueAdjustmentRepository valueAdjustmentRepository;
+    StateMutationRepository valueAdjustmentRepository;
 
     @Autowired
-    ValueContainerRepo valueContainerRepo;
+    StateContainerRepository valueContainerRepo;
 
     @Test
     void runSimpleMonthlySimulation() {
@@ -50,7 +50,7 @@ public class MonthlySimulationIT extends IntegrationTestBase {
                 accountSetupHandler,
                 expenseHandler,
                 liabilityPaymentHandler,
-                valueContainerService
+                stateContainerService
         );
 
         // start simulation at first of current month
@@ -90,7 +90,7 @@ public class MonthlySimulationIT extends IntegrationTestBase {
             accountSetupHandler,
             expenseHandler,
             liabilityPaymentHandler,
-            valueContainerService
+            stateContainerService
         );
 
         ctx.setCurrentDate(LocalDate.now().withDayOfMonth(1));

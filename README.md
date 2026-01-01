@@ -12,9 +12,8 @@ This project includes comprehensive documentation to help you understand the arc
 |------|-------------|-------------------|
 | **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | New domain-first package structure | Domain-driven design, shared kernel, package organization |
-| **[testing-strategy.md](docs/testing-strategy.md)** | Testing philosophy and requirements | Unit vs integration vs fuzz tests, why real databases, why no mocks |
-| **[financial-rules/README.md](docs/financial-rules/README.md)** | Financial rules documentation guide | Rule hierarchy, how to add rules, production bug process |
-| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Integration testing infrastructure | Testcontainers setup, HikariCP config, fuzz testing |
+| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Testing philosophy, strategy, and infrastructure | Unit vs integration vs fuzz tests, why real databases, why no mocks, Testcontainers setup, HikariCP config |
+| **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** | Financial rules & invariants (authoritative) | Core invariants, container behavior, scenarios, edge cases |
 | **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** | Financial rules coverage analysis | Rule-by-rule mapping to tests, compliance verification |
 | **[REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Complete refactoring history | All package moves, class relocations, import updates |
 | **[ENTITIES.md](docs/ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
@@ -75,7 +74,7 @@ curl -X POST http://localhost:8080/api/speech \
 - **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
 - **LLM-First Approach**: Natural language understanding via OpenAI GPT-4.1 Mini
 - **Strategy Pattern**: Different financial adjustment strategies for different container types
-- **Event Sourcing Ready**: Audit trail via ValueAdjustmentEntity
+- **Event Sourcing Ready**: Audit trail via StateMutationEntity
 - **Multi-tenant Ready**: Built-in userId/businessId support
 
 ### Package Structure
@@ -123,12 +122,12 @@ This is a **production-grade finance application**. Financial correctness is non
 Documents > Tests > Code
 ```
 
-**Financial rules are defined in natural language** in `/docs/financial-rules/`:
-- `01-core-invariants.md` - Fundamental financial laws (idempotency, no duplicate application)
-- `02-container-behavior.md` - Account/container behavior rules
-- `03-transaction-scenarios.md` - Canonical test scenarios
-- `04-edge-cases.md` - Edge case handling
-- `05-assumptions.md` - System assumptions
+**Financial rules are defined in natural language** in `/docs/FINANCIAL_RULES.md`:
+- Section 1: Core Invariants - Fundamental financial laws (idempotency, no duplicate application)
+- Section 2: Container Behavior - Account/container behavior rules
+- Section 3: Canonical Scenarios - Standard transaction scenarios
+- Section 4: Edge Cases - Duplicates, ordering, partial failures
+- Section 5: System Assumptions - Determinism, database as truth
 
 **Integration tests enforce these rules.** Production code must pass tests that enforce documented rules.
 
@@ -197,10 +196,9 @@ mvn verify -Pintegration -Dfuzz.iterations=100
 
 ### Documentation
 
-- **[testing-strategy.md](docs/testing-strategy.md)** - Complete testing philosophy
-- **[financial-rules/README.md](docs/financial-rules/README.md)** - How to add/update rules
+- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Complete testing philosophy and integration test guide
+- **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** - Financial rules & how to add/update them
 - **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** - Coverage analysis
-- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Integration test guide
 
 **Financial correctness protects against regressions. Tests are our contract.**
 

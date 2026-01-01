@@ -4,10 +4,10 @@ import com.apps.deen_sa.IntegrationTestBase;
 import com.apps.deen_sa.simulation.FinancialSimulationContext;
 import com.apps.deen_sa.simulation.FinancialSimulationRunner;
 import com.apps.deen_sa.simulation.LLMTestConfiguration;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
-import com.apps.deen_sa.core.value.ValueContainerRepo;
-import com.apps.deen_sa.core.value.ValueAdjustmentRepository;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
+import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
+import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.assertions.FinancialAssertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,13 +27,13 @@ public class FuzzSimulationIT extends IntegrationTestBase {
     private TransactionTemplate transactionTemplate;
 
     @Autowired
-    ValueContainerRepo valueContainerRepo;
+    StateContainerRepository valueContainerRepo;
 
     @Autowired
-    TransactionRepository transactionRepository;
+    StateChangeRepository transactionRepository;
 
     @Autowired
-    ValueAdjustmentRepository valueAdjustmentRepository;
+    StateMutationRepository valueAdjustmentRepository;
 
     @Autowired
     com.apps.deen_sa.finance.account.AccountSetupHandler accountSetupHandler;
@@ -45,7 +45,7 @@ public class FuzzSimulationIT extends IntegrationTestBase {
     com.apps.deen_sa.finance.payment.LiabilityPaymentHandler liabilityPaymentHandler;
 
     @Autowired
-    com.apps.deen_sa.finance.account.ValueContainerService valueContainerService;
+    com.apps.deen_sa.core.state.StateContainerService stateContainerService;
 
     @Test
     void runFuzzSimulations() {
@@ -83,7 +83,7 @@ public class FuzzSimulationIT extends IntegrationTestBase {
             accountSetupHandler,
             expenseHandler,
             liabilityPaymentHandler,
-            valueContainerService
+            stateContainerService
         );
 
         ctx.setCurrentDate(LocalDate.now().withDayOfMonth(1));
@@ -97,8 +97,8 @@ public class FuzzSimulationIT extends IntegrationTestBase {
                 .run();
 
         // map container type to entity for generator
-        Map<String, ValueContainerEntity> map = new HashMap<>();
-        for (ValueContainerEntity v : valueContainerRepo.findAll()) {
+        Map<String, StateContainerEntity> map = new HashMap<>();
+        for (StateContainerEntity v : valueContainerRepo.findAll()) {
             map.putIfAbsent(v.getContainerType(), v);
         }
 
@@ -131,7 +131,7 @@ public class FuzzSimulationIT extends IntegrationTestBase {
         FinancialAssertions.assertAllTransactionsHaveValidStatus(transactionRepository);
 
         // per-container balance integrity
-        for (ValueContainerEntity v : valueContainerRepo.findAll()) {
+        for (StateContainerEntity v : valueContainerRepo.findAll()) {
             FinancialAssertions.assertContainerBalance(v.getId(), opening.getOrDefault(v.getId(), BigDecimal.ZERO), valueAdjustmentRepository, valueContainerRepo);
         }
 

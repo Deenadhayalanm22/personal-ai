@@ -3,19 +3,19 @@ package com.apps.deen_sa.finance.payment;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.transaction.TransactionTypeEnum;
-import com.apps.deen_sa.core.value.CompletenessLevelEnum;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
-import com.apps.deen_sa.dto.AdjustmentCommand;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.state.StateChangeTypeEnum;
+import com.apps.deen_sa.core.state.CompletenessLevelEnum;
+import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
-import com.apps.deen_sa.finance.account.ValueAdjustmentService;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.core.mutation.StateMutationService;
+import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategyResolver;
+import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
+import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategyResolver;
 import com.apps.deen_sa.llm.impl.LiabilityPaymentClassifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,11 +34,11 @@ import java.util.Map;
 public class LiabilityPaymentHandler implements SpeechHandler {
 
     private final LiabilityPaymentClassifier llm;
-    private final TransactionRepository transactionRepository;
-    private final ValueContainerService valueContainerService;
-    private final ValueAdjustmentService valueAdjustmentService;
+    private final StateChangeRepository transactionRepository;
+    private final StateContainerService stateContainerService;
+    private final StateMutationService stateMutationService;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
-    private final ValueAdjustmentStrategyResolver strategyResolver;
+    private final StateMutationStrategyResolver strategyResolver;
 
     @Override
     public String intentType() {
@@ -70,7 +70,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
 
         // Resolve source container (bank account or wallet)
         Long userId = 1L; // TODO: Get from authentication context
-        ValueContainerEntity sourceContainer = resolveSourceContainer(dto, userId);
+        StateContainerEntity sourceContainer = resolveSourceContainer(dto, userId);
 
         if (sourceContainer == null) {
             return SpeechResult.invalid(
@@ -79,7 +79,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
         }
 
         // Resolve target liability (credit card or loan)
-        ValueContainerEntity targetContainer = resolveTargetLiability(dto, userId);
+        StateContainerEntity targetContainer = resolveTargetLiability(dto, userId);
 
         if (targetContainer == null) {
             return SpeechResult.invalid(
@@ -89,10 +89,10 @@ public class LiabilityPaymentHandler implements SpeechHandler {
         }
 
         // Create transaction entity
-        TransactionEntity transaction = createTransactionEntity(dto, userId, sourceContainer, targetContainer);
+        StateChangeEntity transaction = createTransactionEntity(dto, userId, sourceContainer, targetContainer);
 
         // Save transaction
-        TransactionEntity saved = transactionRepository.save(transaction);
+        StateChangeEntity saved = transactionRepository.save(transaction);
 
         // Apply financial impact
         applyFinancialImpact(saved, sourceContainer, targetContainer);
@@ -117,13 +117,13 @@ public class LiabilityPaymentHandler implements SpeechHandler {
      * Resolve source container (where money comes from).
      * Defaults to BANK_ACCOUNT if not specified.
      */
-    private ValueContainerEntity resolveSourceContainer(LiabilityPaymentDto dto, Long userId) {
-        List<ValueContainerEntity> containers = valueContainerService.getActiveContainers(userId);
+    private StateContainerEntity resolveSourceContainer(LiabilityPaymentDto dto, Long userId) {
+        List<StateContainerEntity> containers = stateContainerService.getActiveContainers(userId);
 
         String sourceType = dto.getSourceAccount() != null ? dto.getSourceAccount() : "BANK_ACCOUNT";
 
         // Find matching container by type
-        List<ValueContainerEntity> matching = containers.stream()
+        List<StateContainerEntity> matching = containers.stream()
                 .filter(c -> c.getContainerType().equals(sourceType))
                 .toList();
 
@@ -134,19 +134,19 @@ public class LiabilityPaymentHandler implements SpeechHandler {
     /**
      * Resolve target liability container (credit card or loan).
      */
-    private ValueContainerEntity resolveTargetLiability(LiabilityPaymentDto dto, Long userId) {
-        List<ValueContainerEntity> containers = valueContainerService.getActiveContainers(userId);
+    private StateContainerEntity resolveTargetLiability(LiabilityPaymentDto dto, Long userId) {
+        List<StateContainerEntity> containers = stateContainerService.getActiveContainers(userId);
 
         String targetType = dto.getTargetLiability();
 
         // Find matching container by type
-        List<ValueContainerEntity> matching = containers.stream()
+        List<StateContainerEntity> matching = containers.stream()
                 .filter(c -> c.getContainerType().equals(targetType))
                 .toList();
 
         // If target name is specified, try to match by name
         if (dto.getTargetName() != null && !matching.isEmpty()) {
-            List<ValueContainerEntity> namedMatches = matching.stream()
+            List<StateContainerEntity> namedMatches = matching.stream()
                     .filter(c -> c.getName() != null &&
                             c.getName().toLowerCase().contains(dto.getTargetName().toLowerCase()))
                     .toList();
@@ -161,18 +161,18 @@ public class LiabilityPaymentHandler implements SpeechHandler {
     }
 
     /**
-     * Create TransactionEntity from payment DTO.
+     * Create StateChangeEntity from payment DTO.
      */
-    private TransactionEntity createTransactionEntity(
+    private StateChangeEntity createTransactionEntity(
             LiabilityPaymentDto dto,
             Long userId,
-            ValueContainerEntity source,
-            ValueContainerEntity target) {
+            StateContainerEntity source,
+            StateContainerEntity target) {
 
-        TransactionEntity tx = new TransactionEntity();
+        StateChangeEntity tx = new StateChangeEntity();
 
         tx.setUserId(String.valueOf(userId));
-        tx.setTransactionType(TransactionTypeEnum.TRANSFER);
+        tx.setTransactionType(StateChangeTypeEnum.TRANSFER);
         tx.setAmount(dto.getAmount());
 
         tx.setSourceContainerId(source.getId());
@@ -209,9 +209,9 @@ public class LiabilityPaymentHandler implements SpeechHandler {
      * Debits source container and credits target liability.
      */
     private void applyFinancialImpact(
-            TransactionEntity tx,
-            ValueContainerEntity sourceContainer,
-            ValueContainerEntity targetContainer) {
+            StateChangeEntity tx,
+            StateContainerEntity sourceContainer,
+            StateContainerEntity targetContainer) {
 
         if (tx.isFinanciallyApplied()) {
             return; // Idempotency check
@@ -222,30 +222,30 @@ public class LiabilityPaymentHandler implements SpeechHandler {
                 : "LIABILITY_PAYMENT";
 
         // 1. Debit source container (money leaves bank account)
-        AdjustmentCommand debitCommand = adjustmentCommandFactory.forTransferDebit(tx, reason);
-        valueAdjustmentService.apply(sourceContainer, debitCommand);
+        StateMutationCommand debitCommand = adjustmentCommandFactory.forTransferDebit(tx, reason);
+        stateMutationService.apply(sourceContainer, debitCommand);
 
         // 2. Credit target liability (payment reduces outstanding)
         // Use the specialized payment method for credit settlement
-        ValueAdjustmentStrategy strategy = strategyResolver.resolve(targetContainer);
+        StateMutationStrategy strategy = strategyResolver.resolve(targetContainer);
 
         if (strategy instanceof CreditSettlementStrategy) {
             // Use specialized payment method that reduces outstanding
-            AdjustmentCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
+            StateMutationCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
             
             // Create audit trail
-            valueAdjustmentService.apply(targetContainer, creditCommand);
+            stateMutationService.apply(targetContainer, creditCommand);
             
             // Apply payment to reduce outstanding
             ((CreditSettlementStrategy) strategy).applyPayment(targetContainer, tx.getAmount());
             
             // Save updated container
             targetContainer.setLastActivityAt(Instant.now());
-            valueContainerService.UpdateValueContainer(targetContainer);
+            stateContainerService.UpdateValueContainer(targetContainer);
         } else {
             // Fallback: use regular credit adjustment
-            AdjustmentCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
-            valueAdjustmentService.apply(targetContainer, creditCommand);
+            StateMutationCommand creditCommand = adjustmentCommandFactory.forTransferCredit(tx, reason);
+            stateMutationService.apply(targetContainer, creditCommand);
         }
     }
 }

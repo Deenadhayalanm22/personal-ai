@@ -1,21 +1,21 @@
-package com.apps.deen_sa.finance.account.strategy;
+package com.apps.deen_sa.core.mutation.strategy;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
+import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-public class ValueAdjustmentStrategyResolver {
+public class StateMutationStrategyResolver {
 
-    private final List<ValueAdjustmentStrategy> strategies;
+    private final List<StateMutationStrategy> strategies;
 
-    public ValueAdjustmentStrategyResolver(List<ValueAdjustmentStrategy> strategies) {
+    public StateMutationStrategyResolver(List<StateMutationStrategy> strategies) {
         this.strategies = strategies;
     }
 
-    public ValueAdjustmentStrategy resolve(ValueContainerEntity container) {
+    public StateMutationStrategy resolve(StateContainerEntity container) {
         return strategies.stream()
                 .filter(s -> s.supports(container))
                 .findFirst()

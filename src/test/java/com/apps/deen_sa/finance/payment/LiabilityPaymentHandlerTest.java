@@ -2,12 +2,12 @@ package com.apps.deen_sa.finance.payment;
 
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
-import com.apps.deen_sa.core.transaction.TransactionTypeEnum;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.state.StateChangeRepository;
+import com.apps.deen_sa.core.state.StateChangeTypeEnum;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.llm.impl.LiabilityPaymentClassifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,10 +33,10 @@ class LiabilityPaymentHandlerTest {
     private LiabilityPaymentClassifier llm;
 
     @Mock
-    private TransactionRepository transactionRepository;
+    private StateChangeRepository transactionRepository;
 
     @Mock
-    private ValueContainerService valueContainerService;
+    private StateContainerService stateContainerService;
 
     private LiabilityPaymentHandler handler;
 
@@ -60,8 +60,8 @@ class LiabilityPaymentHandlerTest {
         dto.setPaymentType("CREDIT_CARD_PAYMENT");
         dto.setRawText(userInput);
 
-        ValueContainerEntity bankAccount = createBankAccount();
-        ValueContainerEntity creditCard = createCreditCard(new BigDecimal("50000"));
+        StateContainerEntity bankAccount = createBankAccount();
+        StateContainerEntity creditCard = createCreditCard(new BigDecimal("50000"));
 
         // When
         // SpeechResult result = handler.handleSpeech(userInput, ctx);
@@ -91,8 +91,8 @@ class LiabilityPaymentHandlerTest {
         dto.setPaymentType("EMI");
         dto.setRawText(userInput);
 
-        ValueContainerEntity bankAccount = createBankAccount();
-        ValueContainerEntity loan = createLoan(new BigDecimal("200000"));
+        StateContainerEntity bankAccount = createBankAccount();
+        StateContainerEntity loan = createLoan(new BigDecimal("200000"));
 
         // When
         // SpeechResult result = handler.handleSpeech(userInput, ctx);
@@ -140,8 +140,8 @@ class LiabilityPaymentHandlerTest {
     }
 
     // Helper methods
-    private ValueContainerEntity createBankAccount() {
-        ValueContainerEntity bank = new ValueContainerEntity();
+    private StateContainerEntity createBankAccount() {
+        StateContainerEntity bank = new StateContainerEntity();
         bank.setId(1L);
         bank.setContainerType("BANK_ACCOUNT");
         bank.setName("Salary Account");
@@ -150,8 +150,8 @@ class LiabilityPaymentHandlerTest {
         return bank;
     }
 
-    private ValueContainerEntity createCreditCard(BigDecimal outstanding) {
-        ValueContainerEntity card = new ValueContainerEntity();
+    private StateContainerEntity createCreditCard(BigDecimal outstanding) {
+        StateContainerEntity card = new StateContainerEntity();
         card.setId(2L);
         card.setContainerType("CREDIT_CARD");
         card.setName("HDFC Credit Card");
@@ -161,8 +161,8 @@ class LiabilityPaymentHandlerTest {
         return card;
     }
 
-    private ValueContainerEntity createLoan(BigDecimal outstanding) {
-        ValueContainerEntity loan = new ValueContainerEntity();
+    private StateContainerEntity createLoan(BigDecimal outstanding) {
+        StateContainerEntity loan = new StateContainerEntity();
         loan.setId(3L);
         loan.setContainerType("LOAN");
         loan.setName("Personal Loan");

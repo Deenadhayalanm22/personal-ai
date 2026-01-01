@@ -1,23 +1,23 @@
 package com.apps.deen_sa.finance.expense;
 
-import com.apps.deen_sa.dto.AdjustmentCommand;
+import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.core.transaction.TransactionEntity;
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.finance.expense.ExpenseCompletenessEvaluator;
 import com.apps.deen_sa.llm.impl.ExpenseClassifier;
 import com.apps.deen_sa.finance.expense.ExpenseDtoToEntityMapper;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.transaction.TransactionRepository;
+import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategyResolver;
+import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategyResolver;
 import com.apps.deen_sa.finance.expense.TagNormalizationService;
-import com.apps.deen_sa.finance.account.ValueAdjustmentService;
-import com.apps.deen_sa.finance.account.ValueContainerService;
-import com.apps.deen_sa.finance.account.strategy.ValueAdjustmentStrategy;
-import com.apps.deen_sa.core.value.CompletenessLevelEnum;
+import com.apps.deen_sa.core.mutation.StateMutationService;
+import com.apps.deen_sa.core.state.StateContainerService;
+import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
+import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import com.apps.deen_sa.finance.expense.ExpenseMerger;
 import com.apps.deen_sa.finance.expense.ExpenseValidator;
 import lombok.RequiredArgsConstructor;
@@ -34,12 +34,12 @@ import java.util.Map;
 public class ExpenseHandler implements SpeechHandler {
 
     private final ExpenseClassifier llm;
-    private final TransactionRepository repo;
+    private final StateChangeRepository repo;
     private final TagNormalizationService tagNormalizationService;
-    private final ValueContainerService valueContainerService;
+    private final StateContainerService stateContainerService;
     private final ExpenseCompletenessEvaluator completenessEvaluator;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
-    private final ValueAdjustmentService valueAdjustmentService;
+    private final StateMutationService stateMutationService;
 
     @Override
     public String intentType() {
@@ -68,7 +68,7 @@ public class ExpenseHandler implements SpeechHandler {
         // We SAVE, but still ask follow-up to improve quality
         if (level == CompletenessLevelEnum.MINIMAL) {
 
-            TransactionEntity saved = saveExpense(dto); // sourceContainerId will be NULL
+            StateChangeEntity saved = saveExpense(dto); // sourceContainerId will be NULL
             saved.setNeedsEnrichment(true);
             saved.setFinanciallyApplied(false);
             repo.save(saved);
@@ -99,7 +99,7 @@ public class ExpenseHandler implements SpeechHandler {
         // Save + map container, but no balance mutation
         if (level == CompletenessLevelEnum.OPERATIONAL) {
 
-            TransactionEntity saved = saveExpense(dto);
+            StateChangeEntity saved = saveExpense(dto);
             // based on the container, enrichment being handled.
             saved.setNeedsEnrichment(saved.getSourceContainerId() == null);
 
@@ -121,7 +121,7 @@ public class ExpenseHandler implements SpeechHandler {
         // Full save + balance mutation
         if (level == CompletenessLevelEnum.FINANCIAL) {
 
-            TransactionEntity saved = saveExpense(dto);
+            StateChangeEntity saved = saveExpense(dto);
             if (!saved.isFinanciallyApplied()) {
                 applyFinancialImpact(saved);
                 saved.setFinanciallyApplied(true);
@@ -177,7 +177,7 @@ public class ExpenseHandler implements SpeechHandler {
         // ----------------------------
         // Step D – Load existing transaction
         // ----------------------------
-        TransactionEntity tx =
+        StateChangeEntity tx =
                 repo.findById(transactionId)
                         .orElseThrow(() ->
                                 new IllegalStateException("Transaction not found"));
@@ -199,7 +199,7 @@ public class ExpenseHandler implements SpeechHandler {
         if (newLevel != CompletenessLevelEnum.MINIMAL
                 && tx.getSourceContainerId() == null) {
 
-            ValueContainerEntity source =
+            StateContainerEntity source =
                     resolveSourceContainer(dto, Long.valueOf(tx.getUserId()));
 
             if (source != null) {
@@ -258,15 +258,15 @@ public class ExpenseHandler implements SpeechHandler {
     // -----------------------------------------------------
     // INTERNAL SAVE LOGIC
     // -----------------------------------------------------
-    private TransactionEntity saveExpense(ExpenseDto dto) {
+    private StateChangeEntity saveExpense(ExpenseDto dto) {
         Long userId = 1L; // TODO: resolve properly
         dto.setTags(tagNormalizationService.normalizeTags(dto.getTags()));
 
-        TransactionEntity transaction =
+        StateChangeEntity transaction =
                 ExpenseDtoToEntityMapper.toEntity(dto, userId);
 
         // Resolve source container only if provided
-        ValueContainerEntity source =
+        StateContainerEntity source =
                 resolveSourceContainer(dto, userId);
 
         if (source != null) {
@@ -276,14 +276,14 @@ public class ExpenseHandler implements SpeechHandler {
         return repo.save(transaction);
     }
 
-    private ValueContainerEntity resolveSourceContainer(ExpenseDto dto, Long userId) {
+    private StateContainerEntity resolveSourceContainer(ExpenseDto dto, Long userId) {
 
         if (dto.getSourceAccount() == null) return null;
 
-        List<ValueContainerEntity> containers =
-                valueContainerService.getActiveContainers(userId);
+        List<StateContainerEntity> containers =
+                stateContainerService.getActiveContainers(userId);
 
-        List<ValueContainerEntity> matching =
+        List<StateContainerEntity> matching =
                 containers.stream()
                         .filter(c -> c.getContainerType().equals(dto.getSourceAccount()))
                         .toList();
@@ -294,7 +294,7 @@ public class ExpenseHandler implements SpeechHandler {
     // =====================================================
     // FINANCIAL APPLICATION (SINGLE SOURCE)
     // =====================================================
-    private void applyFinancialImpact(TransactionEntity tx) {
+    private void applyFinancialImpact(StateChangeEntity tx) {
 
         if (tx.isFinanciallyApplied()) return;
 
@@ -304,14 +304,14 @@ public class ExpenseHandler implements SpeechHandler {
             );
         }
 
-        ValueContainerEntity container =
-                valueContainerService.findValueContainerById(
+        StateContainerEntity container =
+                stateContainerService.findValueContainerById(
                         tx.getSourceContainerId()
                 );
 
-        AdjustmentCommand command =
+        StateMutationCommand command =
                 adjustmentCommandFactory.forExpense(tx);
 
-        valueAdjustmentService.apply(container, command);
+        stateMutationService.apply(container, command);
     }
 }

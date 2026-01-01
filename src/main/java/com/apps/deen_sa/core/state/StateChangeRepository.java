@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.transaction;
+package com.apps.deen_sa.core.state;
 
 import com.apps.deen_sa.dto.TimeRange;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public interface TransactionRepository extends JpaRepository<TransactionEntity, Long>, JpaSpecificationExecutor<TransactionEntity> {
+public interface StateChangeRepository extends JpaRepository<StateChangeEntity, Long>, JpaSpecificationExecutor<StateChangeEntity> {
 
     @Query(value = """
             SELECT COALESCE(SUM(t.amount), 0)
@@ -94,7 +94,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                 Collectors.toMap(
                         r -> (String) r[0],
                         r -> (BigDecimal) r[1],
-                        (a, b) -> a,              // merge function (won’t happen due to GROUP BY)
+                        (a, b) -> a,              // merge function (won't happen due to GROUP BY)
                         LinkedHashMap::new
                 )
         );
@@ -113,7 +113,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                 Collectors.toMap(
                         r -> (String) r[0],
                         r -> (BigDecimal) r[1],
-                        (a, b) -> a,              // merge function (won’t happen due to GROUP BY)
+                        (a, b) -> a,              // merge function (won't happen due to GROUP BY)
                         LinkedHashMap::new
                 )
         );

@@ -80,7 +80,7 @@ List<ExpenseItemDto> recent = repo.findTop10ByOrderBySpentAtDesc();
 Handles queries like "How many EMIs are left?"
 
 **Flow**:
-1. **Retrieve Active Loans**: Query ValueContainerRepo for active loans
+1. **Retrieve Active Loans**: Query StateContainerRepository for active loans
 2. **No Loans**: Return info message
 3. **Multiple Loans**: Ask user to clarify which loan
    - Store loan IDs in context metadata
@@ -88,7 +88,7 @@ Handles queries like "How many EMIs are left?"
    - Return follow-up question
 4. **Single Loan or Resolved**: Call `computeAndRespond()`
 
-#### `computeAndRespond(ValueContainerEntity loan): SpeechResult`
+#### `computeAndRespond(StateContainerEntity loan): SpeechResult`
 **Computation Logic** (NO LLM here - pure calculation):
 
 1. **Count Paid EMIs**: Query transaction repository
@@ -133,8 +133,8 @@ Handles queries like "How many EMIs are left?"
 - **Separation**: Business logic separate from presentation
 
 ### Dependencies
-- `ValueContainerRepo`: Loan data access
-- `TransactionRepository`: EMI payment history
+- `StateContainerRepository`: Loan data access
+- `StateChangeRepository`: EMI payment history
 - `LoanQueryExplainer`: Natural language generation
 
 ---
@@ -163,9 +163,9 @@ List<String> normalized = tagNormalizationService.normalizeTags(userTags);
 
 ---
 
-## 5. ValueContainerService
+## 5. StateContainerService
 
-**Purpose**: Manage ValueContainer CRUD and queries
+**Purpose**: Manage StateContainer CRUD and queries
 
 ### Responsibilities
 - Create new containers (accounts, loans, wallets)
@@ -175,14 +175,14 @@ List<String> normalized = tagNormalizationService.normalizeTags(userTags);
 
 ### Key Methods (Inferred)
 
-#### `getActiveContainers(Long userId): List<ValueContainerEntity>`
+#### `getActiveContainers(Long userId): List<StateContainerEntity>`
 Returns all active containers for a user
 - Filters by `ownerType=USER`, `ownerId=userId`, `status=ACTIVE`
 
-#### `findValueContainerById(Long id): ValueContainerEntity`
+#### `findValueContainerById(Long id): StateContainerEntity`
 Retrieves a specific container by ID
 
-#### `createContainer(AccountSetupDto dto): ValueContainerEntity`
+#### `createContainer(AccountSetupDto dto): StateContainerEntity`
 Creates a new container from account setup data
 
 ### Use Cases
@@ -192,24 +192,24 @@ Creates a new container from account setup data
 
 ---
 
-## 6. ValueAdjustmentService
+## 6. StateMutationService
 
-**Purpose**: Apply financial adjustments to value containers
+**Purpose**: Apply financial adjustments to state containers
 
 ### Responsibilities
 - Execute balance changes
-- Create audit trail (ValueAdjustmentEntity)
+- Create audit trail (StateMutationEntity)
 - Handle different container types via strategies
 - Enforce business rules (over-limit detection)
 
 ### Key Methods
 
-#### `apply(ValueContainerEntity container, AdjustmentCommand command): void`
+#### `apply(StateContainerEntity container, StateMutationCommand command): void`
 
 **Flow**:
 1. **Resolve Strategy**: Get appropriate strategy for container type
    ```java
-   ValueAdjustmentStrategy strategy = strategyResolver.resolve(container.getContainerType());
+   StateMutationStrategy strategy = strategyResolver.resolve(container.getContainerType());
    ```
 
 2. **Execute Adjustment**: Apply strategy
@@ -224,7 +224,7 @@ Creates a new container from account setup data
 
 4. **Create Audit Record**: Log adjustment
    ```java
-   ValueAdjustmentEntity adjustment = new ValueAdjustmentEntity();
+   StateMutationEntity adjustment = new StateMutationEntity();
    adjustment.setTransactionId(command.getTransactionId());
    adjustment.setContainerId(container.getId());
    adjustment.setAdjustmentType(command.getType());
@@ -242,9 +242,9 @@ Different strategies for different container types:
 - **InventoryStrategy**: Quantity-based adjustments
 
 ### Dependencies
-- `ValueContainerRepo`: Container persistence
-- `ValueAdjustmentRepository`: Audit trail
-- `ValueAdjustmentStrategyResolver`: Strategy selection
+- `StateContainerRepository`: Container persistence
+- `StateMutationRepository`: Audit trail
+- `StateMutationStrategyResolver`: Strategy selection
 
 ### Design Notes
 - Idempotent if called with same transaction ID
@@ -258,8 +258,8 @@ Different strategies for different container types:
 ### Pattern 1: Handler → Service → Repository
 ```
 ExpenseHandler
-  → ValueContainerService.getActiveContainers()
-  → ValueContainerRepo.findByOwnerIdAndStatus()
+  → StateContainerService.getActiveContainers()
+  → StateContainerRepository.findByOwnerIdAndStatus()
 ```
 
 ### Pattern 2: Service → LLM → Service
@@ -272,7 +272,7 @@ LoanAnalysisService
 
 ### Pattern 3: Service → Strategy → Repository
 ```
-ValueAdjustmentService
+StateMutationService
   → Resolve strategy based on container type
   → Execute strategy
   → Save container + audit record
@@ -282,8 +282,8 @@ ValueAdjustmentService
 ```
 ExpenseHandler
   → TagNormalizationService.normalizeTags()
-  → ValueContainerService.findById()
-  → ValueAdjustmentService.apply()
+  → StateContainerService.findById()
+  → StateMutationService.apply()
 ```
 
 ---
@@ -307,15 +307,15 @@ Services are designed to be composed
 // Handler composes multiple services
 ExpenseHandler {
     TagNormalizationService tagService;
-    ValueContainerService containerService;
-    ValueAdjustmentService adjustmentService;
+    StateContainerService containerService;
+    StateMutationService adjustmentService;
     ExpenseCompletenessEvaluator evaluator;
 }
 ```
 
 ### 4. Strategy for Variation
 Use Strategy pattern for type-specific behavior
-- ValueAdjustmentStrategy for different containers
+- StateMutationStrategy for different containers
 - Avoids if/else chains
 - Easy to extend
 
@@ -334,15 +334,15 @@ Services use Spring's declarative transaction management:
 ```java
 @Service
 @Transactional // Default: read-write
-public class ValueAdjustmentService {
+public class StateMutationService {
     
     @Transactional(readOnly = true)
-    public ValueContainerEntity findById(Long id) {
+    public StateContainerEntity findById(Long id) {
         // Read-only for performance
     }
     
     @Transactional // Read-write for modifications
-    public void apply(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void apply(StateContainerEntity container, StateMutationCommand cmd) {
         // Atomic: both container update and audit record
     }
 }
@@ -403,10 +403,10 @@ These are caught by:
 class LoanAnalysisServiceTest {
     
     @MockBean
-    private TransactionRepository transactionRepo;
+    private StateChangeRepository transactionRepo;
     
     @MockBean
-    private ValueContainerRepo containerRepo;
+    private StateContainerRepository containerRepo;
     
     @Autowired
     private LoanAnalysisService service;

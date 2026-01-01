@@ -1,6 +1,6 @@
-package com.apps.deen_sa.finance.account;
+package com.apps.deen_sa.core.state.cache;
 
-import com.apps.deen_sa.core.value.ValueContainerEntity;
+import com.apps.deen_sa.core.state.StateContainerEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class InMemoryValueContainerCache implements ValueContainerCache {
+public class InMemoryStateContainerCache implements StateContainerCache {
 
     private final Map<Long, CacheEntry> cache = new ConcurrentHashMap<>();
 
@@ -16,7 +16,7 @@ public class InMemoryValueContainerCache implements ValueContainerCache {
     private static final long TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     @Override
-    public List<ValueContainerEntity> getActiveContainers(Long ownerId) {
+    public List<StateContainerEntity> getActiveContainers(Long ownerId) {
         CacheEntry entry = cache.get(ownerId);
 
         if (entry == null || entry.isExpired()) {
@@ -27,7 +27,7 @@ public class InMemoryValueContainerCache implements ValueContainerCache {
     }
 
     @Override
-    public void putActiveContainers(Long ownerId, List<ValueContainerEntity> containers) {
+    public void putActiveContainers(Long ownerId, List<StateContainerEntity> containers) {
         cache.put(ownerId, new CacheEntry(containers));
     }
 
@@ -42,10 +42,10 @@ public class InMemoryValueContainerCache implements ValueContainerCache {
     }
 
     private static class CacheEntry {
-        private final List<ValueContainerEntity> containers;
+        private final List<StateContainerEntity> containers;
         private final long createdAt = System.currentTimeMillis();
 
-        CacheEntry(List<ValueContainerEntity> containers) {
+        CacheEntry(List<StateContainerEntity> containers) {
             this.containers = containers;
         }
 

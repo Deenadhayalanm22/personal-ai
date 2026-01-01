@@ -1,4 +1,5 @@
-package com.apps.deen_sa.core.value;
+package com.apps.deen_sa.core.mutation;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,8 +10,8 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "value_adjustments")
-public class ValueAdjustmentEntity {
+@Table(name = "state_mutation")
+public class StateMutationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +22,7 @@ public class ValueAdjustmentEntity {
     private Long containerId;
 
     @Enumerated(EnumType.STRING)
-    private AdjustmentTypeEnum adjustmentType; // DEBIT / CREDIT
+    private MutationTypeEnum adjustmentType; // DEBIT / CREDIT
 
     private BigDecimal amount;
 

@@ -1,6 +1,6 @@
 package com.apps.deen_sa.simulation;
 
-import com.apps.deen_sa.finance.account.ValueContainerService;
+import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.account.AccountSetupHandler;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import com.apps.deen_sa.finance.payment.LiabilityPaymentHandler;
@@ -18,18 +18,18 @@ public class FinancialSimulationContext {
     public final AccountSetupHandler accountSetupHandler;
     public final ExpenseHandler expenseHandler;
     public final LiabilityPaymentHandler liabilityPaymentHandler;
-    public final ValueContainerService valueContainerService;
+    public final StateContainerService stateContainerService;
 
     public FinancialSimulationContext(
             AccountSetupHandler accountSetupHandler,
             ExpenseHandler expenseHandler,
             LiabilityPaymentHandler liabilityPaymentHandler,
-            ValueContainerService valueContainerService
+            StateContainerService stateContainerService
     ) {
         this.accountSetupHandler = accountSetupHandler;
         this.expenseHandler = expenseHandler;
         this.liabilityPaymentHandler = liabilityPaymentHandler;
-        this.valueContainerService = valueContainerService;
+        this.stateContainerService = stateContainerService;
         this.currentDate = LocalDate.now();
     }
 

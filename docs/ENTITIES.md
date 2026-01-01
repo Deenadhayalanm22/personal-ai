@@ -1,7 +1,7 @@
 # Entity Layer Documentation
 
-> **Note**: Following the domain-first refactoring, entities are now organized by domain:
-> - **Core (Shared Kernel)**: `com.apps.deen_sa.core.transaction` and `com.apps.deen_sa.core.value`
+> **Note**: Following the domain-first refactoring and kernel abstraction, entities are now organized:
+> - **Core (Shared Kernel)**: `com.apps.deen_sa.core.state` and `com.apps.deen_sa.core.mutation`
 > - **Finance Domain**: `com.apps.deen_sa.finance.expense`
 > - See [ARCHITECTURE.md](ARCHITECTURE.md) and [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for complete details.
 
@@ -12,23 +12,23 @@ The entity layer represents the domain model and database schema using JPA annot
 
 ```
 ┌─────────────────────┐
-│  TransactionEntity  │◄────────┐
-│  (transaction_rec)  │         │
+│  StateChangeEntity  │◄────────┐
+│  (state_change)     │         │
 └─────────────────────┘         │
          │                      │
          │ sourceContainerId    │ transactionId
          │ targetContainerId    │
          ↓                      │
 ┌─────────────────────┐         │
-│ ValueContainerEntity│         │
-│  (value_container)  │         │
+│ StateContainerEntity│         │
+│  (state_container)  │         │
 └─────────────────────┘         │
          ↑                      │
          │ containerId          │
          │                      │
 ┌─────────────────────┐         │
-│ValueAdjustmentEntity│─────────┘
-│ (value_adjustments) │
+│ StateMutationEntity │─────────┘
+│ (state_mutation)    │
 └─────────────────────┘
 
 ┌─────────────────────┐
@@ -44,10 +44,11 @@ The entity layer represents the domain model and database schema using JPA annot
 
 ---
 
-## 1. TransactionEntity
+## 1. StateChangeEntity
 
-**Table**: `transaction_rec`  
-**Purpose**: Core transaction recording with flexible design supporting multiple transaction types.
+**Table**: `state_change`  
+**Package**: `com.apps.deen_sa.core.state`  
+**Purpose**: Core state change recording with flexible design supporting multiple transaction types across domains.
 
 ### Key Fields
 
@@ -57,8 +58,8 @@ The entity layer represents the domain model and database schema using JPA annot
 - `businessId` (String, nullable): For business transactions
 
 #### Transaction Type
-- `transactionType` (TransactionTypeEnum, NOT NULL): Type of transaction
-  - Values defined in `utils/TransactionTypeEnum.java`
+- `transactionType` (StateChangeTypeEnum, NOT NULL): Type of state change
+  - Defined in `core.state.StateChangeTypeEnum`
   - Examples: EXPENSE, INCOME, TRANSFER, INVESTMENT
 
 #### Monetary Fields
@@ -102,10 +103,11 @@ The entity layer represents the domain model and database schema using JPA annot
 
 ---
 
-## 2. ValueContainerEntity
+## 2. StateContainerEntity
 
-**Table**: `value_container`  
-**Purpose**: Universal container for all value-holding entities (accounts, loans, inventory, receivables, etc.)
+**Table**: `state_container`  
+**Package**: `com.apps.deen_sa.core.state`  
+**Purpose**: Universal container for all value-holding entities (accounts, loans, inventory, receivables, etc.) across domains.
 
 ### Key Fields
 
@@ -201,24 +203,25 @@ currency: null
 
 ---
 
-## 3. ValueAdjustmentEntity
+## 3. StateMutationEntity
 
-**Table**: `value_adjustments`  
-**Purpose**: Audit trail for all changes to value containers
+**Table**: `state_mutation`  
+**Package**: `com.apps.deen_sa.core.mutation`  
+**Purpose**: Audit trail for all mutations to state containers across domains
 
 ### Key Fields
 - `id` (Long, PK, Auto-generated)
-- `transactionId` (Long): Link to the transaction that caused this adjustment
-- `containerId` (Long): Which container was adjusted
-- `adjustmentType` (AdjustmentTypeEnum): DEBIT or CREDIT
-- `amount` (BigDecimal): Adjustment amount
-- `reason` (String): Why adjustment occurred (EXPENSE, REVERSAL, EDIT)
-- `occurredAt` (Instant): When adjustment occurred
+- `transactionId` (Long): Link to the state change that caused this mutation
+- `containerId` (Long): Which container was mutated
+- `adjustmentType` (MutationTypeEnum): DEBIT or CREDIT
+- `amount` (BigDecimal): Mutation amount
+- `reason` (String): Why mutation occurred (EXPENSE, REVERSAL, EDIT)
+- `occurredAt` (Instant): When mutation occurred
 - `createdAt` (Instant): When record was created
 
 ### Design Notes
 - Immutable audit log
-- Every container change creates an adjustment record
+- Every container change creates a mutation record
 - Enables reconstruction of container history
 - Supports reversal and correction workflows
 
@@ -266,7 +269,7 @@ currency: null
 - `updatedAt` (OffsetDateTime)
 
 ### Design Notes
-- Simpler model compared to TransactionEntity
+- Simpler model compared to StateChangeEntity
 - Uses `@ElementCollection` for tags (separate table)
 - OffsetDateTime for timezone-aware timestamps
 - JSONB for flexible metadata
@@ -307,15 +310,15 @@ Located in `core/transaction/TransactionTypeEnum.java`
 **Note**: Credit card and loan payments use TRANSFER type (not EXPENSE) to correctly reflect the accounting principle that principal repayment is a transfer between containers, not an expense.
 
 ### CompletenessLevelEnum
-Located in `utils/CompletenessLevelEnum.java`
+Located in `core.state.CompletenessLevelEnum`
 ```java
 MINIMAL      // Basic data only
 OPERATIONAL  // Has category and merchant
 FINANCIAL    // Complete with container mapping
 ```
 
-### AdjustmentTypeEnum
-Located in `utils/AdjustmentTypeEnum.java`
+### MutationTypeEnum
+Located in `core.mutation.MutationTypeEnum`
 ```java
 DEBIT   // Decreases container value
 CREDIT  // Increases container value
@@ -340,28 +343,28 @@ CREDIT  // Increases container value
 
 ### Indexes
 Recommended indexes (not shown in entity code):
-- `transaction_rec(user_id, timestamp)`
-- `value_container(owner_id, container_type, status)`
-- `value_adjustments(transaction_id)`
-- `value_adjustments(container_id, occurred_at)`
+- `state_change(user_id, timestamp)`
+- `state_container(owner_id, container_type, status)`
+- `state_mutation(transaction_id)`
+- `state_mutation(container_id, occurred_at)`
 
 ---
 
 ## Entity Lifecycle
 
-### Transaction Flow
-1. **Create**: TransactionEntity created from user input
+### State Change Flow
+1. **Create**: StateChangeEntity created from user input
 2. **Evaluate**: Completeness level determined
 3. **Save**: Entity persisted with appropriate flags
 4. **Resolve**: Container mapping attempted (if data available)
-5. **Apply**: Financial impact applied (creates ValueAdjustmentEntity)
+5. **Apply**: Financial impact applied (creates StateMutationEntity)
 6. **Update**: Mark as `financiallyApplied=true`
 7. **Enrich**: Additional data added via follow-up (if `needsEnrichment=true`)
 
 ### Container Flow
-1. **Setup**: ValueContainerEntity created via AccountSetupHandler
-2. **Link**: Transactions link via sourceContainerId/targetContainerId
-3. **Adjust**: ValueAdjustmentEntity records created on each transaction
+1. **Setup**: StateContainerEntity created via AccountSetupHandler
+2. **Link**: State changes link via sourceContainerId/targetContainerId
+3. **Adjust**: StateMutationEntity records created on each state change
 4. **Update**: currentValue and availableValue updated
 5. **Monitor**: overLimit checked and set if capacity exceeded
 
@@ -371,6 +374,6 @@ Recommended indexes (not shown in entity code):
 
 The system supports dual models:
 - **ExpenseEntity**: Simple, legacy, used by ExpenseSummaryService
-- **TransactionEntity**: New, comprehensive, future-focused
+- **StateChangeEntity**: New, comprehensive, future-focused kernel abstraction
 
 This allows gradual migration while maintaining backward compatibility.

@@ -11,20 +11,30 @@ December 29, 2025
 ### 1. CORE (Shared Kernel) ✅
 **Package:** `com.apps.deen_sa.core`
 
-#### core.transaction
-- **TransactionEntity** (from entity)
-- **TransactionRepository** (from repo)
-- **TransactionTypeEnum** (from utils)
-
-#### core.value  
+#### core.state
+- **StateChangeEntity** (from entity)
+- **StateChangeRepository** (from repo)
+- **StateChangeTypeEnum** (from utils)
+- **StateContainerEntity** (from entity)
+- **StateContainerRepository** (from repo)
+- **StateContainerService** (domain-agnostic CRUD service)
 - **CompletenessLevelEnum** (from utils)
-- **ValueContainerEntity** (from entity)
-- **ValueAdjustmentEntity** (from entity)
-- **AdjustmentTypeEnum** (from utils)
-- **ValueContainerRepo** (from repo)
-- **ValueAdjustmentRepository** (from repo)
 
-**Rationale:** These are foundational business concepts used across multiple domains. No dependencies on finance, food, or conversation domains.
+#### core.state.cache
+- **StateContainerCache** (caching interface)
+- **InMemoryStateContainerCache** (generic cache implementation)
+
+#### core.mutation  
+- **StateMutationEntity** (from entity)
+- **StateMutationRepository** (from repo)
+- **StateMutationService** (orchestration/pipeline service)
+- **MutationTypeEnum** (from utils)
+
+#### core.mutation.strategy
+- **StateMutationStrategy** (SPI interface - domain-agnostic contract)
+- **StateMutationStrategyResolver** (generic resolver, no domain logic)
+
+**Rationale:** The kernel contains ONLY domain-agnostic mechanisms. Strategy implementations with finance-specific logic (cash, credit, loans) have been moved to finance.account.strategy. Core provides only the SPI (interface) and generic resolver. No dependencies on finance, food, or any other domain.
 
 ---
 
@@ -79,23 +89,18 @@ December 29, 2025
 
 #### finance.account
 **Classes Moved:**
-- **ValueContainerService** (from service)
-- **ValueAdjustmentService** (from service)
 - **AccountSetupHandler** (from handler)
 - **AccountSetupValidator** (from validator)
-- **ValueContainerCache** (from cache)
-- **InMemoryValueContainerCache** (from cache)
 
 #### finance.account.strategy
-**Classes Moved:**
-- **AdjustmentCommandFactory** (from resolver)
-- **ValueAdjustmentStrategyResolver** (from resolver)
-- **ValueAdjustmentStrategy** (from strategy)
-- **CreditSettlementStrategy** (from strategy)
-- **CashLikeStrategy** (from strategy.impl)
-- **CreditCardStrategy** (from strategy.impl)
+**Finance-Specific Strategy Implementations:**
+- **AdjustmentCommandFactory** (creates finance-specific commands)
+- **CreditSettlementStrategy** (finance-specific interface for credit/loan payments)
+- **CashLikeStrategy** (implements core.mutation.strategy.StateMutationStrategy)
+- **CreditCardStrategy** (implements core.mutation.strategy.StateMutationStrategy)
+- **LoanStrategy** (implements core.mutation.strategy.StateMutationStrategy)
 
-**Rationale:** Finance domain with clear sub-domains for different concerns. Strategy pattern implementations co-located with their domain (account management).
+**Rationale:** Account setup is finance-domain specific. Strategy implementations contain finance business logic (cash, credit cards, loans, EMI, over-limit detection) and belong in the finance domain. They implement the core SPI contract (StateMutationStrategy) but encode finance-specific rules.
 
 ---
 
@@ -162,8 +167,8 @@ The following packages remain in their original location:
 ## Import Updates
 
 All imports across the codebase have been updated automatically:
-- Updated references to core.transaction.*
-- Updated references to core.value.*
+- Updated references to core.state.*
+- Updated references to core.mutation.*
 - Updated references to conversation.*
 - Updated references to finance.*
 - Updated references to common.exception.*

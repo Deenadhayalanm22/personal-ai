@@ -28,7 +28,7 @@ This framework enables **deterministic, repeatable financial simulations** for i
 │  Real Production Services           │  AccountSetupHandler
 │  (No Mocks!)                        │  ExpenseHandler
 │                                     │  LiabilityPaymentHandler
-│                                     │  ValueContainerService
+│                                     │  StateContainerService
 └─────────────────────────────────────┘
 ```
 
@@ -270,7 +270,7 @@ SIM:PAYMENT;amount=3000;target=CREDIT_CARD;targetName=MyCard;date=2024-01-15
 ## Financial Invariants Enforced
 
 ### 1. No Orphan Adjustments
-Every `ValueAdjustmentEntity` must reference a valid `TransactionEntity`.
+Every `StateMutationEntity` must reference a valid `StateChangeEntity`.
 
 **Why**: Prevents data corruption where adjustments exist without their parent transaction.
 
@@ -342,9 +342,9 @@ for (ScenarioAction action : scenario) {
 ### Step 4: Inspect Database
 Add breakpoint after `runner.run()` and inspect:
 ```sql
-SELECT * FROM value_container;
-SELECT * FROM transaction;
-SELECT * FROM value_adjustment;
+SELECT * FROM state_container;
+SELECT * FROM state_change;
+SELECT * FROM state_mutation;
 ```
 
 ## Extending the Framework

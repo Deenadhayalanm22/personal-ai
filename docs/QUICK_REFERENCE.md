@@ -55,16 +55,16 @@ public class InvestmentHandler implements SpeechHandler {
 ### 2. Adding a New Container Type
 
 **Files to Modify**:
-1. Update `ValueContainerEntity` (no schema change needed - uses containerType string)
+1. Update `StateContainerEntity` (no schema change needed - uses containerType string)
 2. Create new strategy: `com.apps.deen_sa.strategy.impl/NewContainerStrategy.java`
-3. Register strategy in `ValueAdjustmentStrategyResolver`
+3. Register strategy in `StateMutationStrategyResolver`
 
 **Example**:
 ```java
 @Component
-public class WalletStrategy implements ValueAdjustmentStrategy {
+public class WalletStrategy implements StateMutationStrategy {
     @Override
-    public void apply(ValueContainerEntity container, AdjustmentCommand cmd) {
+    public void apply(StateContainerEntity container, StateMutationCommand cmd) {
         if (cmd.getType() == DEBIT) {
             container.setCurrentValue(
                 container.getCurrentValue().subtract(cmd.getAmount())
@@ -114,14 +114,14 @@ public class BudgetClassifier extends BaseLLMExtractor {
 
 ```java
 // By user and date range
-List<TransactionEntity> txs = repo.findByUserIdAndTimestampBetween(
+List<StateChangeEntity> txs = repo.findByUserIdAndTimestampBetween(
     userId, 
     startTime, 
     endTime
 );
 
 // By category
-List<TransactionEntity> txs = repo.findByUserIdAndCategory(
+List<StateChangeEntity> txs = repo.findByUserIdAndCategory(
     userId, 
     "food"
 );
@@ -272,8 +272,8 @@ public class MyHandler implements SpeechHandler {
 ### Key Tables
 
 ```sql
--- Transactions
-transaction_rec (
+-- State Changes (Transactions)
+state_change (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(30) NOT NULL,
     transaction_type VARCHAR(50) NOT NULL,
@@ -288,8 +288,8 @@ transaction_rec (
     needs_enrichment BOOLEAN DEFAULT FALSE
 );
 
--- Value Containers
-value_container (
+-- State Containers
+state_container (
     id BIGSERIAL PRIMARY KEY,
     owner_type VARCHAR(30) NOT NULL,
     owner_id BIGINT NOT NULL,
@@ -303,8 +303,8 @@ value_container (
     over_limit BOOLEAN DEFAULT FALSE
 );
 
--- Adjustments (Audit Trail)
-value_adjustments (
+-- State Mutations (Audit Trail)
+state_mutation (
     id BIGSERIAL PRIMARY KEY,
     transaction_id BIGINT,
     container_id BIGINT,
@@ -535,14 +535,14 @@ INSERT INTO tag_master (canonical_tag, status) VALUES
 
 ### Find incomplete transactions
 ```sql
-SELECT * FROM transaction_rec 
+SELECT * FROM state_change 
 WHERE needs_enrichment = true;
 ```
 
 ### Sum expenses by category (last 30 days)
 ```sql
 SELECT category, SUM(amount) 
-FROM transaction_rec 
+FROM state_change 
 WHERE user_id = '1' 
   AND transaction_type = 'EXPENSE'
   AND timestamp > NOW() - INTERVAL '30 days'
@@ -551,14 +551,14 @@ GROUP BY category;
 
 ### Find over-limit containers
 ```sql
-SELECT * FROM value_container 
+SELECT * FROM state_container 
 WHERE over_limit = true 
   AND status = 'ACTIVE';
 ```
 
 ### Audit trail for container
 ```sql
-SELECT * FROM value_adjustments 
+SELECT * FROM state_mutation 
 WHERE container_id = 123 
 ORDER BY occurred_at DESC;
 ```
