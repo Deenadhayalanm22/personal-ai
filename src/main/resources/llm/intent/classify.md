@@ -6,6 +6,7 @@ Your task is to classify the user's message into EXACTLY ONE of the following in
 - QUERY
 - INCOME
 - INVESTMENT
+- INVESTMENT_SELL
 - TRANSFER
 - ACCOUNT_SETUP
 - ASSET_SETUP
@@ -143,6 +144,22 @@ Money being invested or allocated for returns.
 Examples:
 - "Invested 10k in mutual fund"
 - "Bought shares of TCS"
+
+----------------------------------------
+
+INVESTMENT_SELL:
+Selling owned assets for cash proceeds.
+
+This intent applies when the user is SELLING assets like stocks, mutual funds, or gold.
+
+Examples:
+- "Sold 15 ITC shares at 400"
+- "I sold 5 units of SBI Bluechip at 520"
+- "Sold 2 grams of gold at 6300"
+
+CRITICAL:
+- If user is BUYING assets → INVESTMENT
+- If user is SELLING assets → INVESTMENT_SELL
 
 ----------------------------------------
 
