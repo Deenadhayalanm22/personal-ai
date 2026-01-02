@@ -11,6 +11,9 @@ import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
 import com.apps.deen_sa.core.mutation.StateMutationService;
+import com.apps.deen_sa.core.mutation.StateMutationEntity;
+import com.apps.deen_sa.core.mutation.StateMutationRepository;
+import com.apps.deen_sa.core.mutation.MutationTypeEnum;
 import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
@@ -37,6 +40,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
     private final StateChangeRepository transactionRepository;
     private final StateContainerService stateContainerService;
     private final StateMutationService stateMutationService;
+    private final StateMutationRepository stateMutationRepository;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
     private final StateMutationStrategyResolver strategyResolver;
 
@@ -230,6 +234,17 @@ public class LiabilityPaymentHandler implements SpeechHandler {
         StateMutationStrategy strategy = strategyResolver.resolve(targetContainer);
 
         if (strategy instanceof CreditSettlementStrategy) {
+            // Create adjustment record for credit card payment
+            StateMutationEntity creditAdjustment = new StateMutationEntity();
+            creditAdjustment.setTransactionId(tx.getId());
+            creditAdjustment.setContainerId(targetContainer.getId());
+            creditAdjustment.setAdjustmentType(MutationTypeEnum.CREDIT);
+            creditAdjustment.setAmount(tx.getAmount());
+            creditAdjustment.setReason(reason);
+            creditAdjustment.setOccurredAt(tx.getTimestamp() != null ? tx.getTimestamp() : Instant.now());
+            creditAdjustment.setCreatedAt(Instant.now());
+            stateMutationRepository.save(creditAdjustment);
+            
             // Apply payment to reduce outstanding
             ((CreditSettlementStrategy) strategy).applyPayment(targetContainer, tx.getAmount());
             // Save updated container

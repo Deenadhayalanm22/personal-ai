@@ -6,8 +6,10 @@ Your task is to classify the user's message into EXACTLY ONE of the following in
 - QUERY
 - INCOME
 - INVESTMENT
+- INVESTMENT_SELL
 - TRANSFER
 - ACCOUNT_SETUP
+- ASSET_SETUP
 - LIABILITY_PAYMENT
 - UNKNOWN
         
@@ -40,6 +42,30 @@ Examples (ALL are ACCOUNT_SETUP):
 IMPORTANT:
 Mentioning EMI, outstanding amount, tenure, or loan details
 DOES NOT mean a payment is happening.
+
+----------------------------------------
+
+ASSET_SETUP:
+Use this intent when the user is DECLARING or RECORDING existing asset ownership.
+
+This includes:
+- Stocks/Shares (ITC shares, Reliance stock)
+- Mutual Funds (SBI Bluechip, HDFC Midcap)
+- Physical Assets (gold, silver)
+- Other investments they already own
+
+This is for OWNERSHIP DECLARATION, not for buying or selling.
+
+Examples (ALL are ASSET_SETUP):
+- "I have 100 ITC shares"
+- "I own 50 units of SBI Bluechip mutual fund"
+- "I have 20 grams of gold"
+- "I own 30 shares of Reliance"
+
+CRITICAL:
+- If user is DECLARING ownership → ASSET_SETUP
+- If user is BUYING/INVESTING → INVESTMENT
+- Asset declaration is about stating what they own, not a transaction
 
 ----------------------------------------
 
@@ -118,6 +144,22 @@ Money being invested or allocated for returns.
 Examples:
 - "Invested 10k in mutual fund"
 - "Bought shares of TCS"
+
+----------------------------------------
+
+INVESTMENT_SELL:
+Selling owned assets for cash proceeds.
+
+This intent applies when the user is SELLING assets like stocks, mutual funds, or gold.
+
+Examples:
+- "Sold 15 ITC shares at 400"
+- "I sold 5 units of SBI Bluechip at 520"
+- "Sold 2 grams of gold at 6300"
+
+CRITICAL:
+- If user is BUYING assets → INVESTMENT
+- If user is SELLING assets → INVESTMENT_SELL
 
 ----------------------------------------
 

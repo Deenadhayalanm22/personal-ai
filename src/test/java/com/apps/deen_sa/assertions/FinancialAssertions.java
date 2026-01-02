@@ -68,19 +68,30 @@ public final class FinancialAssertions {
                 .filter(a -> a.getContainerId() != null && a.getContainerId().equals(containerId))
                 .collect(Collectors.toList());
 
+        StateContainerEntity current = containerRepo.findById(containerId).orElseThrow(() -> new IllegalStateException("Container missing: " + containerId));
+        
+        // Determine if this is a liability container (CREDIT_CARD, LOAN)
+        boolean isLiability = current.getContainerType().equals("CREDIT_CARD") || current.getContainerType().equals("LOAN");
+
         BigDecimal credits = adjustments.stream()
                 .filter(a -> a.getAdjustmentType() != null && a.getAdjustmentType().name().equals("CREDIT"))
                 .map(StateMutationEntity::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal debits = adjustments.stream()
-                .filter(a -> a.getAdjustmentType() != null && a.getAdjustmentType().name().equals("DEBIT"))
+                .filter(a -> a.getAdjustmentType() != null && 
+                        (a.getAdjustmentType().name().equals("DEBIT") || a.getAdjustmentType().name().equals("PAYMENT")))
                 .map(StateMutationEntity::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal expected = openingValue.add(credits).subtract(debits);
-
-        StateContainerEntity current = containerRepo.findById(containerId).orElseThrow(() -> new IllegalStateException("Container missing: " + containerId));
+        BigDecimal expected;
+        if (isLiability) {
+            // For liabilities: DEBIT increases outstanding, CREDIT/PAYMENT decreases outstanding
+            expected = openingValue.add(debits).subtract(credits);
+        } else {
+            // For assets: CREDIT increases balance, DEBIT/PAYMENT decreases balance
+            expected = openingValue.add(credits).subtract(debits);
+        }
 
         BigDecimal currentValue = current.getCurrentValue() == null ? BigDecimal.ZERO : current.getCurrentValue();
 
