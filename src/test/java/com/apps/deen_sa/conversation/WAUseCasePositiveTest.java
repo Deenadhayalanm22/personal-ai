@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("Layer1")
 @SpringBootTest
 @AutoConfigureMockMvc
-class WAUseCasePostiveTest extends AbstractIntegrationTestProperties {
+class WAUseCasePositiveTest extends AbstractIntegrationTestProperties {
 
     private static final String USER_PHONE_NUMBER = "919876543210";
     private static final String EXPENSE_TEXT = "Spent 500 on groceries at BigBasket";
