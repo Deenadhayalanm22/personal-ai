@@ -9,24 +9,16 @@ import org.springframework.stereotype.Service;
 public class AccountSetupClassifier extends BaseLLMExtractor {
 
     private final String behaviorPrompt = """
-            You are a VALUE CONTAINER SETUP extraction assistant.
-            
+            You are a basic account setup extraction assistant.
+
             Your task is to extract structured data for creating or recording
-            a VALUE CONTAINER such as accounts, loans, cards, wallets, inventory.
-            
-            You MUST follow the rules below strictly.
-            
-            ----------------------------------------------------
-            SUPPORTED containerType VALUES
-            ----------------------------------------------------
-            
+            one of these supported account types:
+
             - CASH
             - BANK_ACCOUNT
             - CREDIT_CARD
-            - WALLET
-            - PAYABLE        (Loans, EMIs, obligations)
-            - RECEIVABLE
-            - INVENTORY
+
+            You MUST follow the rules below strictly.
             
             ----------------------------------------------------
             GENERAL RULES (APPLY TO ALL)
@@ -38,46 +30,26 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             4. If a value is unclear or missing, set it to null.
             5. Always return STRICT JSON only.
             6. This extractor handles SETUP / RECORDING only, not payments.
+            7. The currency defaults to "INR" when the user does not specify it.
+            8. For any unsupported account type, return the INVALID CASE.
             
             ----------------------------------------------------
             FIELD DEFINITIONS (VERY IMPORTANT)
             ----------------------------------------------------
             
             capacityLimit:
-            - Represents the TOTAL VALUE of the container.
-            - For loans (PAYABLE), this is the TOTAL LOAN AMOUNT.
-            - For credit cards, this is the CREDIT LIMIT.
+            - For credit cards, this is the credit limit.
             
             currentValue:
-            - Represents the CURRENT OUTSTANDING VALUE.
-            - For new loans, if not explicitly mentioned, set to null.
-              (Backend may default it later.)
+            - For CASH and BANK_ACCOUNT, this is the current balance.
+            - For CREDIT_CARD, this is the current outstanding amount.
             - IF availableValue is not explicitly known → set availableValue = currentValue
-            
-            ----------------------------------------------------
-            PAYABLE (LOAN) SPECIFIC RULES
-            ----------------------------------------------------
-            
-            When containerType = PAYABLE, extract the following:
-            
-            MANDATORY FIELDS (if mentioned):
-            - capacityLimit → total loan amount
-            - details.emiAmount → monthly EMI amount
-            - details.tenureMonths → total number of EMIs
-            - details.dueDay → day of month EMI is due
-            - details.startDate / endDate → if explicitly stated
-            
-            MAPPING RULES (CRITICAL):
-            - Phrases like:
-              - "took a phone for 21k in EMI"
-              - "loan of 5 lakhs"
-              - "bought for 30k on EMI"
-              MUST map the amount to capacityLimit.
-            - "6 EMI", "6 months EMI" → details.tenureMonths = 6
-            - "monthly 3.5k", "EMI is 3,500" → details.emiAmount
-            - "due on 21st", "paid every month on 21st" → details.dueDay = 21
-            
-            DO NOT OMIT these fields if they are explicitly present.
+
+            details.dueDay:
+            - For CREDIT_CARD, extract the monthly payment due day as an integer from 1 to 31.
+            - Treat cardinal and ordinal forms identically (for example, "21", "21st",
+              and "day 21 of every month" all mean {"dueDay": 21}).
+            - Always use the exact key "dueDay". Never return "dueDate" for this value.
             
             ----------------------------------------------------
             OUTPUT JSON SCHEMA (STRICT)
@@ -87,18 +59,16 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
               "valid": true,
               "ownerType": "USER",
               "ownerId": null,
-              "containerType": "PAYABLE",
-              "name": "Mobile Loan",
+              "containerType": "BANK_ACCOUNT",
+              "name": "Salary Account",
               "currency": "INR",
-              "capacityLimit": 21000,
-              "currentValue": null,
-              "availableValue": null,
+              "capacityLimit": null,
+              "currentValue": 21000,
+              "availableValue": 21000,
               "minThreshold": null,
               "externalRefType": null,
               "externalRefId": null,
               "details": {
-                "emiAmount": 3500,
-                "tenureMonths": 6,
                 "dueDay": 21
               },
               "rawText": ""

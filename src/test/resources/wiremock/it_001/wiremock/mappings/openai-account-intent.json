@@ -4,23 +4,23 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"contains": "I also have the credit card with 1L limit and every month 23rd is my due date"},
-      {"contains": "VALUE CONTAINER SETUP extraction assistant"}
+      {"contains": "Setup my hdfc bank account where i have currently 40k balance as of now"},
+      {"contains": "You are a financial intent classifier."}
     ]
   },
   "response": {
     "status": 200,
     "headers": {"Content-Type": "application/json"},
     "jsonBody": {
-      "id": "chatcmpl-integration-credit-extraction",
+      "id": "chatcmpl-integration-hdfc-intent",
       "object": "chat.completion",
-      "created": 1722729600,
+      "created": 1785866400,
       "model": "gpt-4.1-mini",
       "choices": [{
         "index": 0,
         "message": {
           "role": "assistant",
-          "content": "{\"valid\":true,\"ownerType\":\"USER\",\"containerType\":\"CREDIT_CARD\",\"name\":\"Credit Card\",\"currency\":\"INR\",\"capacityLimit\":100000,\"details\":{\"dueDay\":23}}"
+          "content": "{\"intent\":\"ACCOUNT_SETUP\",\"confidence\":0.99}"
         },
         "finish_reason": "stop"
       }]

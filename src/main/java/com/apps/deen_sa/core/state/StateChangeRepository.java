@@ -18,15 +18,17 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
 
     @Query(value = """
             SELECT COALESCE(SUM(t.amount), 0)
-            FROM transaction_rec t
-            LEFT JOIN value_container vc
+            FROM state_change t
+            LEFT JOIN state_container vc
                    ON vc.id = t.source_container_id
             WHERE t.transaction_type = 'EXPENSE'
+              AND t.user_id = :userId
               AND t.tx_time BETWEEN :start AND :end
               AND (:category IS NULL OR t.category = :category)
               AND (:sourceAccount IS NULL OR vc.container_type = :sourceAccount)
             """, nativeQuery = true)
     BigDecimal sumExpenses(
+            @Param("userId") String userId,
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("category") String category,
@@ -36,18 +38,41 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
 
     @Query(value = """
                 SELECT t.category, COALESCE(SUM(t.amount), 0)
-                FROM transaction_rec t
-                LEFT JOIN value_container vc
+                FROM state_change t
+                LEFT JOIN state_container vc
                        ON vc.id = t.source_container_id
                 WHERE t.transaction_type = 'EXPENSE'
+                  AND t.user_id = :userId
                   AND t.tx_time BETWEEN :start AND :end
                   AND (:sourceAccount IS NULL OR vc.container_type = :sourceAccount)
                 GROUP BY t.category
                 ORDER BY SUM(t.amount) DESC
                 """, nativeQuery = true)
     List<Object[]> sumByCategoryRaw(
+            @Param("userId") String userId,
             Instant start,
             Instant end,
+            String sourceAccount
+    );
+
+    @Query(value = """
+            SELECT t.subcategory, COALESCE(SUM(t.amount), 0)
+            FROM state_change t
+            LEFT JOIN state_container vc
+                   ON vc.id = t.source_container_id
+            WHERE t.transaction_type = 'EXPENSE'
+              AND t.user_id = :userId
+              AND t.tx_time BETWEEN :start AND :end
+              AND (:category IS NULL OR t.category = :category)
+              AND (:sourceAccount IS NULL OR vc.container_type = :sourceAccount)
+            GROUP BY t.subcategory
+            ORDER BY SUM(t.amount) DESC
+            """, nativeQuery = true)
+    List<Object[]> sumBySubcategoryRaw(
+            @Param("userId") String userId,
+            Instant start,
+            Instant end,
+            String category,
             String sourceAccount
     );
 
@@ -55,16 +80,18 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             SELECT
                 vc.container_type AS source_account,
                 COALESCE(SUM(t.amount), 0) AS total_amount
-            FROM transaction_rec t
-            LEFT JOIN value_container vc
+            FROM state_change t
+            LEFT JOIN state_container vc
                    ON vc.id = t.source_container_id
             WHERE t.transaction_type = 'EXPENSE'
+              AND t.user_id = :userId
               AND t.tx_time BETWEEN :start AND :end
               AND (:category IS NULL OR t.category = :category)
             GROUP BY vc.container_type
             ORDER BY total_amount DESC
             """, nativeQuery = true)
     List<Object[]> sumBySourceAccountRaw(
+            @Param("userId") String userId,
             Instant start,
             Instant end,
             String category
@@ -84,10 +111,12 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
 
     // ✅ THIS METHOD GOES HERE
     default Map<String, BigDecimal> sumByCategory(
+            String userId,
             TimeRange range,
             String sourceAccount
     ) {
         return sumByCategoryRaw(
+                userId,
                 range.start(),
                 range.end(),
                 sourceAccount
@@ -103,10 +132,12 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
 
     // ✅ THIS METHOD GOES HERE
     default Map<String, BigDecimal> sumBySourceAccount(
+            String userId,
             TimeRange range,
             String sourceAccount
     ) {
         return sumBySourceAccountRaw(
+                userId,
                 range.start(),
                 range.end(),
                 sourceAccount
@@ -115,6 +146,28 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
                         r -> (String) r[0],
                         r -> (BigDecimal) r[1],
                         (a, b) -> a,              // merge function (won't happen due to GROUP BY)
+                        LinkedHashMap::new
+                )
+        );
+    }
+
+    default Map<String, BigDecimal> sumBySubcategory(
+            String userId,
+            TimeRange range,
+            String category,
+            String sourceAccount
+    ) {
+        return sumBySubcategoryRaw(
+                userId,
+                range.start(),
+                range.end(),
+                category,
+                sourceAccount
+        ).stream().collect(
+                Collectors.toMap(
+                        r -> (String) r[0],
+                        r -> (BigDecimal) r[1],
+                        (a, b) -> a,
                         LinkedHashMap::new
                 )
         );

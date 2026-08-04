@@ -16,6 +16,7 @@ public class ExpenseQueryBuilder {
     public ExpenseQuery from(QueryResult qr) {
 
         ExpenseQuery eq = new ExpenseQuery();
+        eq.setUserId("1"); // TODO: resolve from authenticated user
 
         eq.setTimeRange(
                 timeRangeResolver.resolve(qr.getTimePeriod())
@@ -25,7 +26,8 @@ public class ExpenseQueryBuilder {
         eq.setSourceAccount(qr.getSourceAccount());
 
         eq.setIncludeTotal(qr.isIncludeTotal());
-        eq.setGroupByCategory(qr.isGroupByCategory());
+        // A category breakdown makes total queries useful for insights as well.
+        eq.setGroupByCategory(qr.isGroupByCategory() || qr.isIncludeTotal());
         eq.setGroupBySourceAccount(qr.isGroupBySourceAccount());
 
         return eq;

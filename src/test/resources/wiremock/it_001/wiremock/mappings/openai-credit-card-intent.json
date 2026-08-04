@@ -4,7 +4,7 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"contains": "Setup my salary account with 10000rs and i have debit card, upi mapped against this"},
+      {"contains": "Setup my hdfc credit card where i have 30k inr limit outstanding of 0 and due date is 21 of every month"},
       {"contains": "You are a financial intent classifier."}
     ]
   },
@@ -12,9 +12,9 @@
     "status": 200,
     "headers": {"Content-Type": "application/json"},
     "jsonBody": {
-      "id": "chatcmpl-integration-salary-intent",
+      "id": "chatcmpl-integration-hdfc-credit-card-intent",
       "object": "chat.completion",
-      "created": 1722729600,
+      "created": 1785866400,
       "model": "gpt-4.1-mini",
       "choices": [{
         "index": 0,

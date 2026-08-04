@@ -6,6 +6,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ExpenseQuery {
+    // owner scope
+    private String userId;
+
     // mandatory
     private TimeRange timeRange;
 

@@ -53,6 +53,7 @@ If user asks:
 - "how much did I spend":
   queryType = EXPENSE_TOTAL
   includeTotal = true
+  groupByCategory = true
 
 ------------------------------------------------
 TIME PERIOD (PATTERN-BASED)

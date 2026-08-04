@@ -15,5 +15,6 @@ public class ExpenseSummary {
     private BigDecimal totalSpend;
 
     private Map<String, BigDecimal> spendByCategory;
+    private Map<String, BigDecimal> spendBySubcategory;
     private Map<String, BigDecimal> spendBySourceAccount;
 }

@@ -24,6 +24,7 @@ public class ExpenseAnalyticsService {
         if (query.isIncludeTotal()) {
             summary.setTotalSpend(
                     repo.sumExpenses(
+                            query.getUserId(),
                             range.start(),
                             range.end(),
                             query.getCategory(),
@@ -35,7 +36,16 @@ public class ExpenseAnalyticsService {
         if (query.isGroupByCategory()) {
             summary.setSpendByCategory(
                     repo.sumByCategory(
+                            query.getUserId(),
                             range,
+                            query.getSourceAccount()
+                    )
+            );
+            summary.setSpendBySubcategory(
+                    repo.sumBySubcategory(
+                            query.getUserId(),
+                            range,
+                            query.getCategory(),
                             query.getSourceAccount()
                     )
             );
@@ -44,6 +54,7 @@ public class ExpenseAnalyticsService {
         if (query.isGroupBySourceAccount()) {
             summary.setSpendBySourceAccount(
                     repo.sumBySourceAccount(
+                            query.getUserId(),
                             query.getTimeRange(),
                             query.getCategory()
                     )
