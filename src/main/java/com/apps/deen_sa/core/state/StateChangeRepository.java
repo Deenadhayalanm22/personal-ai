@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 public interface StateChangeRepository extends JpaRepository<StateChangeEntity, Long>, JpaSpecificationExecutor<StateChangeEntity> {
 
+
     @Query(value = """
             SELECT COALESCE(SUM(t.amount), 0)
             FROM transaction_rec t

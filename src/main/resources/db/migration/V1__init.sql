@@ -1,5 +1,4 @@
--- Initial schema for integration tests
--- All tables required by JPA entities
+-- Initial schema for the application and integration tests.
 
 -- State Container (accounts, credit cards, cash, etc.)
 CREATE TABLE IF NOT EXISTS state_container (
@@ -72,43 +71,6 @@ CREATE TABLE IF NOT EXISTS state_mutation (
     CONSTRAINT fk_mutation_container FOREIGN KEY (container_id) REFERENCES state_container(id)
 );
 
--- Expense Records
-CREATE TABLE IF NOT EXISTS expense (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    account_id BIGINT,
-    amount NUMERIC(15,2) NOT NULL,
-    currency VARCHAR(3) NOT NULL DEFAULT 'INR',
-    category VARCHAR(50) NOT NULL,
-    subcategory VARCHAR(100),
-    merchant_name VARCHAR(200),
-    payment_method VARCHAR(50),
-    spent_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    raw_text TEXT,
-    details JSONB,
-    is_valid BOOLEAN DEFAULT TRUE,
-    validation_reason TEXT,
-    source VARCHAR(50),
-    source_ref VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE
-);
-
--- Expense Tags (many-to-many)
-CREATE TABLE IF NOT EXISTS expense_tags (
-    expense_id BIGINT NOT NULL,
-    tag VARCHAR(255),
-    CONSTRAINT fk_expense_tags FOREIGN KEY (expense_id) REFERENCES expense(id) ON DELETE CASCADE
-);
-
--- Tag Master
-CREATE TABLE IF NOT EXISTS tag_master (
-    id BIGSERIAL PRIMARY KEY,
-    canonical_tag VARCHAR(255),
-    status VARCHAR(50)
-);
-
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_state_container_owner ON state_container(owner_type, owner_id);
 CREATE INDEX IF NOT EXISTS idx_state_container_type ON state_container(container_type);
@@ -116,7 +78,4 @@ CREATE INDEX IF NOT EXISTS idx_state_change_user ON state_change(user_id);
 CREATE INDEX IF NOT EXISTS idx_state_change_type ON state_change(transaction_type);
 CREATE INDEX IF NOT EXISTS idx_state_mutation_statechange ON state_mutation(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_state_mutation_container ON state_mutation(container_id);
-CREATE INDEX IF NOT EXISTS idx_expense_user ON expense(user_id);
-CREATE INDEX IF NOT EXISTS idx_expense_category ON expense(category);
-CREATE INDEX IF NOT EXISTS idx_expense_spent_at ON expense(spent_at);
 

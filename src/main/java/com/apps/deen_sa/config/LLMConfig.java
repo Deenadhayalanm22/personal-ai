@@ -2,7 +2,6 @@ package com.apps.deen_sa.config;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,9 +9,10 @@ import org.springframework.context.annotation.Configuration;
 public class LLMConfig {
 
     @Bean
-    public OpenAIClient openAIClient(@Value("${openai.api-key}") String apiKey) {
+    public OpenAIClient openAIClient(ApplicationProperties properties) {
         return OpenAIOkHttpClient.builder()
-                .apiKey(apiKey)
+                .apiKey(properties.openai().apiKey())
+                .baseUrl(properties.openai().baseUrl())
                 .build();
     }
 }

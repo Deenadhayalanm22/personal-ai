@@ -1,0 +1,37 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "Spent 500 on groceries at BigBasket"
+      },
+      {
+        "contains": "Food & Dining"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "chatcmpl-integration-expense",
+      "object": "chat.completion",
+      "created": 1722729600,
+      "model": "gpt-4.1-mini",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"valid\":true,\"amount\":500,\"category\":\"Food & Dining\",\"subcategory\":\"Groceries\",\"merchantName\":\"BigBasket\",\"sourceAccount\":\"CASH\",\"transactionDate\":\"2026-08-04\",\"rawText\":\"Spent 500 on groceries at BigBasket\",\"details\":{},\"tags\":[],\"sourceResolved\":false}"
+          },
+          "finish_reason": "stop"
+        }
+      ]
+    }
+  }
+}

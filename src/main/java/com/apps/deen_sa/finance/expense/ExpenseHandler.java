@@ -4,30 +4,19 @@ import com.apps.deen_sa.dto.StateMutationCommand;
 import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.core.state.StateChangeEntity;
 import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.finance.expense.ExpenseCompletenessEvaluator;
 import com.apps.deen_sa.llm.impl.ExpenseClassifier;
-import com.apps.deen_sa.finance.expense.ExpenseDtoToEntityMapper;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
-import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategyResolver;
-import com.apps.deen_sa.finance.expense.TagNormalizationService;
 import com.apps.deen_sa.core.mutation.StateMutationService;
 import com.apps.deen_sa.core.state.StateContainerService;
-import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
 import com.apps.deen_sa.core.state.CompletenessLevelEnum;
-import com.apps.deen_sa.finance.expense.ExpenseMerger;
-import com.apps.deen_sa.finance.expense.ExpenseValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +24,6 @@ public class ExpenseHandler implements SpeechHandler {
 
     private final ExpenseClassifier llm;
     private final StateChangeRepository repo;
-    private final TagNormalizationService tagNormalizationService;
     private final StateContainerService stateContainerService;
     private final ExpenseCompletenessEvaluator completenessEvaluator;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
@@ -112,6 +100,7 @@ public class ExpenseHandler implements SpeechHandler {
             }
 
             repo.save(saved);
+
             ctx.reset();
 
             return SpeechResult.saved(saved);
@@ -260,7 +249,6 @@ public class ExpenseHandler implements SpeechHandler {
     // -----------------------------------------------------
     private StateChangeEntity saveExpense(ExpenseDto dto) {
         Long userId = 1L; // TODO: resolve properly
-        dto.setTags(tagNormalizationService.normalizeTags(dto.getTags()));
 
         StateChangeEntity transaction =
                 ExpenseDtoToEntityMapper.toEntity(dto, userId);

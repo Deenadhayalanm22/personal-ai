@@ -1,8 +1,8 @@
 package com.apps.deen_sa.conversation;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,23 +17,18 @@ import java.util.Map;
 public class WhatsAppReplySender {
 
     private final RestTemplate restTemplate;
-
-    @Value("${whatsapp.access-token}")
-    private String accessToken;
-
-    @Value("${whatsapp.phone-number-id}")
-    private String phoneNumberId;
+    private final ApplicationProperties properties;
 
     public void sendTextReply(String to, String message) {
 
         String url =
-                "https://graph.facebook.com/v19.0/"
-                        + phoneNumberId
+                properties.whatsapp().apiBaseUrl() + "/v19.0/"
+                    + properties.whatsapp().phoneNumberId()
                         + "/messages";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(accessToken);
+        headers.setBearerAuth(properties.whatsapp().accessToken());
 
         Map<String, Object> payload = Map.of(
                 "messaging_product", "whatsapp",

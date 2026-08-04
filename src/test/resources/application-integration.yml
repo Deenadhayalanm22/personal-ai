@@ -39,3 +39,4 @@ logging:
 test:
   containers:
     enabled: true
+

@@ -71,6 +71,7 @@ public class ExpenseDtoToEntityMapper {
             details.putAll(dto.getDetails());
         }
 
+
         entity.setDetails(details);
         entity.setCompletenessLevel(dto.getCompletenessLevelEnum());
 
@@ -140,6 +141,7 @@ public class ExpenseDtoToEntityMapper {
             existing.putAll(dto.getDetails());
             entity.setDetails(existing);
         }
+
 
         // ----------------------------
         // NEVER TOUCH THESE HERE

@@ -1,0 +1,29 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"contains": "I also have the credit card with 1L limit and every month 23rd is my due date"},
+      {"contains": "VALUE CONTAINER SETUP extraction assistant"}
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "jsonBody": {
+      "id": "chatcmpl-integration-credit-extraction",
+      "object": "chat.completion",
+      "created": 1722729600,
+      "model": "gpt-4.1-mini",
+      "choices": [{
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"valid\":true,\"ownerType\":\"USER\",\"containerType\":\"CREDIT_CARD\",\"name\":\"Credit Card\",\"currency\":\"INR\",\"capacityLimit\":100000,\"details\":{\"dueDay\":23}}"
+        },
+        "finish_reason": "stop"
+      }]
+    }
+  }
+}

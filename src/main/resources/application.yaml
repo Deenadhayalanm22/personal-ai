@@ -15,6 +15,7 @@ spring:
 
 openai:
   api-key: ${OPENAI_API_KEY}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
 
 management:
   endpoints:
@@ -28,7 +29,12 @@ management:
 whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN}
   phone-number-id:  ${WHATSAPP_PHONE_NUMBER_ID}
+  api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
 
 logging:
   level:
     root: INFO
+
+server:
+  port: ${PORT:8080}
+
