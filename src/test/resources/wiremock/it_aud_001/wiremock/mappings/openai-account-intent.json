@@ -1,0 +1,29 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"contains": "Setup my hdfc bank account where i have currently 40k balance as of now"},
+      {"contains": "You are a financial intent classifier."}
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "jsonBody": {
+      "id": "chatcmpl-integration-hdfc-intent",
+      "object": "chat.completion",
+      "created": 1785866400,
+      "model": "gpt-4.1-mini",
+      "choices": [{
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"intent\":\"ACCOUNT_SETUP\",\"confidence\":0.99}"
+        },
+        "finish_reason": "stop"
+      }]
+    }
+  }
+}

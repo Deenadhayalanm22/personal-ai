@@ -21,6 +21,45 @@ public class WhatsAppReplySender {
 
     public void sendTextReply(String to, String message) {
 
+        sendPayload(to, message, Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "text",
+                "text", Map.of("body", message)
+        ));
+    }
+
+    public void sendAudioConfirmation(String to, String transcription, String confirmationId) {
+        String body = "I heard:\n\n" + limit(transcription, 850)
+                + "\n\nShould I process this?";
+
+        Map<String, Object> payload = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "button",
+                        "body", Map.of("text", body),
+                        "action", Map.of("buttons", java.util.List.of(
+                                replyButton("audio_confirm:" + confirmationId, "Yes"),
+                                replyButton("audio_retry:" + confirmationId, "Retry")
+                        ))
+                )
+        );
+
+        sendPayload(to, "audio transcription confirmation", payload);
+    }
+
+    private Map<String, Object> replyButton(String id, String title) {
+        return Map.of("type", "reply", "reply", Map.of("id", id, "title", title));
+    }
+
+    private String limit(String text, int maxLength) {
+        return text.length() <= maxLength ? text : text.substring(0, maxLength - 1) + "…";
+    }
+
+    private void sendPayload(String to, String description, Map<String, Object> payload) {
+
         String url =
                 properties.whatsapp().apiBaseUrl() + "/v19.0/"
                     + properties.whatsapp().phoneNumberId()
@@ -30,19 +69,12 @@ public class WhatsAppReplySender {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(properties.whatsapp().accessToken());
 
-        Map<String, Object> payload = Map.of(
-                "messaging_product", "whatsapp",
-                "to", to,
-                "type", "text",
-                "text", Map.of("body", message)
-        );
-
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(payload, headers);
 
         try {
             restTemplate.postForEntity(url, request, String.class);
-            log.info("Successfully pushed the message-{} to {}", message, to);
+            log.info("Successfully pushed {} to {}", description, to);
         } catch (Exception e) {
             // swallow or log — webhook flow must never break
             log.error("Failed to send WhatsApp reply to {}", to, e);

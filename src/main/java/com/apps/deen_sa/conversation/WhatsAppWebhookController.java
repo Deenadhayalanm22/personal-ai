@@ -45,6 +45,16 @@ public class WhatsAppWebhookController {
             );
         });
 
+        payload.extractAudioMessages().forEach(msg ->
+                messageProcessor.processIncomingAudio(
+                        msg.from(),
+                        msg.mediaId(),
+                        msg.mimeType()
+                ));
+
+        payload.extractInteractiveMessages().forEach(msg ->
+                messageProcessor.processInteractiveReply(msg.from(), msg.buttonId()));
+
         // IMMEDIATE response to Meta
         return ResponseEntity.ok().build();
     }
