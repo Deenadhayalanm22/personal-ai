@@ -337,6 +337,13 @@ public class ExpenseHandler implements SpeechHandler {
     }
 
     private List<ResponseAction> actionsFor(String field) {
+        if ("category".equals(field)) {
+            return List.of(
+                    new ResponseAction("answer:Groceries", "Groceries"),
+                    new ResponseAction("answer:Food and dining", "Food / Dining"),
+                    new ResponseAction("answer:Transportation", "Travel")
+            );
+        }
         if ("sourceAccount".equals(field)) {
             return List.of(
                     new ResponseAction("answer:CASH", "Cash"),
@@ -349,7 +356,8 @@ public class ExpenseHandler implements SpeechHandler {
 
     private String questionFor(String field, ExpenseDto dto) {
         return switch (field) {
-            case "category" -> "What was the ₹" + dto.getAmount().stripTrailingZeros().toPlainString() + " expense for?";
+            case "category" -> "What was the ₹" + dto.getAmount().stripTrailingZeros().toPlainString()
+                    + " expense for? Reply with something like groceries, fuel, rent, or choose below. Type Skip to leave it uncategorized.";
             case "sourceAccount" -> "How did you pay?";
             case "amount" -> "How much did you spend?";
             case "spentAt" -> "When did you spend it?";

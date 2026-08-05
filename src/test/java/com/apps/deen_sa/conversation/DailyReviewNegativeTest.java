@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
@@ -30,6 +32,9 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
     @Autowired
     private ConversationSessionRepository sessionRepository;
 
+    @Value("${wiremock.admin-url:http://localhost:9091/__admin}")
+    private String wireMockAdminUrl;
+
     @Test
     void it_neg_001() throws Exception {
         sendText("wamid.expense-1", "I spent 500");
@@ -44,6 +49,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             });
             assertWaitingFor("category");
         });
+        awaitState(this::assertCategorySuggestionsSent);
 
         sendText("wamid.expense-2", "Groceries");
 
@@ -145,6 +151,21 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             assertThat(session.getWaitingForField()).isEqualTo(field);
             assertThat(session.getActiveTransactionId()).isNotNull();
         });
+    }
+
+    private void assertCategorySuggestionsSent() {
+        String requestJournal = RestClient.create(wireMockAdminUrl)
+                .get()
+                .uri("/requests")
+                .retrieve()
+                .body(String.class);
+
+        assertThat(requestJournal)
+                .contains("Reply with something like groceries, fuel, rent")
+                .contains("Groceries")
+                .contains("Food / Dining")
+                .contains("Travel")
+                .doesNotContain("Skip for now");
     }
 
     private void awaitState(Runnable assertion) {
