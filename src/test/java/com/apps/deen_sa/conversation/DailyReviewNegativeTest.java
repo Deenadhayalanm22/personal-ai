@@ -37,11 +37,11 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
     @Test
     void it_neg_001() throws Exception {
-        sendText("wamid.expense-1", "I spent 500");
+        sendText("wamid.expense-1", "I spent 35");
 
         awaitState(() -> {
             assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
-                assertThat(expense.getAmount()).isEqualByComparingTo("500");
+                assertThat(expense.getAmount()).isEqualByComparingTo("35");
                 assertThat(expense.getCategory()).isNull();
                 assertThat(expense.getSourceContainerId()).isNull();
                 assertThat(expense.isFinanciallyApplied()).isFalse();
@@ -51,12 +51,12 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         });
         awaitState(this::assertCategorySuggestionsSent);
 
-        sendText("wamid.expense-2", "Groceries");
+        sendText("wamid.expense-2", "It is for evening snacks");
 
         awaitState(() -> {
             assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
                 assertThat(expense.getCategory()).isEqualTo("Food & Dining");
-                assertThat(expense.getSubcategory()).isEqualTo("Groceries");
+                assertThat(expense.getSubcategory()).isEqualTo("Snacks & Beverages");
             });
             assertWaitingFor("sourceAccount");
         });
@@ -77,12 +77,12 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             assertWaitingFor("sourceBalance");
         });
 
-        sendText("wamid.expense-4", "10000");
+        sendText("wamid.expense-4", "40k");
 
         awaitState(() -> {
             assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
-                assertThat(account.getCurrentValue()).isEqualByComparingTo("9500");
-                assertThat(account.getAvailableValue()).isEqualByComparingTo("9500");
+                assertThat(account.getCurrentValue()).isEqualByComparingTo("39965");
+                assertThat(account.getAvailableValue()).isEqualByComparingTo("39965");
                 assertThat(account.getLastActivityAt()).isNotNull();
             });
             assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
@@ -91,7 +91,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
                 assertThat(expense.isNeedsEnrichment()).isFalse();
             });
             assertThat(stateMutationRepository.findAll()).singleElement().satisfies(mutation ->
-                    assertThat(mutation.getAmount()).isEqualByComparingTo("500"));
+                    assertThat(mutation.getAmount()).isEqualByComparingTo("35"));
             assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
                 assertThat(session.getActiveIntent()).isNull();
                 assertThat(session.getWaitingForField()).isNull();
@@ -99,11 +99,47 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             });
         });
 
-        // Meta may redeliver a webhook. The external message ID must prevent a duplicate expense.
-        sendText("wamid.expense-1", "I spent 500");
+        sendText("wamid.expense-5", "I spent 3500 yesterday");
         awaitState(() -> {
-            assertThat(stateChangeRepository.findAll()).hasSize(1);
-            assertThat(stateMutationRepository.findAll()).hasSize(1);
+            assertThat(stateChangeRepository.findAll()).hasSize(2);
+            assertWaitingFor("category");
+        });
+
+        // This contains the verb "Paid", but is an answer to the category question,
+        // not a new expense because it contains no new amount.
+        sendText("wamid.expense-6", "Paid internet bill");
+        awaitState(() -> {
+            assertThat(stateChangeRepository.findAll())
+                    .filteredOn(expense -> expense.getAmount().compareTo(new java.math.BigDecimal("3500")) == 0)
+                    .singleElement()
+                    .satisfies(expense -> {
+                        assertThat(expense.getCategory()).isEqualTo("Utilities");
+                        assertThat(expense.getSubcategory()).isEqualTo("Internet");
+                    });
+            assertWaitingFor("sourceAccount");
+        });
+
+        sendButton("wamid.expense-7", "answer:BANK_ACCOUNT", "Bank / UPI");
+        awaitState(() -> {
+            assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
+                assertThat(account.getCurrentValue()).isEqualByComparingTo("36465");
+                assertThat(account.getAvailableValue()).isEqualByComparingTo("36465");
+            });
+            assertThat(stateChangeRepository.findAll()).hasSize(2)
+                    .filteredOn(expense -> expense.isFinanciallyApplied())
+                    .hasSize(2);
+            assertThat(stateMutationRepository.findAll()).hasSize(2);
+            assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                assertThat(session.getActiveIntent()).isNull();
+                assertThat(session.getWaitingForField()).isNull();
+            });
+        });
+
+        // Meta may redeliver a webhook. The external message ID must prevent a duplicate expense.
+        sendText("wamid.expense-1", "I spent 35");
+        awaitState(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(2);
+            assertThat(stateMutationRepository.findAll()).hasSize(2);
         });
     }
 

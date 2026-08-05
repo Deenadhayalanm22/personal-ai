@@ -5,7 +5,7 @@
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
       {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "MISSING FIELD:\ncategory"}},
-      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "USER ANSWER:\n\"Groceries\""}}
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "USER ANSWER:\n\"It is for evening snacks\""}}
     ]
   },
   "response": {
@@ -20,7 +20,7 @@
         "index": 0,
         "message": {
           "role": "assistant",
-          "content": "{\"valid\":true,\"category\":\"Food & Dining\",\"subcategory\":\"Groceries\",\"tags\":[\"grocery\"]}"
+          "content": "{\"valid\":true,\"category\":\"Food & Dining\",\"subcategory\":\"Snacks & Beverages\",\"tags\":[\"snacks\"]}"
         },
         "finish_reason": "stop"
       }]

@@ -32,4 +32,11 @@ class ExpenseInputNormalizerTest {
 
         assertThat(normalized.getAmount()).isNull();
     }
+
+    @Test
+    void understandsCompactIndianAmounts() {
+        assertThat(HumanAmountParser.parse("40k")).contains(new java.math.BigDecimal("40000"));
+        assertThat(HumanAmountParser.parse("1.5 lakh")).contains(new java.math.BigDecimal("150000.0"));
+        assertThat(HumanAmountParser.parse("2 crore")).contains(new java.math.BigDecimal("20000000"));
+    }
 }

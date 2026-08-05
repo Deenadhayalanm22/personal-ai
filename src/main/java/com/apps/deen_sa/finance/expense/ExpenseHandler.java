@@ -368,8 +368,7 @@ public class ExpenseHandler implements SpeechHandler {
     private SpeechResult completeSourceBalance(String answer, ConversationContext ctx, Long transactionId) {
         BigDecimal balance;
         try {
-            String numeric = answer.replace(",", "").replaceAll("[^0-9.-]", "");
-            balance = new BigDecimal(numeric);
+            balance = HumanAmountParser.parse(answer).orElseThrow(NumberFormatException::new);
             if (balance.signum() < 0) throw new NumberFormatException("negative balance");
         } catch (RuntimeException invalidNumber) {
             return SpeechResult.followup(

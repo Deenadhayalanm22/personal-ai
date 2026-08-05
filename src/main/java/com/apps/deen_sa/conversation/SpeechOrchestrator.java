@@ -7,9 +7,13 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 @Service
 public class SpeechOrchestrator {
+
+    private static final Pattern EXPLICIT_AMOUNT = Pattern.compile(
+            "(?i)(?:₹|rs\\.?|inr)?\\s*[0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:k|thousand|lakh|lac|crore|cr)?");
 
     private final IntentClassifier intentClassifier;
     private final Map<String, SpeechHandler> handlers;
@@ -35,7 +39,8 @@ public class SpeechOrchestrator {
             return SpeechResult.info("Okay — I stopped the questions. Any activity already recorded is still saved.");
         }
 
-        if (ctx.isInFollowup() && looksLikeNewActivity(normalized)) {
+        if (ctx.isInFollowup() && looksLikeNewActivity(normalized)
+                && !isLikelyExpenseDescription(ctx, normalized)) {
             IntentResult interruption = intentClassifier.classify(text);
             SpeechHandler newHandler = interruption.confidence() >= 0.75
                     ? handlers.get(interruption.intent()) : null;
@@ -43,7 +48,7 @@ public class SpeechOrchestrator {
                 ctx.reset();
                 return newHandler.handleSpeech(text, ctx);
             }
-            if (newHandler != null && containsTransactionVerb(normalized)) {
+            if (newHandler != null && containsTransactionVerb(normalized) && hasExplicitAmount(normalized)) {
                 ctx.reset();
                 return newHandler.handleSpeech(text, ctx);
             }
@@ -84,5 +89,15 @@ public class SpeechOrchestrator {
         return List.of("spent ", "paid ", "bought ", "sold ", "received ", "got ",
                         "transferred ", "invested ", "setup ", "set up ", "i have ")
                 .stream().anyMatch(text::contains);
+    }
+
+    private boolean hasExplicitAmount(String text) {
+        return EXPLICIT_AMOUNT.matcher(text).find();
+    }
+
+    private boolean isLikelyExpenseDescription(ConversationContext context, String text) {
+        return "EXPENSE".equals(context.getActiveIntent())
+                && "category".equals(context.getWaitingForField())
+                && !hasExplicitAmount(text);
     }
 }

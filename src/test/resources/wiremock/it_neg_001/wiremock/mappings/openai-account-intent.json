@@ -4,7 +4,7 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"contains": "I spent 500"},
+      {"contains": "I spent 35"},
       {"contains": "You are a financial intent classifier."}
     ]
   },

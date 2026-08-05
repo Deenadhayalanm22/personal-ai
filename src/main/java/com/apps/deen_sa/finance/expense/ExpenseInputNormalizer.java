@@ -14,7 +14,8 @@ import java.util.regex.Pattern;
 public class ExpenseInputNormalizer {
 
     private static final Pattern EXPLICIT_SPEND_AMOUNT = Pattern.compile(
-            "(?i)\\b(?:spent|paid)\\s*(?:rs\\.?|inr|₹)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)\\b");
+            "(?i)\\b(?:spent|paid)\\s*(?:rs\\.?|inr|₹)?\\s*"
+                    + "([0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:k|thousand|lakh|lac|crore|cr)?)\\b");
 
     public ExpenseDto normalize(ExpenseDto dto, String originalText, ConversationContext context) {
         if (dto == null) dto = new ExpenseDto();
@@ -33,7 +34,7 @@ public class ExpenseInputNormalizer {
         if (text == null) return java.util.Optional.empty();
         Matcher matcher = EXPLICIT_SPEND_AMOUNT.matcher(text);
         if (!matcher.find()) return java.util.Optional.empty();
-        return java.util.Optional.of(new BigDecimal(matcher.group(1).replace(",", "")));
+        return HumanAmountParser.parse(matcher.group(1));
     }
 
     private ZoneId resolveZone(String timezone) {

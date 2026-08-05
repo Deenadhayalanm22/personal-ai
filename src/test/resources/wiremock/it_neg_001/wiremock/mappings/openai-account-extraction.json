@@ -4,7 +4,7 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"contains": "I spent 500"},
+      {"contains": "I spent 35"},
       {"contains": "Extract the financial transaction from:"}
     ]
   },
@@ -20,7 +20,7 @@
         "index": 0,
         "message": {
           "role": "assistant",
-          "content": "{\"valid\":true,\"amount\":null,\"category\":null,\"subcategory\":null,\"merchantName\":null,\"sourceAccount\":null,\"transactionDate\":null,\"rawText\":\"I spent 500\",\"details\":{},\"tags\":[]}"
+          "content": "{\"valid\":true,\"amount\":null,\"category\":null,\"subcategory\":null,\"merchantName\":null,\"sourceAccount\":null,\"transactionDate\":null,\"rawText\":\"I spent 35\",\"details\":{},\"tags\":[]}"
         },
         "finish_reason": "stop"
       }]
