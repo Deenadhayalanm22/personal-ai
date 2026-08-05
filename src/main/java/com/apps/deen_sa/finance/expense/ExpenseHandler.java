@@ -176,6 +176,12 @@ public class ExpenseHandler implements SpeechHandler {
         if ("sourceBalance".equals(missingField)) {
             return completeSourceBalance(userAnswer, ctx, transactionId);
         }
+        if ("creditLimit".equals(missingField)) {
+            return completeCreditLimit(userAnswer, ctx, transactionId);
+        }
+        if ("creditCardDueDay".equals(missingField)) {
+            return completeCreditCardDueDay(userAnswer, ctx, transactionId);
+        }
 
         // ----------------------------
         // Step A – Extract refined field from LLM
@@ -188,6 +194,12 @@ public class ExpenseHandler implements SpeechHandler {
 
     /** Applies an interpreter-produced patch to the pending expense without another model call. */
     public SpeechResult handleInterpretedFollowup(EventPatch patch, String userAnswer, ConversationContext ctx) {
+        if ("creditLimit".equals(ctx.getWaitingForField())) {
+            return completeCreditLimit(userAnswer, ctx, ctx.getActiveTransactionId());
+        }
+        if ("creditCardDueDay".equals(ctx.getWaitingForField())) {
+            return completeCreditCardDueDay(userAnswer, ctx, ctx.getActiveTransactionId());
+        }
         ExpenseDto refined = objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class);
         return completeInterpretedFollowup(refined, userAnswer, ctx);
     }
@@ -293,11 +305,20 @@ public class ExpenseHandler implements SpeechHandler {
 
 
         if (tx.getSourceContainerId() != null && !canApplyFinancialImpact(tx)) {
+            StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
+            if ("CREDIT_CARD".equals(source.getContainerType()) && source.getCapacityLimit() == null) {
+                ctx.setWaitingForField("creditLimit");
+                ctx.setPartialObject(dto);
+                return SpeechResult.followup(
+                        "I created " + source.getName() + ". What is its credit limit?",
+                        List.of("creditLimit"), dto,
+                        List.of(new ResponseAction("control:skip", "Not sure / later"))
+                );
+            }
             ctx.setWaitingForField("sourceBalance");
             ctx.setPartialObject(dto);
             return SpeechResult.followup(
-                    "I created " + stateContainerService.findValueContainerById(tx.getSourceContainerId()).getName()
-                            + ". What is its current balance?",
+                    "I created " + source.getName() + ". " + balanceQuestion(source),
                     List.of("sourceBalance"),
                     dto,
                     List.of(new ResponseAction("control:skip", "Not sure / later"))
@@ -381,6 +402,7 @@ public class ExpenseHandler implements SpeechHandler {
             return List.of(
                     new ResponseAction("answer:CASH", "Cash"),
                     new ResponseAction("answer:BANK_ACCOUNT", "Bank / UPI"),
+                    new ResponseAction("answer:CREDIT_CARD", "Credit Card"),
                     new ResponseAction("control:skip", "Skip")
             );
         }
@@ -429,14 +451,73 @@ public class ExpenseHandler implements SpeechHandler {
         ctx.reset();
 
         StateContainerEntity updated = stateContainerService.findValueContainerById(source.getId());
+        String valueLabel = "CREDIT_CARD".equals(source.getContainerType()) ? " outstanding is now ₹" : " balance is now ₹";
         return SpeechResult.builder()
                 .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
                 .message("All set. Added ₹" + tx.getAmount().stripTrailingZeros().toPlainString()
                         + " for " + tx.getCategory() + ". " + source.getName()
-                        + " balance is now ₹" + updated.getCurrentValue().stripTrailingZeros().toPlainString() + ".")
+                        + valueLabel + updated.getCurrentValue().stripTrailingZeros().toPlainString() + ".")
                 .savedEntity(tx)
                 .needFollowup(false)
                 .build();
+    }
+
+    private SpeechResult completeCreditLimit(String answer, ConversationContext ctx, Long transactionId) {
+        BigDecimal limit;
+        try {
+            limit = HumanAmountParser.parse(answer).orElseThrow(NumberFormatException::new);
+            if (limit.signum() <= 0) throw new NumberFormatException("non-positive limit");
+        } catch (RuntimeException invalidNumber) {
+            return SpeechResult.followup("Please enter the credit limit as a number, for example 50k.",
+                    List.of("creditLimit"), ctx.getPartialObject(),
+                    List.of(new ResponseAction("control:skip", "Not sure / later")));
+        }
+        StateChangeEntity tx = repo.findById(transactionId)
+                .orElseThrow(() -> new IllegalStateException("Transaction not found"));
+        StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
+        source.setCapacityLimit(limit);
+        stateContainerService.UpdateValueContainer(source);
+        ctx.setWaitingForField("creditCardDueDay");
+        return SpeechResult.followup("What day of the month is this card's payment due? For example, reply 21 for the 21st.",
+                List.of("creditCardDueDay"), ctx.getPartialObject(),
+                List.of(new ResponseAction("answer:UNKNOWN_DUE_DAY", "Not sure")));
+    }
+
+    private SpeechResult completeCreditCardDueDay(String answer, ConversationContext ctx, Long transactionId) {
+        StateChangeEntity tx = repo.findById(transactionId)
+                .orElseThrow(() -> new IllegalStateException("Transaction not found"));
+        StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
+        if (!"UNKNOWN_DUE_DAY".equals(answer)) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?:^|\\D)([0-9]{1,2})(?:st|nd|rd|th)?(?:\\D|$)",
+                    java.util.regex.Pattern.CASE_INSENSITIVE).matcher(answer.trim());
+            if (!matcher.find()) {
+                return invalidDueDay(ctx);
+            }
+            int dueDay = Integer.parseInt(matcher.group(1));
+            if (dueDay < 1 || dueDay > 31) return invalidDueDay(ctx);
+            java.util.Map<String, Object> details = source.getDetails() == null
+                    ? new java.util.HashMap<>() : new java.util.HashMap<>(source.getDetails());
+            details.put("dueDay", dueDay);
+            source.setDetails(details);
+            stateContainerService.UpdateValueContainer(source);
+        }
+        ctx.setWaitingForField("sourceBalance");
+        return SpeechResult.followup("What is the card's current outstanding amount? Reply 0 if nothing is due.",
+                List.of("sourceBalance"), ctx.getPartialObject(),
+                List.of(new ResponseAction("answer:0", "Nothing due"),
+                        new ResponseAction("control:skip", "Not sure / later")));
+    }
+
+    private SpeechResult invalidDueDay(ConversationContext ctx) {
+        return SpeechResult.followup("Please enter a due day from 1 to 31, or choose Not sure.",
+                List.of("creditCardDueDay"), ctx.getPartialObject(),
+                List.of(new ResponseAction("answer:UNKNOWN_DUE_DAY", "Not sure")));
+    }
+
+    private String balanceQuestion(StateContainerEntity source) {
+        return "CREDIT_CARD".equals(source.getContainerType())
+                ? "What is the card's current outstanding amount? Reply 0 if nothing is due."
+                : "What is its current balance?";
     }
 
     private SpeechResult expenseConfirmation(StateChangeEntity expense) {

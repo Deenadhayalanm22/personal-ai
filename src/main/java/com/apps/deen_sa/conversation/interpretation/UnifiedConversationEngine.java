@@ -50,6 +50,26 @@ public class UnifiedConversationEngine {
         return result;
     }
 
+    /** Button answers are already structured user input and must not be reinterpreted by a model. */
+    public SpeechResult processTrustedAnswer(String answer, ConversationContext context) {
+        if (!context.isInFollowup()) return process(answer, context);
+        String field = context.getWaitingForField();
+        Map<String, Object> values = "UNKNOWN_DUE_DAY".equals(answer) ? Map.of()
+                : Map.of(field.equals("spentAt") ? "transactionDate" : field, answer);
+        EventPatch patch = new EventPatch(null, context.getActiveIntent(), values, List.of(), List.of(),
+                List.of(new FieldEvidence(field, answer, answer, 1.0)));
+        TurnInterpretation turn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT,
+                context.getActiveIntent(), null, List.of(patch), null, null, List.of(), 1.0);
+        validate(turn);
+        SpeechResult result = execute(turn, answer, context);
+        appendTurn(context, "user", answer);
+        if (result.getMessage() != null) appendTurn(context, "assistant", result.getMessage());
+        context.setLastQuestion(Boolean.TRUE.equals(result.getNeedFollowup()) ? result.getMessage() : null);
+        context.setInterpreterVersion(VERSION);
+        syncPendingState(context, turn);
+        return result;
+    }
+
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {
         if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), context);
         if (turn.turnType() == TurnType.AMBIGUOUS || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY) {
@@ -90,6 +110,8 @@ public class UnifiedConversationEngine {
             case "category" -> fields.category() != null || fields.subcategory() != null;
             case "sourceAccount" -> fields.sourceAccount() != null;
             case "sourceBalance" -> fields.sourceBalance() != null;
+            case "creditLimit" -> fields.creditLimit() != null;
+            case "creditCardDueDay" -> fields.creditCardDueDay() != null;
             case "amount" -> fields.amount() != null;
             case "spentAt", "transactionDate" -> fields.transactionDate() != null;
             default -> false;

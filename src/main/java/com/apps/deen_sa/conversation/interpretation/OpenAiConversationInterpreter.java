@@ -24,11 +24,15 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
              "targetEventId":null,"events":[{"eventId":null,"eventType":"EXPENSE","fields":{},
              "unresolvedFields":[],"ambiguities":[],"evidence":[{"field":"amount","value":"35","evidence":"35","confidence":0.99}]}],
              "command":null,"query":null,"ambiguities":[],"confidence":0.0}
-            Expense fields are amount, category, subcategory, merchantName, sourceAccount, sourceBalance,
+            Expense fields are amount, category, subcategory, merchantName, sourceAccount, sourceBalance, creditLimit,
+            creditCardDueDay (integer 1-31),
             transactionDate (YYYY-MM-DD), tags, and rawText. Only emit a field when supported by the message or context.
             Unknown fields MUST be null. Never use 0, empty strings, slash, epoch dates, or invented dates as placeholders.
             Add field evidence for every non-null extracted field. For a pending answer, preserve known facts by targeting
             the pending event; do not restate unknown amount/date placeholders.
+            Existing accounts are resolution candidates only. Never infer sourceAccount from account history or from the
+            fact that only one account exists. Set sourceAccount only when the CURRENT user message explicitly states a
+            payment method, or directly answers a payment-source question.
             For category, use the broad label and put the specific meaning in subcategory when clear.
             Commands include SKIP_PENDING, CANCEL_PENDING and UNDO_LAST. Corrections must target an existing pending event when possible.
             """;

@@ -83,7 +83,7 @@ public class WhatsAppMessageProcessor {
             } else if (buttonId.startsWith("audio_retry:")) {
                 retryAudio(from, confirmationId(buttonId, "audio_retry:"));
             } else if (buttonId.startsWith("answer:")) {
-                processText(from, buttonId.substring("answer:".length()));
+                processTrustedAnswer(from, buttonId.substring("answer:".length()));
             } else if ("control:skip".equals(buttonId)) {
                 processText(from, "skip");
             } else if ("control:cancel".equals(buttonId)) {
@@ -138,6 +138,24 @@ public class WhatsAppMessageProcessor {
             sessionService.save(context);
 
             log.info("Processed message - {} from {} and reply is ready - {}", text, from, result.getMessage());
+            if (result.getMessage() != null) {
+                if (result.getActions() != null && !result.getActions().isEmpty()) {
+                    replySender.sendInteractiveReply(from, result.getMessage(), result.getActions());
+                } else {
+                    replySender.sendTextReply(from, result.getMessage());
+                }
+            }
+        }
+    }
+
+    private void processTrustedAnswer(String from, String answer) {
+        Object lock = userLocks[Math.floorMod(from.hashCode(), userLocks.length)];
+        synchronized (lock) {
+            AppUserEntity user = appUserService.resolve("WHATSAPP", from);
+            ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
+            context.setTimezone(user.getTimezone());
+            SpeechResult result = unifiedEngine.processTrustedAnswer(answer, context);
+            sessionService.save(context);
             if (result.getMessage() != null) {
                 if (result.getActions() != null && !result.getActions().isEmpty()) {
                     replySender.sendInteractiveReply(from, result.getMessage(), result.getActions());

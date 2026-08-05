@@ -130,12 +130,38 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             assertWaitingFor("sourceAccount");
         });
 
-        sendButton("wamid.expense-7", "answer:BANK_ACCOUNT", "Bank / UPI");
+        sendButton("wamid.expense-7", "answer:CREDIT_CARD", "Credit Card");
         awaitState(() -> {
-            assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
-                assertThat(account.getCurrentValue()).isEqualByComparingTo("36465");
-                assertThat(account.getAvailableValue()).isEqualByComparingTo("36465");
-            });
+            assertThat(stateContainerRepository.findAll()).hasSize(2)
+                    .filteredOn(account -> account.getContainerType().equals("CREDIT_CARD"))
+                    .singleElement().satisfies(card -> assertThat(card.getCurrentValue()).isNull());
+            assertWaitingFor("creditLimit");
+        });
+
+        sendText("wamid.expense-8", "50k");
+        awaitState(() -> {
+            assertThat(stateContainerRepository.findAll())
+                    .filteredOn(account -> account.getContainerType().equals("CREDIT_CARD"))
+                    .singleElement().satisfies(card -> assertThat(card.getCapacityLimit()).isEqualByComparingTo("50000"));
+            assertWaitingFor("creditCardDueDay");
+        });
+
+        sendText("wamid.expense-9", "21st");
+        awaitState(() -> {
+            assertThat(stateContainerRepository.findAll())
+                    .filteredOn(account -> account.getContainerType().equals("CREDIT_CARD"))
+                    .singleElement().satisfies(card -> assertThat(card.getDetails()).containsEntry("dueDay", 21));
+            assertWaitingFor("sourceBalance");
+        });
+
+        sendButton("wamid.expense-10", "answer:0", "Nothing due");
+        awaitState(() -> {
+            assertThat(stateContainerRepository.findAll())
+                    .filteredOn(account -> account.getContainerType().equals("CREDIT_CARD"))
+                    .singleElement().satisfies(card -> assertThat(card.getCurrentValue()).isEqualByComparingTo("3500"));
+            assertThat(stateContainerRepository.findAll())
+                    .filteredOn(account -> account.getContainerType().equals("BANK_ACCOUNT"))
+                    .singleElement().satisfies(bank -> assertThat(bank.getCurrentValue()).isEqualByComparingTo("39965"));
             assertThat(stateChangeRepository.findAll()).hasSize(2)
                     .filteredOn(expense -> expense.isFinanciallyApplied())
                     .hasSize(2);
@@ -160,6 +186,8 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             case "It is for evening snacks" -> Map.of("category", "Food & Dining", "subcategory", "Snacks & Beverages");
             case "BANK_ACCOUNT" -> Map.of("sourceAccount", "BANK_ACCOUNT");
             case "40k" -> Map.of("sourceBalance", 40000);
+            case "50k" -> Map.of("creditLimit", 50000);
+            case "21st" -> Map.of("creditCardDueDay", 21);
             // Real structured-output regression: unknown values arrived as literal "null" strings.
             case "I spent 3500 yesterday" -> Map.of("amount", 3500, "transactionDate", "2026-08-05",
                     "category", "null", "sourceAccount", "null");
