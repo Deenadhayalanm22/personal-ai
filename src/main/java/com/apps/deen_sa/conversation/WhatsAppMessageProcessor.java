@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 import java.util.stream.IntStream;
+import com.apps.deen_sa.config.ApplicationProperties;
+import com.apps.deen_sa.conversation.interpretation.UnifiedConversationEngine;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,8 @@ public class WhatsAppMessageProcessor {
     private final WhatsAppMediaDownloader mediaDownloader;
     private final AudioHandler audioHandler;
     private final AudioConfirmationService confirmationService;
+    private final UnifiedConversationEngine unifiedEngine;
+    private final ApplicationProperties properties;
 
     @Async("whatsappExecutor")
     public void processIncomingMessage(String from, String text, String messageId) {
@@ -136,7 +140,13 @@ public class WhatsAppMessageProcessor {
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
             context.setTimezone(user.getTimezone());
-            SpeechResult result = orchestrator.process(text, context);
+            SpeechResult result;
+            if (properties.conversation().active()) {
+                result = unifiedEngine.process(text, context);
+            } else {
+                if (properties.conversation().shadow()) unifiedEngine.observe(text, context);
+                result = orchestrator.process(text, context);
+            }
             sessionService.save(context);
 
             log.info("Processed message - {} from {} and reply is ready - {}", text, from, result.getMessage());

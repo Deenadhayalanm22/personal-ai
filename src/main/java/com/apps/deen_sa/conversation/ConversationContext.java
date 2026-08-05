@@ -2,6 +2,10 @@ package com.apps.deen_sa.conversation;
 
 import lombok.Data;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import com.apps.deen_sa.conversation.interpretation.PendingEvent;
+import com.apps.deen_sa.conversation.interpretation.ConversationTurn;
 
 @Data
 public class ConversationContext {
@@ -26,6 +30,10 @@ public class ConversationContext {
 
     // Arbitrary metadata (if handler needs anything extra)
     private Map<String, Object> metadata;
+    private List<PendingEvent> pendingEvents = new ArrayList<>();
+    private List<ConversationTurn> recentTurns = new ArrayList<>();
+    private String lastQuestion;
+    private String interpreterVersion;
 
     // Determine if user is in a multi-step follow-up flow
     public boolean isInFollowup() {
@@ -39,5 +47,7 @@ public class ConversationContext {
         this.waitingForField = null;
         this.partialObject = null;
         if (metadata != null) metadata.clear();
+        this.pendingEvents.clear();
+        this.lastQuestion = null;
     }
 }

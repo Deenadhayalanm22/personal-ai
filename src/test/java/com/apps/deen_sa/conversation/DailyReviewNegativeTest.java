@@ -7,12 +7,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import com.apps.deen_sa.conversation.interpretation.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -20,8 +27,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Tag("Layer1")
-@SpringBootTest
+@SpringBootTest(properties = "conversation.mode=active")
 @AutoConfigureMockMvc
+@Import(DailyReviewNegativeTest.InterpreterFixture.class)
 class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
     private static final String PHONE = "919876543210";
@@ -96,6 +104,9 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
                 assertThat(session.getActiveIntent()).isNull();
                 assertThat(session.getWaitingForField()).isNull();
                 assertThat(session.getActiveTransactionId()).isNull();
+                assertThat(session.getInterpreterVersion()).isEqualTo("unified-v1");
+                assertThat(session.getPendingEvents()).isEmpty();
+                assertThat(session.getRecentTurns()).isNotEmpty();
             });
         });
 
@@ -141,6 +152,32 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             assertThat(stateChangeRepository.findAll()).hasSize(2);
             assertThat(stateMutationRepository.findAll()).hasSize(2);
         });
+    }
+
+    private static TurnInterpretation interpretationFor(String text) {
+        Map<String, Object> fields = switch (text) {
+            case "I spent 35" -> Map.of("amount", 35, "transactionDate", "2026-08-06");
+            case "It is for evening snacks" -> Map.of("category", "Food & Dining", "subcategory", "Snacks & Beverages");
+            case "BANK_ACCOUNT" -> Map.of("sourceAccount", "BANK_ACCOUNT");
+            case "40k" -> Map.of("sourceBalance", 40000);
+            case "I spent 3500 yesterday" -> Map.of("amount", 3500, "transactionDate", "2026-08-05");
+            case "Paid internet bill" -> Map.of("category", "Utilities", "subcategory", "Internet");
+            default -> throw new AssertionError("Unexpected interpreter input: " + text);
+        };
+        boolean newEvent = text.startsWith("I spent");
+        return new TurnInterpretation(newEvent ? TurnType.NEW_EVENT : TurnType.ANSWER_TO_PENDING_EVENT,
+                "EXPENSE", null,
+                List.of(new EventPatch(null, "EXPENSE", fields, List.of(), List.of(), List.of())),
+                null, null, List.of(), 0.99);
+    }
+
+    @TestConfiguration
+    static class InterpreterFixture {
+        @Bean
+        @Primary
+        ConversationInterpreter deterministicConversationInterpreter() {
+            return (text, context) -> interpretationFor(text);
+        }
     }
 
     private void sendText(String messageId, String text) throws Exception {

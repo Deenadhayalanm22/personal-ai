@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.math.BigDecimal;
 import com.apps.deen_sa.conversation.ResponseAction;
+import com.apps.deen_sa.conversation.interpretation.EventPatch;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final AdjustmentCommandFactory adjustmentCommandFactory;
     private final StateMutationService stateMutationService;
     private final ExpenseInputNormalizer inputNormalizer;
+    private final ObjectMapper objectMapper;
 
     @Override
     public String intentType() {
@@ -47,6 +50,19 @@ public class ExpenseHandler implements SpeechHandler {
     public SpeechResult handleSpeech(String text, ConversationContext ctx) {
 
         ExpenseDto dto = inputNormalizer.normalize(llm.extractExpense(text), text, ctx);
+        return handleExpense(dto, ctx);
+    }
+
+    /** Executes already-interpreted facts. No model call and no semantic parsing happens here. */
+    public SpeechResult handleInterpreted(EventPatch patch, String rawText, ConversationContext ctx) {
+        ExpenseDto extracted = objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class);
+        extracted.setRawText(rawText);
+        extracted.setValid(extracted.getAmount() != null);
+        ExpenseDto dto = inputNormalizer.normalize(extracted, rawText, ctx);
+        return handleExpense(dto, ctx);
+    }
+
+    private SpeechResult handleExpense(ExpenseDto dto, ConversationContext ctx) {
 
         log.info("Expense extraction completeness - amountPresent={}, categoryPresent={}, datePresent={}, "
                         + "sourcePresent={}, extractorValid={}, extractorReason={}",
@@ -166,6 +182,23 @@ public class ExpenseHandler implements SpeechHandler {
         // ----------------------------
         ExpenseDto refined =
                 llm.extractFieldFromFollowup(dto, missingField, userAnswer);
+
+        return completeInterpretedFollowup(refined, userAnswer, ctx);
+    }
+
+    /** Applies an interpreter-produced patch to the pending expense without another model call. */
+    public SpeechResult handleInterpretedFollowup(EventPatch patch, String userAnswer, ConversationContext ctx) {
+        ExpenseDto refined = objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class);
+        return completeInterpretedFollowup(refined, userAnswer, ctx);
+    }
+
+    private SpeechResult completeInterpretedFollowup(ExpenseDto refined, String userAnswer, ConversationContext ctx) {
+        String missingField = ctx.getWaitingForField();
+        ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
+        Long transactionId = ctx.getActiveTransactionId();
+
+        if (transactionId == null) return SpeechResult.invalid("No active transaction to update.");
+        if ("sourceBalance".equals(missingField)) return completeSourceBalance(userAnswer, ctx, transactionId);
 
         // ----------------------------
         // Step B – Merge into existing DTO

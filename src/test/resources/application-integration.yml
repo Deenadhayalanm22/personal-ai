@@ -24,6 +24,10 @@ spring:
 
 openai:
   api-key: ${OPENAI_API_KEY:test-api-key}
+  interpreter-model: gpt-test
+
+conversation:
+  mode: legacy
 
 whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN:test-access-token}
@@ -39,4 +43,3 @@ logging:
 test:
   containers:
     enabled: true
-

@@ -25,6 +25,10 @@ public class ConversationSessionService {
         context.setActiveTransactionId(session.getActiveTransactionId());
         context.setActiveIntent(session.getActiveIntent());
         context.setWaitingForField(session.getWaitingForField());
+        context.setPendingEvents(session.getPendingEvents() == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(session.getPendingEvents()));
+        context.setRecentTurns(session.getRecentTurns() == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(session.getRecentTurns()));
+        context.setLastQuestion(session.getLastQuestion());
+        context.setInterpreterVersion(session.getInterpreterVersion());
         if (session.getPartialJson() != null && session.getPartialType() != null) {
             try {
                 Class<?> type = Class.forName(session.getPartialType());
@@ -47,6 +51,10 @@ public class ConversationSessionService {
         session.setActiveTransactionId(context.getActiveTransactionId());
         session.setActiveIntent(context.getActiveIntent());
         session.setWaitingForField(context.getWaitingForField());
+        session.setPendingEvents(context.getPendingEvents());
+        session.setRecentTurns(context.getRecentTurns());
+        session.setLastQuestion(context.getLastQuestion());
+        session.setInterpreterVersion(context.getInterpreterVersion());
         Object partial = context.getPartialObject();
         session.setPartialType(partial == null ? null : partial.getClass().getName());
         session.setPartialJson(partial == null ? null : objectMapper.convertValue(partial, Map.class));
