@@ -20,7 +20,7 @@
         "index": 0,
         "message": {
           "role": "assistant",
-          "content": "{\"valid\":true,\"amount\":500,\"category\":null,\"subcategory\":null,\"merchantName\":null,\"sourceAccount\":null,\"transactionDate\":\"2026-08-05\",\"rawText\":\"I spent 500\",\"details\":{},\"tags\":[]}"
+          "content": "{\"valid\":true,\"amount\":null,\"category\":null,\"subcategory\":null,\"merchantName\":null,\"sourceAccount\":null,\"transactionDate\":null,\"rawText\":\"I spent 500\",\"details\":{},\"tags\":[]}"
         },
         "finish_reason": "stop"
       }]

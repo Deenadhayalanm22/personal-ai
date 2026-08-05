@@ -135,6 +135,7 @@ public class WhatsAppMessageProcessor {
             log.info("Received message - {} from {}", text, from);
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
+            context.setTimezone(user.getTimezone());
             SpeechResult result = orchestrator.process(text, context);
             sessionService.save(context);
 

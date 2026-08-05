@@ -9,6 +9,7 @@ public class ConversationContext {
     private Long sessionId;
     private Long userId = 1L;
     private String channel = "REST";
+    private String timezone = "Asia/Kolkata";
 
     private Long activeTransactionId;
 

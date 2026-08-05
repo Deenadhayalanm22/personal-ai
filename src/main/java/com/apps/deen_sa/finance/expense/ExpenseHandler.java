@@ -14,6 +14,7 @@ import com.apps.deen_sa.core.mutation.StateMutationService;
 import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import com.apps.deen_sa.conversation.ResponseAction;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class ExpenseHandler implements SpeechHandler {
 
     private final ExpenseClassifier llm;
@@ -31,6 +33,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final ExpenseCompletenessEvaluator completenessEvaluator;
     private final AdjustmentCommandFactory adjustmentCommandFactory;
     private final StateMutationService stateMutationService;
+    private final ExpenseInputNormalizer inputNormalizer;
 
     @Override
     public String intentType() {
@@ -43,13 +46,23 @@ public class ExpenseHandler implements SpeechHandler {
     @Override
     public SpeechResult handleSpeech(String text, ConversationContext ctx) {
 
-        ExpenseDto dto = llm.extractExpense(text);
+        ExpenseDto dto = inputNormalizer.normalize(llm.extractExpense(text), text, ctx);
+
+        log.info("Expense extraction completeness - amountPresent={}, categoryPresent={}, datePresent={}, "
+                        + "sourcePresent={}, extractorValid={}, extractorReason={}",
+                dto.getAmount() != null,
+                dto.getCategory() != null && !dto.getCategory().isBlank(),
+                dto.getTransactionDate() != null,
+                dto.getSourceAccount() != null,
+                dto.isValid(),
+                dto.getReason());
 
         CompletenessLevelEnum level =
                 completenessEvaluator.evaluate(dto);
 
         if (level == null) {
-            return SpeechResult.invalid("I couldn’t understand this expense clearly.");
+            log.warn("Rejecting expense because no explicit amount could be extracted from text");
+            return SpeechResult.invalid("How much did you spend?");
         }
 
         // Always find missing fields (used for UI / follow-up)
