@@ -20,7 +20,7 @@ openai:
 
 conversation:
   # active: unified interpreter owns the turn; shadow: compare without writes; legacy: old pipeline
-  mode: ${CONVERSATION_MODE:shadow}
+  mode: ${CONVERSATION_MODE:active}
 
 management:
   endpoints:

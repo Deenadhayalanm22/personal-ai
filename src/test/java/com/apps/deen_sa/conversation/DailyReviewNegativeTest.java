@@ -164,7 +164,9 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             case "Paid internet bill" -> Map.of("category", "Utilities", "subcategory", "Internet");
             default -> throw new AssertionError("Unexpected interpreter input: " + text);
         };
-        boolean newEvent = text.startsWith("I spent");
+        // Reproduce the real-model mistake: a category answer containing "Paid" is labelled NEW_EVENT.
+        // The deterministic correlation policy must still attach it to the pending expense.
+        boolean newEvent = text.startsWith("I spent") || text.equals("Paid internet bill");
         return new TurnInterpretation(newEvent ? TurnType.NEW_EVENT : TurnType.ANSWER_TO_PENDING_EVENT,
                 "EXPENSE", null,
                 List.of(new EventPatch(null, "EXPENSE", fields, List.of(), List.of(), List.of())),

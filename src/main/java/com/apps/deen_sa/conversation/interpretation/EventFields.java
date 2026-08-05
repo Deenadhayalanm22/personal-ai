@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Closed financial schema used by Structured Outputs; unknown model fields cannot reach execution. */
 public record EventFields(
@@ -35,7 +36,30 @@ public record EventFields(
                 null, string(values.get("rawText")));
     }
 
+    public EventFields sanitized(List<FieldEvidence> evidence) {
+        Set<String> supported = evidence == null ? Set.of() : evidence.stream()
+                .filter(item -> item != null && item.field() != null && item.evidence() != null && !item.evidence().isBlank())
+                .map(FieldEvidence::field).collect(java.util.stream.Collectors.toSet());
+        return new EventFields(
+                positiveOrNull(amount),
+                textOrNull(category), textOrNull(subcategory), textOrNull(merchantName),
+                textOrNull(sourceAccount), supported.contains("sourceBalance") ? nonNegativeOrNull(sourceBalance) : null,
+                supported.contains("transactionDate") ? plausibleDateOrNull(transactionDate) : null,
+                tags == null || tags.isEmpty() ? null : tags.stream().filter(tag -> tag != null && !tag.isBlank()).toList(),
+                textOrNull(rawText));
+    }
+
     private static void put(Map<String, Object> values, String key, Object value) { if (value != null) values.put(key, value); }
     private static String string(Object value) { return value == null ? null : value.toString(); }
     private static BigDecimal decimal(Object value) { return value == null ? null : new BigDecimal(value.toString()); }
+    private static String textOrNull(String value) {
+        if (value == null || value.isBlank() || value.equals("/") || value.equalsIgnoreCase("unknown")) return null;
+        return value;
+    }
+    private static BigDecimal positiveOrNull(BigDecimal value) { return value == null || value.signum() <= 0 ? null : value; }
+    private static BigDecimal nonNegativeOrNull(BigDecimal value) { return value == null || value.signum() < 0 ? null : value; }
+    private static LocalDate plausibleDateOrNull(LocalDate value) {
+        if (value == null || value.getYear() < 2000 || value.isAfter(LocalDate.now().plusDays(1))) return null;
+        return value;
+    }
 }

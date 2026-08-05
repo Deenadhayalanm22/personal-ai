@@ -83,8 +83,10 @@ public class UnifiedConversationEngine {
                         + ", but cannot safely save it yet.") : handler.handleSpeech(text, context));
                 continue;
             }
-            boolean continuation = context.isInFollowup()
-                    && (turn.turnType() == TurnType.ANSWER_TO_PENDING_EVENT || turn.turnType() == TurnType.CORRECTION);
+            boolean continuation = context.isInFollowup() && (
+                    turn.turnType() == TurnType.ANSWER_TO_PENDING_EVENT
+                            || turn.turnType() == TurnType.CORRECTION
+                            || answersPendingField(event, context.getWaitingForField()));
             results.add(continuation
                     ? expenseHandler.handleInterpretedFollowup(event, text, context)
                     : expenseHandler.handleInterpreted(event, text, context));
@@ -93,6 +95,18 @@ public class UnifiedConversationEngine {
         String message = results.stream().map(SpeechResult::getMessage).filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining("\n"));
         return SpeechResult.info(message);
+    }
+
+    private boolean answersPendingField(EventPatch event, String waitingForField) {
+        EventFields fields = event.fields();
+        return switch (waitingForField) {
+            case "category" -> fields.category() != null || fields.subcategory() != null;
+            case "sourceAccount" -> fields.sourceAccount() != null;
+            case "sourceBalance" -> fields.sourceBalance() != null;
+            case "amount" -> fields.amount() != null;
+            case "spentAt", "transactionDate" -> fields.transactionDate() != null;
+            default -> false;
+        };
     }
 
     private SpeechResult command(String command, ConversationContext context) {

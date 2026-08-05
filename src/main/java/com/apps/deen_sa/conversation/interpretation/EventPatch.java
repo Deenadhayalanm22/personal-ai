@@ -11,10 +11,11 @@ public record EventPatch(
         List<FieldEvidence> evidence
 ) {
     public EventPatch {
-        fields = fields == null ? new EventFields(null, null, null, null, null, null, null, null, null) : fields;
         unresolvedFields = unresolvedFields == null ? List.of() : List.copyOf(unresolvedFields);
         ambiguities = ambiguities == null ? List.of() : List.copyOf(ambiguities);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        fields = (fields == null ? new EventFields(null, null, null, null, null, null, null, null, null) : fields)
+                .sanitized(evidence);
     }
 
     public EventPatch(String eventId, String eventType, java.util.Map<String, Object> fields,

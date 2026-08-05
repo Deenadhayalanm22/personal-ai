@@ -140,6 +140,7 @@ public class WhatsAppMessageProcessor {
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
             context.setTimezone(user.getTimezone());
+            log.info("Conversation engine mode={} for user {}", properties.conversation().effectiveMode(), user.getId());
             SpeechResult result;
             if (properties.conversation().active()) {
                 result = unifiedEngine.process(text, context);
