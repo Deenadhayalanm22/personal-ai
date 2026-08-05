@@ -1,8 +1,5 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.conversation.ConversationContext;
-import com.apps.deen_sa.conversation.SpeechOrchestrator;
-import com.apps.deen_sa.conversation.SpeechResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Async;
@@ -10,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 import java.util.stream.IntStream;
-import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.conversation.interpretation.UnifiedConversationEngine;
 
 @Service
@@ -20,7 +16,6 @@ public class WhatsAppMessageProcessor {
 
     private final Object[] userLocks = IntStream.range(0, 64).mapToObj(ignored -> new Object()).toArray();
 
-    private final SpeechOrchestrator orchestrator;
     private final AppUserService appUserService;
     private final ConversationSessionService sessionService;
     private final InboundMessageService inboundMessageService;
@@ -29,7 +24,6 @@ public class WhatsAppMessageProcessor {
     private final AudioHandler audioHandler;
     private final AudioConfirmationService confirmationService;
     private final UnifiedConversationEngine unifiedEngine;
-    private final ApplicationProperties properties;
 
     @Async("whatsappExecutor")
     public void processIncomingMessage(String from, String text, String messageId) {
@@ -140,14 +134,7 @@ public class WhatsAppMessageProcessor {
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
             context.setTimezone(user.getTimezone());
-            log.info("Conversation engine mode={} for user {}", properties.conversation().effectiveMode(), user.getId());
-            SpeechResult result;
-            if (properties.conversation().active()) {
-                result = unifiedEngine.process(text, context);
-            } else {
-                if (properties.conversation().shadow()) unifiedEngine.observe(text, context);
-                result = orchestrator.process(text, context);
-            }
+            SpeechResult result = unifiedEngine.process(text, context);
             sessionService.save(context);
 
             log.info("Processed message - {} from {} and reply is ready - {}", text, from, result.getMessage());

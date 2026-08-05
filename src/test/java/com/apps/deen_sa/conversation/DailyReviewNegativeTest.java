@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Tag("Layer1")
-@SpringBootTest(properties = "conversation.mode=active")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Import(DailyReviewNegativeTest.InterpreterFixture.class)
 class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
@@ -160,7 +160,9 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             case "It is for evening snacks" -> Map.of("category", "Food & Dining", "subcategory", "Snacks & Beverages");
             case "BANK_ACCOUNT" -> Map.of("sourceAccount", "BANK_ACCOUNT");
             case "40k" -> Map.of("sourceBalance", 40000);
-            case "I spent 3500 yesterday" -> Map.of("amount", 3500, "transactionDate", "2026-08-05");
+            // Real structured-output regression: unknown values arrived as literal "null" strings.
+            case "I spent 3500 yesterday" -> Map.of("amount", 3500, "transactionDate", "2026-08-05",
+                    "category", "null", "sourceAccount", "null");
             case "Paid internet bill" -> Map.of("category", "Utilities", "subcategory", "Internet");
             default -> throw new AssertionError("Unexpected interpreter input: " + text);
         };

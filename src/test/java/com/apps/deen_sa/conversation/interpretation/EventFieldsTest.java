@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventFieldsTest {
     @Test
     void removesModelPlaceholdersForUnknownFinancialFields() {
-        EventFields fields = new EventFields(BigDecimal.ZERO, "", "Internet", "", "",
+        EventFields fields = new EventFields(BigDecimal.ZERO, "null", "Internet", "none", "N/A",
                 BigDecimal.ZERO, LocalDate.of(1970, 1, 1), List.of(), "Paid internet bill")
                 .sanitized(List.of(new FieldEvidence("subcategory", "Internet", "internet bill", .99)));
 
@@ -19,6 +19,7 @@ class EventFieldsTest {
         assertThat(fields.sourceBalance()).isNull();
         assertThat(fields.transactionDate()).isNull();
         assertThat(fields.category()).isNull();
+        assertThat(fields.sourceAccount()).isNull();
         assertThat(fields.subcategory()).isEqualTo("Internet");
     }
 }

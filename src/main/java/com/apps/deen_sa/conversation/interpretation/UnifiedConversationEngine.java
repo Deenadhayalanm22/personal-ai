@@ -7,7 +7,6 @@ import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
-import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,7 +17,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@Log4j2
 public class UnifiedConversationEngine {
     private static final int HISTORY_LIMIT = 12;
     private static final String VERSION = "unified-v1";
@@ -50,17 +48,6 @@ public class UnifiedConversationEngine {
         context.setInterpreterVersion(VERSION);
         syncPendingState(context, turn);
         return result;
-    }
-
-    public void observe(String text, ConversationContext context) {
-        try {
-            TurnInterpretation interpretation = interpreter.interpret(text, new InterpretationContext(
-                    context.getUserId(), context.getTimezone(), "INR", context.getLastQuestion(),
-                    context.getPendingEvents(), context.getRecentTurns(), accountContext(context.getUserId())));
-            log.info("Unified interpreter shadow result for user {}: {}", context.getUserId(), interpretation);
-        } catch (RuntimeException exception) {
-            log.warn("Unified interpreter shadow call failed for user {}", context.getUserId(), exception);
-        }
     }
 
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {

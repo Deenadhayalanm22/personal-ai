@@ -440,8 +440,11 @@ public class ExpenseHandler implements SpeechHandler {
     }
 
     private SpeechResult expenseConfirmation(StateChangeEntity expense) {
+        String category = expense.getCategory();
+        boolean hasCategory = category != null && !category.isBlank()
+                && !java.util.Set.of("null", "none", "n/a", "unknown").contains(category.trim().toLowerCase());
         String message = "Added ₹" + expense.getAmount().stripTrailingZeros().toPlainString()
-                + (expense.getCategory() == null ? " expense." : " for " + expense.getCategory() + ".");
+                + (hasCategory ? " for " + category + "." : " expense.");
         if (!expense.isFinanciallyApplied()) {
             message += " It is saved for spending insights; exact account balance is not updated yet.";
         }

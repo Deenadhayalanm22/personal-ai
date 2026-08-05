@@ -53,8 +53,12 @@ public record EventFields(
     private static String string(Object value) { return value == null ? null : value.toString(); }
     private static BigDecimal decimal(Object value) { return value == null ? null : new BigDecimal(value.toString()); }
     private static String textOrNull(String value) {
-        if (value == null || value.isBlank() || value.equals("/") || value.equalsIgnoreCase("unknown")) return null;
-        return value;
+        if (value == null) return null;
+        String normalized = value.trim();
+        if (normalized.isBlank() || normalized.equals("/")
+                || java.util.Set.of("null", "none", "n/a", "na", "unknown", "not provided")
+                .contains(normalized.toLowerCase())) return null;
+        return normalized;
     }
     private static BigDecimal positiveOrNull(BigDecimal value) { return value == null || value.signum() <= 0 ? null : value; }
     private static BigDecimal nonNegativeOrNull(BigDecimal value) { return value == null || value.signum() < 0 ? null : value; }
