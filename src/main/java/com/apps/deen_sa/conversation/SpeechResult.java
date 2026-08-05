@@ -31,6 +31,8 @@ public class SpeechResult {
     // Optional: Used by orchestrator to know next handler or context
     private String nextAction;
 
+    private List<ResponseAction> actions;
+
     // ---------- FACTORY METHODS ---------- //
 
     public static SpeechResult invalid(String reason) {
@@ -48,6 +50,18 @@ public class SpeechResult {
                 .needFollowup(true)
                 .missingFields(fields)
                 .partial(partial)
+                .build();
+    }
+
+    public static SpeechResult followup(String question, List<String> fields, Object partial,
+                                        List<ResponseAction> actions) {
+        return SpeechResult.builder()
+                .status(SpeechStatus.FOLLOWUP)
+                .message(question)
+                .needFollowup(true)
+                .missingFields(fields)
+                .partial(partial)
+                .actions(actions)
                 .build();
     }
 

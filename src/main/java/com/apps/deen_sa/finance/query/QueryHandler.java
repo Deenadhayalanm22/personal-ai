@@ -38,7 +38,7 @@ public class QueryHandler implements SpeechHandler {
     public SpeechResult handleSpeech(String userText, ConversationContext ctx) {
         QueryResult result = queryClassifier.classify(userText);
 
-        ExpenseQuery query = expenseQueryBuilder.from(result);
+        ExpenseQuery query = expenseQueryBuilder.from(result, ctx.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
 
         String context =

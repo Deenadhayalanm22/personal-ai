@@ -29,7 +29,6 @@ public class ExpenseCompletenessEvaluator {
 
     private boolean hasMinimal(ExpenseDto dto) {
         return dto.getAmount() != null
-                && dto.getCategory() != null
                 && dto.getTransactionDate() != null;
     }
 

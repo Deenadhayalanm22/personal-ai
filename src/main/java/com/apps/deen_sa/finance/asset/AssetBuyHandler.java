@@ -90,7 +90,7 @@ public class AssetBuyHandler implements SpeechHandler {
         BigDecimal totalAmount = dto.getQuantity().multiply(dto.getPricePerUnit());
 
         // Resolve source container (where money comes from)
-        Long userId = 1L; // TODO: replace with auth user
+        Long userId = ctx.getUserId();
         StateContainerEntity sourceContainer = resolveSourceContainer(dto, userId);
 
         if (sourceContainer == null) {

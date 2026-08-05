@@ -1,0 +1,26 @@
+{
+  "status": "SAVED",
+  "message": "Created HDFC bank account. I can track activity now; add a current balance later for exact balance insights.",
+  "needFollowup": false,
+  "savedEntity": {
+    "ownerType": "USER",
+    "ownerId": 1,
+    "containerType": "BANK_ACCOUNT",
+    "name": "HDFC bank account",
+    "status": "ACTIVE",
+    "currency": "INR",
+    "currentValue": null,
+    "availableValue": null,
+    "unit": null,
+    "capacityLimit": null,
+    "minThreshold": null,
+    "priorityOrder": null,
+    "closedAt": null,
+    "lastActivityAt": null,
+    "externalRefType": null,
+    "externalRefId": "HDFC bank account",
+    "details": null,
+    "overLimit": false,
+    "overLimitAmount": null
+  }
+}

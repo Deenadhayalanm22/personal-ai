@@ -16,21 +16,24 @@ public class AccountSetupValidator {
         if (dto.getContainerType() == null) missing.add("containerType");
         if (dto.getName() == null) missing.add("name");
 
-        // Credit-card-specific rules
-        if ("CREDIT_CARD".equals(dto.getContainerType())) {
-
-            if (dto.getCapacityLimit() == null)
-                missing.add("capacityLimit");
-
-            Map<String, Object> details = normalizeCreditCardDetails(dto);
-            if (details == null || !details.containsKey("dueDay"))
-                missing.add("details.dueDay");
-        }
-
-        if (dto.getCurrency() == null)
-            missing.add("currency");
+        normalizeAccountIdentifier(dto);
+        normalizeCreditCardDetails(dto);
 
         return missing;
+    }
+
+    /**
+     * A user-provided account label is itself a safe identifier. For example,
+     * "HDFC bank account" is sufficient when the user has not supplied a masked
+     * number or a separate nickname.
+     */
+    private static void normalizeAccountIdentifier(AccountSetupDto dto) {
+        if (("BANK_ACCOUNT".equals(dto.getContainerType())
+                || "CREDIT_CARD".equals(dto.getContainerType()))
+                && (dto.getExternalRefId() == null || dto.getExternalRefId().isBlank())
+                && dto.getName() != null && !dto.getName().isBlank()) {
+            dto.setExternalRefId(dto.getName());
+        }
     }
 
     /**

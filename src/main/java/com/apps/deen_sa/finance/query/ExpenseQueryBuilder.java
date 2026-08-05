@@ -13,10 +13,10 @@ public class ExpenseQueryBuilder {
         this.timeRangeResolver = timeRangeResolver;
     }
 
-    public ExpenseQuery from(QueryResult qr) {
+    public ExpenseQuery from(QueryResult qr, Long userId) {
 
         ExpenseQuery eq = new ExpenseQuery();
-        eq.setUserId("1"); // TODO: resolve from authenticated user
+        eq.setUserId(userId.toString());
 
         eq.setTimeRange(
                 timeRangeResolver.resolve(qr.getTimePeriod())

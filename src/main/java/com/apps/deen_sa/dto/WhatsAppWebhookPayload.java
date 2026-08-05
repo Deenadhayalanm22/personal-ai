@@ -18,7 +18,7 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
                         : Stream.empty()
                 )
                 .filter(m -> "text".equals(m.type()) && m.text() != null)
-                .map(m -> new UserMessage(m.from(), m.text().body()))
+                .map(m -> new UserMessage(m.from(), m.text().body(), m.id()))
                 .toList();
     }
 
@@ -31,7 +31,7 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
                         ? c.value().messages().stream()
                         : Stream.empty())
                 .filter(m -> "audio".equals(m.type()) && m.audio() != null)
-                .map(m -> new AudioMessage(m.from(), m.audio().id(), m.audio().mimeType()))
+                .map(m -> new AudioMessage(m.from(), m.audio().id(), m.audio().mimeType(), m.id()))
                 .toList();
     }
 
@@ -47,14 +47,14 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
                         && m.interactive() != null
                         && m.interactive().buttonReply() != null)
                 .map(m -> new InteractiveMessage(
-                        m.from(), m.interactive().buttonReply().id()))
+                        m.from(), m.interactive().buttonReply().id(), m.id()))
                 .toList();
     }
 
     public record Entry(List<Change> changes) {}
     public record Change(Value value) {}
     public record Value(List<Message> messages) {}
-    public record Message(String from, String type, Text text, Audio audio, Interactive interactive) {}
+    public record Message(String id, String from, String type, Text text, Audio audio, Interactive interactive) {}
     public record Text(String body) {}
     public record Audio(String id, @JsonProperty("mime_type") String mimeType) {}
     public record Interactive(
@@ -62,6 +62,6 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
             @JsonProperty("button_reply") ButtonReply buttonReply
     ) {}
     public record ButtonReply(String id, String title) {}
-    public record AudioMessage(String from, String mediaId, String mimeType) {}
-    public record InteractiveMessage(String from, String buttonId) {}
+    public record AudioMessage(String from, String mediaId, String mimeType, String messageId) {}
+    public record InteractiveMessage(String from, String buttonId, String messageId) {}
 }

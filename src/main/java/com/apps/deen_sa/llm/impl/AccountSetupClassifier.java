@@ -32,6 +32,23 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             6. This extractor handles SETUP / RECORDING only, not payments.
             7. The currency defaults to "INR" when the user does not specify it.
             8. For any unsupported account type, return the INVALID CASE.
+            9. currentValue is optional during initial setup. Never invent or
+               default it to zero when omitted; return null. An explicitly stated
+               zero is valid. Exact balance insights remain unavailable until a
+               dated balance is supplied later.
+            10. externalRefId is optional for BANK_ACCOUNT and CREDIT_CARD. Extract
+                a safe user-provided identifier such as a nickname, masked account
+                number, or last four digits. Never request or infer a full account
+                or card number. If none is stated, return null.
+            11. A supported account request with missing fields is STILL valid.
+                Return valid = true, extract every value that is present, and set
+                only the missing values to null. NEVER use the INVALID CASE merely
+                because mandatory setup fields are missing; backend validation is
+                responsible for asking follow-up questions.
+            12. Use the institution/account wording as the name. For example,
+                "Setup my HDFC bank account where I have 40k balance" means:
+                name = "HDFC bank account", currentValue = 40000, and the safe
+                account label may also be used as externalRefId.
             
             ----------------------------------------------------
             FIELD DEFINITIONS (VERY IMPORTANT)
@@ -44,6 +61,29 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             - For CASH and BANK_ACCOUNT, this is the current balance.
             - For CREDIT_CARD, this is the current outstanding amount.
             - IF availableValue is not explicitly known → set availableValue = currentValue
+
+            externalRefId:
+            - For BANK_ACCOUNT and CREDIT_CARD, this identifies the specific account.
+            - Use only a nickname, masked number, or last four digits explicitly
+              provided by the user.
+            - For CASH it is optional.
+            - A clearly stated account label such as "HDFC bank account" or
+              "HDFC salary account" is a valid safe identifier and may be used
+              when no masked number or separate nickname is provided.
+
+            ----------------------------------------------------
+            USEFUL FIELDS BY ACCOUNT TYPE (ONLY NAME AND TYPE BLOCK CREATION)
+            ----------------------------------------------------
+
+            CASH:
+            - name; currency and currentValue may be enriched later
+
+            BANK_ACCOUNT:
+            - name; currency, currentValue and externalRefId may be enriched later
+
+            CREDIT_CARD:
+            - name; current outstanding, externalRefId, capacityLimit and dueDay
+              may be enriched later
 
             details.dueDay:
             - For CREDIT_CARD, extract the monthly payment due day as an integer from 1 to 31.
@@ -66,8 +106,8 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
               "currentValue": 21000,
               "availableValue": 21000,
               "minThreshold": null,
-              "externalRefType": null,
-              "externalRefId": null,
+              "externalRefType": "BANK",
+              "externalRefId": "Savings-1234",
               "details": {
                 "dueDay": 21
               },
@@ -79,6 +119,10 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
               "valid": false,
               "reason": "string"
             }
+
+            Use INVALID CASE only when the requested account type is unsupported
+            or the text is not an account-setup request. Missing fields do not make
+            a supported setup request invalid.
             """;
 
     protected AccountSetupClassifier(OpenAIClient client) {
@@ -108,7 +152,12 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             USER ANSWER:
             "%s"
 
-            Extract ONLY the missing field.
+            The answer may be either a short answer or a complete restatement of
+            the account setup. Extract the missing field AND every other account
+            field explicitly supplied in this answer. Set fields not present in
+            this answer to null so the application preserves previous data while
+            merging. A supported setup remains valid even if other mandatory
+            fields are still missing.
             Return JSON only.
             """.formatted(existing, missingField, userAnswer);
 
@@ -120,6 +169,12 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
     }
 
     public String generateFollowupQuestion(String field) {
+        if ("currentValue".equals(field)) {
+            return "What is the current balance or outstanding amount? You can enter 0 if there is none.";
+        }
+        if ("externalRefId".equals(field)) {
+            return "What safe identifier should I use for this account, such as a nickname or the last four digits? Please do not share the full account or card number.";
+        }
         return "Please provide " + field.replaceAll("([A-Z])", " $1").toLowerCase();
     }
 }

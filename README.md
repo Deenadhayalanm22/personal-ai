@@ -21,6 +21,7 @@ This project includes comprehensive documentation to help you understand the arc
 | **[LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md)** | AI/LLM components and prompt engineering | OpenAI integration, classifiers, extractors, prompt structure |
 | **[ARCHITECTURE_PATTERNS.md](docs/ARCHITECTURE_PATTERNS.md)** | Design patterns and architectural decisions | Strategy, Factory, Template patterns, key trade-offs |
 | **[QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** | Quick lookup guide for common tasks | Code patterns, setup, troubleshooting, SQL queries |
+| **[CONVERSATIONAL_MVP.md](docs/CONVERSATIONAL_MVP.md)** | Progressive WhatsApp setup contract | Provisional accounts, follow-ups, sessions, and reconciliation boundaries |
 
 ## 🚀 Quick Start
 

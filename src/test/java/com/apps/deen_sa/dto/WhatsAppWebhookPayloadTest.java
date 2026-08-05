@@ -11,6 +11,7 @@ class WhatsAppWebhookPayloadTest {
     @Test
     void extractsAudioMessagesWithoutTreatingThemAsText() {
         WhatsAppWebhookPayload.Message message = new WhatsAppWebhookPayload.Message(
+                "wamid.audio-1",
                 "919876543210",
                 "audio",
                 null,
@@ -27,7 +28,7 @@ class WhatsAppWebhookPayloadTest {
         assertThat(payload.extractUserMessages()).isEmpty();
         assertThat(payload.extractAudioMessages()).containsExactly(
                 new WhatsAppWebhookPayload.AudioMessage(
-                        "919876543210", "media-123", "audio/ogg; codecs=opus")
+                        "919876543210", "media-123", "audio/ogg; codecs=opus", "wamid.audio-1")
         );
     }
 }

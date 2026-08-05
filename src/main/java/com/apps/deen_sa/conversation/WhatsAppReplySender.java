@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +49,24 @@ public class WhatsAppReplySender {
         );
 
         sendPayload(to, "audio transcription confirmation", payload);
+    }
+
+    public void sendInteractiveReply(String to, String message, List<ResponseAction> actions) {
+        List<Map<String, Object>> buttons = actions.stream()
+                .limit(3)
+                .map(action -> replyButton(limit(action.id(), 256), limit(action.title(), 20)))
+                .toList();
+        Map<String, Object> payload = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "button",
+                        "body", Map.of("text", limit(message, 1024)),
+                        "action", Map.of("buttons", buttons)
+                )
+        );
+        sendPayload(to, "interactive follow-up", payload);
     }
 
     private Map<String, Object> replyButton(String id, String title) {

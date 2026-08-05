@@ -6,6 +6,10 @@ import java.util.Map;
 @Data
 public class ConversationContext {
 
+    private Long sessionId;
+    private Long userId = 1L;
+    private String channel = "REST";
+
     private Long activeTransactionId;
 
     // Which handler currently owns the conversation?
@@ -29,6 +33,7 @@ public class ConversationContext {
 
     // Reset context fully
     public void reset() {
+        this.activeTransactionId = null;
         this.activeIntent = null;
         this.waitingForField = null;
         this.partialObject = null;

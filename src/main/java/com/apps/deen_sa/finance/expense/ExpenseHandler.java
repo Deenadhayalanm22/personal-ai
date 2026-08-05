@@ -17,6 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
+import java.math.BigDecimal;
+import com.apps.deen_sa.conversation.ResponseAction;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +59,7 @@ public class ExpenseHandler implements SpeechHandler {
         // We SAVE, but still ask follow-up to improve quality
         if (level == CompletenessLevelEnum.MINIMAL) {
 
-            StateChangeEntity saved = saveExpense(dto); // sourceContainerId will be NULL
+            StateChangeEntity saved = saveExpense(dto, ctx.getUserId()); // sourceContainerId will be NULL
             saved.setNeedsEnrichment(true);
             saved.setFinanciallyApplied(false);
             repo.save(saved);
@@ -64,8 +67,7 @@ public class ExpenseHandler implements SpeechHandler {
             // If there are missing fields, guide the user
             if (!missing.isEmpty()) {
                 String nextField = missing.getFirst();
-                String followupQ =
-                        llm.generateFollowupQuestionForExpense(nextField, dto);
+                String followupQ = questionFor(nextField, dto);
 
                 ctx.setActiveIntent("EXPENSE");
                 ctx.setWaitingForField(nextField);
@@ -75,7 +77,8 @@ public class ExpenseHandler implements SpeechHandler {
                 return SpeechResult.followup(
                         followupQ,
                         List.of(nextField),
-                        dto
+                        dto,
+                        actionsFor(nextField)
                 );
             }
 
@@ -87,12 +90,12 @@ public class ExpenseHandler implements SpeechHandler {
         // Save + map container, but no balance mutation
         if (level == CompletenessLevelEnum.OPERATIONAL) {
 
-            StateChangeEntity saved = saveExpense(dto);
+            StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
             // based on the container, enrichment being handled.
-            saved.setNeedsEnrichment(saved.getSourceContainerId() == null);
+            saved.setNeedsEnrichment(saved.getSourceContainerId() == null || !canApplyFinancialImpact(saved));
 
             // ✅ APPLY FINANCIAL IMPACT IF POSSIBLE
-            if (saved.getSourceContainerId() != null
+            if (canApplyFinancialImpact(saved)
                     && !saved.isFinanciallyApplied()) {
 
                 applyFinancialImpact(saved);
@@ -103,24 +106,24 @@ public class ExpenseHandler implements SpeechHandler {
 
             ctx.reset();
 
-            return SpeechResult.saved(saved);
+            return expenseConfirmation(saved);
         }
 
         // 🔹 CASE 3: FINANCIAL completeness
         // Full save + balance mutation
         if (level == CompletenessLevelEnum.FINANCIAL) {
 
-            StateChangeEntity saved = saveExpense(dto);
-            if (!saved.isFinanciallyApplied()) {
+            StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
+            if (canApplyFinancialImpact(saved) && !saved.isFinanciallyApplied()) {
                 applyFinancialImpact(saved);
                 saved.setFinanciallyApplied(true);
             }
 
-            saved.setNeedsEnrichment(false);
+            saved.setNeedsEnrichment(!saved.isFinanciallyApplied());
             repo.save(saved);
             ctx.reset();
 
-            return SpeechResult.saved(saved);
+            return expenseConfirmation(saved);
         }
 
         // Should never reach here
@@ -139,6 +142,10 @@ public class ExpenseHandler implements SpeechHandler {
 
         if (transactionId == null) {
             return SpeechResult.invalid("No active transaction to update.");
+        }
+
+        if ("sourceBalance".equals(missingField)) {
+            return completeSourceBalance(userAnswer, ctx, transactionId);
         }
 
         // ----------------------------
@@ -202,12 +209,13 @@ public class ExpenseHandler implements SpeechHandler {
         // ----------------------------
         // Step H – Apply financial impact exactly once
         // ----------------------------
-        if (tx.getSourceContainerId() != null
+        if (canApplyFinancialImpact(tx)
                 && !tx.isFinanciallyApplied()) {
 
             applyFinancialImpact(tx);
             tx.setFinanciallyApplied(true);
         }
+        tx.setNeedsEnrichment(!tx.isFinanciallyApplied());
 
         // ----------------------------
         // Step I – Persist updates
@@ -223,8 +231,7 @@ public class ExpenseHandler implements SpeechHandler {
         if (!stillMissing.isEmpty()) {
 
             String nextField = stillMissing.getFirst();
-            String followupQ =
-                    llm.generateFollowupQuestionForExpense(nextField, dto);
+            String followupQ = questionFor(nextField, dto);
 
             ctx.setWaitingForField(nextField);
             ctx.setPartialObject(dto);
@@ -233,7 +240,21 @@ public class ExpenseHandler implements SpeechHandler {
             return SpeechResult.followup(
                     followupQ,
                     List.of(nextField),
-                    dto
+                    dto,
+                    actionsFor(nextField)
+            );
+        }
+
+
+        if (tx.getSourceContainerId() != null && !canApplyFinancialImpact(tx)) {
+            ctx.setWaitingForField("sourceBalance");
+            ctx.setPartialObject(dto);
+            return SpeechResult.followup(
+                    "I created " + stateContainerService.findValueContainerById(tx.getSourceContainerId()).getName()
+                            + ". What is its current balance?",
+                    List.of("sourceBalance"),
+                    dto,
+                    List.of(new ResponseAction("control:skip", "Not sure / later"))
             );
         }
 
@@ -241,14 +262,13 @@ public class ExpenseHandler implements SpeechHandler {
         // Step K – Conversation complete
         // ----------------------------
         ctx.reset();
-        return SpeechResult.saved(tx);
+        return expenseConfirmation(tx);
     }
 
     // -----------------------------------------------------
     // INTERNAL SAVE LOGIC
     // -----------------------------------------------------
-    private StateChangeEntity saveExpense(ExpenseDto dto) {
-        Long userId = 1L; // TODO: resolve properly
+    private StateChangeEntity saveExpense(ExpenseDto dto, Long userId) {
 
         StateChangeEntity transaction =
                 ExpenseDtoToEntityMapper.toEntity(dto, userId);
@@ -271,12 +291,113 @@ public class ExpenseHandler implements SpeechHandler {
         List<StateContainerEntity> containers =
                 stateContainerService.getActiveContainers(userId);
 
+        String requested = normalizeSourceType(dto.getSourceAccount());
         List<StateContainerEntity> matching =
                 containers.stream()
-                        .filter(c -> c.getContainerType().equals(dto.getSourceAccount()))
+                        .filter(c -> c.getContainerType().equals(requested)
+                                || c.getName().equalsIgnoreCase(dto.getSourceAccount()))
                         .toList();
 
-        return matching.size() == 1 ? matching.getFirst() : null;
+        if (matching.size() == 1) return matching.getFirst();
+        if (matching.isEmpty() && isSupportedSource(requested)) {
+            return stateContainerService.createProvisional(userId, requested);
+        }
+        return null;
+    }
+
+    private String normalizeSourceType(String source) {
+        String normalized = source.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
+        if (normalized.equals("BANK") || normalized.equals("UPI") || normalized.equals("BANK/UPI")) {
+            return "BANK_ACCOUNT";
+        }
+        if (normalized.equals("CARD") || normalized.equals("CREDIT")) return "CREDIT_CARD";
+        return normalized;
+    }
+
+    private boolean isSupportedSource(String type) {
+        return List.of("CASH", "BANK_ACCOUNT", "CREDIT_CARD", "WALLET").contains(type);
+    }
+
+    private boolean canApplyFinancialImpact(StateChangeEntity tx) {
+        if (tx.getSourceContainerId() == null) return false;
+        return stateContainerService.findValueContainerById(tx.getSourceContainerId()).getCurrentValue() != null;
+    }
+
+    private List<ResponseAction> actionsFor(String field) {
+        if ("sourceAccount".equals(field)) {
+            return List.of(
+                    new ResponseAction("answer:CASH", "Cash"),
+                    new ResponseAction("answer:BANK_ACCOUNT", "Bank / UPI"),
+                    new ResponseAction("control:skip", "Skip")
+            );
+        }
+        return List.of(new ResponseAction("control:skip", "Skip for now"));
+    }
+
+    private String questionFor(String field, ExpenseDto dto) {
+        return switch (field) {
+            case "category" -> "What was the ₹" + dto.getAmount().stripTrailingZeros().toPlainString() + " expense for?";
+            case "sourceAccount" -> "How did you pay?";
+            case "amount" -> "How much did you spend?";
+            case "spentAt" -> "When did you spend it?";
+            default -> "Please provide " + field + ".";
+        };
+    }
+
+    private SpeechResult completeSourceBalance(String answer, ConversationContext ctx, Long transactionId) {
+        BigDecimal balance;
+        try {
+            String numeric = answer.replace(",", "").replaceAll("[^0-9.-]", "");
+            balance = new BigDecimal(numeric);
+            if (balance.signum() < 0) throw new NumberFormatException("negative balance");
+        } catch (RuntimeException invalidNumber) {
+            return SpeechResult.followup(
+                    "Please enter the current balance as a number, or choose Not sure / later.",
+                    List.of("sourceBalance"),
+                    ctx.getPartialObject(),
+                    List.of(new ResponseAction("control:skip", "Not sure / later"))
+            );
+        }
+
+        StateChangeEntity tx = repo.findById(transactionId)
+                .orElseThrow(() -> new IllegalStateException("Transaction not found"));
+        StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
+        source.setCurrentValue(balance);
+        source.setAvailableValue(balance);
+        stateContainerService.UpdateValueContainer(source);
+
+        if (!tx.isFinanciallyApplied()) {
+            applyFinancialImpact(tx);
+            tx.setFinanciallyApplied(true);
+        }
+        tx.setCompletenessLevel(CompletenessLevelEnum.FINANCIAL);
+        tx.setNeedsEnrichment(false);
+        repo.save(tx);
+        ctx.reset();
+
+        StateContainerEntity updated = stateContainerService.findValueContainerById(source.getId());
+        return SpeechResult.builder()
+                .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
+                .message("All set. Added ₹" + tx.getAmount().stripTrailingZeros().toPlainString()
+                        + " for " + tx.getCategory() + ". " + source.getName()
+                        + " balance is now ₹" + updated.getCurrentValue().stripTrailingZeros().toPlainString() + ".")
+                .savedEntity(tx)
+                .needFollowup(false)
+                .build();
+    }
+
+    private SpeechResult expenseConfirmation(StateChangeEntity expense) {
+        String message = "Added ₹" + expense.getAmount().stripTrailingZeros().toPlainString()
+                + (expense.getCategory() == null ? " expense." : " for " + expense.getCategory() + ".");
+        if (!expense.isFinanciallyApplied()) {
+            message += " It is saved for spending insights; exact account balance is not updated yet.";
+        }
+        return SpeechResult.builder()
+                .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
+                .message(message)
+                .savedEntity(expense)
+                .needFollowup(false)
+                .build();
     }
 
     // =====================================================

@@ -41,7 +41,8 @@ public class WhatsAppWebhookController {
         payload.extractUserMessages().forEach(msg -> {
             messageProcessor.processIncomingMessage(
                     msg.from(),
-                    msg.text()
+                    msg.text(),
+                    msg.messageId()
             );
         });
 
@@ -49,11 +50,12 @@ public class WhatsAppWebhookController {
                 messageProcessor.processIncomingAudio(
                         msg.from(),
                         msg.mediaId(),
-                        msg.mimeType()
+                        msg.mimeType(),
+                        msg.messageId()
                 ));
 
         payload.extractInteractiveMessages().forEach(msg ->
-                messageProcessor.processInteractiveReply(msg.from(), msg.buttonId()));
+                messageProcessor.processInteractiveReply(msg.from(), msg.buttonId(), msg.messageId()));
 
         // IMMEDIATE response to Meta
         return ResponseEntity.ok().build();

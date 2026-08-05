@@ -73,7 +73,7 @@ public class LiabilityPaymentHandler implements SpeechHandler {
         }
 
         // Resolve source container (bank account or wallet)
-        Long userId = 1L; // TODO: Get from authentication context
+        Long userId = ctx.getUserId();
         StateContainerEntity sourceContainer = resolveSourceContainer(dto, userId);
 
         if (sourceContainer == null) {

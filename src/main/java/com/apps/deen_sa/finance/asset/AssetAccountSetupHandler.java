@@ -73,7 +73,7 @@ public class AssetAccountSetupHandler implements SpeechHandler {
         }
 
         // Save the asset container immediately
-        StateContainerEntity savedContainer = saveAssetContainer(dto);
+        StateContainerEntity savedContainer = saveAssetContainer(dto, ctx.getUserId());
         
         // Clear context since we're done with the main flow
         ctx.reset();
@@ -110,7 +110,7 @@ public class AssetAccountSetupHandler implements SpeechHandler {
      * Save asset as a StateContainer with type ASSET.
      * Sets currentValue = quantity to represent ownership state.
      */
-    private StateContainerEntity saveAssetContainer(AssetDto dto) {
+    private StateContainerEntity saveAssetContainer(AssetDto dto, Long userId) {
         
         // Check if asset already exists for this user
         Optional<StateContainerEntity> existing = containerRepository
@@ -118,7 +118,7 @@ public class AssetAccountSetupHandler implements SpeechHandler {
                 .stream()
                 .filter(c -> "ASSET".equals(c.getContainerType()) 
                         && dto.getAssetIdentifier().equalsIgnoreCase(c.getName())
-                        && c.getOwnerId().equals(1L)) // TODO: replace with auth user
+                        && c.getOwnerId().equals(userId))
                 .findFirst();
 
         StateContainerEntity container;
@@ -132,7 +132,7 @@ public class AssetAccountSetupHandler implements SpeechHandler {
             // Create new asset container
             container = new StateContainerEntity();
             container.setOwnerType("USER");
-            container.setOwnerId(1L); // TODO: replace with auth user
+            container.setOwnerId(userId);
             container.setContainerType("ASSET");
             container.setName(dto.getAssetIdentifier());
             container.setStatus("ACTIVE");

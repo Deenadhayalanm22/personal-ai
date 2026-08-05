@@ -55,10 +55,10 @@ public class AccountSetupHandler implements SpeechHandler {
             );
         }
 
-        StateContainerEntity saved = save(dto);
+        applyProfileDefaults(dto);
+        StateContainerEntity saved = save(dto, ctx.getUserId());
         ctx.reset();
-
-        return SpeechResult.saved(saved);
+        return setupConfirmation(saved);
     }
 
     @Override
@@ -87,18 +87,18 @@ public class AccountSetupHandler implements SpeechHandler {
             );
         }
 
-        StateContainerEntity saved = save(dto);
+        applyProfileDefaults(dto);
+        StateContainerEntity saved = save(dto, ctx.getUserId());
         ctx.reset();
-
-        return SpeechResult.saved(saved);
+        return setupConfirmation(saved);
     }
 
-    private StateContainerEntity save(AccountSetupDto dto) {
+    private StateContainerEntity save(AccountSetupDto dto, Long userId) {
 
         StateContainerEntity e = new StateContainerEntity();
 
         e.setOwnerType(dto.getOwnerType() != null ? dto.getOwnerType() : "USER");
-        e.setOwnerId(1L); // replace with auth user
+        e.setOwnerId(userId);
 
         e.setContainerType(dto.getContainerType());
         e.setName(dto.getName());
@@ -118,6 +118,25 @@ public class AccountSetupHandler implements SpeechHandler {
         e.setDetails(dto.getDetails());
 
         return repo.save(e);
+    }
+
+    private void applyProfileDefaults(AccountSetupDto dto) {
+        if (dto.getCurrency() == null) dto.setCurrency("INR");
+        if (dto.getAvailableValue() == null && dto.getCurrentValue() != null) {
+            dto.setAvailableValue(dto.getCurrentValue());
+        }
+    }
+
+    private SpeechResult setupConfirmation(StateContainerEntity saved) {
+        String balanceNote = saved.getCurrentValue() == null
+                ? " I can track activity now; add a current balance later for exact balance insights."
+                : " Opening balance recorded.";
+        return SpeechResult.builder()
+                .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
+                .message("Created " + saved.getName() + "." + balanceNote)
+                .savedEntity(saved)
+                .needFollowup(false)
+                .build();
     }
 
     public static String[] getNullPropertyNames(Object source) {

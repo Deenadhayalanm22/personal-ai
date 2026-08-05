@@ -24,6 +24,31 @@ public class SpeechOrchestrator {
 
     public SpeechResult process(String text, ConversationContext ctx) {
 
+        String normalized = text == null ? "" : text.trim().toLowerCase();
+        if (ctx.isInFollowup() && (normalized.equals("skip") || normalized.equals("later")
+                || normalized.equals("not sure") || normalized.equals("don't know"))) {
+            ctx.reset();
+            return SpeechResult.info("No problem — I saved what you told me. You can add the missing detail later.");
+        }
+        if (ctx.isInFollowup() && (normalized.equals("cancel") || normalized.equals("stop"))) {
+            ctx.reset();
+            return SpeechResult.info("Okay — I stopped the questions. Any activity already recorded is still saved.");
+        }
+
+        if (ctx.isInFollowup() && looksLikeNewActivity(normalized)) {
+            IntentResult interruption = intentClassifier.classify(text);
+            SpeechHandler newHandler = interruption.confidence() >= 0.75
+                    ? handlers.get(interruption.intent()) : null;
+            if (newHandler != null && !interruption.intent().equals(ctx.getActiveIntent())) {
+                ctx.reset();
+                return newHandler.handleSpeech(text, ctx);
+            }
+            if (newHandler != null && containsTransactionVerb(normalized)) {
+                ctx.reset();
+                return newHandler.handleSpeech(text, ctx);
+            }
+        }
+
         // 1️⃣ CASE: Follow-up mode
         if (ctx.isInFollowup()) {
             SpeechHandler handler = handlers.get(ctx.getActiveIntent());
@@ -46,5 +71,18 @@ public class SpeechOrchestrator {
 
         // 3️⃣ Pass initial speech to the correct handler
         return handler.handleSpeech(text, ctx);
+    }
+
+    private boolean looksLikeNewActivity(String text) {
+        return containsTransactionVerb(text)
+                || text.startsWith("how much")
+                || text.startsWith("show me")
+                || text.startsWith("what did");
+    }
+
+    private boolean containsTransactionVerb(String text) {
+        return List.of("spent ", "paid ", "bought ", "sold ", "received ", "got ",
+                        "transferred ", "invested ", "setup ", "set up ", "i have ")
+                .stream().anyMatch(text::contains);
     }
 }

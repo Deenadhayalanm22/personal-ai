@@ -6,6 +6,7 @@ import com.apps.deen_sa.core.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.Instant;
 
 @Service
 public class StateContainerService {
@@ -52,5 +53,29 @@ public class StateContainerService {
     // Call this after ANY container update
     public void evictCache(Long ownerId) {
         cache.evict(ownerId);
+    }
+
+    public StateContainerEntity createProvisional(Long ownerId, String containerType) {
+        StateContainerEntity container = new StateContainerEntity();
+        container.setOwnerType("USER");
+        container.setOwnerId(ownerId);
+        container.setContainerType(containerType);
+        container.setName(defaultName(containerType));
+        container.setStatus("ACTIVE");
+        container.setCurrency("INR");
+        container.setOpenedAt(Instant.now());
+        StateContainerEntity saved = repository.save(container);
+        cache.evict(ownerId);
+        return saved;
+    }
+
+    private String defaultName(String type) {
+        return switch (type) {
+            case "BANK_ACCOUNT" -> "My bank account";
+            case "CREDIT_CARD" -> "My credit card";
+            case "WALLET" -> "My wallet";
+            case "CASH" -> "Cash";
+            default -> "My " + type.toLowerCase().replace('_', ' ');
+        };
     }
 }

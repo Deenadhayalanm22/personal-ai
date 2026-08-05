@@ -15,16 +15,14 @@ import org.springframework.web.bind.annotation.*;
 public class SpeechController {
 
     private final SpeechOrchestrator orchestrator;
-    private final ConversationContext conversationContext;
 
     @PostMapping("/process")
     public SpeechResult processSpeech(@RequestBody SpeechInput request) {
 
         log.info("Message is about to be processed - {}", request.getText());
-        return orchestrator.process(
-                request.getText(),
-                conversationContext
-        );
+        ConversationContext context = new ConversationContext();
+        context.setUserId(1L);
+        context.setChannel("REST");
+        return orchestrator.process(request.getText(), context);
     }
 }
-
