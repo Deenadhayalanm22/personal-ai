@@ -4,6 +4,7 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.core.mutation.StateMutationRepository;
 import com.apps.deen_sa.core.state.StateChangeRepository;
 import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.core.state.cache.StateContainerCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.flywaydb.core.Flyway;
@@ -38,6 +39,9 @@ public abstract class AbstractIntegrationTestProperties {
 	@Autowired
 	private ConversationContext conversationContext;
 
+	@Autowired
+	private StateContainerCache stateContainerCache;
+
 	@Value("${wiremock.admin-url:http://localhost:9091/__admin}")
 	private String wireMockAdminUrl;
 
@@ -45,6 +49,7 @@ public abstract class AbstractIntegrationTestProperties {
 	protected void resetTestState(TestInfo testInfo) {
 		flyway.clean();
 		flyway.migrate();
+		stateContainerCache.evictAll();
 		conversationContext.reset();
 		resetAndLoadWireMockMappings(testInfo);
 	}

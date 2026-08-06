@@ -34,3 +34,8 @@ Omit `LIVE_MODEL_NAME` to use the configured default. The test is disabled unles
 The suite asserts semantic behavior and persisted financial state rather than exact model JSON or exact conversational wording. Network failures should be retried by rerunning the test; semantic assertion failures should be investigated rather than automatically retried.
 
 The `live-model` profile disables Spring, Hibernate, Flyway, and application logs so the IntelliJ console shows the printed WhatsApp conversation. This affects only `LiveModelIT`; normal application logging is unchanged.
+
+`it_live_001` reads its curated multilingual messages from the `live-model-scenarios` section of
+`src/main/resources/test-prompts.yml`. It covers complete English/Tamil/Tanglish expenses, missing category,
+missing payment source, missing amount, multiple expenses in one sentence, and read-only queries in all three
+language styles. Each section prints a heading so model behavior is easy to review in the IntelliJ console.

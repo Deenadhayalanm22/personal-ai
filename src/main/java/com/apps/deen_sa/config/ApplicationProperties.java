@@ -12,6 +12,8 @@ public record ApplicationProperties(
             String apiKey,
             String baseUrl,
             String model,
+            String escalationModel,
+            double escalationConfidence,
             String transcriptionModel
     ) {
     }

@@ -7,36 +7,42 @@ import com.openai.models.responses.StructuredResponse;
 import com.openai.models.responses.StructuredResponseCreateParams;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.apps.deen_sa.llm.AiCallTelemetry;
 
 @Service
 @RequiredArgsConstructor
 public class OpenAiConversationInterpreter implements ConversationInterpreter {
     private static final String SYSTEM_PROMPT = """
-            You are the semantic turn interpreter for a conversational bookkeeping application.
-            Interpret meaning; never invent financial facts and never decide database mutations.
-            The latest user message may answer the last question even when it contains words such as paid, bought, or sold.
-            Prefer ANSWER_TO_PENDING_EVENT when it naturally answers the lastQuestion. Use NEW_EVENT only for a distinct event.
-            Extract every distinct event when one message contains several events.
-            Resolve relative dates using the supplied timezone. Preserve the user's own wording as evidence.
-            Return JSON only with this shape:
+            Interpret one multilingual bookkeeping turn (including English, Tamil, and romanized Tamil) into JSON.
+            Never invent facts or authorize database changes. Current input can answer lastQuestion; prefer
+            ANSWER_TO_PENDING_EVENT for that case. NEW_EVENT means a distinct activity stated now.
+
+            Shape:
             {"turnType":"NEW_EVENT|ANSWER_TO_PENDING_EVENT|CORRECTION|COMMAND|QUERY|NEW_EVENTS|AMBIGUOUS",
              "intent":"EXPENSE|INCOME|TRANSFER|ACCOUNT_SETUP|ASSET_BUY|ASSET_SELL|QUERY|UNKNOWN",
+             "language":"en-IN|ta-IN|ta-Latn|other",
              "targetEventId":null,"events":[{"eventId":null,"eventType":"EXPENSE","fields":{},
              "unresolvedFields":[],"ambiguities":[],"evidence":[{"field":"amount","value":"35","evidence":"35","confidence":0.99}]}],
-             "command":null,"query":null,"ambiguities":[],"confidence":0.0}
-            Expense fields are amount, category, subcategory, merchantName, sourceAccount, sourceBalance, creditLimit,
-            creditCardDueDay (integer 1-31),
-            transactionDate (YYYY-MM-DD), tags, and rawText. Only emit a field when supported by the message or context.
-            Unknown fields MUST be null. Never use 0, empty strings, slash, epoch dates, or invented dates as placeholders.
-            Add field evidence for every non-null extracted field. For a pending answer, preserve known facts by targeting
-            the pending event; do not restate unknown amount/date placeholders.
-            Existing accounts are resolution candidates only. Never infer sourceAccount from account history or from the
-            fact that only one account exists. Set sourceAccount only when the CURRENT user message explicitly states a
-            payment method, or directly answers a payment-source question.
-            For category, use the broad label and put the specific meaning in subcategory when clear.
-            Commands include SKIP_PENDING, CANCEL_PENDING and UNDO_LAST. Corrections must target an existing pending event when possible.
-            A greeting such as hi/hello, a help request, or a question about capabilities is not a financial mutation.
-            Return COMMAND with command HELP for those inputs so the application can show onboarding instructions.
+             "command":null,"query":"NONE",
+             "ambiguities":[],"confidence":0.0}
+
+            Expense fields: amount, category, subcategory, merchantName, sourceAccount, sourceBalance, creditLimit,
+            creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
+            Rules:
+            - Unknown fields are null; never use placeholder strings or invented dates.
+            - Every non-null field needs exact supporting evidence copied from the CURRENT message. Context evidence may
+              resolve a pending event but must never create a new event.
+            - A NEW_EVENT amount must be explicitly evidenced in the current message.
+            - Existing accounts are candidates only. Set sourceAccount only when stated now or answering that question.
+              Canonical payment-source mapping: UPI, bank transfer, debit card, FASTag linked to bank, and auto-debit
+              from bank => BANK_ACCOUNT; cash => CASH; credit card or card EMI => CREDIT_CARD; wallet => WALLET.
+              When any payment source is explicit, ALWAYS emit sourceAccount and copy the exact payment phrase into its
+              evidence. This mapping applies equally to English, Tamil, and romanized Tamil.
+            - Use broad category and specific subcategory. Resolve relative dates with timezone.
+            - query is always required. Use NONE for non-query turns. Questions about existing data are QUERY with no
+              events and the matching canonical period. Examples: "today"/"இன்று"/"inniku" => TODAY;
+              "this month"/"இந்த மாதம்"/"intha month" => THIS_MONTH.
+            - Greetings/help are COMMAND HELP. Controls: SKIP_PENDING, CANCEL_PENDING, UNDO_LAST.
             """;
 
     private final OpenAIClient client;
@@ -50,13 +56,36 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                     "userMessage", userMessage,
                     "context", context
             ));
+            String instructions = SYSTEM_PROMPT + pendingInstruction(context);
+            TurnInterpretation primary = callModel(input, instructions, properties.openai().model(),
+                    "conversation_interpretation");
+            String escalationModel = properties.openai().escalationModel();
+            double confidence = primary.confidence() == null ? 0 : primary.confidence();
+            if (confidence < properties.openai().escalationConfidence()
+                    && escalationModel != null && !escalationModel.isBlank()
+                    && !escalationModel.equals(properties.openai().model())) {
+                return callModel(input, instructions, escalationModel, "conversation_interpretation_escalation");
+            }
+            return primary;
+        } catch (Exception exception) {
+            throw new ConversationInterpretationException("Unable to interpret conversation turn", exception);
+        }
+    }
+
+    private TurnInterpretation callModel(String input, String instructions, String model, String purpose) {
+        long startedNanos = System.nanoTime();
+        try {
             StructuredResponseCreateParams<TurnInterpretation> params = com.openai.models.responses.ResponseCreateParams.builder()
-                    .model(properties.openai().model())
-                    .instructions(SYSTEM_PROMPT)
+                    .model(model)
+                    .instructions(instructions)
                     .input(input)
                     .text(TurnInterpretation.class)
                     .build();
             StructuredResponse<TurnInterpretation> response = client.responses().create(params);
+            response.usage().ifPresentOrElse(usage -> AiCallTelemetry.success(
+                            purpose, model, usage.inputTokens(),
+                            usage.inputTokensDetails().cachedTokens(), usage.outputTokens(), startedNanos),
+                    () -> AiCallTelemetry.success(purpose, model, 0, 0, 0, startedNanos));
             return response.output().stream()
                     .flatMap(item -> item.message().stream())
                     .flatMap(message -> message.content().stream())
@@ -64,7 +93,25 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Interpreter returned no structured output"));
         } catch (Exception exception) {
-            throw new ConversationInterpretationException("Unable to interpret conversation turn", exception);
+            AiCallTelemetry.failure(purpose, model, startedNanos);
+            if (exception instanceof RuntimeException runtimeException) throw runtimeException;
+            throw new IllegalStateException("Model call failed", exception);
         }
+    }
+
+    private String pendingInstruction(InterpretationContext context) {
+        if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return "";
+        PendingEvent pending = context.pendingEvents().getLast();
+        if (pending.unresolvedFields() == null || pending.unresolvedFields().isEmpty()) return "";
+        String field = pending.unresolvedFields().getFirst();
+        return """
+
+                CURRENT TURN OVERRIDE: A transaction is pending and needs field `%s`. Interpret the latest message
+                primarily as ANSWER_TO_PENDING_EVENT targeting that event. A short noun phrase or description can be a
+                complete answer and does not need an amount or transaction verb. For category, examples such as
+                "coffee and snacks", "மாலை சிற்றுண்டி", or "petrol ku" are category answers. Use NEW_EVENT only when
+                the current message clearly states a separate activity with its own amount. If the field is not answered,
+                return AMBIGUOUS without inventing values.
+                """.formatted(field);
     }
 }

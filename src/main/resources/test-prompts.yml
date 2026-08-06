@@ -81,3 +81,12 @@ prompts:
   - "Bought things for home and child around 3000 paid by UPI"
   - "Weekend expenses like movie using credit card food by UPI shopping by cash"
   - "Office commute and lunch outside cost me 450 today paid by UPI"
+
+# Curated prompts consumed by LiveModelIT. Keep these conversational and multilingual; assertions belong in Java.
+live-model-scenarios:
+  tamil-missing-source:
+  tanglish-missing-amount:
+  multiple-expenses:
+  english-query:
+  tamil-query:
+  tanglish-query:

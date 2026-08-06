@@ -40,6 +40,8 @@ public abstract class BaseLLMExtractor {
     }
 
     protected String callLLM(String systemPrompt, String userPrompt) {
+        String purpose = getClass().getSimpleName();
+        long startedNanos = System.nanoTime();
         ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
                 .model(properties.openai().model())
                 .addSystemMessage(systemPrompt)
@@ -47,7 +49,18 @@ public abstract class BaseLLMExtractor {
                 .temperature(0.1)
                 .build();
 
-        ChatCompletion completion = client.chat().completions().create(params);
+        ChatCompletion completion;
+        try {
+            completion = client.chat().completions().create(params);
+            completion.usage().ifPresentOrElse(usage -> AiCallTelemetry.success(
+                            purpose, completion.model(), usage.promptTokens(),
+                            usage.promptTokensDetails().flatMap(details -> details.cachedTokens()).orElse(0L),
+                            usage.completionTokens(), startedNanos),
+                    () -> AiCallTelemetry.success(purpose, completion.model(), 0, 0, 0, startedNanos));
+        } catch (RuntimeException failure) {
+            AiCallTelemetry.failure(purpose, properties.openai().model(), startedNanos);
+            throw failure;
+        }
 
         return completion.choices().getFirst()
                 .message()

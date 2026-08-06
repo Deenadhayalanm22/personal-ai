@@ -78,7 +78,11 @@ public class ExpenseHandler implements SpeechHandler {
 
         if (level == null) {
             log.warn("Rejecting expense because no explicit amount could be extracted from text");
-            return SpeechResult.invalid("How much did you spend?");
+            ctx.setActiveIntent("EXPENSE");
+            ctx.setWaitingForField("amount");
+            ctx.setPartialObject(dto);
+            ctx.setActiveTransactionId(null);
+            return SpeechResult.followup("How much did you spend?", List.of("amount"), dto, List.of());
         }
 
         // Always find missing fields (used for UI / follow-up)
@@ -209,6 +213,11 @@ public class ExpenseHandler implements SpeechHandler {
         ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
         Long transactionId = ctx.getActiveTransactionId();
 
+        if (transactionId == null && "amount".equals(missingField)) {
+            ExpenseMerger.merge(dto, refined);
+            dto.setRawText(dto.getRawText() + " " + userAnswer);
+            return handleExpense(dto, ctx);
+        }
         if (transactionId == null) return SpeechResult.invalid("No active transaction to update.");
         if ("sourceBalance".equals(missingField)) return completeSourceBalance(userAnswer, ctx, transactionId);
 

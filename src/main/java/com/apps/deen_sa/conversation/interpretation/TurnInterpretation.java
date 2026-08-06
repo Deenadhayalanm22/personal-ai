@@ -5,10 +5,11 @@ import java.util.List;
 public record TurnInterpretation(
         TurnType turnType,
         String intent,
+        String language,
         String targetEventId,
         List<EventPatch> events,
         String command,
-        String query,
+        QueryPeriod query,
         List<String> ambiguities,
         Double confidence
 ) {

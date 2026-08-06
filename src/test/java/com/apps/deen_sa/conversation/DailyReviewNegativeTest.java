@@ -4,6 +4,7 @@ import com.apps.deen_sa.core.state.CompletenessLevelEnum;
 import com.apps.deen_sa.integration.AbstractIntegrationTestProperties;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import com.apps.deen_sa.conversation.interpretation.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
     private static final String PHONE = "919876543210";
+    private static final AtomicInteger INTERPRETER_CALLS = new AtomicInteger();
 
     @Autowired
     private MockMvc mockMvc;
@@ -47,6 +50,11 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
     @Value("${wiremock.admin-url:http://localhost:9091/__admin}")
     private String wireMockAdminUrl;
+
+    @BeforeEach
+    void resetInterpreterCallCount() {
+        INTERPRETER_CALLS.set(0);
+    }
 
     @Test
     void it_neg_001() throws Exception {
@@ -109,7 +117,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
                 assertThat(session.getActiveIntent()).isNull();
                 assertThat(session.getWaitingForField()).isNull();
                 assertThat(session.getActiveTransactionId()).isNull();
-                assertThat(session.getInterpreterVersion()).isEqualTo("unified-v1");
+                assertThat(session.getInterpreterVersion()).isEqualTo("unified-v2");
                 assertThat(session.getPendingEvents()).isEmpty();
                 assertThat(session.getRecentTurns()).isNotEmpty();
             });
@@ -208,6 +216,14 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
                 .contains("Added ₹500 for Groceries")
                 .contains("balance is now ₹9500");
 
+        // Reproduce the production failure deterministically: the interpreter fixture deliberately
+        // returns a second ₹58 expense copied from history for this read-only question.
+        String summary = chatText("wamid.flow-6", "what i spent today?");
+        assertThat(summary).contains("record this as a new money activity");
+
+        String safeSummary = chatText("wamid.flow-7", "Show today's spending");
+        assertThat(safeSummary).isEqualTo("You spent a total of ₹500 today.");
+
         awaitState(() -> {
             assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
                 assertThat(expense.getAmount()).isEqualByComparingTo("500");
@@ -216,15 +232,61 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             });
             assertThat(stateContainerRepository.findAll()).singleElement()
                     .satisfies(account -> assertThat(account.getCurrentValue()).isEqualByComparingTo("9500"));
+            assertThat(stateMutationRepository.findAll()).singleElement();
         });
+        assertThat(INTERPRETER_CALLS).hasValue(4);
 
         System.out.println("=======================================================\n");
+    }
+
+    @Test
+    void it_neg_003_completesExpenseThatInitiallyHasNoAmount() throws Exception {
+        String amountQuestion = chatText("wamid.missing-1", "Nethu office lunch ku spend pannen");
+        assertThat(amountQuestion).isEqualTo("How much did you spend?");
+        assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+            assertThat(session.getActiveIntent()).isEqualTo("EXPENSE");
+            assertThat(session.getWaitingForField()).isEqualTo("amount");
+            assertThat(session.getActiveTransactionId()).isNull();
+            assertThat(session.getLastQuestion()).isEqualTo("How much did you spend?");
+        });
+        assertThat(stateChangeRepository.findAll()).isEmpty();
+
+        String sourceQuestion = chatText("wamid.missing-2", "450");
+        assertThat(sourceQuestion).isEqualTo("How did you pay?");
+        assertWaitingFor("sourceAccount");
+        assertThat(stateChangeRepository.findAll()).singleElement()
+                .satisfies(expense -> assertThat(expense.getAmount()).isEqualByComparingTo("450"));
+
+        String balanceQuestion = chatButton("wamid.missing-3", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(balanceQuestion).contains("current balance");
+        String confirmation = chatText("wamid.missing-4", "10k");
+        assertThat(confirmation).contains("₹450").contains("₹9550");
+
+        awaitState(() -> {
+            assertThat(stateChangeRepository.findAll()).singleElement()
+                    .satisfies(expense -> assertThat(expense.isFinanciallyApplied()).isTrue());
+            assertThat(stateMutationRepository.findAll()).singleElement();
+        });
+        assertThat(INTERPRETER_CALLS).hasValue(1);
+    }
+
+    @Test
+    void it_neg_004_keepsPendingQuestionWhenFollowupIsAmbiguous() throws Exception {
+        String categoryQuestion = chatText("wamid.ambiguous-1", "I spent 260");
+        assertThat(categoryQuestion).contains("What was the ₹260 expense for?");
+
+        String repeatedQuestion = chatText("wamid.ambiguous-2", "???");
+        assertThat(repeatedQuestion).isEqualTo(categoryQuestion);
+        assertWaitingFor("category");
+        assertThat(stateChangeRepository.findAll()).singleElement()
+                .satisfies(expense -> assertThat(expense.getAmount()).isEqualByComparingTo("260"));
     }
 
     private static TurnInterpretation interpretationFor(String text) {
         Map<String, Object> fields = switch (text) {
             case "Hi" -> Map.of();
             case "I spent 500" -> Map.of("amount", 500, "transactionDate", "2026-08-06");
+            case "I spent 260" -> Map.of("amount", 260, "transactionDate", "2026-08-06");
             case "I bought groceries" -> Map.of("category", "Groceries", "subcategory", "Groceries");
             case "10k" -> Map.of("sourceBalance", 10000);
             case "I spent 35" -> Map.of("amount", 35, "transactionDate", "2026-08-06");
@@ -237,19 +299,39 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             case "I spent 3500 yesterday" -> Map.of("amount", 3500, "transactionDate", "2026-08-05",
                     "category", "null", "sourceAccount", "null");
             case "Paid internet bill" -> Map.of("category", "Utilities", "subcategory", "Internet");
+            // Exact regression seen in production: history leaked the prior amount/category into a query.
+            case "what i spent today?" -> Map.of("amount", 58, "category", "Food & Dining",
+                    "subcategory", "curd and some icecream", "transactionDate", "2026-08-06");
+            case "Show today's spending" -> Map.of();
+            case "Nethu office lunch ku spend pannen" -> Map.of(
+                    "category", "Food & Dining", "subcategory", "Office lunch");
+            case "???" -> Map.of();
             default -> throw new AssertionError("Unexpected interpreter input: " + text);
         };
         // Reproduce the real-model mistake: a category answer containing "Paid" is labelled NEW_EVENT.
         // The deterministic correlation policy must still attach it to the pending expense.
         if (text.equals("Hi")) {
-            return new TurnInterpretation(TurnType.AMBIGUOUS, "UNKNOWN", null,
-                    List.of(), null, null, List.of("No financial activity found"), 0.2);
+            return new TurnInterpretation(TurnType.AMBIGUOUS, "UNKNOWN", "en-IN", null,
+                    List.of(), null, QueryPeriod.NONE, List.of("No financial activity found"), 0.2);
         }
-        boolean newEvent = text.startsWith("I spent") || text.equals("Paid internet bill");
+        if (text.equals("???")) {
+            return new TurnInterpretation(TurnType.AMBIGUOUS, "EXPENSE", "en-IN", null,
+                    List.of(), null, QueryPeriod.NONE, List.of("Pending category was not answered"), 0.2);
+        }
+        if (text.equals("Show today's spending")) {
+            return new TurnInterpretation(TurnType.QUERY, "QUERY", "en-IN", null,
+                    List.of(), null, QueryPeriod.TODAY, List.of(), 0.99);
+        }
+        boolean newEvent = text.startsWith("I spent") || text.equals("Paid internet bill")
+                || text.equals("what i spent today?") || text.equals("Nethu office lunch ku spend pannen");
+        List<FieldEvidence> evidence = fields.containsKey("amount")
+                ? List.of(new FieldEvidence("amount", fields.get("amount").toString(),
+                    text.equals("what i spent today?") ? "58" : fields.get("amount").toString(), 0.99))
+                : List.of();
         return new TurnInterpretation(newEvent ? TurnType.NEW_EVENT : TurnType.ANSWER_TO_PENDING_EVENT,
-                "EXPENSE", null,
-                List.of(new EventPatch(null, "EXPENSE", fields, List.of(), List.of(), List.of())),
-                null, null, List.of(), 0.99);
+                "EXPENSE", "en-IN", null,
+                List.of(new EventPatch(null, "EXPENSE", fields, List.of(), List.of(), evidence)),
+                null, QueryPeriod.NONE, List.of(), 0.99);
     }
 
     @TestConfiguration
@@ -257,7 +339,10 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         @Bean
         @Primary
         ConversationInterpreter deterministicConversationInterpreter() {
-            return (text, context) -> interpretationFor(text);
+            return (text, context) -> {
+                INTERPRETER_CALLS.incrementAndGet();
+                return interpretationFor(text);
+            };
         }
     }
 

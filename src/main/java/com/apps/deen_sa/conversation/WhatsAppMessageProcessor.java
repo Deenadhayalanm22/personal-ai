@@ -134,6 +134,8 @@ public class WhatsAppMessageProcessor {
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
             context.setTimezone(user.getTimezone());
+            context.setLocale(user.getLocale());
+            context.setCurrency(user.getCurrency());
             SpeechResult result = unifiedEngine.process(text, context);
             sessionService.save(context);
 
@@ -154,6 +156,8 @@ public class WhatsAppMessageProcessor {
             AppUserEntity user = appUserService.resolve("WHATSAPP", from);
             ConversationContext context = sessionService.load(user.getId(), "WHATSAPP");
             context.setTimezone(user.getTimezone());
+            context.setLocale(user.getLocale());
+            context.setCurrency(user.getCurrency());
             SpeechResult result = unifiedEngine.processTrustedAnswer(answer, context);
             sessionService.save(context);
             if (result.getMessage() != null) {

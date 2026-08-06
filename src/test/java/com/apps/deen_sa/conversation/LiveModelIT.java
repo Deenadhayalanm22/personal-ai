@@ -14,11 +14,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClient;
+import org.springframework.core.io.ClassPathResource;
+import org.yaml.snakeyaml.Yaml;
 
+import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -60,23 +65,151 @@ class LiveModelIT extends AbstractIntegrationTestProperties {
         String confirmation = chatText("wamid.live-4", "10k");
         assertThat(confirmation).contains("₹500").contains("₹9500");
 
+        String secondConfirmation = chatText(
+                "wamid.live-5",
+                "I spent 58 on curd and some ice cream through UPI");
+        assertThat(secondConfirmation)
+                .as("Explicit UPI must be extracted as sourceAccount=BANK_ACCOUNT; the app must not ask payment again")
+                .contains("₹58")
+                .doesNotContainIgnoringCase("how did you pay");
+
+        String todaySummary = chatText("wamid.live-6", "What did I spend today?");
+        assertThat(todaySummary)
+                .contains("558")
+                .containsIgnoringCase("today");
+
+        scenario("English · complete sentence");
+        int beforeEnglishComplete = expenseCount();
+        String englishComplete = chatText("wamid.live-7", "Paid BESCOM electricity bill of 1850 using UPI");
+        assertThat(englishComplete).contains("₹1850");
+        assertExpenseApplied(beforeEnglishComplete + 1, "1850");
+
+        scenario("Tamil · complete sentence");
+        int beforeTamilComplete = expenseCount();
+        String tamilComplete = chatText("wamid.live-8", "இன்று மளிகை பொருட்களுக்கு 230 ரூபாய் UPI மூலம் செலவு செய்தேன்");
+        assertThat(tamilComplete).contains("₹230");
+        assertExpenseApplied(beforeTamilComplete + 1, "230");
+
+        scenario("Tanglish · complete sentence");
+        int beforeTanglishComplete = expenseCount();
+        String tanglishComplete = chatText("wamid.live-9", "Inniku bike petrol ku 350 rupees UPI la spend pannen");
+        assertThat(tanglishComplete).contains("₹350");
+        assertExpenseApplied(beforeTanglishComplete + 1, "350");
+
+        scenario("English · sparse expense with category and payment follow-ups");
+        int beforeSparse = expenseCount();
+        String categoryQuestion = chatText("wamid.live-10", "I spent 260");
+        assertThat(categoryQuestion).contains("₹260").containsIgnoringCase("expense for");
+        assertWaitingFor("category");
+        assertExpenseCount(beforeSparse + 1);
+
+        String sparsePaymentQuestion = chatText("wamid.live-11", "Coffee and snacks outside");
+        assertThat(sparsePaymentQuestion).containsIgnoringCase("pay");
+        assertWaitingFor("sourceAccount");
+
+        String sparseConfirmation = chatButton("wamid.live-12", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(sparseConfirmation).contains("₹260");
+        assertExpenseApplied(beforeSparse + 1, "260");
+
+        scenario("Tamil · understood expense with missing payment source");
+        int beforeTamilPartial = expenseCount();
+        String tamilPaymentQuestion = chatText("wamid.live-13", "நேற்று மின்சார கட்டணத்திற்கு 650 ரூபாய் செலவு செய்தேன்");
+        assertThat(tamilPaymentQuestion).containsIgnoringCase("pay");
+        assertWaitingFor("sourceAccount");
+        String tamilConfirmation = chatButton("wamid.live-14", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(tamilConfirmation).contains("₹650");
+        assertExpenseApplied(beforeTamilPartial + 1, "650");
+
+        scenario("Tanglish · missing amount, followed by amount and payment source");
+        int beforeTanglishPartial = expenseCount();
+        String amountQuestion = chatText("wamid.live-15", "Nethu office lunch ku spend pannen");
+        assertThat(amountQuestion).containsIgnoringCase("how much");
+        assertWaitingFor("amount");
+        assertExpenseCount(beforeTanglishPartial);
+
+        String tanglishSourceQuestion = chatText("wamid.live-16", "450");
+        assertThat(tanglishSourceQuestion).containsIgnoringCase("pay");
+        assertWaitingFor("sourceAccount");
+        assertExpenseCount(beforeTanglishPartial + 1);
+
+        String tanglishPartialConfirmation = chatButton("wamid.live-17", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(tanglishPartialConfirmation).contains("₹450");
+        assertExpenseApplied(beforeTanglishPartial + 1, "450");
+
+        scenario("English · two expenses in one natural sentence");
+        int beforeMultiple = expenseCount();
+        String multipleConfirmation = chatText("wamid.live-18", "Spent 80 on tea and 120 on auto using UPI");
+        assertThat(multipleConfirmation).contains("80").contains("120");
+        assertExpenseApplied(beforeMultiple + 2, "80");
+        assertExpenseApplied(beforeMultiple + 2, "120");
+
+        scenario("English, Tamil, and Tanglish · read-only queries must not create expenses");
+        int beforeQueries = expenseCount();
+        String englishQuery = chatText("wamid.live-19", "What did I spend today?");
+        assertThat(englishQuery).contains("₹");
+        assertExpenseCount(beforeQueries);
+
+        String tamilQuery = chatText("wamid.live-20", "இன்று நான் எவ்வளவு செலவு செய்தேன்?");
+        assertThat(tamilQuery).contains("₹");
+        assertExpenseCount(beforeQueries);
+
+        String tanglishQuery = chatText("wamid.live-21", "Inniku naan evlo spend pannen?");
+        assertThat(tanglishQuery).contains("₹");
+        assertExpenseCount(beforeQueries);
+
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-            assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
-                assertThat(expense.getAmount()).isEqualByComparingTo("500");
+            assertThat(stateChangeRepository.findAll()).hasSize(10).allSatisfy(expense -> {
                 assertThat(expense.getCategory()).isNotBlank();
+                assertThat(expense.isFinanciallyApplied()).isTrue();
+            }).anySatisfy(expense -> {
+                assertThat(expense.getAmount()).isEqualByComparingTo("500");
                 assertThat((expense.getCategory() + " " + expense.getSubcategory()).toLowerCase())
                         .contains("grocer");
-                assertThat(expense.isFinanciallyApplied()).isTrue();
-            });
+            }).anySatisfy(expense ->
+                    assertThat(expense.getAmount()).isEqualByComparingTo("58"));
             assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
                 assertThat(account.getContainerType()).isEqualTo("BANK_ACCOUNT");
-                assertThat(account.getCurrentValue()).isEqualByComparingTo("9500");
+                assertThat(account.getCurrentValue()).isEqualByComparingTo("5452");
             });
-            assertThat(stateMutationRepository.findAll()).singleElement()
-                    .satisfies(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("500"));
+            assertThat(stateMutationRepository.findAll()).hasSize(10)
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("500"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("58"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("1850"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("230"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("350"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("260"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("650"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("450"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("80"))
+                    .anySatisfy(mutation -> assertThat(mutation.getAmount()).isEqualByComparingTo("120"));
         });
 
         System.out.println("==================================================================\n");
+    }
+
+    private void scenario(String title) {
+        System.out.println("\n---------------- " + title + " ----------------");
+    }
+
+    private int expenseCount() {
+        return stateChangeRepository.findAll().size();
+    }
+
+    private void assertExpenseCount(int expected) {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateChangeRepository.findAll()).hasSize(expected));
+    }
+
+    private void assertExpenseApplied(int expectedCount, String amount) {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(expectedCount)
+                    .filteredOn(expense -> expense.getAmount().compareTo(new BigDecimal(amount)) == 0)
+                    .isNotEmpty()
+                    .allSatisfy(expense -> {
+                        assertThat(expense.isFinanciallyApplied()).isTrue();
+                        assertThat(expense.getSourceContainerId()).isNotNull();
+                    });
+        });
     }
 
     private void requireRealApiKey() {

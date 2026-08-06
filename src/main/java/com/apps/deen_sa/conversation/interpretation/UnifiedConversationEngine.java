@@ -4,9 +4,13 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
+import com.apps.deen_sa.conversation.ConversationMessages;
 import com.apps.deen_sa.core.state.StateContainerEntity;
 import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
+import com.apps.deen_sa.finance.expense.HumanAmountParser;
+import com.apps.deen_sa.finance.query.QueryHandler;
+import com.apps.deen_sa.llm.AiCallTelemetry;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,43 +19,51 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class UnifiedConversationEngine {
-    private static final int HISTORY_LIMIT = 12;
-    private static final String VERSION = "unified-v1";
-    private static final String GETTING_STARTED_MESSAGE = """
-            I can help you record everyday money activity and understand where your money goes.
-
-            You can message me naturally. For example:
-            • I spent 500 on groceries
-            • Paid 1,200 for electricity yesterday
-            • I received 25,000 salary
-            • Add my bank account with a balance of 40,000
-            • How much did I spend this month?
-
-            To start, try sending: I spent 500 on groceries
-            """;
+    private static final int HISTORY_LIMIT = 4;
+    private static final String VERSION = "unified-v2";
+    private static final Set<String> HELP_COMMANDS = Set.of("hi", "hello", "hey", "help", "வணக்கம்", "உதவி");
 
     private final ConversationInterpreter interpreter;
     private final ExpenseHandler expenseHandler;
     private final StateContainerService containerService;
     private final Map<String, SpeechHandler> handlers;
+    private final MutationAuthorizationPolicy mutationPolicy;
+    private final ConversationMessages messages;
 
     public UnifiedConversationEngine(ConversationInterpreter interpreter, ExpenseHandler expenseHandler,
-                                     StateContainerService containerService, List<SpeechHandler> handlers) {
+                                     StateContainerService containerService, List<SpeechHandler> handlers,
+                                     MutationAuthorizationPolicy mutationPolicy, ConversationMessages messages) {
         this.interpreter = interpreter;
         this.expenseHandler = expenseHandler;
         this.containerService = containerService;
         this.handlers = handlers.stream().collect(Collectors.toMap(SpeechHandler::intentType, handler -> handler));
+        this.mutationPolicy = mutationPolicy;
+        this.messages = messages;
     }
 
     public SpeechResult process(String text, ConversationContext context) {
+        SpeechResult deterministic = deterministicTurn(text, context);
+        if (deterministic != null) return finishDeterministicTurn(text, deterministic, context);
+
         InterpretationContext input = new InterpretationContext(
-                context.getUserId(), context.getTimezone(), "INR", context.getLastQuestion(),
+                context.getUserId(), context.getTimezone(), context.getCurrency(), context.getLastQuestion(),
                 context.getPendingEvents(), context.getRecentTurns(), accountContext(context.getUserId()));
         TurnInterpretation turn = interpreter.interpret(text, input);
         validate(turn);
+        applyTurnLanguage(turn, context);
+        if (!mutationPolicy.isAuthorized(turn, text)) {
+            SpeechResult safeReply = SpeechResult.info(messages.mutationNeedsClarification(context.getLocale()));
+            appendTurn(context, "user", text);
+            appendTurn(context, "assistant", safeReply.getMessage());
+            context.setInterpreterVersion(VERSION);
+            return safeReply;
+        }
 
         SpeechResult result = execute(turn, text, context);
         appendTurn(context, "user", text);
@@ -71,7 +83,7 @@ public class UnifiedConversationEngine {
         EventPatch patch = new EventPatch(null, context.getActiveIntent(), values, List.of(), List.of(),
                 List.of(new FieldEvidence(field, answer, answer, 1.0)));
         TurnInterpretation turn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT,
-                context.getActiveIntent(), null, List.of(patch), null, null, List.of(), 1.0);
+                context.getActiveIntent(), context.getLocale(), null, List.of(patch), null, QueryPeriod.NONE, List.of(), 1.0);
         validate(turn);
         SpeechResult result = execute(turn, answer, context);
         appendTurn(context, "user", answer);
@@ -84,13 +96,21 @@ public class UnifiedConversationEngine {
 
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {
         if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), context);
+        if (turn.turnType() == TurnType.AMBIGUOUS && context.isInFollowup()) {
+            String question = context.getLastQuestion() == null
+                    ? messages.mutationNeedsClarification(context.getLocale()) : context.getLastQuestion();
+            return SpeechResult.followup(question, List.of(context.getWaitingForField()), context.getPartialObject());
+        }
         if (turn.turnType() == TurnType.AMBIGUOUS || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY) {
-            return SpeechResult.info(GETTING_STARTED_MESSAGE);
+            return SpeechResult.info(messages.gettingStarted(context.getLocale()));
         }
         if (turn.turnType() == TurnType.QUERY) {
             SpeechHandler query = handlers.get("QUERY");
-            return query == null ? SpeechResult.unknown("I understood this as a question, but queries are not available yet.")
-                    : query.handleSpeech(text, context);
+            if (query instanceof QueryHandler queryHandler
+                    && turn.query() != null && turn.query() != QueryPeriod.NONE) {
+                return queryHandler.handleInterpreted(turn.query().name(), context);
+            }
+            return SpeechResult.info(messages.queryPeriodQuestion(context.getLocale()));
         }
 
         List<SpeechResult> results = new ArrayList<>();
@@ -132,14 +152,14 @@ public class UnifiedConversationEngine {
     private SpeechResult command(String command, ConversationContext context) {
         if ("SKIP_PENDING".equals(command)) {
             context.reset();
-            return SpeechResult.info("No problem — I saved what you told me. You can add the missing detail later.");
+            return SpeechResult.info(messages.skipped(context.getLocale()));
         }
         if ("CANCEL_PENDING".equals(command)) {
             context.reset();
-            return SpeechResult.info("Okay — I stopped the questions. Any activity already recorded is still saved.");
+            return SpeechResult.info(messages.cancelled(context.getLocale()));
         }
         // Greetings, help requests, and unknown non-mutating commands should teach the user what the app can do.
-        return SpeechResult.info(GETTING_STARTED_MESSAGE);
+        return SpeechResult.info(messages.gettingStarted(context.getLocale()));
     }
 
     private void validate(TurnInterpretation turn) {
@@ -155,6 +175,55 @@ public class UnifiedConversationEngine {
                 }
             }
         }
+    }
+
+    private SpeechResult deterministicTurn(String text, ConversationContext context) {
+        String normalized = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);
+        if (!context.isInFollowup() && HELP_COMMANDS.contains(normalized)) {
+            AiCallTelemetry.avoided("help_command");
+            return SpeechResult.info(messages.gettingStarted(context.getLocale()));
+        }
+        if (context.isInFollowup() && Set.of("skip", "later", "not sure", "தவிர்").contains(normalized)) {
+            context.reset();
+            AiCallTelemetry.avoided("conversation_control");
+            return SpeechResult.info(messages.skipped(context.getLocale()));
+        }
+        if (context.isInFollowup() && Set.of("cancel", "stop", "ரத்து").contains(normalized)) {
+            context.reset();
+            AiCallTelemetry.avoided("conversation_control");
+            return SpeechResult.info(messages.cancelled(context.getLocale()));
+        }
+        if (!context.isInFollowup()) return null;
+        String field = context.getWaitingForField();
+        if (!Set.of("amount", "sourceBalance", "creditLimit", "creditCardDueDay").contains(field)) return null;
+        BigDecimal value = HumanAmountParser.parse(text).orElse(null);
+        if (value == null || value.signum() < 0) return null;
+        if ("creditCardDueDay".equals(field)
+                && (value.stripTrailingZeros().scale() > 0 || value.compareTo(BigDecimal.ONE) < 0
+                || value.compareTo(BigDecimal.valueOf(31)) > 0)) return null;
+        Object fieldValue = "creditCardDueDay".equals(field) ? value.intValue() : value;
+        EventPatch patch = new EventPatch(null, context.getActiveIntent(), Map.of(field, fieldValue),
+                List.of(), List.of(), List.of(new FieldEvidence(field, fieldValue.toString(), text, 1.0)));
+        TurnInterpretation turn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT,
+                context.getActiveIntent(), context.getLocale(), null, List.of(patch), null, QueryPeriod.NONE, List.of(), 1.0);
+        AiCallTelemetry.avoided("pending_numeric_answer");
+        SpeechResult result = execute(turn, text, context);
+        syncPendingState(context, turn);
+        return result;
+    }
+
+    private SpeechResult finishDeterministicTurn(String text, SpeechResult result, ConversationContext context) {
+        appendTurn(context, "user", text);
+        if (result.getMessage() != null) appendTurn(context, "assistant", result.getMessage());
+        context.setLastQuestion(Boolean.TRUE.equals(result.getNeedFollowup()) ? result.getMessage() : null);
+        context.setInterpreterVersion(VERSION);
+        return result;
+    }
+
+    private void applyTurnLanguage(TurnInterpretation turn, ConversationContext context) {
+        if (turn.language() == null) return;
+        if (turn.language().equalsIgnoreCase("ta-IN")) context.setLocale("ta-IN");
+        else if (turn.language().equalsIgnoreCase("en-IN")) context.setLocale("en-IN");
     }
 
     private List<Map<String, Object>> accountContext(Long userId) {

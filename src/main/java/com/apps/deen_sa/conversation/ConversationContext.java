@@ -14,6 +14,8 @@ public class ConversationContext {
     private Long userId = 1L;
     private String channel = "REST";
     private String timezone = "Asia/Kolkata";
+    private String locale = "en-IN";
+    private String currency = "INR";
 
     private Long activeTransactionId;
 
