@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.dto.QueryResult;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
@@ -15,10 +16,11 @@ public class QueryClassifier extends BaseLLMExtractor {
 
     protected QueryClassifier(
             OpenAIClient client,
+            ApplicationProperties properties,
             PromptLoader promptLoader,
             ExpenseTaxonomyRegistry expenseTaxonomyRegistry
     ) {
-        super(client);
+        super(client, properties);
         this.expenseTaxonomyRegistry = expenseTaxonomyRegistry;
 
         this.systemPromptTemplate = promptLoader.combine(

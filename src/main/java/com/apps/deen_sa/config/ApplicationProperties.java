@@ -11,7 +11,8 @@ public record ApplicationProperties(
     public record OpenAi(
             String apiKey,
             String baseUrl,
-            String interpreterModel
+            String model,
+            String transcriptionModel
     ) {
     }
 

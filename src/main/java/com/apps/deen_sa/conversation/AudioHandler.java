@@ -1,5 +1,6 @@
 package com.apps.deen_sa.conversation;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.openai.client.OpenAIClient;
 import com.openai.core.MultipartField;
 import com.openai.models.audio.transcriptions.TranscriptionCreateParams;
@@ -13,10 +14,8 @@ import java.io.InputStream;
 @Service
 @RequiredArgsConstructor
 public class AudioHandler {
-
-    private static final String TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
-
     private final OpenAIClient openAIClient;
+    private final ApplicationProperties properties;
 
     public String transcribe(byte[] audio, String mimeType) {
         MultipartField<InputStream> file = MultipartField.<InputStream>builder()
@@ -28,7 +27,7 @@ public class AudioHandler {
         TranscriptionCreateResponse response = openAIClient.audio().transcriptions().create(
                 TranscriptionCreateParams.builder()
                         .file(file)
-                        .model(TRANSCRIPTION_MODEL)
+                        .model(properties.openai().transcriptionModel())
                         .build()
         );
 

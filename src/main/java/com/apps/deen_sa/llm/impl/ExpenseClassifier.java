@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.common.exception.LLMParsingException;
@@ -19,9 +20,10 @@ public class ExpenseClassifier extends BaseLLMExtractor {
     private final String behaviorPrompt;
 
     protected ExpenseClassifier(OpenAIClient client,
+                                ApplicationProperties properties,
                                 PromptLoader promptLoader,
                                 ExpenseTaxonomyRegistry expenseTaxonomyRegistry) {
-        super(client);
+        super(client, properties);
         this.promptLoader = promptLoader;
         this.expenseTaxonomyRegistry = expenseTaxonomyRegistry;
         this.behaviorPrompt = buildBehaviorPrompt();

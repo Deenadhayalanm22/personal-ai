@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.IntentResult;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.apps.deen_sa.llm.PromptLoader;
@@ -11,8 +12,8 @@ public class IntentClassifier extends BaseLLMExtractor {
 
     private final String systemPrompt;
 
-    protected IntentClassifier(OpenAIClient client, PromptLoader promptLoader) {
-        super(client);
+    protected IntentClassifier(OpenAIClient client, ApplicationProperties properties, PromptLoader promptLoader) {
+        super(client, properties);
 
         this.systemPrompt = promptLoader.combine(
                 "llm/common/global_rules.md",

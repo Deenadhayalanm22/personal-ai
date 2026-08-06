@@ -20,6 +20,18 @@ import java.util.stream.Collectors;
 public class UnifiedConversationEngine {
     private static final int HISTORY_LIMIT = 12;
     private static final String VERSION = "unified-v1";
+    private static final String GETTING_STARTED_MESSAGE = """
+            I can help you record everyday money activity and understand where your money goes.
+
+            You can message me naturally. For example:
+            • I spent 500 on groceries
+            • Paid 1,200 for electricity yesterday
+            • I received 25,000 salary
+            • Add my bank account with a balance of 40,000
+            • How much did I spend this month?
+
+            To start, try sending: I spent 500 on groceries
+            """;
 
     private final ConversationInterpreter interpreter;
     private final ExpenseHandler expenseHandler;
@@ -73,8 +85,7 @@ public class UnifiedConversationEngine {
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {
         if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), context);
         if (turn.turnType() == TurnType.AMBIGUOUS || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY) {
-            return SpeechResult.followup("I’m not fully sure what you want me to record. Could you say it another way?",
-                    List.of("clarification"), null);
+            return SpeechResult.info(GETTING_STARTED_MESSAGE);
         }
         if (turn.turnType() == TurnType.QUERY) {
             SpeechHandler query = handlers.get("QUERY");

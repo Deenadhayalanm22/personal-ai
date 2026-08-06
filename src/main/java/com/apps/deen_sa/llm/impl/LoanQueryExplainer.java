@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.openai.client.OpenAIClient;
 import org.springframework.stereotype.Component;
@@ -19,8 +20,8 @@ public class LoanQueryExplainer extends BaseLLMExtractor {
         %s
         """;
 
-    public LoanQueryExplainer(OpenAIClient client) {
-        super(client);
+    public LoanQueryExplainer(OpenAIClient client, ApplicationProperties properties) {
+        super(client, properties);
     }
 
     public String explainEmiRemaining(Map<String, Object> summary) {

@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.AccountSetupDto;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.openai.client.OpenAIClient;
@@ -125,8 +126,8 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             a supported setup request invalid.
             """;
 
-    protected AccountSetupClassifier(OpenAIClient client) {
-        super(client);
+    protected AccountSetupClassifier(OpenAIClient client, ApplicationProperties properties) {
+        super(client, properties);
     }
 
     public AccountSetupDto extractAccount(String text) {

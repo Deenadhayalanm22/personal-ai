@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.TagMatchResult;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.openai.client.OpenAIClient;
@@ -36,8 +37,8 @@ public class TagSemanticMatcher extends BaseLLMExtractor {
         }
         """;
 
-    public TagSemanticMatcher(OpenAIClient client) {
-        super(client);
+    public TagSemanticMatcher(OpenAIClient client, ApplicationProperties properties) {
+        super(client, properties);
     }
 
     public Map<String, String> match(

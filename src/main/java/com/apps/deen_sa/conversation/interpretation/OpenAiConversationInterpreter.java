@@ -49,7 +49,7 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                     "context", context
             ));
             StructuredResponseCreateParams<TurnInterpretation> params = com.openai.models.responses.ResponseCreateParams.builder()
-                    .model(properties.openai().interpreterModel())
+                    .model(properties.openai().model())
                     .instructions(SYSTEM_PROMPT)
                     .input(input)
                     .text(TurnInterpretation.class)

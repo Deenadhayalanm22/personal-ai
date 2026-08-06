@@ -29,4 +29,4 @@
 2. Run the semantic corpus against the configured model.
 3. Review event count, clarification rate, correction rate, invalid-output rate, and financial mutation count.
 
-The default model is configurable with `OPENAI_INTERPRETER_MODEL`. The application currently defaults to `gpt-5.6-sol`; pin an explicit snapshot in production after evaluation if repeatability is more important than automatic model updates.
+All OpenAI text calls use the model configured with `OPENAI_MODEL`. The application defaults to `gpt-4.1-mini`; pin an explicit snapshot in production after evaluation if repeatability is more important than automatic model updates. Audio transcription is configured separately with `OPENAI_TRANSCRIPTION_MODEL` because it requires a transcription-capable model.

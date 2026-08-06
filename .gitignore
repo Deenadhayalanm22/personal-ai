@@ -25,3 +25,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Local secrets used by opt-in live-model tests
+.env.live-model

@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.AssetDto;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.openai.client.OpenAIClient;
@@ -145,8 +146,8 @@ public class AssetClassifier extends BaseLLMExtractor {
             }
             """;
 
-    protected AssetClassifier(OpenAIClient client) {
-        super(client);
+    protected AssetClassifier(OpenAIClient client, ApplicationProperties properties) {
+        super(client, properties);
     }
 
     public AssetDto extractAsset(String text) {

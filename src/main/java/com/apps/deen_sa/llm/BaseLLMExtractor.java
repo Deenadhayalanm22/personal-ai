@@ -1,19 +1,21 @@
 package com.apps.deen_sa.llm;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.openai.client.OpenAIClient;
-import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 
 public abstract class BaseLLMExtractor {
     protected final OpenAIClient client;
+    protected final ApplicationProperties properties;
     protected final ObjectMapper mapper;
 
-    protected BaseLLMExtractor(OpenAIClient client) {
+    protected BaseLLMExtractor(OpenAIClient client, ApplicationProperties properties) {
         this.client = client;
+        this.properties = properties;
         this.mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -39,7 +41,7 @@ public abstract class BaseLLMExtractor {
 
     protected String callLLM(String systemPrompt, String userPrompt) {
         ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-                .model(ChatModel.GPT_4_1_MINI)
+                .model(properties.openai().model())
                 .addSystemMessage(systemPrompt)
                 .addUserMessage(userPrompt)
                 .temperature(0.1)

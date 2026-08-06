@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.ExpenseSummary;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.openai.client.OpenAIClient;
@@ -23,8 +24,8 @@ public class ExpenseSummaryExplainer extends BaseLLMExtractor {
             Explain the result clearly in one short paragraph.
            """;
 
-    public ExpenseSummaryExplainer(OpenAIClient client) {
-        super(client);
+    public ExpenseSummaryExplainer(OpenAIClient client, ApplicationProperties properties) {
+        super(client, properties);
     }
 
     public String explain(ExpenseSummary summary, String question, String context) {

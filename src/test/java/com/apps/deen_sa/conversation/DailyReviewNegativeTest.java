@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.List;
@@ -39,6 +41,9 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
     @Autowired
     private ConversationSessionRepository sessionRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("${wiremock.admin-url:http://localhost:9091/__admin}")
     private String wireMockAdminUrl;
@@ -180,8 +185,48 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         });
     }
 
+    @Test
+    void it_neg_002() throws Exception {
+        System.out.println("\n================ WHATSAPP CONVERSATION ================");
+
+        String intro = chatText("wamid.flow-1", "Hi");
+        assertThat(intro)
+                .contains("I can help you record everyday money activity")
+                .contains("I spent 500 on groceries");
+
+        String categoryQuestion = chatText("wamid.flow-2", "I spent 500");
+        assertThat(categoryQuestion).contains("What was the ₹500 expense for?");
+
+        String paymentQuestion = chatText("wamid.flow-3", "I bought groceries");
+        assertThat(paymentQuestion).isEqualTo("How did you pay?");
+
+        String balanceQuestion = chatButton("wamid.flow-4", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(balanceQuestion).contains("What is its current balance?");
+
+        String confirmation = chatText("wamid.flow-5", "10k");
+        assertThat(confirmation)
+                .contains("Added ₹500 for Groceries")
+                .contains("balance is now ₹9500");
+
+        awaitState(() -> {
+            assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
+                assertThat(expense.getAmount()).isEqualByComparingTo("500");
+                assertThat(expense.getCategory()).isEqualTo("Groceries");
+                assertThat(expense.isFinanciallyApplied()).isTrue();
+            });
+            assertThat(stateContainerRepository.findAll()).singleElement()
+                    .satisfies(account -> assertThat(account.getCurrentValue()).isEqualByComparingTo("9500"));
+        });
+
+        System.out.println("=======================================================\n");
+    }
+
     private static TurnInterpretation interpretationFor(String text) {
         Map<String, Object> fields = switch (text) {
+            case "Hi" -> Map.of();
+            case "I spent 500" -> Map.of("amount", 500, "transactionDate", "2026-08-06");
+            case "I bought groceries" -> Map.of("category", "Groceries", "subcategory", "Groceries");
+            case "10k" -> Map.of("sourceBalance", 10000);
             case "I spent 35" -> Map.of("amount", 35, "transactionDate", "2026-08-06");
             case "It is for evening snacks" -> Map.of("category", "Food & Dining", "subcategory", "Snacks & Beverages");
             case "BANK_ACCOUNT" -> Map.of("sourceAccount", "BANK_ACCOUNT");
@@ -196,6 +241,10 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         };
         // Reproduce the real-model mistake: a category answer containing "Paid" is labelled NEW_EVENT.
         // The deterministic correlation policy must still attach it to the pending expense.
+        if (text.equals("Hi")) {
+            return new TurnInterpretation(TurnType.AMBIGUOUS, "UNKNOWN", null,
+                    List.of(), null, null, List.of("No financial activity found"), 0.2);
+        }
         boolean newEvent = text.startsWith("I spent") || text.equals("Paid internet bill");
         return new TurnInterpretation(newEvent ? TurnType.NEW_EVENT : TurnType.ANSWER_TO_PENDING_EVENT,
                 "EXPENSE", null,
@@ -242,6 +291,59 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
                 """.formatted(messageId, PHONE, buttonId, title);
         postWebhook(payload);
     }
+
+    private String chatText(String messageId, String userText) throws Exception {
+        int before = outgoingMessages().size();
+        System.out.println("Deena: " + userText);
+        sendText(messageId, userText);
+        String reply = awaitNextReply(before);
+        System.out.println("App: " + reply.replace("\n", "\n     "));
+        return reply;
+    }
+
+    private String chatButton(String messageId, String buttonId, String title) throws Exception {
+        int before = outgoingMessages().size();
+        System.out.println("Deena: " + title + "  [button]");
+        sendButton(messageId, buttonId, title);
+        String reply = awaitNextReply(before);
+        System.out.println("App: " + reply.replace("\n", "\n     "));
+        return reply;
+    }
+
+    private String awaitNextReply(int previousCount) {
+        final String[] reply = new String[1];
+        await().atMost(Duration.ofSeconds(30)).pollInterval(Duration.ofMillis(200)).untilAsserted(() -> {
+            List<OutgoingMessage> messages = outgoingMessages();
+            assertThat(messages).hasSizeGreaterThan(previousCount);
+            reply[0] = messages.getLast().text();
+            assertThat(reply[0]).isNotBlank();
+        });
+        return reply[0];
+    }
+
+    private List<OutgoingMessage> outgoingMessages() {
+        try {
+            String journal = RestClient.create(wireMockAdminUrl).get().uri("/requests")
+                    .retrieve().body(String.class);
+            JsonNode root = objectMapper.readTree(journal);
+            java.util.ArrayList<OutgoingMessage> messages = new java.util.ArrayList<>();
+            for (JsonNode entry : root.path("requests")) {
+                JsonNode request = entry.path("request");
+                if (!request.path("url").asText().endsWith("/messages")) continue;
+                JsonNode payload = objectMapper.readTree(request.path("body").asText());
+                String text = payload.path("type").asText().equals("interactive")
+                        ? payload.path("interactive").path("body").path("text").asText()
+                        : payload.path("text").path("body").asText();
+                messages.add(new OutgoingMessage(request.path("loggedDate").asLong(), text));
+            }
+            messages.sort(java.util.Comparator.comparingLong(OutgoingMessage::loggedAt));
+            return messages;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to read outgoing WhatsApp requests", exception);
+        }
+    }
+
+    private record OutgoingMessage(long loggedAt, String text) { }
 
     private void postWebhook(String payload) throws Exception {
         mockMvc.perform(post("/webhook/whatsapp")

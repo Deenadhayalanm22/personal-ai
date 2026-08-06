@@ -1,5 +1,6 @@
 package com.apps.deen_sa.llm.impl;
 
+import com.apps.deen_sa.config.ApplicationProperties;
 import com.apps.deen_sa.dto.LiabilityPaymentDto;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.apps.deen_sa.llm.PromptLoader;
@@ -11,8 +12,9 @@ public class LiabilityPaymentClassifier extends BaseLLMExtractor {
 
     private final String systemPrompt;
 
-    protected LiabilityPaymentClassifier(OpenAIClient client, PromptLoader promptLoader) {
-        super(client);
+    protected LiabilityPaymentClassifier(OpenAIClient client, ApplicationProperties properties,
+                                         PromptLoader promptLoader) {
+        super(client, properties);
 
         this.systemPrompt = promptLoader.combine(
                 "llm/common/global_rules.md",
