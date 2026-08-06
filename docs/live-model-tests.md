@@ -32,3 +32,5 @@ LIVE_MODEL_NAME='gpt-4.1-mini' \
 Omit `LIVE_MODEL_NAME` to use the configured default. The test is disabled unless `RUN_LIVE_MODEL_TESTS=true`, so normal builds never spend API credits.
 
 The suite asserts semantic behavior and persisted financial state rather than exact model JSON or exact conversational wording. Network failures should be retried by rerunning the test; semantic assertion failures should be investigated rather than automatically retried.
+
+The `live-model` profile disables Spring, Hibernate, Flyway, and application logs so the IntelliJ console shows the printed WhatsApp conversation. This affects only `LiveModelIT`; normal application logging is unchanged.

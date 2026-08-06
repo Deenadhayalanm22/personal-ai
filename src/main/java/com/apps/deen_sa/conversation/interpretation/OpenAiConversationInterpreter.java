@@ -35,6 +35,8 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
             payment method, or directly answers a payment-source question.
             For category, use the broad label and put the specific meaning in subcategory when clear.
             Commands include SKIP_PENDING, CANCEL_PENDING and UNDO_LAST. Corrections must target an existing pending event when possible.
+            A greeting such as hi/hello, a help request, or a question about capabilities is not a financial mutation.
+            Return COMMAND with command HELP for those inputs so the application can show onboarding instructions.
             """;
 
     private final OpenAIClient client;

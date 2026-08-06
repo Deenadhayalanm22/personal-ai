@@ -138,7 +138,8 @@ public class UnifiedConversationEngine {
             context.reset();
             return SpeechResult.info("Okay — I stopped the questions. Any activity already recorded is still saved.");
         }
-        return SpeechResult.invalid("I understood the command, but it is not safe to apply yet.");
+        // Greetings, help requests, and unknown non-mutating commands should teach the user what the app can do.
+        return SpeechResult.info(GETTING_STARTED_MESSAGE);
     }
 
     private void validate(TurnInterpretation turn) {
