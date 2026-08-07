@@ -11,6 +11,12 @@ public class MutationAuthorizationPolicy {
     public boolean isAuthorized(TurnInterpretation turn, String currentMessage) {
         if (turn.turnType() != TurnType.NEW_EVENT && turn.turnType() != TurnType.NEW_EVENTS) return true;
         for (EventPatch event : turn.events()) {
+            // Account setup records declared state (balance, limit, outstanding), not a money movement.
+            // Authorize it from the complete current utterance, never from a transaction amount or history.
+            if ("ACCOUNT_SETUP".equalsIgnoreCase(event.eventType())) {
+                if (!isGrounded(event.fields().rawText(), currentMessage)) return false;
+                continue;
+            }
             if (event.fields().amount() == null) continue;
             FieldEvidence amountEvidence = event.evidence().stream()
                     .filter(item -> item != null && "amount".equals(item.field()))

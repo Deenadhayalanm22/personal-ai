@@ -7,6 +7,7 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.core.state.StateContainerService;
 import com.apps.deen_sa.finance.account.AccountSetupValidator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
@@ -23,9 +24,13 @@ public class AccountSetupHandler implements SpeechHandler {
 
     private final AccountSetupClassifier llm;
     private final StateContainerRepository repo;
-    public AccountSetupHandler(AccountSetupClassifier llm, StateContainerRepository repo) {
+    private final StateContainerService stateContainerService;
+
+    public AccountSetupHandler(AccountSetupClassifier llm, StateContainerRepository repo,
+                               StateContainerService stateContainerService) {
         this.llm = llm;
         this.repo = repo;
+        this.stateContainerService = stateContainerService;
     }
 
     @Override
@@ -117,7 +122,9 @@ public class AccountSetupHandler implements SpeechHandler {
         e.setOpenedAt(Instant.now());
         e.setDetails(dto.getDetails());
 
-        return repo.save(e);
+        StateContainerEntity saved = repo.save(e);
+        stateContainerService.evictCache(userId);
+        return saved;
     }
 
     private void applyProfileDefaults(AccountSetupDto dto) {

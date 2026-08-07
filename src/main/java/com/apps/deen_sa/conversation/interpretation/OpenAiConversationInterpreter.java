@@ -19,14 +19,15 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
 
             Shape:
             {"turnType":"NEW_EVENT|ANSWER_TO_PENDING_EVENT|CORRECTION|COMMAND|QUERY|NEW_EVENTS|AMBIGUOUS",
-             "intent":"EXPENSE|INCOME|TRANSFER|ACCOUNT_SETUP|ASSET_BUY|ASSET_SELL|QUERY|UNKNOWN",
+             "intent":"EXPENSE|INCOME|TRANSFER|LIABILITY_PAYMENT|ACCOUNT_SETUP|ASSET_BUY|ASSET_SELL|QUERY|UNKNOWN",
              "language":"en-IN|ta-IN|ta-Latn|other",
              "targetEventId":null,"events":[{"eventId":null,"eventType":"EXPENSE","fields":{},
              "unresolvedFields":[],"ambiguities":[],"evidence":[{"field":"amount","value":"35","evidence":"35","confidence":0.99}]}],
              "command":null,"query":"NONE",
              "ambiguities":[],"confidence":0.0}
 
-            Expense fields: amount, category, subcategory, merchantName, sourceAccount, sourceBalance, creditLimit,
+            Financial fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount,
+            sourceBalance, creditLimit,
             creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
             Rules:
             - Unknown fields are null; never use placeholder strings or invented dates.
@@ -38,6 +39,21 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
               from bank => BANK_ACCOUNT; cash => CASH; credit card or card EMI => CREDIT_CARD; wallet => WALLET.
               When any payment source is explicit, ALWAYS emit sourceAccount and copy the exact payment phrase into its
               evidence. This mapping applies equally to English, Tamil, and romanized Tamil.
+            - Account declarations and setup requests are NEW_EVENT with intent and eventType ACCOUNT_SETUP. Examples:
+              "create my HDFC salary bank account with balance 20000", "add an ICICI credit card with a 1 lakh
+              limit", and "என் வங்கி கணக்கில் 40000 இருப்பு உள்ளது". Account balances, outstanding amounts, limits,
+              and due days are setup attributes, NOT transaction amounts. For ACCOUNT_SETUP, leave amount null and
+              place the complete current message in rawText; the account setup handler owns detailed extraction and
+              follow-up. Never return AMBIGUOUS merely because a setup sentence contains a balance.
+            - Incoming money is NEW_EVENT with intent and eventType INCOME. This includes salary, customer receipts,
+              refunds, interest, gifts, and any other money credited to the user. Put the receiving account's exact
+              stated name in destinationAccount. For example, "salary credited to my HDFC salary account" means
+              destinationAccount="HDFC salary account". Never put the receiving account in sourceAccount.
+            - Paying a credit-card bill or loan is NEW_EVENT with intent and eventType LIABILITY_PAYMENT, never
+              EXPENSE. Examples: "pay my HDFC card bill from my salary account", "credit card payment", "clear the
+              SBI card outstanding", and "pay my loan EMI". Buying goods or services USING a card remains EXPENSE.
+              Preserve the exact named source and liability from the current message in rawText; the liability-payment
+              handler performs detailed extraction and exact container resolution.
             - Use broad category and specific subcategory. Resolve relative dates with timezone.
             - query is always required. Use NONE for non-query turns. Questions about existing data are QUERY with no
               events and the matching canonical period. Examples: "today"/"இன்று"/"inniku" => TODAY;

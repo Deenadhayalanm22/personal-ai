@@ -33,6 +33,16 @@ public class AdjustmentCommandFactory {
         );
     }
 
+    public StateMutationCommand forIncomingCredit(StateChangeEntity tx) {
+        return new StateMutationCommand(
+                tx.getAmount(),
+                MutationTypeEnum.CREDIT,
+                "INCOME",
+                tx.getId(),
+                tx.getTimestamp() != null ? tx.getTimestamp() : Instant.now()
+        );
+    }
+
     /**
      * Create DEBIT adjustment for source container in a transfer.
      * Used when money leaves the source container (e.g., bank account).

@@ -14,7 +14,7 @@ public record EventPatch(
         unresolvedFields = unresolvedFields == null ? List.of() : List.copyOf(unresolvedFields);
         ambiguities = ambiguities == null ? List.of() : List.copyOf(ambiguities);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
-        fields = (fields == null ? new EventFields(null, null, null, null, null, null, null, null, null, null, null) : fields)
+        fields = (fields == null ? new EventFields(null, null, null, null, null, null, null, null, null, null, null, null) : fields)
                 .sanitized(evidence);
     }
 

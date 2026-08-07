@@ -14,6 +14,7 @@ public record EventFields(
         String subcategory,
         String merchantName,
         String sourceAccount,
+        String destinationAccount,
         BigDecimal sourceBalance,
         BigDecimal creditLimit,
         Integer creditCardDueDay,
@@ -25,7 +26,8 @@ public record EventFields(
         Map<String, Object> values = new LinkedHashMap<>();
         put(values, "amount", amount); put(values, "category", category);
         put(values, "subcategory", subcategory); put(values, "merchantName", merchantName);
-        put(values, "sourceAccount", sourceAccount); put(values, "sourceBalance", sourceBalance);
+        put(values, "sourceAccount", sourceAccount); put(values, "destinationAccount", destinationAccount);
+        put(values, "sourceBalance", sourceBalance);
         put(values, "creditLimit", creditLimit);
         put(values, "creditCardDueDay", creditCardDueDay);
         put(values, "transactionDate", transactionDate); put(values, "tags", tags); put(values, "rawText", rawText);
@@ -35,7 +37,8 @@ public record EventFields(
     public static EventFields from(Map<String, Object> values) {
         return new EventFields(decimal(values.get("amount")), string(values.get("category")),
                 string(values.get("subcategory")), string(values.get("merchantName")),
-                string(values.get("sourceAccount")), decimal(values.get("sourceBalance")), decimal(values.get("creditLimit")),
+                string(values.get("sourceAccount")), string(values.get("destinationAccount")),
+                decimal(values.get("sourceBalance")), decimal(values.get("creditLimit")),
                 integer(values.get("creditCardDueDay")),
                 values.get("transactionDate") == null ? null : LocalDate.parse(values.get("transactionDate").toString()),
                 null, string(values.get("rawText")));
@@ -49,6 +52,7 @@ public record EventFields(
                 positiveOrNull(amount),
                 textOrNull(category), textOrNull(subcategory), textOrNull(merchantName),
                 supported.contains("sourceAccount") ? textOrNull(sourceAccount) : null,
+                supported.contains("destinationAccount") ? textOrNull(destinationAccount) : null,
                 supported.contains("sourceBalance") ? nonNegativeOrNull(sourceBalance) : null,
                 supported.contains("creditLimit") ? positiveOrNull(creditLimit) : null,
                 supported.contains("creditCardDueDay") ? validDueDayOrNull(creditCardDueDay) : null,

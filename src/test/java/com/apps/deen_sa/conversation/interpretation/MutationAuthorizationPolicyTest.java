@@ -24,6 +24,19 @@ class MutationAuthorizationPolicyTest {
         assertThat(policy.isAuthorized(leakedExpense, "இன்று நான் எவ்வளவு செலவு செய்தேன்?")).isFalse();
     }
 
+    @Test
+    void authorizesExplicitAccountSetupWithoutTreatingOpeningBalanceAsTransactionAmount() {
+        EventPatch account = new EventPatch(null, "ACCOUNT_SETUP", Map.of(
+                "amount", 20000,
+                "rawText", "Create my HDFC salary bank account with a current balance of 20000"
+        ), List.of(), List.of(), List.of());
+        TurnInterpretation setup = new TurnInterpretation(TurnType.NEW_EVENT, "ACCOUNT_SETUP", "en-IN", null,
+                List.of(account), null, QueryPeriod.NONE, List.of(), 0.99);
+
+        assertThat(policy.isAuthorized(setup,
+                "Create my HDFC salary bank account with a current balance of 20000")).isTrue();
+    }
+
     private TurnInterpretation expenseWithAmountEvidence(String evidence) {
         EventPatch event = new EventPatch(null, "EXPENSE", Map.of("amount", 58), List.of(), List.of(),
                 List.of(new FieldEvidence("amount", "58", evidence, 0.99)));

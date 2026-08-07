@@ -31,6 +31,7 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -108,7 +109,13 @@ public class LiabilityPaymentHandler implements SpeechHandler {
         // Reset conversation context
         ctx.reset();
 
-        return SpeechResult.saved(saved);
+        return SpeechResult.builder()
+                .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
+                .message("Paid ₹" + saved.getAmount().stripTrailingZeros().toPlainString()
+                        + " from " + sourceContainer.getName() + " to " + targetContainer.getName() + ".")
+                .savedEntity(saved)
+                .needFollowup(false)
+                .build();
     }
 
     @Override
@@ -148,20 +155,38 @@ public class LiabilityPaymentHandler implements SpeechHandler {
                 .filter(c -> c.getContainerType().equals(targetType))
                 .toList();
 
-        // If target name is specified, try to match by name
+        // With multiple liabilities, a stated name must resolve exactly enough to one card.
+        // Never silently post a payment to the first credit card.
         if (dto.getTargetName() != null && !matching.isEmpty()) {
+            String requested = normalizeAccountName(dto.getTargetName());
             List<StateContainerEntity> namedMatches = matching.stream()
                     .filter(c -> c.getName() != null &&
-                            c.getName().toLowerCase().contains(dto.getTargetName().toLowerCase()))
+                            namesMatch(normalizeAccountName(c.getName()), requested))
                     .toList();
 
-            if (!namedMatches.isEmpty()) {
+            if (namedMatches.size() == 1) {
                 return namedMatches.get(0);
             }
+            return null;
         }
 
-        // Return first matching container by type
-        return matching.isEmpty() ? null : matching.get(0);
+        // An omitted name is safe only when exactly one liability of that type exists.
+        return matching.size() == 1 ? matching.getFirst() : null;
+    }
+
+    private boolean namesMatch(String stored, String requested) {
+        return !stored.isBlank() && !requested.isBlank()
+                && (stored.equals(requested) || stored.contains(requested) || requested.contains(stored));
+    }
+
+    private String normalizeAccountName(String value) {
+        return value.toLowerCase(Locale.ROOT)
+                .replace("credit card", "")
+                .replace("card", "")
+                .replace("bill", "")
+                .replace("payment", "")
+                .replaceAll("[^\\p{L}\\p{N}]", "")
+                .trim();
     }
 
     /**

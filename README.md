@@ -1,27 +1,10 @@
 # Personal AI Finance Application
 
-A Spring Boot-based financial management application with AI/LLM integration for intelligent expense tracking, account management, and financial analytics. The system processes natural language inputs through WhatsApp to record expenses, manage accounts, and provide financial insights.
+Personal AI is a Java 21/Spring Boot conversational finance assistant. It accepts natural-language messages through WhatsApp or REST, uses an LLM for interpretation, and keeps financial calculation, authorization, persistence, and reporting deterministic in PostgreSQL.
 
-## 📚 Documentation
+## Product documentation
 
-This project includes comprehensive documentation to help you understand the architecture, design decisions, and implementation details without needing to read through all the Java source files.
-
-### Documentation Files
-
-| File | Description | What You'll Learn |
-|------|-------------|-------------------|
-| **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | High-level architecture and project structure | Technology stack, system architecture, core workflows, API endpoints |
-| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | New domain-first package structure | Domain-driven design, shared kernel, package organization |
-| **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** | Testing philosophy, strategy, and infrastructure | Unit vs integration vs fuzz tests, why real databases, why no mocks, Testcontainers setup, HikariCP config |
-| **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** | Financial rules & invariants (authoritative) | Core invariants, container behavior, scenarios, edge cases |
-| **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** | Financial rules coverage analysis | Rule-by-rule mapping to tests, compliance verification |
-| **[REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Complete refactoring history | All package moves, class relocations, import updates |
-| **[ENTITIES.md](docs/ENTITIES.md)** | Database schema and entity relationships | Data models, entity fields, relationships, design rationale |
-| **[SERVICES.md](docs/SERVICES.md)** | Service layer logic and responsibilities | Business logic, service interactions, transaction management |
-| **[LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md)** | AI/LLM components and prompt engineering | OpenAI integration, classifiers, extractors, prompt structure |
-| **[ARCHITECTURE_PATTERNS.md](docs/ARCHITECTURE_PATTERNS.md)** | Design patterns and architectural decisions | Strategy, Factory, Template patterns, key trade-offs |
-| **[QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** | Quick lookup guide for common tasks | Code patterns, setup, troubleshooting, SQL queries |
-| **[CONVERSATIONAL_MVP.md](docs/CONVERSATIONAL_MVP.md)** | Progressive WhatsApp setup contract | Provisional accounts, follow-ups, sessions, and reconciliation boundaries |
+The maintained product backlog and requirements live in **[docs/jira/README.md](docs/jira/README.md)**. It uses one stable hierarchy: Initiative → Epic → Story → Sub-task. Each story records status, priority, dependencies, plain-English requirements, and testable acceptance criteria.
 
 ## 🚀 Quick Start
 
@@ -33,13 +16,11 @@ This project includes comprehensive documentation to help you understand the arc
 
 ### Setup
 1. Clone the repository
-2. Set environment variables:
+2. Provide PostgreSQL configuration (currently in `application.yaml` or standard Spring datasource overrides) and the integration credentials you use:
    ```bash
-   export DB_HOST=localhost
-   export DB_PORT=5432
-   export DB_NAME=personal_ai
-   export DB_USER=your_user
-   export DB_PASSWORD=your_password
+   export SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/personal_ai'
+   export SPRING_DATASOURCE_USERNAME='your_user'
+   export SPRING_DATASOURCE_PASSWORD='your_password'
    export OPENAI_API_KEY=sk-your-key
    ```
 3. Build and run:
@@ -53,8 +34,8 @@ This project includes comprehensive documentation to help you understand the arc
 # Health check
 curl http://localhost:8080/health
 
-# Record an expense via speech
-curl -X POST http://localhost:8080/api/speech \
+# Process a natural-language message
+curl -X POST http://localhost:8080/api/v1/process \
   -H "Content-Type: application/json" \
   -d '{"text": "Spent 500 on groceries at BigBasket"}'
 ```
@@ -75,8 +56,8 @@ curl -X POST http://localhost:8080/api/speech \
 - **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
 - **LLM-First Approach**: Natural language understanding via OpenAI GPT-4.1 Mini
 - **Strategy Pattern**: Different financial adjustment strategies for different container types
-- **Event Sourcing Ready**: Audit trail via StateMutationEntity
-- **Multi-tenant Ready**: Built-in userId/businessId support
+- **Mutation Audit Trail**: Balance changes are represented by `StateMutationEntity`
+- **User-Scoped Data Model**: User identifiers exist; production authorization remains tracked work
 
 ### Package Structure
 ```
@@ -94,7 +75,7 @@ com.apps.deen_sa
 └── common (Utilities)
 ```
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for complete package details.
+The implementation is organized by conversation, core state/mutation, finance, and LLM domains.
 
 ## 📖 Use Case: Recording an Expense
 
@@ -113,95 +94,23 @@ User: "Cash"
   → Confirms: "Recorded ₹500 expense from Cash"
 ```
 
-## 💰 Financial Correctness & Testing Philosophy
+## 💰 Financial correctness
 
-This is a **production-grade finance application**. Financial correctness is non-negotiable.
+Financial correctness is a product requirement. The application is still in development and must satisfy the production-readiness stories before handling real financial data.
 
-### Rule Hierarchy
-
-```
-Documents > Tests > Code
-```
-
-**Financial rules are defined in natural language** in `/docs/FINANCIAL_RULES.md`:
-- Section 1: Core Invariants - Fundamental financial laws (idempotency, no duplicate application)
-- Section 2: Container Behavior - Account/container behavior rules
-- Section 3: Canonical Scenarios - Standard transaction scenarios
-- Section 4: Edge Cases - Duplicates, ordering, partial failures
-- Section 5: System Assumptions - Determinism, database as truth
-
-**Integration tests enforce these rules.** Production code must pass tests that enforce documented rules.
-
-### Testing Strategy
+### Testing strategy
 
 **Unit Tests**: Fast feedback on business logic (mocks allowed)
 ```bash
 mvn clean test
 ```
 
-**Integration Tests**: Enforce financial correctness (NO mocks, real PostgreSQL via Testcontainers)
+**Integration Tests**: Run tests named `*IT` through the Maven integration profile
 ```bash
 mvn clean verify -Pintegration
 ```
 
-**Fuzz Tests**: Discover edge cases via randomized scenarios (50+ iterations, deterministic seeds)
-```bash
-mvn verify -Pintegration -Dfuzz.iterations=100
-```
-
-### Financial Invariants
-
-Every integration test verifies **8 financial invariants**:
-
-1. **No Orphan Adjustments** - Every adjustment references valid transaction
-2. **Adjustment-Transaction Consistency** - Applied transactions have adjustments
-3. **Balance Integrity** - Balance = opening + credits - debits
-4. **Money Conservation** - Total money across containers constant
-5. **No Negative Balances** - Assets (CASH, BANK_ACCOUNT) ≥ 0
-6. **Capacity Limits** - Liabilities respect capacity limits
-7. **Transaction Validity** - Valid type, non-null amount, non-negative
-8. **Idempotency** - Rerunning simulation produces identical results
-
-### Why Real Databases?
-
-**Testcontainers + PostgreSQL 16 is mandatory for integration tests.**
-
-- ❌ **NO H2/HSQLDB/Derby** - In-memory databases hide financial bugs
-- ❌ **NO Mocks in Integration Tests** - Mocks bypass invariant checks
-- ✅ **Real PostgreSQL** - Same behavior as production
-- ✅ **Real Services** - Test actual transaction boundaries
-- ✅ **Real Constraints** - Foreign keys, triggers, precision
-
-### Deterministic Simulations
-
-All financial scenarios are reproducible:
-
-```bash
-# Test fails with seed 1042
-mvn verify -Pintegration -Dtest=FuzzSimulationIT#testReproduceSeed -Dfuzz.seed=1042
-```
-
-### CI Enforcement
-
-**GitHub Actions blocks PR merges on rule violations.**
-
-Pull request validation:
-```bash
-mvn clean verify -Pintegration -Dfuzz.iterations=50
-```
-
-Nightly comprehensive testing:
-```bash
-mvn verify -Pintegration -Dfuzz.iterations=100
-```
-
-### Documentation
-
-- **[INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)** - Complete testing philosophy and integration test guide
-- **[FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md)** - Financial rules & how to add/update them
-- **[FINANCIAL_RULES_TEST_COVERAGE.md](docs/FINANCIAL_RULES_TEST_COVERAGE.md)** - Coverage analysis
-
-**Financial correctness protects against regressions. Tests are our contract.**
+Financial writes must be deterministic, auditable, and idempotent. An unknown balance remains unknown (`null`), never zero. See EPIC-002 in the Jira documentation for the full product contract and acceptance criteria.
 
 ---
 
@@ -214,23 +123,13 @@ mvn clean test
 # Run integration tests (requires Docker)
 mvn clean verify -Pintegration
 
-# Run specific test
-mvn test -Dtest=ExpenseHandlerTest
-
-# Run with coverage
-mvn clean test jacoco:report
+# Run a specific test
+mvn test -Dtest=ExpenseCompletenessEvaluatorTest
 ```
 
-## 📊 Database Schema
+## 📊 Database schema
 
-The application uses PostgreSQL with the following key tables:
-- `transaction_rec`: Core transaction records
-- `value_container`: Accounts, loans, credit cards, inventory
-- `value_adjustments`: Audit trail for all balance changes
-- `expense`: Legacy expense model (for backward compatibility)
-- `tag_master`: Canonical tag repository
-
-See [ENTITIES.md](docs/ENTITIES.md) for detailed schema documentation.
+Flyway migrations under `src/main/resources/db/migration/` define the durable PostgreSQL schema. Do not infer production safety from Hibernate's current development-time schema-update setting; replacing it with migration validation is tracked in STORY-033.
 
 ## 🤖 LLM Integration
 
@@ -239,8 +138,6 @@ The application uses OpenAI GPT-4.1 Mini for:
 - **Expense Extraction**: Parse natural language into structured data
 - **Query Understanding**: Convert questions into database queries
 - **Natural Language Generation**: Explain results in conversational language
-
-See [LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md) for prompt engineering details.
 
 ## 🔧 Configuration
 
@@ -253,7 +150,7 @@ Main configuration in `src/main/resources/application.yaml`:
 ## 📝 Contributing
 
 When adding new features:
-1. Follow existing patterns (see [ARCHITECTURE_PATTERNS.md](docs/ARCHITECTURE_PATTERNS.md))
+1. Link the change to a story in `docs/jira/` and keep its acceptance criteria current
 2. Keep business logic separate from LLM calls
 3. Ensure financial operations are idempotent
 4. Add tests for new functionality
@@ -267,6 +164,4 @@ When adding new features:
 
 [Add contact information]
 
----
-
-**💡 Tip**: Start with [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) for a high-level understanding, then check [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the new package structure, and dive into specific documentation files based on your needs.
+Start with the [Jira product documentation](docs/jira/README.md), then open the epic for the product area you are changing.

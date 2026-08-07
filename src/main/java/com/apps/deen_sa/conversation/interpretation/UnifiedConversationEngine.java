@@ -117,8 +117,12 @@ public class UnifiedConversationEngine {
         for (EventPatch event : turn.events()) {
             if (!"EXPENSE".equalsIgnoreCase(event.eventType())) {
                 SpeechHandler handler = handlers.get(event.eventType());
-                results.add(handler == null ? SpeechResult.unknown("I understood " + event.eventType()
-                        + ", but cannot safely save it yet.") : handler.handleSpeech(text, context));
+                results.add(handler == null
+                        ? SpeechResult.unknown("I understood " + event.eventType()
+                                + ", but cannot safely save it yet.")
+                        : handler instanceof StructuredEventHandler structured
+                                ? structured.handleInterpreted(event, text, context)
+                                : handler.handleSpeech(text, context));
                 continue;
             }
             boolean continuation = context.isInFollowup() && (
