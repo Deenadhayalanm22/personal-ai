@@ -10,7 +10,9 @@ import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.finance.expense.ExpenseAnalyticsService;
 import org.springframework.stereotype.Service;
-import com.apps.deen_sa.conversation.ConversationMessages;
+import java.math.BigDecimal;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class QueryHandler implements SpeechHandler {
@@ -20,20 +22,18 @@ public class QueryHandler implements SpeechHandler {
     private final ExpenseSummaryExplainer expenseSummaryExplainer;
     private final QueryClassifier queryClassifier;
     private final QueryContextFormatter queryContextFormatter;
-    private final ConversationMessages messages;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
             ExpenseAnalyticsService expenseAnalyticsService,
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
-            QueryContextFormatter queryContextFormatter, ConversationMessages messages
+            QueryContextFormatter queryContextFormatter
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
         this.expenseSummaryExplainer = expenseSummaryExplainer;
         this.queryClassifier = queryClassifier;
         this.queryContextFormatter = queryContextFormatter;
-        this.messages = messages;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
@@ -47,7 +47,7 @@ public class QueryHandler implements SpeechHandler {
         ExpenseQuery query = expenseQueryBuilder.from(result, context.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
-        return SpeechResult.info(messages.summary(context.getLocale(), period, summary));
+        return SpeechResult.info(summary(context.getLocale(), period, summary));
     }
 
     @Override
@@ -74,5 +74,23 @@ public class QueryHandler implements SpeechHandler {
     @Override
     public SpeechResult handleFollowup(String userAnswer, ConversationContext ctx) {
         return SpeechResult.info("No follow-ups supported for queries yet.");
+    }
+
+    private String summary(String locale, String period, ExpenseSummary summary) {
+        BigDecimal total = summary.getTotalSpend() == null ? BigDecimal.ZERO : summary.getTotalSpend();
+        String amount = "₹" + total.stripTrailingZeros().toPlainString();
+        boolean tamil = locale != null && Set.of("ta", "ta-in").contains(locale.toLowerCase(Locale.ROOT));
+        if (tamil) return switch (period) {
+            case "TODAY" -> "இன்று உங்கள் மொத்த செலவு " + amount + ".";
+            case "THIS_MONTH" -> "இந்த மாதம் உங்கள் மொத்த செலவு " + amount + ".";
+            default -> "கேட்ட காலத்தில் உங்கள் மொத்த செலவு " + amount + ".";
+        };
+        return "You spent a total of " + amount + " " + switch (period) {
+            case "TODAY" -> "today";
+            case "THIS_WEEK" -> "this week";
+            case "THIS_MONTH" -> "this month";
+            case "THIS_YEAR" -> "this year";
+            default -> "for the requested period";
+        } + ".";
     }
 }

@@ -1,12 +1,12 @@
-package com.apps.deen_sa.core.mutation;
+package com.apps.deen_sa.finance.legacy.mutation;
 
 import com.apps.deen_sa.dto.StateMutationCommand;
-import com.apps.deen_sa.core.mutation.StateMutationEntity;
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.mutation.StateMutationRepository;
-import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategyResolver;
-import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
-import com.apps.deen_sa.core.state.StateContainerService;
+import com.apps.deen_sa.finance.legacy.mutation.StateMutationEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.mutation.StateMutationRepository;
+import com.apps.deen_sa.finance.legacy.mutation.strategy.StateMutationStrategyResolver;
+import com.apps.deen_sa.finance.legacy.mutation.strategy.StateMutationStrategy;
+import com.apps.deen_sa.finance.legacy.state.StateContainerService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 

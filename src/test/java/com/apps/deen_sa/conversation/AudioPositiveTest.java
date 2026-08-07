@@ -1,7 +1,7 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.integration.AbstractIntegrationTestProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Tag;
@@ -113,7 +113,7 @@ class AudioPositiveTest extends AbstractIntegrationTestProperties {
                     assertThat(stateContainerRepository.findAll())
                             .hasSize(1)
                             .allSatisfy(this::assertPersistedAudioAccount);
-                    assertThat(outgoingWhatsAppMessageCount("Saved successfully.")).isEqualTo(1);
+                    assertThat(outgoingWhatsAppMessageCount("Created hdfc bank account. Opening balance recorded.")).isEqualTo(1);
                     assertThat(audioConfirmationRepository.findById(confirmation.getId()))
                             .get().extracting(AudioConfirmationEntity::getStatus)
                             .isEqualTo(AudioConfirmationStatus.COMPLETED);

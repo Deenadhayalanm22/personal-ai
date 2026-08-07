@@ -7,22 +7,25 @@ import com.apps.deen_sa.conversation.SpeechStatus;
 import com.apps.deen_sa.conversation.interpretation.EventFields;
 import com.apps.deen_sa.conversation.interpretation.EventPatch;
 import com.apps.deen_sa.conversation.interpretation.StructuredEventHandler;
-import com.apps.deen_sa.core.mutation.StateMutationService;
-import com.apps.deen_sa.core.state.CompletenessLevelEnum;
-import com.apps.deen_sa.core.state.StateChangeEntity;
-import com.apps.deen_sa.core.state.StateChangeRepository;
-import com.apps.deen_sa.core.state.StateChangeTypeEnum;
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerService;
+import com.apps.deen_sa.finance.legacy.mutation.StateMutationService;
+import com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum;
+import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
+import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
+import com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerService;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /** Applies any incoming-money event to an asset-like destination account. */
 @Service
@@ -54,11 +57,13 @@ public class IncomingCreditHandler implements StructuredEventHandler {
     @Override
     public SpeechResult handleInterpreted(EventPatch event, String rawText, ConversationContext context) {
         EventFields fields = event.fields();
-        if (fields.amount() == null) {
+        Map<String, Object> facts = fields.asMap();
+        BigDecimal amount = decimal(facts.get("amount"));
+        if (amount == null) {
             return SpeechResult.followup("How much money did you receive?", List.of("amount"), event);
         }
 
-        StateContainerEntity destination = resolveDestination(fields.destinationAccount(), context.getUserId());
+        StateContainerEntity destination = resolveDestination(string(facts.get("destinationAccount")), context.getUserId());
         if (destination == null) {
             return SpeechResult.followup(
                     "Which bank account, cash account, or wallet received this money?",
@@ -72,13 +77,14 @@ public class IncomingCreditHandler implements StructuredEventHandler {
         StateChangeEntity credit = new StateChangeEntity();
         credit.setUserId(String.valueOf(context.getUserId()));
         credit.setTransactionType(StateChangeTypeEnum.INCOME);
-        credit.setAmount(fields.amount());
-        credit.setCategory(fields.category() == null ? "Income" : fields.category());
-        credit.setSubcategory(fields.subcategory());
-        credit.setMainEntity(fields.merchantName());
+        credit.setAmount(amount);
+        credit.setCategory(string(facts.get("category")) == null ? "Income" : string(facts.get("category")));
+        credit.setSubcategory(string(facts.get("subcategory")));
+        credit.setMainEntity(string(facts.get("merchantName")));
         credit.setTargetContainerId(destination.getId());
-        credit.setTimestamp(fields.transactionDate() == null ? Instant.now()
-                : fields.transactionDate().atStartOfDay(ZoneId.of(context.getTimezone())).toInstant());
+        LocalDate transactionDate = date(facts.get("transactionDate"));
+        credit.setTimestamp(transactionDate == null ? Instant.now()
+                : transactionDate.atStartOfDay(ZoneId.of(context.getTimezone())).toInstant());
         credit.setRawText(rawText);
         credit.setCompletenessLevel(CompletenessLevelEnum.FINANCIAL);
         credit.setNeedsEnrichment(false);
@@ -100,6 +106,10 @@ public class IncomingCreditHandler implements StructuredEventHandler {
                 .needFollowup(false)
                 .build();
     }
+
+    private String string(Object value) { return value == null ? null : value.toString(); }
+    private BigDecimal decimal(Object value) { return value == null ? null : new BigDecimal(value.toString()); }
+    private LocalDate date(Object value) { return value == null ? null : value instanceof LocalDate date ? date : LocalDate.parse(value.toString()); }
 
     private StateContainerEntity resolveDestination(String requestedAccount, Long userId) {
         List<StateContainerEntity> eligible = containerService.getActiveContainers(userId).stream()

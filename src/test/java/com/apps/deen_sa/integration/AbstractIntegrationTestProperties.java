@@ -1,10 +1,10 @@
 package com.apps.deen_sa.integration;
 
 import com.apps.deen_sa.conversation.ConversationContext;
-import com.apps.deen_sa.core.mutation.StateMutationRepository;
-import com.apps.deen_sa.core.state.StateChangeRepository;
-import com.apps.deen_sa.core.state.StateContainerRepository;
-import com.apps.deen_sa.core.state.cache.StateContainerCache;
+import com.apps.deen_sa.finance.legacy.mutation.StateMutationRepository;
+import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.cache.StateContainerCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.flywaydb.core.Flyway;
@@ -63,7 +63,8 @@ public abstract class AbstractIntegrationTestProperties {
 		try {
 			Resource[] mappings = new PathMatchingResourcePatternResolver().getResources(mappingPattern);
 			if (mappings.length == 0) {
-				return;
+				mappings = new PathMatchingResourcePatternResolver()
+						.getResources("classpath*:wiremock/it_001/wiremock/mappings/*.json");
 			}
 
 			RestClient wireMockAdmin = RestClient.create(wireMockAdminUrl);

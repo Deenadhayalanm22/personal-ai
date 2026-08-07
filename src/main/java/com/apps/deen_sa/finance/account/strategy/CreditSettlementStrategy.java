@@ -1,6 +1,6 @@
 package com.apps.deen_sa.finance.account.strategy;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 
 import java.math.BigDecimal;
 

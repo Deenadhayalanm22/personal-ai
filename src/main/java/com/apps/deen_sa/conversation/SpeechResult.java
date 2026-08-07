@@ -22,7 +22,7 @@ public class SpeechResult {
     // List of missing fields backend expects next
     private List<String> missingFields;
 
-    // Store partial DTO (expense, investment, account, etc.)
+    // Extension-owned partial facts retained across a follow-up.
     private Object partial;
 
     // Final saved entity (any handler type)

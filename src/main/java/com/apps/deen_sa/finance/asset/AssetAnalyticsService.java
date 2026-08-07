@@ -1,10 +1,10 @@
 package com.apps.deen_sa.finance.asset;
 
-import com.apps.deen_sa.core.state.StateChangeEntity;
-import com.apps.deen_sa.core.state.StateChangeRepository;
-import com.apps.deen_sa.core.state.StateChangeTypeEnum;
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
+import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
+import com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.dto.AssetMetricsDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

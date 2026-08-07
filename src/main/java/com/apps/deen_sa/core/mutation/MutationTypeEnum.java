@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.mutation;
+package com.apps.deen_sa.finance.legacy.mutation;
 
 public enum MutationTypeEnum {
     DEBIT,    // value increases for liabilities, decreases for assets

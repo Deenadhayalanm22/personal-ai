@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.mutation;
+package com.apps.deen_sa.finance.legacy.mutation;
 
 import jakarta.persistence.*;
 import lombok.Getter;

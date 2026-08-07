@@ -1,7 +1,7 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.integration.AbstractIntegrationTestProperties;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -114,9 +114,9 @@ class DailyReviewPositiveTest extends AbstractIntegrationTestProperties {
                     assertThat(expense.getSubcategory()).isEqualTo("Furniture");
                     assertThat(expense.getMainEntity()).isEqualTo("IKEA");
                     assertThat(expense.getTags()).containsExactly("home", "table", "online");
-                    assertThat(expense.getSourceContainerId()).isNull();
-                    assertThat(expense.isFinanciallyApplied()).isFalse();
-                    assertThat(expense.isNeedsEnrichment()).isTrue();
+                    assertThat(expense.getSourceContainerId()).isNotNull();
+                    assertThat(expense.isFinanciallyApplied()).isTrue();
+                    assertThat(expense.isNeedsEnrichment()).isFalse();
                 });
     }
 
@@ -152,7 +152,7 @@ class DailyReviewPositiveTest extends AbstractIntegrationTestProperties {
         assertThat(account.getClosedAt()).isNull();
         assertThat(account.getLastActivityAt()).isNotNull();
         assertThat(account.getExternalRefType()).isNull();
-        assertThat(account.getExternalRefId()).isNull();
+        assertThat(account.getExternalRefId()).isEqualTo("hdfc bank account");
         assertThat(account.getDetails()).isNull();
         assertThat(account.getCreatedAt()).isNotNull();
         assertThat(account.getUpdatedAt()).isNotNull();
@@ -168,12 +168,13 @@ class DailyReviewPositiveTest extends AbstractIntegrationTestProperties {
         assertThat(account.getName()).isEqualTo("hdfc credit card");
         assertThat(account.getStatus()).isEqualTo("ACTIVE");
         assertThat(account.getCurrency()).isEqualTo("INR");
-        assertThat(account.getCurrentValue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(account.getCurrentValue()).isEqualByComparingTo(new BigDecimal("4200"));
         assertThat(account.getAvailableValue()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(account.getCapacityLimit()).isEqualByComparingTo(new BigDecimal("30000"));
         assertThat(account.getDetails()).containsExactlyInAnyOrderEntriesOf(java.util.Map.of("dueDay", 21));
+        assertThat(account.getExternalRefId()).isEqualTo("hdfc credit card");
         assertThat(account.getOverLimit()).isFalse();
-        assertThat(account.getOverLimitAmount()).isNull();
+        assertThat(account.getOverLimitAmount()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
 }

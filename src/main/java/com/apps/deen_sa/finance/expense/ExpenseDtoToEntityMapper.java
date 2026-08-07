@@ -1,8 +1,8 @@
 package com.apps.deen_sa.finance.expense;
 
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.core.state.StateChangeEntity;
-import com.apps.deen_sa.core.state.StateChangeTypeEnum;
+import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
+import com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum;
 
 import java.time.Instant;
 import java.time.ZoneId;

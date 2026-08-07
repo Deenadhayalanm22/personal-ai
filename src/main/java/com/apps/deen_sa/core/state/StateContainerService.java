@@ -1,8 +1,8 @@
-package com.apps.deen_sa.core.state;
+package com.apps.deen_sa.finance.legacy.state;
 
-import com.apps.deen_sa.core.state.cache.StateContainerCache;
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.cache.StateContainerCache;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

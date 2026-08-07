@@ -1,6 +1,6 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.core.state.StateChangeEntity;
+import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
 import com.apps.deen_sa.integration.AbstractIntegrationTestProperties;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WhatsAppWebhookL1Test extends AbstractIntegrationTestProperties {
 
     private static final String USER_PHONE_NUMBER = "919876543210";
-    private static final String EXPENSE_TEXT = "Spent 500 on groceries at BigBasket";
+    private static final String EXPENSE_TEXT = "Paid house rent of 16000 via bank transfer";
 
     @Autowired
     private MockMvc mockMvc;
@@ -79,7 +79,7 @@ class WhatsAppWebhookL1Test extends AbstractIntegrationTestProperties {
         private void assertPersistedExpense(StateChangeEntity transaction) {
         assertThat(transaction.getUserId()).isEqualTo("1");
       assertThat(transaction.getRawText()).contains(EXPENSE_TEXT);
-        assertThat(transaction.getAmount()).isEqualByComparingTo("500.00");
+        assertThat(transaction.getAmount()).isEqualByComparingTo("16000.00");
         assertThat(transaction.getTransactionType()).hasToString("EXPENSE");
         assertThat(transaction.getCategory()).isNotBlank();
         assertThat(transaction.getTimestamp()).isNotNull();

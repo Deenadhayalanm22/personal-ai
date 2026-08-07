@@ -1,7 +1,7 @@
 package com.apps.deen_sa.finance.asset;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.dto.AssetMetricsDto;
 import com.apps.deen_sa.dto.AssetValuationDto;
 import lombok.RequiredArgsConstructor;

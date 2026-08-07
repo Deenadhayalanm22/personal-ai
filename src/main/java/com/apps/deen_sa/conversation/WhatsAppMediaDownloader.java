@@ -1,8 +1,7 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.config.ApplicationProperties;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,15 +10,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
-@RequiredArgsConstructor
 public class WhatsAppMediaDownloader {
 
     private final RestTemplate restTemplate;
-    private final ApplicationProperties properties;
+    private final String apiBaseUrl;
+    private final String accessToken;
+
+    public WhatsAppMediaDownloader(RestTemplate restTemplate,
+            @Value("${whatsapp.api-base-url:https://graph.facebook.com}") String apiBaseUrl,
+            @Value("${whatsapp.access-token:}") String accessToken) {
+        this.restTemplate = restTemplate; this.apiBaseUrl = apiBaseUrl; this.accessToken = accessToken;
+    }
 
     public byte[] download(String mediaId) {
         HttpEntity<Void> request = new HttpEntity<>(authorizationHeaders());
-        String metadataUrl = properties.whatsapp().apiBaseUrl() + "/v19.0/" + mediaId;
+        String metadataUrl = apiBaseUrl + "/v19.0/" + mediaId;
 
         ResponseEntity<MediaMetadata> metadataResponse = restTemplate.exchange(
                 metadataUrl, HttpMethod.GET, request, MediaMetadata.class);
@@ -39,7 +44,7 @@ public class WhatsAppMediaDownloader {
 
     private HttpHeaders authorizationHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(properties.whatsapp().accessToken());
+        headers.setBearerAuth(accessToken);
         return headers;
     }
 

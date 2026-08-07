@@ -1,6 +1,6 @@
 package com.apps.deen_sa.finance.expense;
 
-import com.apps.deen_sa.core.state.CompletenessLevelEnum;
+import com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum;
 import com.apps.deen_sa.dto.ExpenseDto;
 import org.junit.jupiter.api.Test;
 

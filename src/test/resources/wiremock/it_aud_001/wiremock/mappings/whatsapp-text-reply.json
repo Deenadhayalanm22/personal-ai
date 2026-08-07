@@ -7,7 +7,7 @@
     "bodyPatterns": [
       {"matchesJsonPath": "$.to", "equalTo": "919876543210"},
       {"matchesJsonPath": "$.type", "equalTo": "text"},
-      {"matchesJsonPath": "$.text.body", "equalTo": "Saved successfully."}
+      {"matchesJsonPath": "$.text.body", "equalTo": "Created hdfc bank account. Opening balance recorded."}
     ]
   },
   "response": {

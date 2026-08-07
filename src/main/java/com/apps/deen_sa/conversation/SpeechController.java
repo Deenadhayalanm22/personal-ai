@@ -6,6 +6,7 @@ import com.apps.deen_sa.conversation.SpeechOrchestrator;
 import com.apps.deen_sa.conversation.SpeechResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import com.apps.deen_sa.extension.runtime.ExtensionCatalog;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class SpeechController {
 
     private final SpeechOrchestrator orchestrator;
+    private final ExtensionCatalog extensions;
 
     @PostMapping("/process")
     public SpeechResult processSpeech(@RequestBody SpeechInput request) {
@@ -23,6 +25,7 @@ public class SpeechController {
         ConversationContext context = new ConversationContext();
         context.setUserId(1L);
         context.setChannel("REST");
+        extensions.provisionNewTenant(1L);
         return orchestrator.process(request.getText(), context);
     }
 }

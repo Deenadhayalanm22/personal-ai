@@ -1,13 +1,13 @@
 package com.apps.deen_sa.finance.account;
 
 import com.apps.deen_sa.dto.AccountSetupDto;
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.llm.impl.AccountSetupClassifier;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.state.StateContainerRepository;
-import com.apps.deen_sa.core.state.StateContainerService;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerService;
 import com.apps.deen_sa.finance.account.AccountSetupValidator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;

@@ -27,5 +27,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fuzz-test-results
-          path: target/failsafe-reports/
+          path: application/target/failsafe-reports/
           retention-days: 30
