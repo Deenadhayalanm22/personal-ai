@@ -1,6 +1,6 @@
-package com.apps.deen_sa.core.state.cache;
+package com.apps.deen_sa.finance.legacy.state.cache;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 
 import java.util.List;
 

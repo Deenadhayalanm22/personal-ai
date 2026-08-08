@@ -1,6 +1,6 @@
 package com.apps.deen_sa.dto;
 
-import com.apps.deen_sa.core.mutation.MutationTypeEnum;
+import com.apps.deen_sa.finance.legacy.mutation.MutationTypeEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;

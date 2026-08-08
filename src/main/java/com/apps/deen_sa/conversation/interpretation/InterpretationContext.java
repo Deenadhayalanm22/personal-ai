@@ -10,5 +10,5 @@ public record InterpretationContext(
         String lastQuestion,
         List<PendingEvent> pendingEvents,
         List<ConversationTurn> recentTurns,
-        List<Map<String, Object>> accounts
+        Map<String, Object> extensionContext
 ) { }

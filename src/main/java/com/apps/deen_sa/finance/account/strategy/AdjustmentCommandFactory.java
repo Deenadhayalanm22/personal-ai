@@ -1,8 +1,8 @@
 package com.apps.deen_sa.finance.account.strategy;
 
 import com.apps.deen_sa.dto.StateMutationCommand;
-import com.apps.deen_sa.core.state.StateChangeEntity;
-import com.apps.deen_sa.core.mutation.MutationTypeEnum;
+import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
+import com.apps.deen_sa.finance.legacy.mutation.MutationTypeEnum;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;

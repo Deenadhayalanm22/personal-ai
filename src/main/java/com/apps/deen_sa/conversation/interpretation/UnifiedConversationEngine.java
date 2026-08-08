@@ -4,13 +4,10 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
+import com.apps.deen_sa.conversation.SpeechStatus;
 import com.apps.deen_sa.conversation.ConversationMessages;
-import com.apps.deen_sa.core.state.StateContainerEntity;
-import com.apps.deen_sa.core.state.StateContainerService;
-import com.apps.deen_sa.finance.expense.ExpenseHandler;
-import com.apps.deen_sa.finance.expense.HumanAmountParser;
-import com.apps.deen_sa.finance.query.QueryHandler;
-import com.apps.deen_sa.llm.AiCallTelemetry;
+import com.apps.deen_sa.extension.api.EventCapability;
+import com.apps.deen_sa.extension.runtime.ExtensionCatalog;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Set;
 
@@ -30,19 +26,14 @@ public class UnifiedConversationEngine {
     private static final Set<String> HELP_COMMANDS = Set.of("hi", "hello", "hey", "help", "வணக்கம்", "உதவி");
 
     private final ConversationInterpreter interpreter;
-    private final ExpenseHandler expenseHandler;
-    private final StateContainerService containerService;
-    private final Map<String, SpeechHandler> handlers;
+    private final ExtensionCatalog extensions;
     private final MutationAuthorizationPolicy mutationPolicy;
     private final ConversationMessages messages;
 
-    public UnifiedConversationEngine(ConversationInterpreter interpreter, ExpenseHandler expenseHandler,
-                                     StateContainerService containerService, List<SpeechHandler> handlers,
+    public UnifiedConversationEngine(ConversationInterpreter interpreter, ExtensionCatalog extensions,
                                      MutationAuthorizationPolicy mutationPolicy, ConversationMessages messages) {
         this.interpreter = interpreter;
-        this.expenseHandler = expenseHandler;
-        this.containerService = containerService;
-        this.handlers = handlers.stream().collect(Collectors.toMap(SpeechHandler::intentType, handler -> handler));
+        this.extensions = extensions;
         this.mutationPolicy = mutationPolicy;
         this.messages = messages;
     }
@@ -51,11 +42,19 @@ public class UnifiedConversationEngine {
         SpeechResult deterministic = deterministicTurn(text, context);
         if (deterministic != null) return finishDeterministicTurn(text, deterministic, context);
 
+        EventCapability routed = extensions.routeDeterministically(tenantId(context), text).orElse(null);
+        if (routed != null) {
+            EventPatch patch = new EventPatch(null, routed.eventType(), Map.of("rawText", text),
+                    List.of(), List.of(), List.of(new FieldEvidence("rawText", text, text, 1.0)));
+            SpeechResult result = toSpeechResult(routed.handle(patch, text, context, false));
+            return finishDeterministicTurn(text, result, context);
+        }
+
         InterpretationContext input = new InterpretationContext(
                 context.getUserId(), context.getTimezone(), context.getCurrency(), context.getLastQuestion(),
-                context.getPendingEvents(), context.getRecentTurns(), accountContext(context.getUserId()));
+                context.getPendingEvents(), context.getRecentTurns(), extensions.context(tenantId(context), context.getUserId()));
         TurnInterpretation turn = interpreter.interpret(text, input);
-        validate(turn);
+        validate(turn, context);
         applyTurnLanguage(turn, context);
         if (!mutationPolicy.isAuthorized(turn, text)) {
             SpeechResult safeReply = SpeechResult.info(messages.mutationNeedsClarification(context.getLocale()));
@@ -84,7 +83,7 @@ public class UnifiedConversationEngine {
                 List.of(new FieldEvidence(field, answer, answer, 1.0)));
         TurnInterpretation turn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT,
                 context.getActiveIntent(), context.getLocale(), null, List.of(patch), null, QueryPeriod.NONE, List.of(), 1.0);
-        validate(turn);
+        validate(turn, context);
         SpeechResult result = execute(turn, answer, context);
         appendTurn(context, "user", answer);
         if (result.getMessage() != null) appendTurn(context, "assistant", result.getMessage());
@@ -105,33 +104,24 @@ public class UnifiedConversationEngine {
             return SpeechResult.info(messages.gettingStarted(context.getLocale()));
         }
         if (turn.turnType() == TurnType.QUERY) {
-            SpeechHandler query = handlers.get("QUERY");
-            if (query instanceof QueryHandler queryHandler
-                    && turn.query() != null && turn.query() != QueryPeriod.NONE) {
-                return queryHandler.handleInterpreted(turn.query().name(), context);
+            if (turn.query() != null && turn.query() != QueryPeriod.NONE) {
+                return extensions.query(tenantId(context), "QUERY")
+                        .map(query -> toSpeechResult(query.handle(turn.query().name(), context)))
+                        .orElseGet(() -> SpeechResult.unknown("That query capability is not enabled for this business."));
             }
             return SpeechResult.info(messages.queryPeriodQuestion(context.getLocale()));
         }
 
         List<SpeechResult> results = new ArrayList<>();
         for (EventPatch event : turn.events()) {
-            if (!"EXPENSE".equalsIgnoreCase(event.eventType())) {
-                SpeechHandler handler = handlers.get(event.eventType());
-                results.add(handler == null
-                        ? SpeechResult.unknown("I understood " + event.eventType()
-                                + ", but cannot safely save it yet.")
-                        : handler instanceof StructuredEventHandler structured
-                                ? structured.handleInterpreted(event, text, context)
-                                : handler.handleSpeech(text, context));
-                continue;
-            }
             boolean continuation = context.isInFollowup() && (
                     turn.turnType() == TurnType.ANSWER_TO_PENDING_EVENT
                             || turn.turnType() == TurnType.CORRECTION
                             || answersPendingField(event, context.getWaitingForField()));
-            results.add(continuation
-                    ? expenseHandler.handleInterpretedFollowup(event, text, context)
-                    : expenseHandler.handleInterpreted(event, text, context));
+            results.add(extensions.event(tenantId(context), event.eventType())
+                    .map(capability -> toSpeechResult(capability.handle(event, text, context, continuation)))
+                    .orElseGet(() -> SpeechResult.unknown("I understood " + event.eventType()
+                            + ", but that capability is not enabled for this business.")));
         }
         if (results.size() == 1) return results.getFirst();
         String message = results.stream().map(SpeechResult::getMessage).filter(java.util.Objects::nonNull)
@@ -140,17 +130,10 @@ public class UnifiedConversationEngine {
     }
 
     private boolean answersPendingField(EventPatch event, String waitingForField) {
-        EventFields fields = event.fields();
-        return switch (waitingForField) {
-            case "category" -> fields.category() != null || fields.subcategory() != null;
-            case "sourceAccount" -> fields.sourceAccount() != null;
-            case "sourceBalance" -> fields.sourceBalance() != null;
-            case "creditLimit" -> fields.creditLimit() != null;
-            case "creditCardDueDay" -> fields.creditCardDueDay() != null;
-            case "amount" -> fields.amount() != null;
-            case "spentAt", "transactionDate" -> fields.transactionDate() != null;
-            default -> false;
-        };
+        if (waitingForField == null) return false;
+        Map<String, Object> facts = event.fields().asMap();
+        if ("spentAt".equals(waitingForField)) return facts.containsKey("transactionDate");
+        return facts.containsKey(waitingForField);
     }
 
     private SpeechResult command(String command, ConversationContext context) {
@@ -166,51 +149,42 @@ public class UnifiedConversationEngine {
         return SpeechResult.info(messages.gettingStarted(context.getLocale()));
     }
 
-    private void validate(TurnInterpretation turn) {
+    private void validate(TurnInterpretation turn, ConversationContext context) {
         if (turn == null || turn.turnType() == null) throw new IllegalArgumentException("Interpreter omitted turnType");
         for (EventPatch event : turn.events()) {
-            Object amount = event.fields().amount();
-            if (amount != null) {
-                try {
-                    if (new java.math.BigDecimal(amount.toString().replace(",", "")).signum() <= 0)
-                        throw new IllegalArgumentException("Amount must be positive");
-                } catch (NumberFormatException invalid) {
-                    throw new IllegalArgumentException("Interpreter returned a non-numeric amount", invalid);
-                }
-            }
+            EventCapability capability = extensions.event(tenantId(context), event.eventType()).orElse(null);
+            if (capability == null) continue;
+            capability.fieldTypes().forEach((field, type) -> {
+                Object value = event.fields().asMap().get(field);
+                if (value != null && "number".equals(type) && !(value instanceof Number))
+                    throw new IllegalArgumentException("Interpreter returned a non-numeric value for " + field);
+            });
         }
     }
 
     private SpeechResult deterministicTurn(String text, ConversationContext context) {
         String normalized = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);
         if (!context.isInFollowup() && HELP_COMMANDS.contains(normalized)) {
-            AiCallTelemetry.avoided("help_command");
             return SpeechResult.info(messages.gettingStarted(context.getLocale()));
         }
         if (context.isInFollowup() && Set.of("skip", "later", "not sure", "தவிர்").contains(normalized)) {
             context.reset();
-            AiCallTelemetry.avoided("conversation_control");
             return SpeechResult.info(messages.skipped(context.getLocale()));
         }
         if (context.isInFollowup() && Set.of("cancel", "stop", "ரத்து").contains(normalized)) {
             context.reset();
-            AiCallTelemetry.avoided("conversation_control");
             return SpeechResult.info(messages.cancelled(context.getLocale()));
         }
         if (!context.isInFollowup()) return null;
         String field = context.getWaitingForField();
-        if (!Set.of("amount", "sourceBalance", "creditLimit", "creditCardDueDay").contains(field)) return null;
-        BigDecimal value = HumanAmountParser.parse(text).orElse(null);
+        EventCapability capability = extensions.event(tenantId(context), context.getActiveIntent()).orElse(null);
+        if (capability == null || !"number".equals(capability.fieldTypes().get(field))) return null;
+        java.math.BigDecimal value = parsePositiveDecimal(text);
         if (value == null || value.signum() < 0) return null;
-        if ("creditCardDueDay".equals(field)
-                && (value.stripTrailingZeros().scale() > 0 || value.compareTo(BigDecimal.ONE) < 0
-                || value.compareTo(BigDecimal.valueOf(31)) > 0)) return null;
-        Object fieldValue = "creditCardDueDay".equals(field) ? value.intValue() : value;
-        EventPatch patch = new EventPatch(null, context.getActiveIntent(), Map.of(field, fieldValue),
-                List.of(), List.of(), List.of(new FieldEvidence(field, fieldValue.toString(), text, 1.0)));
+        EventPatch patch = new EventPatch(null, context.getActiveIntent(), Map.of(field, value),
+                List.of(), List.of(), List.of(new FieldEvidence(field, value.toString(), text, 1.0)));
         TurnInterpretation turn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT,
                 context.getActiveIntent(), context.getLocale(), null, List.of(patch), null, QueryPeriod.NONE, List.of(), 1.0);
-        AiCallTelemetry.avoided("pending_numeric_answer");
         SpeechResult result = execute(turn, text, context);
         syncPendingState(context, turn);
         return result;
@@ -230,13 +204,27 @@ public class UnifiedConversationEngine {
         else if (turn.language().equalsIgnoreCase("en-IN")) context.setLocale("en-IN");
     }
 
-    private List<Map<String, Object>> accountContext(Long userId) {
-        return containerService.getActiveContainers(userId).stream().map(this::account).toList();
+    private Long tenantId(ConversationContext context) {
+        Object configured = context.getMetadata() == null ? null : context.getMetadata().get("tenantId");
+        if (configured instanceof Number number) return number.longValue();
+        return context.getUserId() == null ? 1L : context.getUserId();
     }
 
-    private Map<String, Object> account(StateContainerEntity account) {
-        return Map.of("id", account.getId(), "name", account.getName(), "type", account.getContainerType(),
-                "balanceKnown", account.getCurrentValue() != null);
+    private java.math.BigDecimal parsePositiveDecimal(String text) {
+        if (text == null) return null;
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?i)(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)").matcher(text);
+        if (!matcher.find()) return null;
+        try { return new java.math.BigDecimal(matcher.group(1).replace(",", "")); }
+        catch (NumberFormatException ignored) { return null; }
+    }
+
+    private SpeechResult toSpeechResult(com.apps.deen_sa.extension.api.CapabilityResult result) {
+        SpeechStatus status;
+        try { status = SpeechStatus.valueOf(result.status()); }
+        catch (Exception ignored) { status = SpeechStatus.UNKNOWN; }
+        return SpeechResult.builder().status(status).message(result.message()).needFollowup(result.followup())
+                .missingFields(result.missingFields()).partial(result.partial()).savedEntity(result.savedEntity())
+                .actions(result.actions().stream().map(value -> new ResponseAction(value.id(), value.title())).toList()).build();
     }
 
     private void appendTurn(ConversationContext context, String role, String text) {

@@ -1,8 +1,7 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.config.ApplicationProperties;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,12 +12,21 @@ import java.util.Map;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Log4j2
 public class WhatsAppReplySender {
 
     private final RestTemplate restTemplate;
-    private final ApplicationProperties properties;
+    private final String apiBaseUrl;
+    private final String phoneNumberId;
+    private final String accessToken;
+
+    public WhatsAppReplySender(RestTemplate restTemplate,
+            @Value("${whatsapp.api-base-url:https://graph.facebook.com}") String apiBaseUrl,
+            @Value("${whatsapp.phone-number-id:}") String phoneNumberId,
+            @Value("${whatsapp.access-token:}") String accessToken) {
+        this.restTemplate = restTemplate; this.apiBaseUrl = apiBaseUrl;
+        this.phoneNumberId = phoneNumberId; this.accessToken = accessToken;
+    }
 
     public void sendTextReply(String to, String message) {
 
@@ -80,13 +88,13 @@ public class WhatsAppReplySender {
     private void sendPayload(String to, String description, Map<String, Object> payload) {
 
         String url =
-                properties.whatsapp().apiBaseUrl() + "/v19.0/"
-                    + properties.whatsapp().phoneNumberId()
+                apiBaseUrl + "/v19.0/"
+                    + phoneNumberId
                         + "/messages";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(properties.whatsapp().accessToken());
+        headers.setBearerAuth(accessToken);
 
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(payload, headers);

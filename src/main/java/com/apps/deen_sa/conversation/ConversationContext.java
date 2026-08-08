@@ -8,7 +8,7 @@ import com.apps.deen_sa.conversation.interpretation.PendingEvent;
 import com.apps.deen_sa.conversation.interpretation.ConversationTurn;
 
 @Data
-public class ConversationContext {
+public class ConversationContext implements com.apps.deen_sa.extension.api.CapabilityContext {
 
     private Long sessionId;
     private Long userId = 1L;
@@ -19,12 +19,11 @@ public class ConversationContext {
 
     private Long activeTransactionId;
 
-    // Which handler currently owns the conversation?
-    // e.g., "EXPENSE", "ACCOUNT_TRANSFER", "INVESTMENT"
+    // Namespaced capability currently owning the conversation.
     private String activeIntent;
 
     // For multi-turn follow-up:
-    // e.g., ["category"], ["paymentMethod"], ["accountSource"]
+    // Extension-defined field identifier.
     private String waitingForField;
 
     // The partial DTO that needs to be completed

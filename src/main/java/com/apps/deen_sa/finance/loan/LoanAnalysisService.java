@@ -1,11 +1,11 @@
 package com.apps.deen_sa.finance.loan;
 
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.llm.impl.LoanQueryExplainer;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechResult;
-import com.apps.deen_sa.core.state.StateChangeRepository;
-import com.apps.deen_sa.core.state.StateContainerRepository;
+import com.apps.deen_sa.finance.persistence.FinanceAnalyticsRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,11 +20,11 @@ public class LoanAnalysisService {
 
     private final StateContainerRepository valueContainerRepo;
 
-    private final StateChangeRepository transactionRepo;
+    private final FinanceAnalyticsRepository transactionRepo;
 
     private final LoanQueryExplainer llm;
 
-    public LoanAnalysisService(StateContainerRepository valueContainerRepo, StateChangeRepository transactionRepo, LoanQueryExplainer llm) {
+    public LoanAnalysisService(StateContainerRepository valueContainerRepo, FinanceAnalyticsRepository transactionRepo, LoanQueryExplainer llm) {
         this.valueContainerRepo = valueContainerRepo;
         this.transactionRepo = transactionRepo;
         this.llm = llm;

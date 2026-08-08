@@ -11,17 +11,18 @@ public class MutationAuthorizationPolicy {
     public boolean isAuthorized(TurnInterpretation turn, String currentMessage) {
         if (turn.turnType() != TurnType.NEW_EVENT && turn.turnType() != TurnType.NEW_EVENTS) return true;
         for (EventPatch event : turn.events()) {
-            // Account setup records declared state (balance, limit, outstanding), not a money movement.
-            // Authorize it from the complete current utterance, never from a transaction amount or history.
-            if ("ACCOUNT_SETUP".equalsIgnoreCase(event.eventType())) {
-                if (!isGrounded(event.fields().rawText(), currentMessage)) return false;
-                continue;
+            Object rawValue = event.fields().asMap().get("rawText");
+            String groundedRawInput = rawValue == null ? null : rawValue.toString();
+            if (groundedRawInput != null && !isGrounded(groundedRawInput, currentMessage)) return false;
+            for (var fact : event.fields().asMap().entrySet()) {
+                if (!(fact.getValue() instanceof Number)) continue;
+                FieldEvidence evidence = event.evidence().stream()
+                        .filter(item -> item != null && fact.getKey().equals(item.field())).findFirst().orElse(null);
+                boolean separatelyGrounded = evidence != null && isGrounded(evidence.evidence(), currentMessage);
+                boolean groundedByRawInput = groundedRawInput != null
+                        && isGrounded(String.valueOf(fact.getValue()), groundedRawInput);
+                if (!separatelyGrounded && !groundedByRawInput) return false;
             }
-            if (event.fields().amount() == null) continue;
-            FieldEvidence amountEvidence = event.evidence().stream()
-                    .filter(item -> item != null && "amount".equals(item.field()))
-                    .findFirst().orElse(null);
-            if (amountEvidence == null || !isGrounded(amountEvidence.evidence(), currentMessage)) return false;
         }
         return true;
     }

@@ -1,7 +1,7 @@
-package com.apps.deen_sa.core.mutation.strategy;
+package com.apps.deen_sa.finance.legacy.mutation.strategy;
 
 import com.apps.deen_sa.dto.StateMutationCommand;
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 
 public interface StateMutationStrategy {
 

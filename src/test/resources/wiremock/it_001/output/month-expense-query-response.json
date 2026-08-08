@@ -1,4 +1,5 @@
 {
   "status": "INFO",
-  "message": "You spent INR 23,700 this month. Housing accounts for the full amount, with rent contributing about 68% of your spending."
+  "message": "You spent a total of ₹23700 this month.",
+  "needFollowup": false
 }

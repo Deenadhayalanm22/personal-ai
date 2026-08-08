@@ -1,6 +1,6 @@
 {
   "status": "SAVED",
-  "message": "Saved successfully.",
+  "message": "Added ₹4200 for Housing.",
   "needFollowup": false,
   "savedEntity": {
     "userId": "1",
@@ -15,11 +15,11 @@
     "timestamp": "2026-08-04T18:30:00Z",
     "rawText": "Bought a small table for home from IKEA online for 4200 using credit card",
     "details": {},
-    "sourceContainerId": null,
+    "sourceContainerId": 2,
     "targetContainerId": null,
     "tags": ["home", "table", "online"],
     "completenessLevel": "OPERATIONAL",
-    "financiallyApplied": false,
-    "needsEnrichment": true
+    "financiallyApplied": true,
+    "needsEnrichment": false
   }
 }

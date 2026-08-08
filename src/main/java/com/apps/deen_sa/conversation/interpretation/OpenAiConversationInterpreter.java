@@ -1,86 +1,69 @@
 package com.apps.deen_sa.conversation.interpretation;
 
-import com.apps.deen_sa.config.ApplicationProperties;
+import com.apps.deen_sa.extension.api.EventCapability;
+import com.apps.deen_sa.extension.runtime.ExtensionCatalog;
+import com.apps.deen_sa.llm.AiCallTelemetry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
-import com.openai.models.responses.StructuredResponse;
-import com.openai.models.responses.StructuredResponseCreateParams;
-import lombok.RequiredArgsConstructor;
+import com.openai.core.JsonValue;
+import com.openai.models.responses.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.apps.deen_sa.llm.AiCallTelemetry;
 
+import java.util.*;
+
+/** OpenAI adapter with a tenant-specific schema assembled only from enabled extensions. */
 @Service
-@RequiredArgsConstructor
 public class OpenAiConversationInterpreter implements ConversationInterpreter {
-    private static final String SYSTEM_PROMPT = """
-            Interpret one multilingual bookkeeping turn (including English, Tamil, and romanized Tamil) into JSON.
-            Never invent facts or authorize database changes. Current input can answer lastQuestion; prefer
-            ANSWER_TO_PENDING_EVENT for that case. NEW_EVENT means a distinct activity stated now.
+    private static final String CORE_PROMPT = """
+            Interpret one multilingual operational turn into the response schema. Never invent facts, authorize a
+            mutation, or apply a business rule. Every non-null fact needs exact evidence copied from the current
+            message. Context may resolve a pending event but cannot create a new event by itself.
 
-            Shape:
-            {"turnType":"NEW_EVENT|ANSWER_TO_PENDING_EVENT|CORRECTION|COMMAND|QUERY|NEW_EVENTS|AMBIGUOUS",
-             "intent":"EXPENSE|INCOME|TRANSFER|LIABILITY_PAYMENT|ACCOUNT_SETUP|ASSET_BUY|ASSET_SELL|QUERY|UNKNOWN",
-             "language":"en-IN|ta-IN|ta-Latn|other",
-             "targetEventId":null,"events":[{"eventId":null,"eventType":"EXPENSE","fields":{},
-             "unresolvedFields":[],"ambiguities":[],"evidence":[{"field":"amount","value":"35","evidence":"35","confidence":0.99}]}],
-             "command":null,"query":"NONE",
-             "ambiguities":[],"confidence":0.0}
+            Use only enabled event types and declared fields. Return AMBIGUOUS with no events when multiple domains
+            plausibly match or evidence is insufficient. Commands are HELP, SKIP_PENDING, CANCEL_PENDING and
+            UNDO_LAST. NEW_EVENT means a distinct occurrence stated now. Query period is NONE for non-query turns.
 
-            Financial fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount,
-            sourceBalance, creditLimit,
-            creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
-            Rules:
-            - Unknown fields are null; never use placeholder strings or invented dates.
-            - Every non-null field needs exact supporting evidence copied from the CURRENT message. Context evidence may
-              resolve a pending event but must never create a new event.
-            - A NEW_EVENT amount must be explicitly evidenced in the current message.
-            - Existing accounts are candidates only. Set sourceAccount only when stated now or answering that question.
-              Canonical payment-source mapping: UPI, bank transfer, debit card, FASTag linked to bank, and auto-debit
-              from bank => BANK_ACCOUNT; cash => CASH; credit card or card EMI => CREDIT_CARD; wallet => WALLET.
-              When any payment source is explicit, ALWAYS emit sourceAccount and copy the exact payment phrase into its
-              evidence. This mapping applies equally to English, Tamil, and romanized Tamil.
-            - Account declarations and setup requests are NEW_EVENT with intent and eventType ACCOUNT_SETUP. Examples:
-              "create my HDFC salary bank account with balance 20000", "add an ICICI credit card with a 1 lakh
-              limit", and "என் வங்கி கணக்கில் 40000 இருப்பு உள்ளது". Account balances, outstanding amounts, limits,
-              and due days are setup attributes, NOT transaction amounts. For ACCOUNT_SETUP, leave amount null and
-              place the complete current message in rawText; the account setup handler owns detailed extraction and
-              follow-up. Never return AMBIGUOUS merely because a setup sentence contains a balance.
-            - Incoming money is NEW_EVENT with intent and eventType INCOME. This includes salary, customer receipts,
-              refunds, interest, gifts, and any other money credited to the user. Put the receiving account's exact
-              stated name in destinationAccount. For example, "salary credited to my HDFC salary account" means
-              destinationAccount="HDFC salary account". Never put the receiving account in sourceAccount.
-            - Paying a credit-card bill or loan is NEW_EVENT with intent and eventType LIABILITY_PAYMENT, never
-              EXPENSE. Examples: "pay my HDFC card bill from my salary account", "credit card payment", "clear the
-              SBI card outstanding", and "pay my loan EMI". Buying goods or services USING a card remains EXPENSE.
-              Preserve the exact named source and liability from the current message in rawText; the liability-payment
-              handler performs detailed extraction and exact container resolution.
-            - Use broad category and specific subcategory. Resolve relative dates with timezone.
-            - query is always required. Use NONE for non-query turns. Questions about existing data are QUERY with no
-              events and the matching canonical period. Examples: "today"/"இன்று"/"inniku" => TODAY;
-              "this month"/"இந்த மாதம்"/"intha month" => THIS_MONTH.
-            - Greetings/help are COMMAND HELP. Controls: SKIP_PENDING, CANCEL_PENDING, UNDO_LAST.
+            ENABLED EXTENSION CONTRACTS:
             """;
-
     private final OpenAIClient client;
     private final ObjectMapper mapper;
-    private final ApplicationProperties properties;
+    private final ExtensionCatalog extensions;
+    private final String model;
+    private final String escalationModel;
+    private final double escalationConfidence;
 
-    @Override
-    public TurnInterpretation interpret(String userMessage, InterpretationContext context) {
+    public OpenAiConversationInterpreter(OpenAIClient client, ObjectMapper mapper, ExtensionCatalog extensions,
+            @Value("${openai.model:gpt-4.1-mini}") String model,
+            @Value("${openai.escalation-model:gpt-4.1-mini}") String escalationModel,
+            @Value("${openai.escalation-confidence:0.55}") double escalationConfidence) {
+        this.client = client;
+        this.mapper = mapper;
+        this.extensions = extensions;
+        this.model = model;
+        this.escalationModel = escalationModel;
+        this.escalationConfidence = escalationConfidence;
+    }
+
+    @Override public TurnInterpretation interpret(String userMessage, InterpretationContext context) {
         try {
-            String input = mapper.writeValueAsString(java.util.Map.of(
-                    "userMessage", userMessage,
-                    "context", context
-            ));
-            String instructions = SYSTEM_PROMPT + pendingInstruction(context);
-            TurnInterpretation primary = callModel(input, instructions, properties.openai().model(),
-                    "conversation_interpretation");
-            String escalationModel = properties.openai().escalationModel();
-            double confidence = primary.confidence() == null ? 0 : primary.confidence();
-            if (confidence < properties.openai().escalationConfidence()
-                    && escalationModel != null && !escalationModel.isBlank()
-                    && !escalationModel.equals(properties.openai().model())) {
-                return callModel(input, instructions, escalationModel, "conversation_interpretation_escalation");
+            Long tenantId = context.userId() == null ? 1L : context.userId();
+            Collection<EventCapability> capabilities = extensions.enabledEvents(tenantId);
+            String input = mapper.writeValueAsString(Map.of("userMessage", userMessage, "context", context));
+            String instructions = CORE_PROMPT + extensions.interpretationInstructions(tenantId) + pendingInstruction(context);
+            RouteWire route = callRouter(input, instructions, model, capabilities);
+            if (route.selectedEventType() == null || route.selectedEventType().isBlank()) return routeOnly(route);
+            EventCapability selected = capabilities.stream()
+                    .filter(value -> value.eventType().equalsIgnoreCase(route.selectedEventType())).findFirst().orElse(null);
+            if (selected == null) return ambiguous(route, "Selected capability is not enabled for this tenant");
+            String extractionInstructions = instructions + "\nSELECTED CAPABILITY: " + selected.eventType()
+                    + "\n" + selected.extractionInstructions();
+            TurnInterpretation primary = callModel(input, extractionInstructions, model,
+                    "conversation_extraction", List.of(selected));
+            if ((primary.confidence() == null ? 0 : primary.confidence()) < escalationConfidence
+                    && escalationModel != null && !escalationModel.isBlank() && !escalationModel.equals(model)) {
+                return callModel(input, extractionInstructions, escalationModel,
+                        "conversation_extraction_escalation", List.of(selected));
             }
             return primary;
         } catch (Exception exception) {
@@ -88,46 +71,140 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
         }
     }
 
-    private TurnInterpretation callModel(String input, String instructions, String model, String purpose) {
-        long startedNanos = System.nanoTime();
+    private RouteWire callRouter(String input, String instructions, String model,
+                                 Collection<EventCapability> capabilities) {
+        long started = System.nanoTime();
         try {
-            StructuredResponseCreateParams<TurnInterpretation> params = com.openai.models.responses.ResponseCreateParams.builder()
-                    .model(model)
-                    .instructions(instructions)
-                    .input(input)
-                    .text(TurnInterpretation.class)
-                    .build();
-            StructuredResponse<TurnInterpretation> response = client.responses().create(params);
-            response.usage().ifPresentOrElse(usage -> AiCallTelemetry.success(
-                            purpose, model, usage.inputTokens(),
-                            usage.inputTokensDetails().cachedTokens(), usage.outputTokens(), startedNanos),
-                    () -> AiCallTelemetry.success(purpose, model, 0, 0, 0, startedNanos));
-            return response.output().stream()
-                    .flatMap(item -> item.message().stream())
-                    .flatMap(message -> message.content().stream())
-                    .flatMap(content -> content.outputText().stream())
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("Interpreter returned no structured output"));
+            ResponseFormatTextJsonSchemaConfig.Schema.Builder schema = ResponseFormatTextJsonSchemaConfig.Schema.builder();
+            routingSchema(capabilities).forEach((key, value) -> schema.putAdditionalProperty(key, JsonValue.from(value)));
+            ResponseFormatTextJsonSchemaConfig format = ResponseFormatTextJsonSchemaConfig.builder()
+                    .name("extension-route").schema(schema.build()).strict(true).build();
+            Response response = client.responses().create(ResponseCreateParams.builder().model(model)
+                    .instructions(instructions + "\nSelect at most one enabled capability. Do not extract event facts yet.")
+                    .input(input).text(ResponseTextConfig.builder().format(format).build()).build());
+            response.usage().ifPresentOrElse(usage -> AiCallTelemetry.success("conversation_routing", model,
+                            usage.inputTokens(), usage.inputTokensDetails().cachedTokens(), usage.outputTokens(), started),
+                    () -> AiCallTelemetry.success("conversation_routing", model, 0, 0, 0, started));
+            String json = response.output().stream().flatMap(item -> item.message().stream())
+                    .flatMap(message -> message.content().stream()).flatMap(content -> content.outputText().stream())
+                    .map(ResponseOutputText::text).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Router returned no output"));
+            return mapper.readValue(json, RouteWire.class);
         } catch (Exception exception) {
-            AiCallTelemetry.failure(purpose, model, startedNanos);
-            if (exception instanceof RuntimeException runtimeException) throw runtimeException;
+            AiCallTelemetry.failure("conversation_routing", model, started);
+            if (exception instanceof RuntimeException runtime) throw runtime;
+            throw new IllegalStateException("Routing model call failed", exception);
+        }
+    }
+
+    private Map<String, Object> routingSchema(Collection<EventCapability> capabilities) {
+        List<String> eventTypes = capabilities.stream().map(EventCapability::eventType).distinct().sorted().toList();
+        return object(Map.of(
+                "turnType", enumSchema(Arrays.stream(TurnType.values()).map(Enum::name).toList()),
+                "selectedEventType", eventTypes.isEmpty() ? nullable("string")
+                        : Map.of("anyOf", List.of(enumSchema(eventTypes), Map.of("type", "null"))),
+                "language", nullable("string"), "command", nullable("string"),
+                "query", enumSchema(Arrays.stream(QueryPeriod.values()).map(Enum::name).toList()),
+                "ambiguities", array(string()), "confidence", nullable("number")),
+                List.of("turnType", "selectedEventType", "language", "command", "query", "ambiguities", "confidence"));
+    }
+
+    private TurnInterpretation routeOnly(RouteWire route) {
+        TurnType type = TurnType.valueOf(route.turnType());
+        QueryPeriod query = route.query() == null ? QueryPeriod.NONE : QueryPeriod.valueOf(route.query());
+        return new TurnInterpretation(type, route.selectedEventType(), route.language(), null, List.of(),
+                route.command(), query, route.ambiguities(), route.confidence());
+    }
+
+    private TurnInterpretation ambiguous(RouteWire route, String reason) {
+        List<String> ambiguities = new ArrayList<>(route.ambiguities() == null ? List.of() : route.ambiguities());
+        ambiguities.add(reason);
+        return new TurnInterpretation(TurnType.AMBIGUOUS, null, route.language(), null, List.of(), null,
+                QueryPeriod.NONE, ambiguities, route.confidence());
+    }
+
+    private TurnInterpretation callModel(String input, String instructions, String model, String purpose,
+                                         Collection<EventCapability> capabilities) {
+        long started = System.nanoTime();
+        try {
+            ResponseFormatTextJsonSchemaConfig.Schema.Builder schema = ResponseFormatTextJsonSchemaConfig.Schema.builder();
+            responseSchema(capabilities).forEach((key, value) -> schema.putAdditionalProperty(key, JsonValue.from(value)));
+            ResponseFormatTextJsonSchemaConfig format = ResponseFormatTextJsonSchemaConfig.builder()
+                    .name("extension-turn").schema(schema.build()).strict(true).build();
+            ResponseCreateParams params = ResponseCreateParams.builder().model(model).instructions(instructions).input(input)
+                    .text(ResponseTextConfig.builder().format(format).build()).build();
+            Response response = client.responses().create(params);
+            response.usage().ifPresentOrElse(usage -> AiCallTelemetry.success(purpose, model, usage.inputTokens(),
+                            usage.inputTokensDetails().cachedTokens(), usage.outputTokens(), started),
+                    () -> AiCallTelemetry.success(purpose, model, 0, 0, 0, started));
+            String json = response.output().stream().flatMap(item -> item.message().stream())
+                    .flatMap(message -> message.content().stream()).flatMap(content -> content.outputText().stream())
+                    .map(ResponseOutputText::text)
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Interpreter returned no output"));
+            return fromWire(mapper.readValue(json, TurnWire.class));
+        } catch (Exception exception) {
+            AiCallTelemetry.failure(purpose, model, started);
+            if (exception instanceof RuntimeException runtime) throw runtime;
             throw new IllegalStateException("Model call failed", exception);
         }
+    }
+
+    private TurnInterpretation fromWire(TurnWire wire) {
+        List<EventPatch> events = wire.events() == null ? List.of() : wire.events().stream()
+                .map(value -> new EventPatch(value.eventId(), value.eventType(), value.fields(), value.unresolvedFields(),
+                        value.ambiguities(), value.evidence())).toList();
+        TurnType type = TurnType.valueOf(wire.turnType());
+        QueryPeriod query = wire.query() == null ? QueryPeriod.NONE : QueryPeriod.valueOf(wire.query());
+        return new TurnInterpretation(type, wire.intent(), wire.language(), wire.targetEventId(), events, wire.command(),
+                query, wire.ambiguities(), wire.confidence());
+    }
+
+    private Map<String, Object> responseSchema(Collection<EventCapability> capabilities) {
+        Map<String, Object> fields = new TreeMap<>();
+        capabilities.forEach(capability -> capability.fieldTypes().forEach((name, type) -> fields.put(name, nullable(type))));
+        List<String> fieldNames = new ArrayList<>(fields.keySet());
+        Map<String, Object> evidence = object(Map.of("field", string(), "value", string(), "evidence", string(),
+                "confidence", nullable("number")), List.of("field", "value", "evidence", "confidence"));
+        Map<String, Object> event = object(Map.of(
+                "eventId", nullable("string"),
+                "eventType", enumSchema(capabilities.stream().map(EventCapability::eventType).distinct().sorted().toList()),
+                "fields", object(fields, fieldNames),
+                "unresolvedFields", array(string()), "ambiguities", array(string()), "evidence", array(evidence)),
+                List.of("eventId", "eventType", "fields", "unresolvedFields", "ambiguities", "evidence"));
+        return object(Map.of(
+                "turnType", enumSchema(Arrays.stream(TurnType.values()).map(Enum::name).toList()),
+                "intent", nullable("string"), "language", nullable("string"), "targetEventId", nullable("string"),
+                "events", array(event), "command", nullable("string"),
+                "query", enumSchema(Arrays.stream(QueryPeriod.values()).map(Enum::name).toList()),
+                "ambiguities", array(string()), "confidence", nullable("number")),
+                List.of("turnType", "intent", "language", "targetEventId", "events", "command", "query", "ambiguities", "confidence"));
+    }
+
+    private Map<String, Object> object(Map<String, Object> properties, List<String> required) {
+        return Map.of("type", "object", "properties", properties, "required", required, "additionalProperties", false);
+    }
+    private Map<String, Object> string() { return Map.of("type", "string"); }
+    private Map<String, Object> array(Object items) { return Map.of("type", "array", "items", items); }
+    private Map<String, Object> enumSchema(List<String> values) {
+        return values.isEmpty() ? Map.of("type", "string", "enum", List.of("UNKNOWN")) : Map.of("type", "string", "enum", values);
+    }
+    private Map<String, Object> nullable(String type) {
+        Map<String, Object> typed = "array".equals(type) ? array(string()) : Map.of("type", type);
+        return Map.of("anyOf", List.of(typed, Map.of("type", "null")));
     }
 
     private String pendingInstruction(InterpretationContext context) {
         if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return "";
         PendingEvent pending = context.pendingEvents().getLast();
         if (pending.unresolvedFields() == null || pending.unresolvedFields().isEmpty()) return "";
-        String field = pending.unresolvedFields().getFirst();
-        return """
-
-                CURRENT TURN OVERRIDE: A transaction is pending and needs field `%s`. Interpret the latest message
-                primarily as ANSWER_TO_PENDING_EVENT targeting that event. A short noun phrase or description can be a
-                complete answer and does not need an amount or transaction verb. For category, examples such as
-                "coffee and snacks", "மாலை சிற்றுண்டி", or "petrol ku" are category answers. Use NEW_EVENT only when
-                the current message clearly states a separate activity with its own amount. If the field is not answered,
-                return AMBIGUOUS without inventing values.
-                """.formatted(field);
+        return "\nCurrent pending event is " + pending.eventType() + " and needs field "
+                + pending.unresolvedFields().getFirst() + ". Prefer ANSWER_TO_PENDING_EVENT.\n";
     }
+
+    private record TurnWire(String turnType, String intent, String language, String targetEventId,
+                            List<EventWire> events, String command, String query, List<String> ambiguities, Double confidence) { }
+    private record EventWire(String eventId, String eventType, Map<String, Object> fields,
+                             List<String> unresolvedFields, List<String> ambiguities, List<FieldEvidence> evidence) { }
+    private record RouteWire(String turnType, String selectedEventType, String language, String command,
+                             String query, List<String> ambiguities, Double confidence) { }
 }

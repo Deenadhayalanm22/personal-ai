@@ -1,10 +1,12 @@
-# Personal AI Finance Application
+# Conversational Operations Platform
 
-Personal AI is a Java 21/Spring Boot conversational finance assistant. It accepts natural-language messages through WhatsApp or REST, uses an LLM for interpretation, and keeps financial calculation, authorization, persistence, and reporting deterministic in PostgreSQL.
+This project is evolving from a personal-finance application into a reusable conversational operations platform. It lets people record simple real-world work through WhatsApp voice or text instead of forms. Domain extensions provide business vocabulary and rules; the core provides conversation, extraction, follow-up questions, events, signed movements, auditing, and safe execution.
+
+The codebase is now a Maven modular monolith. It has a versioned extension API, tenant-scoped extension catalog, generic ledger, saree job-work extension, and a small grocery extension that proves a new business type can be added without changing core. The personal-finance behavior is exposed through the same capability runtime while its legacy projection is migrated incrementally.
 
 ## Product documentation
 
-The maintained product backlog and requirements live in **[docs/jira/README.md](docs/jira/README.md)**. It uses one stable hierarchy: Initiative → Epic → Story → Sub-task. Each story records status, priority, dependencies, plain-English requirements, and testable acceptance criteria.
+The maintained product backlog and requirements live in **[docs/jira/README.md](docs/jira/README.md)**. Separate initiatives cover the reusable core, personal expense extension, and saree job-work extension.
 
 ## 🚀 Quick Start
 
@@ -25,8 +27,8 @@ The maintained product backlog and requirements live in **[docs/jira/README.md](
    ```
 3. Build and run:
    ```bash
-   mvn clean install
-   mvn spring-boot:run
+   ./mvnw clean install
+   ./mvnw -pl application spring-boot:run
    ```
 
 ### Test the API
@@ -59,23 +61,23 @@ curl -X POST http://localhost:8080/api/v1/process \
 - **Mutation Audit Trail**: Balance changes are represented by `StateMutationEntity`
 - **User-Scoped Data Model**: User identifiers exist; production authorization remains tracked work
 
-### Package Structure
+### Module Structure
 ```
-com.apps.deen_sa
-├── core (Shared Kernel)
-│   ├── transaction
-│   └── value
-├── conversation (Speech & WhatsApp)
-├── finance
-│   ├── expense
-│   ├── loan
-│   ├── query
-│   └── account (+ strategy)
-├── llm (AI Integration)
-└── common (Utilities)
+personal-ai-parent
+├── modules/extension-api
+├── modules/platform-core
+├── modules/platform-conversation
+├── modules/adapter-observability
+├── modules/adapter-openai
+├── modules/adapter-whatsapp
+├── modules/adapter-postgres
+├── modules/extension-personal-finance
+├── modules/extension-saree-job-work
+├── modules/extension-grocery
+└── application
 ```
 
-The implementation is organized by conversation, core state/mutation, finance, and LLM domains.
+The application is the composition root. Business extensions depend on the neutral API and generic ledger; core does not depend on an extension.
 
 ## 📖 Use Case: Recording an Expense
 
@@ -110,7 +112,7 @@ mvn clean test
 mvn clean verify -Pintegration
 ```
 
-Financial writes must be deterministic, auditable, and idempotent. An unknown balance remains unknown (`null`), never zero. See EPIC-002 in the Jira documentation for the full product contract and acceptance criteria.
+Financial writes must be deterministic, auditable, and idempotent. An unknown balance remains unknown (`null`), never zero. See [FIN-EPIC-002](docs/jira/personal-expense/FIN-EPIC-002-correctness.md) for the extension's correctness contract.
 
 ---
 
@@ -129,7 +131,7 @@ mvn test -Dtest=ExpenseCompletenessEvaluatorTest
 
 ## 📊 Database schema
 
-Flyway migrations under `src/main/resources/db/migration/` define the durable PostgreSQL schema. Do not infer production safety from Hibernate's current development-time schema-update setting; replacing it with migration validation is tracked in STORY-033.
+Flyway migrations are packaged by their owner: platform tables in `platform-core`, channel/session tables in the relevant adapters, and finance tables/projections in `extension-personal-finance`. The application composition root does not package migrations itself.
 
 ## 🤖 LLM Integration
 

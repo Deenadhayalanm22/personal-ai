@@ -1,0 +1,27 @@
+package com.apps.deen_sa.extension.runtime;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+import java.util.Map;
+
+@Entity
+@Table(name = "extension_installation", uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "extension_id"}))
+@Getter @Setter
+public class ExtensionInstallationEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
+    @Column(name = "tenant_id", nullable = false) private Long tenantId;
+    @Column(name = "extension_id", nullable = false, length = 80) private String extensionId;
+    @Column(name = "extension_version", nullable = false, length = 40) private String extensionVersion;
+    @Column(nullable = false, length = 20) private String status;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(name = "configuration", columnDefinition = "jsonb")
+    private Map<String, Object> configuration;
+    @CreationTimestamp @Column(nullable = false, updatable = false) private Instant createdAt;
+    @UpdateTimestamp @Column(nullable = false) private Instant updatedAt;
+}

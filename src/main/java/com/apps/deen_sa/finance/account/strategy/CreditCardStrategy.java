@@ -1,9 +1,9 @@
 package com.apps.deen_sa.finance.account.strategy;
 
 import com.apps.deen_sa.dto.StateMutationCommand;
-import com.apps.deen_sa.core.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.finance.account.strategy.CreditSettlementStrategy;
-import com.apps.deen_sa.core.mutation.strategy.StateMutationStrategy;
+import com.apps.deen_sa.finance.legacy.mutation.strategy.StateMutationStrategy;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;

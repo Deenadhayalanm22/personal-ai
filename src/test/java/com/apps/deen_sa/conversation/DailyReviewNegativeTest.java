@@ -1,6 +1,6 @@
 package com.apps.deen_sa.conversation;
 
-import com.apps.deen_sa.core.state.CompletenessLevelEnum;
+import com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum;
 import com.apps.deen_sa.integration.AbstractIntegrationTestProperties;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -167,7 +167,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
             assertWaitingFor("sourceBalance");
         });
 
-        sendButton("wamid.expense-10", "answer:0", "Nothing due");
+        sendText("wamid.expense-10", "0");
         awaitState(() -> {
             assertThat(stateContainerRepository.findAll())
                     .filteredOn(account -> account.getContainerType().equals("CREDIT_CARD"))
@@ -199,8 +199,8 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
 
         String intro = chatText("wamid.flow-1", "Hi");
         assertThat(intro)
-                .contains("I can help you record everyday money activity")
-                .contains("I spent 500 on groceries");
+                .contains("I can help record operational activity")
+                .contains("Describe what happened naturally");
 
         String categoryQuestion = chatText("wamid.flow-2", "I spent 500");
         assertThat(categoryQuestion).contains("What was the ₹500 expense for?");
@@ -219,7 +219,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         // Reproduce the production failure deterministically: the interpreter fixture deliberately
         // returns a second ₹58 expense copied from history for this read-only question.
         String summary = chatText("wamid.flow-6", "what i spent today?");
-        assertThat(summary).contains("record this as a new money activity");
+        assertThat(summary).contains("record this as a new activity");
 
         String safeSummary = chatText("wamid.flow-7", "Show today's spending");
         assertThat(safeSummary).isEqualTo("You spent a total of ₹500 today.");

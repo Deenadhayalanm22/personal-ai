@@ -1,6 +1,6 @@
 {
   "status": "SAVED",
-  "message": "Saved successfully.",
+  "message": "Created hdfc credit card. Opening balance recorded.",
   "needFollowup": false,
   "savedEntity": {
     "ownerType": "USER",
@@ -18,7 +18,7 @@
     "closedAt": null,
     "lastActivityAt": null,
     "externalRefType": null,
-    "externalRefId": null,
+    "externalRefId": "hdfc credit card",
     "details": {
       "dueDay": 21
     },

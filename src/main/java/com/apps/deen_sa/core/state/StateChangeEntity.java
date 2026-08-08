@@ -1,4 +1,4 @@
-package com.apps.deen_sa.core.state;
+package com.apps.deen_sa.finance.legacy.state;
 
 import jakarta.persistence.*;
 import lombok.Getter;
