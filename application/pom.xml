@@ -10,15 +10,9 @@
     <name>personal-ai-application</name>
     <description>Conversational operations modular monolith</description>
     <dependencies>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>extension-api</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>platform-core</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>platform-conversation</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>adapter-openai</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>adapter-whatsapp</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>adapter-postgres</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>extension-personal-finance</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>extension-saree-job-work</artifactId></dependency>
-        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>extension-grocery</artifactId></dependency>
+        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>personal-ai-core</artifactId></dependency>
+        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>expense</artifactId></dependency>
+        <dependency><groupId>com.apps.deen-sa</groupId><artifactId>saree-work</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webflux</artifactId></dependency>

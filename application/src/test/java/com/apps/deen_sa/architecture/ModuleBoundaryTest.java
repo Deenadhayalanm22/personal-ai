@@ -39,8 +39,4 @@ class ModuleBoundaryTest {
             .that().resideInAnyPackage("..saree..")
             .should().dependOnClassesThat().resideInAnyPackage("..finance..", "..grocery..");
 
-    @ArchTest
-    static final ArchRule GROCERY_MUST_NOT_DEPEND_ON_OTHER_EXTENSIONS = noClasses()
-            .that().resideInAnyPackage("..grocery..")
-            .should().dependOnClassesThat().resideInAnyPackage("..finance..", "..saree..");
 }
