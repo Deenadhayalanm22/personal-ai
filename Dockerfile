@@ -1,10 +1,10 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 COPY pom.xml .
+COPY core ./core
 COPY modules ./modules
 COPY application ./application
-COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn --batch-mode clean package -DskipTests
 
 FROM eclipse-temurin:21-jdk-alpine
 RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup

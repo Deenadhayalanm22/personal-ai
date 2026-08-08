@@ -138,7 +138,7 @@ The application uses OpenAI GPT-4.1 Mini for:
 
 ## 🔧 Configuration
 
-Main configuration in `src/main/resources/application.yaml`:
+Main configuration is in `application/src/main/resources/application.yaml`:
 - Database connection
 - OpenAI API settings
 - Server configuration
