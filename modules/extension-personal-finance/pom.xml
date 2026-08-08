@@ -21,43 +21,4 @@
         <dependency><groupId>com.openai</groupId><artifactId>openai-java</artifactId><version>4.6.1</version></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
     </dependencies>
-    <build>
-        <sourceDirectory>${project.basedir}/../../src/main/java</sourceDirectory>
-        <resources>
-            <resource>
-                <directory>${project.basedir}/../../src/main/resources</directory>
-                <includes><include>prompts/**</include><include>db/migration/V1__init.sql</include></includes>
-            </resource>
-            <resource><directory>${project.basedir}/src/main/resources</directory></resource>
-        </resources>
-        <plugins>
-            <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId>
-                <configuration><release>21</release>
-                    <includes>
-                        <include>com/apps/deen_sa/finance/**</include>
-                        <include>com/apps/deen_sa/core/state/**</include>
-                        <include>com/apps/deen_sa/core/mutation/**</include>
-                        <include>com/apps/deen_sa/llm/BaseLLMExtractor.java</include>
-                        <include>com/apps/deen_sa/llm/PromptLoader.java</include>
-                        <include>com/apps/deen_sa/llm/impl/**</include>
-                        <include>com/apps/deen_sa/config/ApplicationProperties.java</include>
-                        <include>com/apps/deen_sa/common/exception/**</include>
-                        <include>com/apps/deen_sa/dto/AccountSetupDto.java</include>
-                        <include>com/apps/deen_sa/dto/Asset*.java</include>
-                        <include>com/apps/deen_sa/dto/Expense*.java</include>
-                        <include>com/apps/deen_sa/dto/LiabilityPaymentDto.java</include>
-                        <include>com/apps/deen_sa/dto/PortfolioSummaryDto.java</include>
-                        <include>com/apps/deen_sa/dto/QueryResult.java</include>
-                        <include>com/apps/deen_sa/dto/SpendQuery.java</include>
-                        <include>com/apps/deen_sa/dto/StateMutationCommand.java</include>
-                        <include>com/apps/deen_sa/dto/TagMatchResult.java</include>
-                        <include>com/apps/deen_sa/dto/TimeRange.java</include>
-                    </includes>
-                    <annotationProcessorPaths>
-                        <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>1.18.34</version></path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

@@ -15,30 +15,4 @@
         <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-annotations</artifactId></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
     </dependencies>
-    <build>
-        <sourceDirectory>${project.basedir}/../../src/main/java</sourceDirectory>
-        <plugins>
-            <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId>
-                <configuration><release>21</release>
-                    <includes>
-                        <include>com/apps/deen_sa/conversation/ConversationContext.java</include>
-                        <include>com/apps/deen_sa/conversation/ConversationChannelGateway.java</include>
-                        <include>com/apps/deen_sa/conversation/AudioTranscriber.java</include>
-                        <include>com/apps/deen_sa/conversation/ConversationMessages.java</include>
-                        <include>com/apps/deen_sa/conversation/ResponseAction.java</include>
-                        <include>com/apps/deen_sa/conversation/SpeechHandler.java</include>
-                        <include>com/apps/deen_sa/conversation/SpeechResult.java</include>
-                        <include>com/apps/deen_sa/conversation/SpeechStatus.java</include>
-                        <include>com/apps/deen_sa/conversation/interpretation/**</include>
-                    </includes>
-                    <excludes>
-                        <exclude>com/apps/deen_sa/conversation/interpretation/OpenAiConversationInterpreter.java</exclude>
-                    </excludes>
-                    <annotationProcessorPaths>
-                        <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>1.18.34</version></path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
