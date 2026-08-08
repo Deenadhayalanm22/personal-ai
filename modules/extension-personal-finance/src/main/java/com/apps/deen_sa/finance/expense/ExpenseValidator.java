@@ -1,0 +1,20 @@
+package com.apps.deen_sa.finance.expense;
+
+import com.apps.deen_sa.dto.ExpenseDto;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ExpenseValidator {
+
+    public static List<String> findMissingFields(ExpenseDto dto) {
+        List<String> missing = new ArrayList<>();
+
+        if (dto.getAmount() == null) missing.add("amount");
+        if (dto.getCategory() == null || dto.getCategory().isBlank()) missing.add("category");
+        if (dto.getSourceAccount() == null) missing.add("sourceAccount");
+        if (dto.getTransactionDate() == null) missing.add("spentAt");
+
+        return missing;
+    }
+}

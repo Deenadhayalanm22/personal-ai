@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: deen-sa
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ws_personal_fin
+    username: ws_app_user
+    password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.json.format_mapper: jackson
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  model: ${OPENAI_MODEL:gpt-4.1-mini}
+  escalation-model: ${OPENAI_ESCALATION_MODEL:gpt-4.1-mini}
+  escalation-confidence: ${OPENAI_ESCALATION_CONFIDENCE:0.55}
+  transcription-model: ${OPENAI_TRANSCRIPTION_MODEL:gpt-4o-mini-transcribe}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - env
+          - health
+          - metrics
+
+whatsapp:
+  access-token: ${WHATSAPP_ACCESS_TOKEN:}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+  api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.type.descriptor.sql: OFF
+
+server:
+  port: ${PORT:8080}

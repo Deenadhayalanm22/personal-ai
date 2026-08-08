@@ -1,0 +1,25 @@
+{
+  "status": "SAVED",
+  "message": "Added ₹4200 for Housing.",
+  "needFollowup": false,
+  "savedEntity": {
+    "userId": "1",
+    "businessId": null,
+    "transactionType": "EXPENSE",
+    "amount": 4200,
+    "quantity": null,
+    "unit": null,
+    "category": "Housing",
+    "subcategory": "Furniture",
+    "mainEntity": "IKEA",
+    "timestamp": "2026-08-04T18:30:00Z",
+    "rawText": "Bought a small table for home from IKEA online for 4200 using credit card",
+    "details": {},
+    "sourceContainerId": 2,
+    "targetContainerId": null,
+    "tags": ["home", "table", "online"],
+    "completenessLevel": "OPERATIONAL",
+    "financiallyApplied": true,
+    "needsEnrichment": false
+  }
+}

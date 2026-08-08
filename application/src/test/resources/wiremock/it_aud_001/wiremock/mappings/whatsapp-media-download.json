@@ -1,0 +1,13 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/media/test-audio-media-id",
+    "headers": {"Authorization": {"equalTo": "Bearer test-access-token"}}
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "audio/ogg"},
+    "base64Body": "T2dnUwACdGVzdC12b2ljZS1ub3Rl"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v19.0/test-phone-id/messages",
+    "bodyPatterns": [{"matchesJsonPath": "$.type", "equalTo": "text"}]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "jsonBody": {"messages": [{"id": "wamid.live-text-reply"}]}
+  }
+}
