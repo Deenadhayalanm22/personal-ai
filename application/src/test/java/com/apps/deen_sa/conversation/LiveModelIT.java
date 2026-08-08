@@ -116,6 +116,173 @@ class LiveModelIT extends AbstractIntegrationTestProperties {
         System.out.println("==================================================================\n");
     }
 
+    @Test
+    void it_live_002() throws Exception {
+        requireRealApiKey();
+        System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
+        System.out.println("Model: " + modelName);
+
+        int message = 1;
+        String intro = chatText(id(message++), "Hi");
+        assertThat(intro)
+                .contains("I can help record operational activity through conversation")
+                .contains("Describe what happened naturally");
+
+        String paymentQuestion = chatText(id(message++), "I spent 500 on groceries");
+        assertThat(paymentQuestion).isEqualTo("How did you pay?");
+        assertWaitingFor("sourceAccount");
+        assertExpenseCount(1);
+
+        String balanceQuestion = chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(balanceQuestion)
+                .containsIgnoringCase("created My bank account")
+                .containsIgnoringCase("current balance");
+        assertWaitingFor("sourceBalance");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
+                    assertThat(account.getName()).isEqualTo("My bank account");
+                    assertThat(account.getContainerType()).isEqualTo("BANK_ACCOUNT");
+                    assertThat(account.getCurrentValue()).isNull();
+                }));
+
+        String setupConfirmation = chatText(id(message++), "10k");
+        assertThat(setupConfirmation).contains("500").contains("9500");
+        assertExpenseApplied(1, "500");
+        assertAccount("My bank account", "BANK_ACCOUNT", "9500", null, null);
+
+        assertRecorded(chatText(id(message++), "I spent 58 on curd and some ice cream through UPI"), "58");
+        assertExpenseApplied(2, "58");
+        assertAccount("My bank account", "BANK_ACCOUNT", "9442", null, null);
+
+        String firstSummary = chatText(id(message++), "What did I spend today?");
+        assertThat(firstSummary).contains("558");
+        assertExpenseCount(2);
+
+        scenario("English · complete sentence");
+        assertRecorded(chatText(id(message++), "Paid BESCOM electricity bill of 1850 using UPI"), "1850");
+        assertExpenseApplied(3, "1850");
+
+        scenario("Tamil · complete sentence");
+        assertRecorded(chatText(id(message++), "இன்று மளிகை பொருட்களுக்கு 230 ரூபாய் UPI மூலம் செலவு செய்தேன்"), "230");
+        assertExpenseApplied(4, "230");
+
+        scenario("Tanglish · complete sentence");
+        assertRecorded(chatText(id(message++), "Inniku bike petrol ku 350 rupees UPI la spend pannen"), "350");
+        assertExpenseApplied(5, "350");
+
+        scenario("English · sparse expense with category and payment follow-ups");
+        String categoryQuestion = chatText(id(message++), "I spent 260");
+        assertThat(categoryQuestion).contains("₹260").containsIgnoringCase("expense for");
+        assertWaitingFor("category");
+        String sparsePaymentQuestion = chatText(id(message++), "Coffee and snacks outside");
+        assertThat(sparsePaymentQuestion).isEqualTo("How did you pay?");
+        assertWaitingFor("sourceAccount");
+        assertRecorded(chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI"), "260");
+        assertExpenseApplied(6, "260");
+
+        scenario("Tamil · understood expense with missing payment source");
+        String tamilPaymentQuestion = chatText(id(message++), "நேற்று மின்சார கட்டணத்திற்கு 650 ரூபாய் செலவு செய்தேன்");
+        assertThat(tamilPaymentQuestion).isEqualTo("How did you pay?");
+        assertWaitingFor("sourceAccount");
+        assertRecorded(chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI"), "650");
+        assertExpenseApplied(7, "650");
+
+        scenario("Tanglish · missing amount, followed by amount and payment source");
+        String amountQuestion = chatText(id(message++), "Nethu office lunch ku spend pannen");
+        assertThat(amountQuestion).isEqualTo("How much did you spend?");
+        assertWaitingFor("amount");
+        assertExpenseCount(7);
+        String tanglishPaymentQuestion = chatText(id(message++), "450");
+        assertThat(tanglishPaymentQuestion).isEqualTo("How did you pay?");
+        assertWaitingFor("sourceAccount");
+        assertRecorded(chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI"), "450");
+        assertExpenseApplied(8, "450");
+
+        scenario("English · two expenses in one natural sentence");
+        String multiExpenseReply = chatText(id(message++), "Spent 80 on tea and 120 on auto using UPI");
+        assertRecorded(multiExpenseReply, "80");
+        assertRecorded(multiExpenseReply, "120");
+        assertExpenseApplied(10, "80");
+        assertExpenseApplied(10, "120");
+
+        scenario("English, Tamil, and Tanglish · read-only queries must not create expenses");
+        String englishSummary = chatText(id(message++), "What did I spend today?");
+        assertThat(englishSummary).contains("4548");
+        String tamilSummary = chatText(id(message++), "இன்று நான் எவ்வளவு செலவு செய்தேன்?");
+        assertThat(tamilSummary).contains("4548");
+        String tanglishSummary = chatText(id(message++), "Inniku naan evlo spend pannen?");
+        assertThat(tanglishSummary).contains("4548");
+
+        scenario("Ledger reconciliation · replies are not the accounting oracle");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll())
+                    .hasSize(10)
+                    .allSatisfy(expense -> {
+                        assertThat(expense.getTransactionType().name()).isEqualTo("EXPENSE");
+                        assertThat(expense.isFinanciallyApplied()).isTrue();
+                        assertThat(expense.getSourceContainerId()).isNotNull();
+                    });
+            assertThat(stateMutationRepository.findAll()).hasSize(10);
+            assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
+                assertThat(account.getContainerType()).isEqualTo("BANK_ACCOUNT");
+                assertThat(account.getCurrentValue()).isEqualByComparingTo("5452");
+            });
+            assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                assertThat(session.getActiveIntent()).isNull();
+                assertThat(session.getWaitingForField()).isNull();
+                assertThat(session.getPendingEvents()).isEmpty();
+            });
+        });
+
+        System.out.println("==================================================================\n");
+    }
+
+    @Test
+    void it_live_003() throws Exception {
+        requireRealApiKey();
+        System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
+        System.out.println("Model: " + modelName);
+
+        int message = 1;
+        String intro = chatText(id(message++), "Hi");
+        assertThat(intro)
+                .contains("I can help record operational activity through conversation")
+                .contains("Describe what happened naturally");
+
+        scenario("Explicit UPI on the first expense creates one provisional bank account");
+        String balanceQuestion = chatText(id(message++), "I spent 50 on groceries today from my upi");
+        assertThat(balanceQuestion)
+                .containsIgnoringCase("created My bank account")
+                .containsIgnoringCase("current balance");
+        assertWaitingFor("sourceBalance");
+        assertExpenseCount(1);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
+                    assertThat(account.getName()).isEqualTo("My bank account");
+                    assertThat(account.getContainerType()).isEqualTo("BANK_ACCOUNT");
+                    assertThat(account.getCurrentValue()).isNull();
+                }));
+
+        String setupConfirmation = chatText(id(message++), "10k");
+        assertThat(setupConfirmation).contains("50").contains("9950");
+        assertExpenseApplied(1, "50");
+        assertAccount("My bank account", "BANK_ACCOUNT", "9950", null, null);
+
+        scenario("Read-only total and persisted reconciliation");
+        assertThat(chatText(id(message++), "What did I spend today?")).contains("50");
+        assertExpenseCount(1);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateMutationRepository.findAll()).hasSize(1);
+            assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                assertThat(session.getActiveIntent()).isNull();
+                assertThat(session.getWaitingForField()).isNull();
+                assertThat(session.getPendingEvents()).isEmpty();
+            });
+        });
+
+        System.out.println("==================================================================\n");
+    }
+
     private String id(int sequence) {
         return "wamid.live-" + sequence;
     }

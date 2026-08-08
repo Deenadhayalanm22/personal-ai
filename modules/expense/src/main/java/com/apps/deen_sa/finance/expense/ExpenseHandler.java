@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.math.BigDecimal;
 import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.conversation.interpretation.EventPatch;
@@ -136,7 +137,8 @@ public class ExpenseHandler implements SpeechHandler {
             }
 
             repo.save(saved);
-
+            SpeechResult accountSetup = accountInitializationFollowup(saved, dto, ctx);
+            if (accountSetup != null) return accountSetup;
             ctx.reset();
 
             return expenseConfirmation(saved);
@@ -154,6 +156,8 @@ public class ExpenseHandler implements SpeechHandler {
 
             saved.setNeedsEnrichment(!saved.isFinanciallyApplied());
             repo.save(saved);
+            SpeechResult accountSetup = accountInitializationFollowup(saved, dto, ctx);
+            if (accountSetup != null) return accountSetup;
             ctx.reset();
 
             return expenseConfirmation(saved);
@@ -313,32 +317,37 @@ public class ExpenseHandler implements SpeechHandler {
         }
 
 
-        if (tx.getSourceContainerId() != null && !canApplyFinancialImpact(tx)) {
-            StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
-            if ("CREDIT_CARD".equals(source.getContainerType()) && source.getCapacityLimit() == null) {
-                ctx.setWaitingForField("creditLimit");
-                ctx.setPartialObject(dto);
-                return SpeechResult.followup(
-                        "I created " + source.getName() + ". What is its credit limit?",
-                        List.of("creditLimit"), dto,
-                        List.of(new ResponseAction("control:skip", "Not sure / later"))
-                );
-            }
-            ctx.setWaitingForField("sourceBalance");
-            ctx.setPartialObject(dto);
-            return SpeechResult.followup(
-                    "I created " + source.getName() + ". " + balanceQuestion(source),
-                    List.of("sourceBalance"),
-                    dto,
-                    List.of(new ResponseAction("control:skip", "Not sure / later"))
-            );
-        }
+        SpeechResult accountSetup = accountInitializationFollowup(tx, dto, ctx);
+        if (accountSetup != null) return accountSetup;
 
         // ----------------------------
         // Step K – Conversation complete
         // ----------------------------
         ctx.reset();
         return expenseConfirmation(tx);
+    }
+
+    private SpeechResult accountInitializationFollowup(StateChangeEntity tx, ExpenseDto dto,
+                                                       ConversationContext ctx) {
+        if (tx.getSourceContainerId() == null || canApplyFinancialImpact(tx)) return null;
+        StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
+        ctx.setActiveIntent("EXPENSE");
+        ctx.setActiveTransactionId(tx.getId());
+        ctx.setPartialObject(dto);
+        if ("CREDIT_CARD".equals(source.getContainerType()) && source.getCapacityLimit() == null) {
+            ctx.setWaitingForField("creditLimit");
+            return SpeechResult.followup(
+                    "I created " + source.getName() + ". What is its credit limit?",
+                    List.of("creditLimit"), dto,
+                    List.of(new ResponseAction("control:skip", "Not sure / later"))
+            );
+        }
+        ctx.setWaitingForField("sourceBalance");
+        return SpeechResult.followup(
+                "I created " + source.getName() + ". " + balanceQuestion(source),
+                List.of("sourceBalance"), dto,
+                List.of(new ResponseAction("control:skip", "Not sure / later"))
+        );
     }
 
     // -----------------------------------------------------
@@ -381,12 +390,15 @@ public class ExpenseHandler implements SpeechHandler {
         return null;
     }
 
-    private String normalizeSourceType(String source) {
-        String normalized = source.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
-        if (normalized.equals("BANK") || normalized.equals("UPI") || normalized.equals("BANK/UPI")) {
+    static String normalizeSourceType(String source) {
+        String normalized = source.trim().replaceFirst("(?i)^(?:my|the)\\s+", "").toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "_")
+                .replaceAll("^_+|_+$", "");
+        String compact = normalized.replace("_", "");
+        if (Set.of("BANK", "UPI", "BANKUPI", "BANKACCOUNT").contains(compact)) {
             return "BANK_ACCOUNT";
         }
-        if (normalized.equals("CARD") || normalized.equals("CREDIT")) return "CREDIT_CARD";
+        if (Set.of("CARD", "CREDIT", "CREDITCARD").contains(compact)) return "CREDIT_CARD";
         return normalized;
     }
 

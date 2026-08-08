@@ -35,6 +35,9 @@ public class PersonalFinanceExtension implements BusinessExtension {
     }
     @Override public Collection<EventCapability> events() { return events; }
     @Override public Collection<QueryCapability> queries() { return queries; }
+    @Override public Collection<DeterministicEventRouter> deterministicRouters() {
+        return List.of(new FinanceDeterministicEventRouter());
+    }
     @Override public Collection<InterpretationPromptContributor> promptContributors() {
         return List.of(new FinanceInterpretationPrompt());
     }

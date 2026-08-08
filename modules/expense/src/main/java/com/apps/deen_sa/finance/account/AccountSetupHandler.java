@@ -25,6 +25,7 @@ public class AccountSetupHandler implements SpeechHandler {
     private final AccountSetupClassifier llm;
     private final StateContainerRepository repo;
     private final StateContainerService stateContainerService;
+    private final DeterministicAccountSetupParser deterministicParser = new DeterministicAccountSetupParser();
 
     public AccountSetupHandler(AccountSetupClassifier llm, StateContainerRepository repo,
                                StateContainerService stateContainerService) {
@@ -41,7 +42,7 @@ public class AccountSetupHandler implements SpeechHandler {
     @Override
     public SpeechResult handleSpeech(String text, ConversationContext ctx) {
 
-        AccountSetupDto dto = llm.extractAccount(text);
+        AccountSetupDto dto = deterministicParser.parse(text).orElseGet(() -> llm.extractAccount(text));
         dto.setRawText(text);
 
         List<String> missing = AccountSetupValidator.findMissingFields(dto);

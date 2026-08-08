@@ -51,6 +51,13 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
             Collection<EventCapability> capabilities = extensions.enabledEvents(tenantId);
             String input = mapper.writeValueAsString(Map.of("userMessage", userMessage, "context", context));
             String instructions = CORE_PROMPT + extensions.interpretationInstructions(tenantId) + pendingInstruction(context);
+            EventCapability pendingCapability = pendingCapability(context, capabilities);
+            if (pendingCapability != null) {
+                String extractionInstructions = instructions + "\nSELECTED CAPABILITY: " + pendingCapability.eventType()
+                        + "\n" + pendingCapability.extractionInstructions();
+                return callModel(input, extractionInstructions, model, "conversation_pending_extraction",
+                        List.of(pendingCapability));
+            }
             RouteWire route = callRouter(input, instructions, model, capabilities);
             if (route.selectedEventType() == null || route.selectedEventType().isBlank()) return routeOnly(route);
             EventCapability selected = capabilities.stream()
@@ -197,8 +204,18 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
         if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return "";
         PendingEvent pending = context.pendingEvents().getLast();
         if (pending.unresolvedFields() == null || pending.unresolvedFields().isEmpty()) return "";
-        return "\nCurrent pending event is " + pending.eventType() + " and needs field "
-                + pending.unresolvedFields().getFirst() + ". Prefer ANSWER_TO_PENDING_EVENT.\n";
+        return "\nAn active " + pending.eventType() + " event is waiting for field "
+                + pending.unresolvedFields().getFirst() + ". Treat a plausible direct reply as ANSWER_TO_PENDING_EVENT, "
+                + "extract that field from the current message, and do not start a new event.\n";
+    }
+
+    private EventCapability pendingCapability(InterpretationContext context,
+                                              Collection<EventCapability> capabilities) {
+        if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return null;
+        PendingEvent pending = context.pendingEvents().getLast();
+        if (pending.unresolvedFields() == null || pending.unresolvedFields().isEmpty()) return null;
+        return capabilities.stream().filter(capability -> capability.eventType().equalsIgnoreCase(pending.eventType()))
+                .findFirst().orElse(null);
     }
 
     private record TurnWire(String turnType, String intent, String language, String targetEventId,

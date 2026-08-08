@@ -2,7 +2,7 @@
 
 This project is evolving from a personal-finance application into a reusable conversational operations platform. It lets people record simple real-world work through WhatsApp voice or text instead of forms. Domain extensions provide business vocabulary and rules; the core provides conversation, extraction, follow-up questions, events, signed movements, auditing, and safe execution.
 
-The codebase is now a Maven modular monolith. It has a versioned extension API, tenant-scoped extension catalog, generic ledger, saree job-work extension, and a small grocery extension that proves a new business type can be added without changing core. The personal-finance behavior is exposed through the same capability runtime while its legacy projection is migrated incrementally.
+The codebase is now a Maven modular monolith. It has a versioned extension API, tenant-scoped extension catalog, generic ledger, personal-expense extension, and saree job-work extension. Only business domains live under `modules/`; shared adapters and runtime infrastructure remain in `core`, and `application` composes the deployable service.
 
 ## Product documentation
 
@@ -56,7 +56,7 @@ curl -X POST http://localhost:8080/api/v1/process \
 
 - **Domain-First Design**: Organized by business domains (core, finance, conversation) rather than technical layers
 - **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
-- **LLM-First Approach**: Natural language understanding via OpenAI GPT-4.1 Mini
+- **Deterministic-First Interpretation**: Explicit business grammar and workflow state are handled in code; OpenAI GPT-4.1 Mini enriches language that remains ambiguous
 - **Strategy Pattern**: Different financial adjustment strategies for different container types
 - **Mutation Audit Trail**: Balance changes are represented by `StateMutationEntity`
 - **User-Scoped Data Model**: User identifiers exist; production authorization remains tracked work

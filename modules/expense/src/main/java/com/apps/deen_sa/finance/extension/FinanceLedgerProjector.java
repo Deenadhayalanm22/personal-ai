@@ -14,6 +14,7 @@ import com.apps.deen_sa.finance.persistence.FinanceExpenseProjectionEntity;
 import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 
@@ -36,7 +37,7 @@ class FinanceLedgerProjector {
         List<MovementPlan> movements = amount == null ? List.of() : movements(type, amount, facts);
         List<ObservationPlan> observations = observations(type, facts);
         Long tenantId = tenantId(context);
-        String idempotency = idempotencyKey(type, rawText, context);
+        String idempotency = idempotencyKey(type, rawText, facts, context);
         CoreEventEntity committed = ledger.commit(new ExecutionPlan(tenantId, "personal-finance", type, "1.0.0", Instant.now(),
                 "user:" + context.getUserId(), facts, evidence(event), "finance-rules-v1", idempotency,
                 causation(context), movements, observations));
@@ -129,11 +130,30 @@ class FinanceLedgerProjector {
         Object value = context.getMetadata() == null ? null : context.getMetadata().get("inboundMessageId");
         return value == null ? null : value.toString();
     }
-    private String idempotencyKey(String type, String rawText, ConversationContext context) {
+    private String idempotencyKey(String type, String rawText, Map<String, Object> facts,
+                                  ConversationContext context) {
+        String factFingerprint = UUID.nameUUIDFromBytes(canonicalFacts(facts).getBytes(StandardCharsets.UTF_8)).toString();
         String causation = causation(context);
-        if (causation != null) return "message:" + causation + ":" + type;
+        if (causation != null) return "message:" + causation + ":" + type + ":" + factFingerprint;
         return "legacy:" + context.getUserId() + ":" + context.getSessionId() + ":" + type + ":"
-                + Integer.toUnsignedString(Objects.hashCode(rawText));
+                + Integer.toUnsignedString(Objects.hashCode(rawText)) + ":" + factFingerprint;
+    }
+    private String canonicalFacts(Map<String, Object> facts) {
+        StringJoiner values = new StringJoiner("|");
+        new TreeMap<>(facts).forEach((key, value) -> values.add(key + "=" + canonicalValue(value)));
+        return values.toString();
+    }
+    private String canonicalValue(Object value) {
+        if (value instanceof BigDecimal decimal) return decimal.stripTrailingZeros().toPlainString();
+        if (value instanceof Map<?, ?> map) {
+            StringJoiner values = new StringJoiner(",", "{", "}");
+            map.entrySet().stream().sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
+                    .forEach(entry -> values.add(entry.getKey() + "=" + canonicalValue(entry.getValue())));
+            return values.toString();
+        }
+        if (value instanceof Collection<?> collection)
+            return collection.stream().map(this::canonicalValue).toList().toString();
+        return String.valueOf(value);
     }
     private String container(Object raw, String fallback) { return raw == null ? fallback : "account:" + slug(raw); }
     private String slug(Object raw) { return raw.toString().toLowerCase(Locale.ROOT).trim().replaceAll("[^\\p{L}0-9]+", "-"); }

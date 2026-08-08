@@ -21,9 +21,11 @@ extension A -X-> extension B (unless an explicit integration module owns the rel
 
 `-X->` means the dependency is forbidden.
 
-## Current coupling found in the code
+## Baseline coupling that motivated the migration
 
-The documentation describes extensions, but the running code is still finance-shaped:
+The following findings describe the pre-segregation baseline. The Maven split, generic extension runtime,
+module-owned persistence/resources, and architecture rules now address these structural problems; remaining
+`finance.legacy` packages are an explicit incremental internal cleanup within the expense module:
 
 1. `UnifiedConversationEngine` injects `ExpenseHandler`, imports `HumanAmountParser`, branches on `EXPENSE`, understands finance follow-up fields, and builds account context.
 2. `OpenAiConversationInterpreter` has a fixed finance intent list, fixed finance fields, bookkeeping instructions, and account/payment rules in its core prompt.

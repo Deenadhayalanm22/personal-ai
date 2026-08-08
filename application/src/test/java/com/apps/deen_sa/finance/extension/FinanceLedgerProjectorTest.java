@@ -41,6 +41,61 @@ class FinanceLedgerProjectorTest {
         assertEquals(1, projections.size());
     }
 
+    @Test
+    void distinctExpensesFromOneMessageAndRepeatedButtonTextAreNotCollapsed() {
+        Map<String, CoreEventEntity> events = new HashMap<>();
+        Set<Long> projectedEventIds = new HashSet<>();
+        long[] nextId = {1L};
+        CoreEventRepository eventRepository = proxy(CoreEventRepository.class, (method, args) -> {
+            if (method.equals("findByTenantIdAndIdempotencyKey"))
+                return Optional.ofNullable(events.get(args[0] + "|" + args[1]));
+            if (method.equals("save")) {
+                CoreEventEntity event = (CoreEventEntity) args[0];
+                event.setId(nextId[0]++);
+                events.put(event.getTenantId() + "|" + event.getIdempotencyKey(), event);
+                return event;
+            }
+            return null;
+        });
+        FinanceAnalyticsRepository projections = proxy(FinanceAnalyticsRepository.class, (method, args) -> {
+            if (method.equals("existsByCoreEventId")) return projectedEventIds.contains(args[0]);
+            if (method.equals("save")) {
+                projectedEventIds.add(((com.apps.deen_sa.finance.persistence.FinanceExpenseProjectionEntity) args[0]).getCoreEventId());
+                return args[0];
+            }
+            return null;
+        });
+        GenericLedgerService ledger = new GenericLedgerService(eventRepository,
+                proxy(CoreMovementRepository.class, (method, args) -> args == null ? null : args[0]),
+                proxy(CoreObservationRepository.class, (method, args) -> args == null ? null : args[0]));
+        FinanceLedgerProjector projector = new FinanceLedgerProjector(ledger, projections);
+        ConversationContext context = new ConversationContext();
+        context.setUserId(3L); context.setSessionId(8L);
+        context.setMetadata(new HashMap<>(Map.of("inboundMessageId", "wamid.multi")));
+
+        EventPatch tea = expense("80", "Food");
+        EventPatch auto = expense("120", "Transport");
+        projector.project(tea, "Spent 80 on tea and 120 on auto using UPI", context);
+        projector.project(auto, "Spent 80 on tea and 120 on auto using UPI", context);
+        projector.project(tea, "Spent 80 on tea and 120 on auto using UPI", context);
+
+        assertEquals(2, events.size(), "two expenses in one inbound message need separate ledger events");
+        assertEquals(2, projectedEventIds.size(), "a retry of the same expense must remain idempotent");
+
+        context.setMetadata(Map.of());
+        projector.project(expense("650", "Utilities"), "Bank / UPI", context);
+        projector.project(expense("450", "Food"), "Bank / UPI", context);
+
+        assertEquals(4, events.size(), "different follow-up completions may share the same button text");
+        assertEquals(4, projectedEventIds.size());
+    }
+
+    private EventPatch expense(String amount, String category) {
+        return new EventPatch(null, "EXPENSE",
+                Map.of("amount", new BigDecimal(amount), "category", category, "sourceAccount", "My bank account"),
+                List.of(), List.of(), List.of());
+    }
+
     private GenericLedgerService ledger(List<CoreMovementEntity> sink) {
         return new GenericLedgerService(proxy(CoreEventRepository.class, (method, args) -> {
             if (method.equals("findByTenantIdAndIdempotencyKey")) return Optional.empty();

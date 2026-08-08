@@ -74,6 +74,12 @@ public class ExtensionCatalog {
                 .flatMap(Optional::stream).findFirst().flatMap(type -> event(tenantId, type));
     }
 
+    public List<DeterministicEventCandidate> extractDeterministically(Long tenantId, String text) {
+        return extensions.values().stream().filter(e -> installations.isEnabled(tenantId, e.descriptor().id()))
+                .flatMap(e -> e.deterministicRouters().stream()).flatMap(router -> router.events(text).stream())
+                .filter(candidate -> event(tenantId, candidate.eventType()).isPresent()).toList();
+    }
+
     public String interpretationInstructions(Long tenantId) {
         return extensions.values().stream().filter(e -> installations.isEnabled(tenantId, e.descriptor().id()))
                 .flatMap(e -> e.promptContributors().stream()).map(InterpretationPromptContributor::instructions)

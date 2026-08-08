@@ -1,0 +1,109 @@
+package com.apps.deen_sa.finance.extension;
+
+import com.apps.deen_sa.extension.api.DeterministicEventRouter;
+import com.apps.deen_sa.extension.api.DeterministicEventCandidate;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/** Routes only syntax whose intent is mechanically certain; enrichment remains model-driven. */
+final class FinanceDeterministicEventRouter implements DeterministicEventRouter {
+    private static final Pattern SPARSE_EXPENSE = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s*(?:₹|rs\\.?|inr)?\\s*"
+                    + "[0-9][0-9,]*(?:\\.[0-9]+)?(?:\\s*(?:k|thousand|lakh|lac|crore|cr))?\\s*[.!]?\\s*$");
+    private static final Pattern ACCOUNT_SETUP = Pattern.compile(
+            "(?i)^\\s*create\\s+my\\s+.+?\\s+(?:bank\\s+account|credit\\s+card)\\s+with\\s+.+$");
+    private static final Pattern TWO_EXPENSES = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+on\\s+(.+?)\\s+and\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+on\\s+(.+?)\\s+(?:using|through|via)\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern SPENT_ON = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+on\\s+(.+?)(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
+    private static final Pattern SPENT_TODAY_FROM = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?spent\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+on\\s+(.+?)\\s+today\\s+from\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern PAID_FOR = Pattern.compile(
+            "(?i)^\\s*paid\\s+(.+?)\\s+(?:of|for)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
+    private static final Pattern TANGLISH_COMPLETE = Pattern.compile(
+            "(?i)^\\s*(?:inniku|nethu)\\s+(.+?)\\s+k(?:u|ku)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+(?:rupees?|rs\\.?)\\s+(.+?)\\s+la\\s+(?:spend|spent|pay|paid)\\s+pannen\\s*[.!]?\\s*$");
+    private static final Pattern TANGLISH_MISSING_AMOUNT = Pattern.compile(
+            "(?i)^\\s*(?:inniku|nethu)\\s+(.+?)\\s+k(?:u|ku)\\s+(?:spend|spent|pay|paid)\\s+pannen\\s*[.!]?\\s*$");
+    private static final Pattern TAMIL_WITH_SOURCE = Pattern.compile(
+            "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+(.+?)\\s+மூலம்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
+    private static final Pattern TAMIL_WITHOUT_SOURCE = Pattern.compile(
+            "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
+
+    @Override
+    public Optional<String> eventType(String text) {
+        if (text == null) return Optional.empty();
+        if (ACCOUNT_SETUP.matcher(text).matches()) return Optional.of("ACCOUNT_SETUP");
+        return SPARSE_EXPENSE.matcher(text).matches() ? Optional.of("EXPENSE") : Optional.empty();
+    }
+
+    @Override
+    public List<DeterministicEventCandidate> events(String text) {
+        if (text == null) return List.of();
+        Matcher matcher = TWO_EXPENSES.matcher(text);
+        if (matcher.matches()) {
+            String source = matcher.group(5).trim();
+            return List.of(candidate(matcher.group(1), matcher.group(2), source, text),
+                    candidate(matcher.group(3), matcher.group(4), source, text));
+        }
+        matcher = SPENT_TODAY_FROM.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
+        matcher = SPENT_ON.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
+        matcher = PAID_FOR.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));
+        matcher = TANGLISH_COMPLETE.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));
+        matcher = TANGLISH_MISSING_AMOUNT.matcher(text);
+        if (matcher.matches()) return List.of(candidateWithoutAmount(matcher.group(1), text));
+        matcher = TAMIL_WITH_SOURCE.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));
+        matcher = TAMIL_WITHOUT_SOURCE.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(2), matcher.group(1), null, text));
+        return List.of();
+    }
+
+    private DeterministicEventCandidate candidate(String amount, String description, String source, String rawText) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.put("amount", new BigDecimal(amount.replace(",", "")));
+        fields.put("category", category(description));
+        fields.put("merchantName", description.trim());
+        if (source != null && !source.isBlank()) fields.put("sourceAccount", source.trim());
+        fields.put("rawText", rawText);
+        return new DeterministicEventCandidate("EXPENSE", fields);
+    }
+
+    private DeterministicEventCandidate candidateWithoutAmount(String description, String rawText) {
+        return new DeterministicEventCandidate("EXPENSE", Map.of(
+                "category", category(description), "merchantName", description.trim(), "rawText", rawText));
+    }
+
+    private String category(String description) {
+        String value = description.toLowerCase(Locale.ROOT);
+        if (value.matches(".*\\b(auto|taxi|cab|bus|train|petrol|fuel)\\b.*")) return "Transport";
+        if (value.matches(".*\\b(electricity|bescom|power|water|utility|utilities)\\b.*")) return "Utilities";
+        if (value.matches(".*\\b(tea|coffee|snack|snacks|food|lunch|dinner|breakfast|curd|ice cream)\\b.*")) return "Food";
+        if (value.matches(".*\\b(grocery|groceries)\\b.*")) return "Groceries";
+        if (value.contains("மளிகை")) return "Groceries";
+        if (value.contains("மின்சார")) return "Utilities";
+        return description.trim();
+    }
+}

@@ -42,6 +42,20 @@ public class UnifiedConversationEngine {
         SpeechResult deterministic = deterministicTurn(text, context);
         if (deterministic != null) return finishDeterministicTurn(text, deterministic, context);
 
+        List<com.apps.deen_sa.extension.api.DeterministicEventCandidate> extracted =
+                extensions.extractDeterministically(tenantId(context), text);
+        if (!extracted.isEmpty()) {
+            List<EventPatch> events = extracted.stream().map(candidate -> new EventPatch(null, candidate.eventType(),
+                    candidate.fields(), List.of(), List.of(), candidate.fields().entrySet().stream()
+                    .map(field -> new FieldEvidence(field.getKey(), String.valueOf(field.getValue()),
+                            evidenceFor(field.getValue(), text), 1.0)).toList())).toList();
+            TurnInterpretation turn = new TurnInterpretation(events.size() == 1 ? TurnType.NEW_EVENT : TurnType.NEW_EVENTS,
+                    events.getFirst().eventType(), context.getLocale(), null, events, null, QueryPeriod.NONE, List.of(), 1.0);
+            if (!mutationPolicy.isAuthorized(turn, text))
+                return finishDeterministicTurn(text, SpeechResult.info(messages.mutationNeedsClarification(context.getLocale())), context);
+            return finishDeterministicTurn(text, execute(turn, text, context), context);
+        }
+
         EventCapability routed = extensions.routeDeterministically(tenantId(context), text).orElse(null);
         if (routed != null) {
             EventPatch patch = new EventPatch(null, routed.eventType(), Map.of("rawText", text),
@@ -53,7 +67,12 @@ public class UnifiedConversationEngine {
         InterpretationContext input = new InterpretationContext(
                 context.getUserId(), context.getTimezone(), context.getCurrency(), context.getLastQuestion(),
                 context.getPendingEvents(), context.getRecentTurns(), extensions.context(tenantId(context), context.getUserId()));
-        TurnInterpretation turn = interpreter.interpret(text, input);
+        TurnInterpretation turn = scopePendingTurn(interpreter.interpret(text, input), context);
+        String pendingFieldType = context.isInFollowup()
+                ? extensions.event(tenantId(context), context.getActiveIntent())
+                        .map(capability -> capability.fieldTypes().get(context.getWaitingForField())).orElse(null)
+                : null;
+        turn = recoverPendingTextAnswer(turn, text, context, pendingFieldType);
         validate(turn, context);
         applyTurnLanguage(turn, context);
         if (!mutationPolicy.isAuthorized(turn, text)) {
@@ -95,7 +114,8 @@ public class UnifiedConversationEngine {
 
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {
         if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), context);
-        if (turn.turnType() == TurnType.AMBIGUOUS && context.isInFollowup()) {
+        if (context.isInFollowup() && (turn.turnType() == TurnType.AMBIGUOUS
+                || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY && turn.turnType() != TurnType.COMMAND)) {
             String question = context.getLastQuestion() == null
                     ? messages.mutationNeedsClarification(context.getLocale()) : context.getLastQuestion();
             return SpeechResult.followup(question, List.of(context.getWaitingForField()), context.getPartialObject());
@@ -118,8 +138,9 @@ public class UnifiedConversationEngine {
                     turn.turnType() == TurnType.ANSWER_TO_PENDING_EVENT
                             || turn.turnType() == TurnType.CORRECTION
                             || answersPendingField(event, context.getWaitingForField()));
-            results.add(extensions.event(tenantId(context), event.eventType())
-                    .map(capability -> toSpeechResult(capability.handle(event, text, context, continuation)))
+            EventPatch scopedEvent = continuation ? scopeToPendingField(event, context.getWaitingForField()) : event;
+            results.add(extensions.event(tenantId(context), scopedEvent.eventType())
+                    .map(capability -> toSpeechResult(capability.handle(scopedEvent, text, context, continuation)))
                     .orElseGet(() -> SpeechResult.unknown("I understood " + event.eventType()
                             + ", but that capability is not enabled for this business.")));
         }
@@ -134,6 +155,48 @@ public class UnifiedConversationEngine {
         Map<String, Object> facts = event.fields().asMap();
         if ("spentAt".equals(waitingForField)) return facts.containsKey("transactionDate");
         return facts.containsKey(waitingForField);
+    }
+
+    static EventPatch scopeToPendingField(EventPatch event, String waitingForField) {
+        if (event == null || waitingForField == null) return event;
+        String field = "spentAt".equals(waitingForField) ? "transactionDate" : waitingForField;
+        Object value = event.fields().asMap().get(field);
+        Map<String, Object> fields = value == null ? Map.of() : Map.of(field, value);
+        List<FieldEvidence> evidence = event.evidence().stream()
+                .filter(item -> item != null && (field.equals(item.field()) || waitingForField.equals(item.field())))
+                .toList();
+        return new EventPatch(event.eventId(), event.eventType(), fields, event.unresolvedFields(),
+                event.ambiguities(), evidence);
+    }
+
+    static TurnInterpretation scopePendingTurn(TurnInterpretation turn, ConversationContext context) {
+        if (turn == null || context == null || !context.isInFollowup() || turn.events().isEmpty()
+                || turn.turnType() == TurnType.QUERY || turn.turnType() == TurnType.COMMAND) return turn;
+        List<EventPatch> events = turn.events().stream()
+                .filter(event -> context.getActiveIntent().equalsIgnoreCase(event.eventType()))
+                .map(event -> scopeToPendingField(event, context.getWaitingForField()))
+                .toList();
+        if (events.isEmpty()) return turn;
+        return new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT, context.getActiveIntent(), turn.language(),
+                turn.targetEventId(), events, turn.command(), turn.query(), turn.ambiguities(), turn.confidence());
+    }
+
+    static TurnInterpretation recoverPendingTextAnswer(TurnInterpretation turn, String text,
+                                                       ConversationContext context, String fieldType) {
+        if (turn == null || context == null || !context.isInFollowup() || !"string".equals(fieldType)
+                || text == null || text.isBlank() || text.contains("?")
+                || turn.turnType() == TurnType.QUERY || turn.turnType() == TurnType.COMMAND) return turn;
+        String waitingForField = context.getWaitingForField();
+        String field = "spentAt".equals(waitingForField) ? "transactionDate" : waitingForField;
+        if ("transactionDate".equals(field) || "rawText".equals(field)) return turn;
+        boolean alreadyExtracted = turn.events().stream()
+                .filter(event -> context.getActiveIntent().equalsIgnoreCase(event.eventType()))
+                .anyMatch(event -> event.fields().asMap().containsKey(field));
+        if (alreadyExtracted) return turn;
+        EventPatch fallback = new EventPatch(null, context.getActiveIntent(), Map.of(field, text.trim()),
+                List.of(), List.of(), List.of(new FieldEvidence(field, text.trim(), text, 1.0)));
+        return new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT, context.getActiveIntent(), turn.language(),
+                turn.targetEventId(), List.of(fallback), null, QueryPeriod.NONE, turn.ambiguities(), 1.0);
     }
 
     private SpeechResult command(String command, ConversationContext context) {
@@ -216,6 +279,12 @@ public class UnifiedConversationEngine {
         if (!matcher.find()) return null;
         try { return new java.math.BigDecimal(matcher.group(1).replace(",", "")); }
         catch (NumberFormatException ignored) { return null; }
+    }
+
+    private String evidenceFor(Object value, String text) {
+        if (value == null || text == null) return "";
+        String rendered = String.valueOf(value);
+        return text.contains(rendered) ? rendered : text;
     }
 
     private SpeechResult toSpeechResult(com.apps.deen_sa.extension.api.CapabilityResult result) {
