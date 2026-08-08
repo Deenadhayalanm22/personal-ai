@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("Layer1")
 @SpringBootTest
 @AutoConfigureMockMvc
-class AudioPositiveTest extends AbstractIntegrationTestProperties {
+class  AudioPositiveTest extends AbstractIntegrationTestProperties {
 
     private static final String USER_PHONE_NUMBER = "919876543210";
 
