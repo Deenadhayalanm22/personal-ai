@@ -18,16 +18,9 @@
         <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
     </properties>
     <modules>
-        <module>modules/extension-api</module>
-        <module>modules/platform-core</module>
-        <module>modules/platform-conversation</module>
-        <module>modules/adapter-observability</module>
-        <module>modules/adapter-openai</module>
-        <module>modules/adapter-whatsapp</module>
-        <module>modules/adapter-postgres</module>
-        <module>modules/extension-personal-finance</module>
-        <module>modules/extension-saree-job-work</module>
-        <module>modules/extension-grocery</module>
+        <module>core</module>
+        <module>modules/expense</module>
+        <module>modules/saree-work</module>
         <module>application</module>
     </modules>
     <dependencyManagement>
@@ -37,43 +30,15 @@
                 <version>1.19.0</version><type>pom</type><scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>extension-api</artifactId>
+                <groupId>com.apps.deen-sa</groupId><artifactId>personal-ai-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>platform-core</artifactId>
+                <groupId>com.apps.deen-sa</groupId><artifactId>expense</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>platform-conversation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>adapter-openai</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>adapter-observability</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>adapter-whatsapp</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>adapter-postgres</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>extension-personal-finance</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>extension-saree-job-work</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>extension-grocery</artifactId>
+                <groupId>com.apps.deen-sa</groupId><artifactId>saree-work</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

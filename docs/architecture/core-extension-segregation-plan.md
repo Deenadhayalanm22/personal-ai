@@ -38,35 +38,24 @@ Package movement alone will not fix this. The orchestration protocol, data contr
 
 ## Target module topology
 
-Use a Maven reactor with these modules:
+Use a deliberately small Maven reactor. Technical separation is expressed by packages inside `core`; only business domains are placed under `modules/`:
 
 ```text
 personal-ai-parent
-├── platform-kernel
-│   └── dependency-free value types: TenantId, ExtensionId, EventTypeId,
-│       Quantity, UnitId, evidence, errors, page/range types
-├── extension-api
-│   └── public versioned SPI used by extensions
-├── platform-core
+├── core
+│   ├── public versioned SPI used by extensions
 │   ├── conversation/session orchestration
 │   ├── extension catalog and tenant capability resolution
 │   ├── authorization, idempotency and unit validation
-│   ├── event/movement ledger
-│   └── application ports; no Spring/JPA types in its public API
-├── adapter-openai
-│   └── schema-driven interpretation and optional explanation
-├── adapter-whatsapp
-│   └── webhook, media, speech and reply delivery
-├── adapter-postgres
-│   └── core ledger/session/tenant JPA implementations and Flyway migrations
-├── extension-personal-finance
-│   └── accounts, expenses, income, transfers, liabilities, assets and reports
-├── extension-saree-job-work
-│   └── employees, material custody, production, inspection and wages
-├── extension-testkit
-│   └── contract fixtures and black-box extension tests
+│   ├── event/movement ledger and PostgreSQL persistence
+│   └── OpenAI, WhatsApp and observability adapters
+├── modules
+│   ├── expense
+│   │   └── accounts, expenses, income, transfers, liabilities, assets and reports
+│   └── saree-work
+│       └── employees, material custody, production, inspection and wages
 └── application
-    └── Spring Boot composition root; chooses adapters and installed extensions
+    └── Spring Boot composition root
 ```
 
 This can be introduced gradually. First create logical boundaries and architecture tests in the existing artifact; split physical Maven modules once dependencies point in the correct direction.
@@ -305,13 +294,11 @@ Segregation is complete when all of the following are true:
 
 Implemented in the current modular-monolith cut:
 
-- `extension-api` is a standalone, Spring-free contract artifact.
-- `platform-core` owns tenant installation/audit and the append-only generic event, movement, and observation ledger.
-- `platform-conversation` owns channel-neutral orchestration and ports; OpenAI, WhatsApp, PostgreSQL, and telemetry are separately compiled adapter artifacts.
+- `core` owns the extension contract, tenant installation/audit, conversation runtime, technical adapters, and append-only generic ledger.
+- technical concerns remain separated by packages but are intentionally not separate Maven modules.
 - tenant capability resolution filters routing, schemas, prompts, context, events, and queries by installation state.
 - finance handlers are reached through `PersonalFinanceExtension`; the unified conversation engine has no finance dependency.
 - saree job work is a standalone module covering employee registration, material custody, surrender, acceptance, wage accrual/payment, and operational queries.
-- grocery is a standalone third extension proving receipt/sale stock movements without a core edit.
 - interpretation is two-stage: tenant-enabled capability routing followed by extraction against only the selected extension schema.
 - finance expense reads use the extension-owned `fin_expense_projection`, populated idempotently from committed `core_event` records.
 - startup compatibility/collision checks and ArchUnit dependency rules enforce the boundary.

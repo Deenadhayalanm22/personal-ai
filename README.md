@@ -64,16 +64,11 @@ curl -X POST http://localhost:8080/api/v1/process \
 ### Module Structure
 ```
 personal-ai-parent
-├── modules/extension-api
-├── modules/platform-core
-├── modules/platform-conversation
-├── modules/adapter-observability
-├── modules/adapter-openai
-├── modules/adapter-whatsapp
-├── modules/adapter-postgres
-├── modules/extension-personal-finance
-├── modules/extension-saree-job-work
-├── modules/extension-grocery
+├── core
+│   └── contracts, runtime, conversation, adapters, persistence and observability
+├── modules
+│   ├── expense
+│   └── saree-work
 └── application
 ```
 
@@ -131,7 +126,7 @@ mvn test -Dtest=ExpenseCompletenessEvaluatorTest
 
 ## 📊 Database schema
 
-Flyway migrations are packaged by their owner: platform tables in `platform-core`, channel/session tables in the relevant adapters, and finance tables/projections in `extension-personal-finance`. The application composition root does not package migrations itself.
+Flyway migrations are packaged by their owner: shared platform/channel tables in `core`, and expense projections in `modules/expense`. The application composition root does not package migrations itself.
 
 ## 🤖 LLM Integration
 
