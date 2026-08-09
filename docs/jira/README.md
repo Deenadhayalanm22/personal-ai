@@ -1,6 +1,6 @@
 # Jira product documentation
 
-The implementation approach for separating the reusable platform from business modules is documented in the [core and business-extension segregation plan](../architecture/core-extension-segregation-plan.md).
+The implementation approach for separating the reusable platform from business modules is documented in the [core and business-extension segregation plan](../architecture/core-extension-segregation-plan.md). The normative rules for choosing between the generic ledger, extension-owned tables, and legacy finance tables are in [extension persistence rules](../architecture/extension-persistence-rules.md).
 
 This directory is the maintained product and delivery contract for a reusable conversational operations platform and its domain extensions. The core exists for people who cannot or do not want to complete software forms; WhatsApp text or voice becomes the interface for simple record keeping and insights.
 

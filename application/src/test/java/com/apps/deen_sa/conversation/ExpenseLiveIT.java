@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles({"test", "live-model"})
 @EnabledIfEnvironmentVariable(named = "RUN_LIVE_MODEL_TESTS", matches = "(?i)true")
-class LiveModelIT extends AbstractIntegrationTestProperties {
+class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     private static final String PHONE = "919876543299";
 
     @Autowired private MockMvc mockMvc;

@@ -21,12 +21,18 @@ public class WhatsAppMessageProcessor {
     private final WhatsAppMediaDownloader mediaDownloader;
     private final AudioTranscriber audioHandler;
     private final AudioConfirmationService confirmationService;
+    private final UserFeatureFlagService featureFlags;
+
+    private static final String ACCESS_DENIED_MESSAGE =
+            "Access is not enabled for this mobile number. Please contact the administrator.";
 
     @Async("whatsappExecutor")
     public void processIncomingMessage(String from, String text, String messageId) {
 
         Long inboundId = inboundMessageService.claim("WHATSAPP", messageId, from);
         if (messageId != null && inboundId == null) return;
+
+        if (!hasFeatureAccess(from, inboundId)) return;
 
         try {
             processText(from, text, messageId);
@@ -47,6 +53,7 @@ public class WhatsAppMessageProcessor {
     public void processIncomingAudio(String from, String mediaId, String mimeType, String messageId) {
         Long inboundId = inboundMessageService.claim("WHATSAPP", messageId, from);
         if (messageId != null && inboundId == null) return;
+        if (!hasFeatureAccess(from, inboundId)) return;
         try {
             byte[] audio = mediaDownloader.download(mediaId);
             String transcription = audioHandler.transcribe(audio, mimeType);
@@ -73,6 +80,7 @@ public class WhatsAppMessageProcessor {
 
         Long inboundId = inboundMessageService.claim("WHATSAPP", messageId, from);
         if (messageId != null && inboundId == null) return;
+        if (!hasFeatureAccess(from, inboundId)) return;
 
         try {
             if (buttonId.startsWith("audio_confirm:")) {
@@ -122,6 +130,15 @@ public class WhatsAppMessageProcessor {
 
     private UUID confirmationId(String buttonId, String prefix) {
         return UUID.fromString(buttonId.substring(prefix.length()));
+    }
+
+    private boolean hasFeatureAccess(String from, Long inboundId) {
+        if (featureFlags.hasAnyEnabledFeature("WHATSAPP", from)) return true;
+
+        log.info("Blocked WhatsApp message from {} because no feature is enabled", from);
+        replySender.sendTextReply(from, ACCESS_DENIED_MESSAGE);
+        inboundMessageService.complete(inboundId);
+        return false;
     }
 
     private void processText(String from, String text, String messageId) {

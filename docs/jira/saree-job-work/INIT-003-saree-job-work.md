@@ -32,6 +32,8 @@ Create employee → issue thread batch → record partial/weekly saree surrender
 → pay/part-pay → close or carry forward batch → review stock, productivity, and variance
 ```
 
+The end-to-end MVP behavior is illustrated in the [target conversation](MVP-target-conversation.md).
+
 ## Initiative acceptance criteria
 
 1. The owner can complete employee, material issue, surrender, wage, payment, and query workflows using simple WhatsApp voice/text without a form.

@@ -1,6 +1,6 @@
 # Protected live-model acceptance contract
 
-`LiveModelIT.it_live_001()` is the project's locked, strict two-month financial-ledger acceptance flow.
+`ExpenseLiveIT.it_live_001()` is the project's locked, strict two-month financial-ledger acceptance flow.
 It is a product/accounting contract, not a disposable model prompt test.
 
 AI coding agents must not edit, simplify, reorder, delete, rename, disable, weaken, regenerate, or

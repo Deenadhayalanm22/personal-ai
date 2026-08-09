@@ -11,33 +11,40 @@ import java.util.regex.Pattern;
 public class SareeJobWorkExtension implements BusinessExtension {
     private final List<EventCapability> events;
 
-    public SareeJobWorkExtension(GenericLedgerService ledger, SareeLedgerQueryRepository queries) {
+    public SareeJobWorkExtension(GenericLedgerService ledger, SareeLedgerQueryRepository queries,
+                                 SareeWorkflowRepository workflows) {
         events = List.of(
-                new SareeEventCapability("SAREE_EMPLOYEE_REGISTERED", ledger),
-                new SareeEventCapability("SAREE_MATERIAL_ISSUED", ledger),
-                new SareeEventCapability("SAREE_PRODUCTION_SURRENDERED", ledger),
-                new SareeEventCapability("SAREE_PRODUCTION_ACCEPTED", ledger),
-                new SareeEventCapability("SAREE_WAGE_PAID", ledger),
+                new SareeEventCapability(SareeEventCapability.MATERIAL_ISSUED, ledger, workflows),
+                new SareeEventCapability(SareeEventCapability.PRODUCTION_SURRENDERED, ledger, workflows),
+                new SareeEventCapability(SareeEventCapability.WAGE_STATEMENT_APPROVED, ledger, workflows),
+                new SareeEventCapability(SareeEventCapability.WAGE_PAID, ledger, workflows),
                 new SareeOperationalQueryCapability(queries));
     }
 
     @Override public ExtensionDescriptor descriptor() {
         return new ExtensionDescriptor("saree-job-work", "1.0.0", 1, "Saree Job Work", false,
                 Set.of("en-IN", "ta-IN", "ta-Latn"),
-                List.of("register employee Lakshmi", "issue 1000 metres thread to Lakshmi",
-                        "Lakshmi surrendered 20 sarees", "accept 18 sarees from Lakshmi"));
+                List.of("Give Selvi 1,000 metres of thread today", "Selvi surrendered 24 sarees",
+                        "Yes", "Paid ₹2,400 cash today"));
     }
+
     @Override public Collection<EventCapability> events() { return events; }
 
     @Override public Collection<DeterministicEventRouter> deterministicRouters() {
         return List.of(text -> {
-            String value = text == null ? "" : text.toLowerCase(Locale.ROOT);
-            if (matches(value, "(?:register|add|create)\\s+(?:an?\\s+)?employee")) return Optional.of("SAREE_EMPLOYEE_REGISTERED");
-            if (matches(value, "(?:issue|gave|give).*(?:thread|yarn).*(?:metre|meter|m\\b)")) return Optional.of("SAREE_MATERIAL_ISSUED");
-            if (matches(value, "(?:surrender|submitted|returned|produced).*(?:saree|piece)")) return Optional.of("SAREE_PRODUCTION_SURRENDERED");
-            if (matches(value, "(?:accept|accepted|approve|approved).*(?:saree|piece)")) return Optional.of("SAREE_PRODUCTION_ACCEPTED");
-            if (matches(value, "(?:pay|paid).*(?:wage|salary).*(?:saree|weav|employee|worker)")) return Optional.of("SAREE_WAGE_PAID");
-            if (matches(value, "(?:how much|show|what).*(?:thread|custody|finished.*stock|wage.*payable|owe)")) return Optional.of("SAREE_OPERATION_QUERY");
+            String value = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);
+            if (matches(value, "(?:give|gave|issue|issued|assign|assigned).*(?:thread|yarn|metres?|meters?|\\bm\\b)"))
+                return Optional.of(SareeEventCapability.MATERIAL_ISSUED);
+            if (matches(value, "(?:surrender|submitted|returned|produced).*(?:saree|piece)"))
+                return Optional.of(SareeEventCapability.PRODUCTION_SURRENDERED);
+            if (matches(value, "^(?:yes|yes[,.!]|ஆம்|aam)[.!]?$"))
+                return Optional.of(SareeEventCapability.WAGE_STATEMENT_APPROVED);
+            if (matches(value, "(?:pay|paid|pays).*(?:cash|bank|upi)"))
+                return Optional.of(SareeEventCapability.WAGE_PAID);
+            if (matches(value, "(?:₹|rs\\.?|inr)?\\s*[0-9][0-9,]*(?:\\.[0-9]+)?.*(?:cash|bank|upi)"))
+                return Optional.of(SareeEventCapability.WAGE_PAID);
+            if (matches(value, "(?:how much|show|what).*(?:thread|custody|wage.*payable|owe)"))
+                return Optional.of("SAREE_OPERATION_QUERY");
             return Optional.empty();
         });
     }

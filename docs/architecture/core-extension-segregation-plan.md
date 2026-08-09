@@ -165,6 +165,10 @@ For interaction between capabilities, use published domain events and an explici
 
 ## Persistence boundary
 
+The detailed, normative decision for future implementations is maintained in
+[extension persistence rules](extension-persistence-rules.md). New extensions and coding agents must apply
+those ownership, projection, migration, and legacy-table rules.
+
 Replace `state_change`/`state_mutation` as the long-term core abstraction with an append-only generic ledger:
 
 ```text
