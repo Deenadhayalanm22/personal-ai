@@ -38,6 +38,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final StateMutationService stateMutationService;
     private final ExpenseInputNormalizer inputNormalizer;
     private final ObjectMapper objectMapper;
+    private final com.apps.deen_sa.finance.budget.BudgetInsightService budgetInsights;
 
     @Override
     public String intentType() {
@@ -141,7 +142,7 @@ public class ExpenseHandler implements SpeechHandler {
             if (accountSetup != null) return accountSetup;
             ctx.reset();
 
-            return expenseConfirmation(saved);
+            return expenseConfirmation(saved, ctx.getTimezone());
         }
 
         // 🔹 CASE 3: FINANCIAL completeness
@@ -160,7 +161,7 @@ public class ExpenseHandler implements SpeechHandler {
             if (accountSetup != null) return accountSetup;
             ctx.reset();
 
-            return expenseConfirmation(saved);
+            return expenseConfirmation(saved, ctx.getTimezone());
         }
 
         // Should never reach here
@@ -324,7 +325,7 @@ public class ExpenseHandler implements SpeechHandler {
         // Step K – Conversation complete
         // ----------------------------
         ctx.reset();
-        return expenseConfirmation(tx);
+        return expenseConfirmation(tx, ctx.getTimezone());
     }
 
     private SpeechResult accountInitializationFollowup(StateChangeEntity tx, ExpenseDto dto,
@@ -377,10 +378,12 @@ public class ExpenseHandler implements SpeechHandler {
                 stateContainerService.getActiveContainers(userId);
 
         String requested = normalizeSourceType(dto.getSourceAccount());
+        String requestedName = normalizeAccountName(dto.getSourceAccount());
         List<StateContainerEntity> matching =
                 containers.stream()
                         .filter(c -> c.getContainerType().equals(requested)
-                                || c.getName().equalsIgnoreCase(dto.getSourceAccount()))
+                                || c.getName().equalsIgnoreCase(dto.getSourceAccount())
+                                || normalizeAccountName(c.getName()).equals(requestedName))
                         .toList();
 
         if (matching.size() == 1) return matching.getFirst();
@@ -388,6 +391,12 @@ public class ExpenseHandler implements SpeechHandler {
             return stateContainerService.createProvisional(userId, requested);
         }
         return null;
+    }
+
+    private String normalizeAccountName(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                .replaceFirst("^(?:my|the)\\s+", "")
+                .replaceAll("[^\\p{L}\\p{N}]", "");
     }
 
     static String normalizeSourceType(String source) {
@@ -541,7 +550,7 @@ public class ExpenseHandler implements SpeechHandler {
                 : "What is its current balance?";
     }
 
-    private SpeechResult expenseConfirmation(StateChangeEntity expense) {
+    private SpeechResult expenseConfirmation(StateChangeEntity expense, String timezone) {
         String category = expense.getCategory();
         boolean hasCategory = category != null && !category.isBlank()
                 && !java.util.Set.of("null", "none", "n/a", "unknown").contains(category.trim().toLowerCase());
@@ -550,6 +559,7 @@ public class ExpenseHandler implements SpeechHandler {
         if (!expense.isFinanciallyApplied()) {
             message += " It is saved for spending insights; exact account balance is not updated yet.";
         }
+        message += budgetInsights.alert(expense, timezone).map(alert -> " " + alert).orElse("");
         return SpeechResult.builder()
                 .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
                 .message(message)

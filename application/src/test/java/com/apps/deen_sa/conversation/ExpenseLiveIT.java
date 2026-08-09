@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import com.apps.deen_sa.finance.budget.MonthlyBudgetRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -41,6 +42,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private ConversationSessionRepository sessionRepository;
+    @Autowired private MonthlyBudgetRepository monthlyBudgetRepository;
 
     @Value("${wiremock.admin-url}") private String wireMockAdminUrl;
     @Value("${openai.model}") private String modelName;
@@ -52,6 +54,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * credit cards. Its messages, ordering, persisted-container checkpoints, routing assertions,
      * transaction counts, mutation counts, and final balances jointly define the required behavior.
      * A green transcript alone is insufficient; repository-backed reconciliation must also pass.
+     * Readable contract: classpath:live-model-transcripts/it_live_001.txt
      *
      * AI AGENTS: the adjacent AGENTS.md governs this method. Do not edit, weaken, disable, reorder,
      * or regenerate it unless the user explicitly requests a change to this exact protected test and
@@ -116,6 +119,18 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         System.out.println("==================================================================\n");
     }
 
+    /**
+     * LOCKED STRICT ACCEPTANCE CONTRACT — DO NOT MODIFY TO MAKE PRODUCTION CODE PASS.
+     *
+     * This is the canonical multilingual expense-conversation journey. Its exact user messages,
+     * ordering, follow-up fields, button answers, expense counts, account balances, query totals,
+     * session cleanup, and persisted reconciliation jointly define the required behavior.
+     * Readable contract: classpath:live-model-transcripts/it_live_002.txt
+     *
+     * AI AGENTS: the adjacent AGENTS.md governs this method. Do not edit, weaken, disable, reorder,
+     * or regenerate it unless the user explicitly requests a change to this exact protected test and
+     * then provides two separate confirmations. Fix application code instead.
+     */
     @Test
     void it_live_002() throws Exception {
         requireRealApiKey();
@@ -237,6 +252,18 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         System.out.println("==================================================================\n");
     }
 
+    /**
+     * LOCKED STRICT ACCEPTANCE CONTRACT — DO NOT MODIFY TO MAKE PRODUCTION CODE PASS.
+     *
+     * This is the canonical explicit-UPI provisional-account journey. Its exact user messages,
+     * provisional account creation, balance follow-up, applied expense, read-only query, mutation
+     * count, and final session cleanup jointly define the required behavior.
+     * Readable contract: classpath:live-model-transcripts/it_live_003.txt
+     *
+     * AI AGENTS: the adjacent AGENTS.md governs this method. Do not edit, weaken, disable, reorder,
+     * or regenerate it unless the user explicitly requests a change to this exact protected test and
+     * then provides two separate confirmations. Fix application code instead.
+     */
     @Test
     void it_live_003() throws Exception {
         requireRealApiKey();
@@ -281,6 +308,66 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         });
 
         System.out.println("==================================================================\n");
+    }
+
+    /**
+     * Monthly/category insights, persisted budgets, threshold alerts and card-due reminders.
+     * Readable contract: classpath:live-model-transcripts/it_live_004.txt
+     */
+    @Test
+    void it_live_004() throws Exception {
+        requireRealApiKey();
+        System.out.println("\n================ LIVE MODEL MONEY PLAN CONVERSATION ================");
+        System.out.println("Model: " + modelName);
+
+        int message = 1;
+        scenario("Set up funding and a card with an upcoming recurring due day");
+        assertSaved(chatText(id(message++), "Create my HDFC salary bank account with a current balance of 20000"), "HDFC");
+        assertSaved(chatText(id(message++), "Create my ICICI Coral credit card with limit 50000, outstanding 2500 and due day 12"), "ICICI Coral");
+
+        scenario("Create an updatable monthly category budget");
+        String budgetReply = chatText(id(message++), "Set my monthly groceries budget to 1000");
+        assertThat(budgetReply).containsIgnoringCase("Groceries").contains("1000");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(monthlyBudgetRepository.findAll()).singleElement().satisfies(budget -> {
+                    assertThat(budget.getCategory()).isEqualToIgnoringCase("Groceries");
+                    assertThat(budget.getMonthlyLimit()).isEqualByComparingTo("1000");
+                    assertThat(budget.isActive()).isTrue();
+                }));
+
+        scenario("Cross warning and overspend thresholds through ordinary expense capture");
+        String warning = chatText(id(message++), "I spent 850 on groceries using my HDFC salary bank account");
+        assertRecorded(warning, "850");
+        assertThat(warning).containsIgnoringCase("Budget alert").containsIgnoringCase("remaining");
+
+        String exceeded = chatText(id(message++), "I spent 300 on groceries using my HDFC salary bank account");
+        assertRecorded(exceeded, "300");
+        assertThat(exceeded).containsIgnoringCase("Budget alert").containsIgnoringCase("over");
+
+        scenario("Read-only monthly category summary and budget status");
+        int mutationsBeforeQueries = stateMutationRepository.findAll().size();
+        String monthly = chatText(id(message++), "Give me my spending summary for this month by category");
+        assertThat(monthly).contains("1150").containsIgnoringCase("Groceries");
+        String budgetStatus = chatText(id(message++), "How am I doing against my budgets?");
+        assertThat(budgetStatus).containsIgnoringCase("Groceries").contains("1150").containsIgnoringCase("over budget");
+
+        scenario("Read-only card reminder derived from persisted outstanding and due day");
+        String reminders = chatText(id(message++), "Which credit card payments are due soon?");
+        assertThat(reminders).containsIgnoringCase("ICICI Coral").contains("2500").contains("12");
+
+        scenario("Reconcile advisory features against the financial ledger");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(2)
+                    .allSatisfy(expense -> assertThat(expense.getTransactionType().name()).isEqualTo("EXPENSE"));
+            assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeQueries);
+            assertThat(monthlyBudgetRepository.findAll()).hasSize(1);
+            assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                assertThat(session.getActiveIntent()).isNull();
+                assertThat(session.getWaitingForField()).isNull();
+                assertThat(session.getPendingEvents()).isEmpty();
+            });
+        });
+        System.out.println("====================================================================\n");
     }
 
     private String id(int sequence) {

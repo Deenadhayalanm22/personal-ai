@@ -63,6 +63,15 @@ class FinanceDeterministicEventRouterTest {
     }
 
     @org.junit.jupiter.api.Test
+    void extractsMonthlyBudgetWithoutTheModel() {
+        var event = router.events("Set my monthly groceries budget to ₹10k").getFirst();
+
+        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
+        assertThat(event.fields()).containsEntry("category", "Groceries")
+                .containsEntry("amount", new java.math.BigDecimal("10000"));
+    }
+
+    @org.junit.jupiter.api.Test
     void extractsSingleExpenseWithPaymentAndPaidForGrammar() {
         var food = router.events("I spent 58 on curd and some ice cream through UPI").getFirst();
         assertThat(food.fields()).containsEntry("amount", new java.math.BigDecimal("58"))

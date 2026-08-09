@@ -1,0 +1,50 @@
+ExpenseLiveIT.it_live_004 — EXPECTED CONVERSATION CONTRACT
+============================================================
+
+Purpose
+-------
+One monthly money-plan journey proving deterministic category summaries, persisted category budgets,
+automatic warning/overspend alerts, card-due reminders, and read-only reconciliation. Live-model prose
+may vary; persisted amounts and the required fragments below are the acceptance oracle.
+
+Setup
+-----
+User: Create my HDFC salary bank account with a current balance of 20000
+App must: confirm creation and mention HDFC.
+
+User: Create my ICICI Coral credit card with limit 50000, outstanding 2500 and due day 12
+App must: confirm creation and mention ICICI Coral.
+
+Budget
+------
+User: Set my monthly groceries budget to 1000
+App must: mention Groceries and 1000.
+State: exactly one active Groceries monthly budget of ₹1,000.
+
+Threshold alerts
+----------------
+User: I spent 850 on groceries using my HDFC salary bank account
+App must: record ₹850 and warn that ₹150 is remaining because at least 80% is used.
+
+User: I spent 300 on groceries using my HDFC salary bank account
+App must: record ₹300 and say the Groceries budget is ₹150 over.
+
+Monthly and budget queries
+--------------------------
+User: Give me my spending summary for this month by category
+App must: mention total ₹1,150 and Groceries.
+
+User: How am I doing against my budgets?
+App must: mention Groceries, ₹1,150, and over budget.
+
+Card reminders
+--------------
+User: Which credit card payments are due soon?
+App must: mention ICICI Coral, ₹2,500 outstanding, and its calculated next due date on day 12.
+
+Final oracle
+------------
+- Exactly two EXPENSE state changes and two corresponding balance mutations.
+- Queries and reminders create no state changes or mutations.
+- Exactly one active monthly budget exists.
+- Conversation has no active intent, waiting field, or pending events.

@@ -1,0 +1,40 @@
+ExpenseLiveIT.it_live_003 — EXPECTED CONVERSATION CONTRACT
+============================================================
+
+Purpose
+-------
+Minimal explicit-UPI flow proving provisional account creation, opening-balance completion,
+expense application, a read-only total, and clean conversation state.
+
+Conversation
+------------
+User: Hi
+App must include:
+- I can help record operational activity through conversation
+- Describe what happened naturally
+
+User: I spent 50 on groceries today from my upi
+App must: say it created My bank account and ask for its current balance.
+State:
+- One pending ₹50 expense
+- Conversation waits for sourceBalance
+- My bank account exists as BANK_ACCOUNT with unknown balance
+
+User: 10k
+App must: mention 50 and 9950.
+State:
+- ₹50 expense is financially applied
+- My bank account balance is ₹9,950
+
+User: What did I spend today?
+App must: mention 50.
+State: expense count remains one; the query creates no financial event.
+
+Final accounting and session oracle
+-----------------------------------
+- Exactly one expense
+- Exactly one state mutation
+- No active conversation intent
+- No waiting field
+- No pending events
+
