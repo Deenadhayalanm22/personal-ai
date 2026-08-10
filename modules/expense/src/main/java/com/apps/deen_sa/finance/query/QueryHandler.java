@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import com.apps.deen_sa.finance.budget.BudgetInsightService;
 import com.apps.deen_sa.finance.credit.CardDueReminderService;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
+import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 
 @Service
 public class QueryHandler implements SpeechHandler {
@@ -27,13 +29,14 @@ public class QueryHandler implements SpeechHandler {
     private final QueryContextFormatter queryContextFormatter;
     private final BudgetInsightService budgetInsights;
     private final CardDueReminderService cardReminders;
+    private final StateContainerRepository stateContainers;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
             ExpenseAnalyticsService expenseAnalyticsService,
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
             QueryContextFormatter queryContextFormatter, BudgetInsightService budgetInsights,
-            CardDueReminderService cardReminders
+            CardDueReminderService cardReminders, StateContainerRepository stateContainers
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
@@ -42,10 +45,12 @@ public class QueryHandler implements SpeechHandler {
         this.queryContextFormatter = queryContextFormatter;
         this.budgetInsights = budgetInsights;
         this.cardReminders = cardReminders;
+        this.stateContainers = stateContainers;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
     public SpeechResult handleInterpreted(String period, ConversationContext context) {
+        if ("ACCOUNT_BALANCE".equals(period)) return SpeechResult.info(accountBalances(context.getUserId()));
         if ("CURRENT_STATUS".equals(period)) return SpeechResult.info(budgetInsights.status(context.getUserId(), context.getTimezone()));
         if ("UPCOMING_DUE".equals(period)) return SpeechResult.info(cardReminders.reminders(context.getUserId(), context.getTimezone()));
         QueryResult result = new QueryResult();
@@ -58,6 +63,23 @@ public class QueryHandler implements SpeechHandler {
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
         return SpeechResult.info(summary(context.getLocale(), period, summary));
+    }
+
+    private String accountBalances(Long userId) {
+        var accounts = stateContainers.findActiveByOwnerId(userId).stream()
+                .filter(account -> Set.of("BANK_ACCOUNT", "CASH", "WALLET", "CREDIT_CARD")
+                        .contains(account.getContainerType()))
+                .toList();
+        if (accounts.isEmpty()) return "You have no active financial accounts yet.";
+        return accounts.stream().map(this::balanceLine).collect(Collectors.joining("\n"));
+    }
+
+    private String balanceLine(StateContainerEntity account) {
+        if (account.getCurrentValue() == null) return account.getName() + " balance is unknown.";
+        String amount = account.getCurrentValue().stripTrailingZeros().toPlainString();
+        if ("CREDIT_CARD".equals(account.getContainerType()))
+            return account.getName() + " outstanding balance is ₹" + amount + ".";
+        return account.getName() + " balance is ₹" + amount + ".";
     }
 
     @Override

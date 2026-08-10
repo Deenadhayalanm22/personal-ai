@@ -10,9 +10,20 @@ import java.util.*;
 public class ExpenseTaxonomyRegistry {
 
     private final Map<String, Set<String>> taxonomy = new HashMap<>();
+    private final Map<String, String> aliases = new HashMap<>();
 
     public ExpenseTaxonomyRegistry() {
         load();
+        loadAliases();
+    }
+
+    private void loadAliases() {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("expense-taxonomy-aliases.yml");
+        if (is == null) return;
+        Map<String, String> raw = new Yaml().load(is);
+        if (raw == null) return;
+        raw.forEach((alias, label) -> canonicalLabel(label).ifPresent(canonical ->
+                aliases.put(alias.trim().toLowerCase(Locale.ROOT), canonical)));
     }
 
     private void load() {
@@ -61,6 +72,11 @@ public class ExpenseTaxonomyRegistry {
     public Optional<String> canonicalLabel(String value) {
         if (value == null || value.isBlank()) return Optional.empty();
         return allLabels().stream().filter(label -> label.equalsIgnoreCase(value.trim())).findFirst();
+    }
+
+    public Optional<String> canonicalAlias(String value) {
+        if (value == null || value.isBlank()) return Optional.empty();
+        return Optional.ofNullable(aliases.get(value.trim().toLowerCase(Locale.ROOT)));
     }
 
     public Optional<String> parentCategory(String subcategory) {

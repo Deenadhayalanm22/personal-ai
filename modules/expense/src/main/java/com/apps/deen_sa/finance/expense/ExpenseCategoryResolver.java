@@ -27,8 +27,16 @@ public class ExpenseCategoryResolver {
             return;
         }
 
-        String raw = firstMeaningful(expense.getSubcategory(), expense.getCategory(), originalText);
+        String raw = firstMeaningful(expense.getSubcategory(), expense.getCategory(),
+                expense.getMerchantName(), originalText);
         if (raw == null) { expense.setCategory(null); expense.setSubcategory(null); return; }
+        String alias = taxonomy.canonicalAlias(raw).orElse(null);
+        if (alias != null) {
+            Optional<String> parent = taxonomy.parentCategory(alias);
+            if (parent.isPresent()) { expense.setCategory(parent.get()); expense.setSubcategory(alias); }
+            else { expense.setCategory(alias); expense.setSubcategory(null); }
+            return;
+        }
         Map<String, String> matches = semanticMatcher.match(taxonomy.allLabels().stream().sorted().toList(), List.of(raw));
         String resolved = taxonomy.canonicalLabel(matches == null ? null : matches.get(raw)).orElse(null);
         if (resolved == null) { expense.setCategory(null); expense.setSubcategory(null); return; }

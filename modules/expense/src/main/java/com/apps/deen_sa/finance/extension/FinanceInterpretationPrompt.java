@@ -20,6 +20,7 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             - Use a broad category and a specific subcategory. Never invent a date, account, amount or classification.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
             - Expense queries use QUERY with TODAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, LAST_MONTH or LAST_3_MONTHS.
+            - Questions asking for an account, bank, UPI, cash or card balance use QUERY with ACCOUNT_BALANCE.
             - Questions about budget remaining, budget status or overspending use QUERY with CURRENT_STATUS.
             - Questions about card bills due, card reminders or upcoming card payments use QUERY with UPCOMING_DUE.
             """; }

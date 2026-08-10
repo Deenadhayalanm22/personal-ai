@@ -1,0 +1,5 @@
+# Exact, locale-aware aliases for common terms whose meaning should not require a model call.
+tea: Snacks & Beverages
+auto: Public Transport
+flight tickets: Public Transport
+medicines: Medicines

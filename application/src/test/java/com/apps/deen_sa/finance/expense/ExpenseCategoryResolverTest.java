@@ -34,6 +34,32 @@ class ExpenseCategoryResolverTest {
         assertThat(expense.getSubcategory()).isNull();
     }
 
+    @Test
+    void resolvesEachSplitExpenseFromItsOwnMerchantInsteadOfTheCombinedSentence() {
+        ExpenseDto tea = new ExpenseDto();
+        tea.setMerchantName("tea");
+        new ExpenseCategoryResolver(taxonomy, matcherMustNotRun())
+                .canonicalize(tea, "Spent 80 on tea and 120 on auto using UPI");
+
+        ExpenseDto auto = new ExpenseDto();
+        auto.setMerchantName("auto");
+        new ExpenseCategoryResolver(taxonomy, matcherMustNotRun())
+                .canonicalize(auto, "Spent 80 on tea and 120 on auto using UPI");
+
+        assertThat(tea.getCategory()).isEqualTo("Food & Dining");
+        assertThat(tea.getSubcategory()).isEqualTo("Snacks & Beverages");
+        assertThat(auto.getCategory()).isEqualTo("Transportation");
+        assertThat(auto.getSubcategory()).isEqualTo("Public Transport");
+    }
+
+    private TagSemanticMatcher matcherMustNotRun() {
+        return new TagSemanticMatcher(null, null) {
+            @Override public Map<String, String> match(List<String> canonical, List<String> values) {
+                throw new AssertionError("Configured aliases must resolve without a model call");
+            }
+        };
+    }
+
     private TagSemanticMatcher matcher(String raw, String resolved) {
         return new TagSemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {

@@ -107,6 +107,32 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertRecorded(chatText(id(message++), "On 6 July 2026 I purchased flight tickets for 6000 using my HDFC Millennia credit card"), "6000");
         assertRecorded(chatText(id(message++), "On 16 July 2026 I bought medicines for 2500 using my ICICI Amazon Pay credit card"), "2500");
         assertRecorded(chatText(id(message++), "On 24 July 2026 I paid 1500 for an OTT subscription using my SBI SimplyCLICK credit card"), "1500");
+
+        scenario("Read-only · generic balance query");
+        int changesBeforeCardBalanceQuery = stateChangeRepository.findAll().size();
+        int mutationsBeforeCardBalanceQuery = stateMutationRepository.findAll().size();
+        String iciciBalance = chatText(id(message++), "What is my ICICI Amazon Pay credit card balance?");
+        assertThat(iciciBalance)
+                .containsIgnoringCase("ICICI Amazon Pay")
+                .contains("2500");
+        assertAccount("ICICI Amazon", "CREDIT_CARD", "2500", "150000", 12);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(changesBeforeCardBalanceQuery);
+            assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeCardBalanceQuery);
+        });
+        int changesBeforeGenericBalanceQuery = stateChangeRepository.findAll().size();
+        int mutationsBeforeGenericBalanceQuery = stateMutationRepository.findAll().size();
+        String genericBalance = chatText(id(message++), "What is my balance?");
+        assertThat(genericBalance)
+                .containsIgnoringCase("HDFC salary bank account").contains("160500")
+                .containsIgnoringCase("HDFC Millennia credit card").contains("6000")
+                .containsIgnoringCase("ICICI Amazon Pay credit card").contains("2500")
+                .containsIgnoringCase("SBI SimplyCLICK credit card").contains("1500");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(changesBeforeGenericBalanceQuery);
+            assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeGenericBalanceQuery);
+        });
+
         assertLiabilityPayment(chatText(id(message++), "On 30 July 2026 pay the full HDFC Millennia card bill of 6000 from my HDFC salary account"),
                 "6000", "HDFC Millennia", 4);
 
@@ -136,6 +162,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     @Test
     void it_live_002() throws Exception {
         requireRealApiKey();
+
         System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
         System.out.println("Model: " + modelName);
 
@@ -179,9 +206,17 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertRecorded(chatText(id(message++), "Paid BESCOM electricity bill of 1850 using UPI"), "1850");
         assertExpenseApplied(3, "1850");
 
-        //ask balance in normal way and it should give the balance
+        scenario("English · natural current-balance query is read-only");
         String balanceSummary = chatText(id(message++), "what is my current balance in my bank");
-        //fill the remaining.
+        assertThat(balanceSummary).contains("7592");
+        assertExpenseCount(3);
+        assertAccount("My bank account", "BANK_ACCOUNT", "7592", null, null);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                    assertThat(session.getActiveIntent()).isNull();
+                    assertThat(session.getWaitingForField()).isNull();
+                    assertThat(session.getPendingEvents()).isEmpty();
+                }));
 
         scenario("Tamil · complete sentence");
         assertRecorded(chatText(id(message++), "இன்று மளிகை பொருட்களுக்கு 230 ரூபாய் UPI மூலம் செலவு செய்தேன்"), "230");

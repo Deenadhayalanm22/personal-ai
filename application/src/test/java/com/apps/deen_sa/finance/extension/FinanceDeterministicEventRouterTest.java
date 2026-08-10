@@ -21,6 +21,7 @@ class FinanceDeterministicEventRouterTest {
     })
     void routesExplicitAccountSetupWithoutTheModel(String text) {
         assertThat(router.eventType(text)).contains("ACCOUNT_SETUP");
+        assertThat(router.query(text)).isEmpty();
     }
 
     @ParameterizedTest
@@ -89,6 +90,18 @@ class FinanceDeterministicEventRouterTest {
         assertThat(router.query(text)).contains("CURRENT_STATUS");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "what is my current balance in my bank",
+            "what is my curent balance",
+            "What is my balance?",
+            "show my bank balance",
+            "how much balance in my account"
+    })
+    void routesAccountBalanceQuestionsWithoutTheModel(String text) {
+        assertThat(router.query(text)).contains("ACCOUNT_BALANCE");
+    }
+
     @org.junit.jupiter.api.Test
     void leavesVegetableMeaningForTaxonomyBackedSemanticResolution() {
         var event = router.events("I spent 1300 on the buying vegitables using my upi").getFirst();
@@ -105,6 +118,35 @@ class FinanceDeterministicEventRouterTest {
         var utility = router.events("Paid BESCOM electricity bill of 1850 using UPI").getFirst();
         assertThat(utility.fields()).containsEntry("amount", new java.math.BigDecimal("1850"))
                 .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "On 6 July 2026 I purchased flight tickets for 6000 using my HDFC Millennia credit card",
+            "On 16 July 2026 I bought medicines for 2500 using my ICICI Amazon Pay credit card"
+    })
+    void routesDatedOrdinaryPurchasesAsExpenses(String text) {
+        var event = router.events(text).getFirst();
+
+        assertThat(event.eventType()).isEqualTo("EXPENSE");
+        assertThat(event.fields()).containsKeys("amount", "merchantName", "sourceAccount", "transactionDate")
+                .doesNotContainKey("category");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "My June salary of 80000 was credited to my HDFC salary account on 1 June 2026",
+            "My July salary of 80000 was credited to my HDFC salary account on 1 July 2026"
+    })
+    void routesExplicitDatedSalaryCreditsWithoutTheModel(String text) {
+        var event = router.events(text).getFirst();
+
+        assertThat(event.eventType()).isEqualTo("INCOME");
+        assertThat(event.fields())
+                .containsEntry("amount", new java.math.BigDecimal("80000"))
+                .containsEntry("destinationAccount", "HDFC salary account")
+                .containsEntry("subcategory", "Salary")
+                .containsKey("transactionDate");
     }
 
     @org.junit.jupiter.api.Test

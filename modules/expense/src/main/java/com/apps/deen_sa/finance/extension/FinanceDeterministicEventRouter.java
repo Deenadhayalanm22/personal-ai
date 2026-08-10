@@ -4,6 +4,8 @@ import com.apps.deen_sa.extension.api.DeterministicEventRouter;
 import com.apps.deen_sa.extension.api.DeterministicEventCandidate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -29,6 +31,11 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     private static final Pattern BUDGET_QUERY = Pattern.compile(
             "(?i)^.*\\b(?:budget|planned)\\b.*(?:how\\s+much|status|doing|remaining|remain|left|against).*$|"
                     + "^.*(?:how\\s+much|status|doing|remaining|remain|left|against).*\\b(?:budget|planned)\\b.*$");
+    private static final Pattern ACCOUNT_BALANCE_QUERY = Pattern.compile(
+            "(?i)^.*(?:\\b(?:current|curent|available)\\s+balance\\b|"
+                    + "\\b(?:bank|account|upi|cash|card)\\s+balance\\b|"
+                    + "\\bbalance\\s+(?:in|of)\\s+(?:my\\s+)?(?:bank|account|upi|cash|card)\\b|"
+                    + "\\b(?:what\\s+is|what's|show|tell)\\s+(?:me\\s+)?my\\s+balance\\b).*$");
     private static final Pattern TWO_EXPENSES = Pattern.compile(
             "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+on\\s+(.+?)\\s+and\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
@@ -42,6 +49,14 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     private static final Pattern PAID_FOR = Pattern.compile(
             "(?i)^\\s*paid\\s+(.+?)\\s+(?:of|for)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
+    private static final Pattern DATED_PURCHASE = Pattern.compile(
+            "(?i)^\\s*on\\s+([0-9]{1,2}\\s+[a-z]+\\s+[0-9]{4})\\s+i\\s+(?:purchased|bought)\\s+(.+?)"
+                    + "\\s+for\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+(?:using|through|via)\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern DATED_SALARY_CREDIT = Pattern.compile(
+            "(?i)^\\s*my\\s+[a-z]+\\s+salary\\s+of\\s+(?:₹|rs\\.?|inr)?\\s*"
+                    + "([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+was\\s+credited\\s+to\\s+my\\s+(.+?)"
+                    + "\\s+on\\s+([0-9]{1,2}\\s+[a-z]+\\s+[0-9]{4})\\s*[.!]?\\s*$");
     private static final Pattern TANGLISH_COMPLETE = Pattern.compile(
             "(?i)^\\s*(?:inniku|nethu)\\s+(.+?)\\s+k(?:u|ku)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+(?:rupees?|rs\\.?)\\s+(.+?)\\s+la\\s+(?:spend|spent|pay|paid)\\s+pannen\\s*[.!]?\\s*$");
@@ -64,6 +79,9 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     @Override
     public List<DeterministicEventCandidate> events(String text) {
         if (text == null) return List.of();
+        Matcher income = DATED_SALARY_CREDIT.matcher(text);
+        if (income.matches()) return List.of(datedIncomeCandidate(
+                income.group(1), income.group(2), income.group(3), text));
         Matcher budget = BUDGET_SET.matcher(text);
         if (budget.matches()) return List.of(budgetCandidate(budget.group(1), budget.group(2), text));
         budget = MONTHLY_SCOPE_BALANCE_SET.matcher(text);
@@ -80,6 +98,9 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         matcher = SPENT_ON.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
+        matcher = DATED_PURCHASE.matcher(text);
+        if (matcher.matches())
+            return List.of(datedCandidate(matcher.group(3), matcher.group(2), matcher.group(4), matcher.group(1), text));
         matcher = PAID_FOR.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));
@@ -100,7 +121,13 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     @Override
     public Optional<String> query(String text) {
         if (text == null) return Optional.empty();
-        return BUDGET_QUERY.matcher(text.trim()).matches() ? Optional.of("CURRENT_STATUS") : Optional.empty();
+        String query = text.trim();
+        if (ACCOUNT_SETUP.matcher(query).matches()
+                || BUDGET_SET.matcher(query).matches()
+                || MONTHLY_SCOPE_BALANCE_SET.matcher(query).matches()) return Optional.empty();
+        if (ACCOUNT_BALANCE_QUERY.matcher(query).matches() && !query.toLowerCase(Locale.ROOT).contains("budget"))
+            return Optional.of("ACCOUNT_BALANCE");
+        return BUDGET_QUERY.matcher(query).matches() ? Optional.of("CURRENT_STATUS") : Optional.empty();
     }
 
     private DeterministicEventCandidate candidate(String amount, String description, String source, String rawText) {
@@ -115,6 +142,26 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     private DeterministicEventCandidate candidateWithoutAmount(String description, String rawText) {
         return new DeterministicEventCandidate("EXPENSE", Map.of(
                 "merchantName", description.trim(), "rawText", rawText));
+    }
+
+    private DeterministicEventCandidate datedCandidate(
+            String amount, String description, String source, String date, String rawText) {
+        Map<String, Object> fields = new LinkedHashMap<>(candidate(amount, description, source, rawText).fields());
+        fields.put("transactionDate", LocalDate.parse(date, DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH)));
+        return new DeterministicEventCandidate("EXPENSE", fields);
+    }
+
+    private DeterministicEventCandidate datedIncomeCandidate(
+            String amount, String destination, String date, String rawText) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.put("amount", new BigDecimal(amount.replace(",", "")));
+        fields.put("category", "Income");
+        fields.put("subcategory", "Salary");
+        fields.put("destinationAccount", destination.trim());
+        fields.put("transactionDate", LocalDate.parse(
+                date, DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH)));
+        fields.put("rawText", rawText);
+        return new DeterministicEventCandidate("INCOME", fields);
     }
 
     private BigDecimal humanAmount(String raw) {
