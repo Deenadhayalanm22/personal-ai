@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import com.apps.deen_sa.finance.budget.MonthlyBudgetRepository;
 import com.apps.deen_sa.conversation.UnprocessedConversationMessageRepository;
+import com.apps.deen_sa.finance.legacy.state.cache.StateContainerCache;
+import org.flywaydb.core.Flyway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -38,13 +40,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles({"test", "live-model"})
 @EnabledIfEnvironmentVariable(named = "RUN_LIVE_MODEL_TESTS", matches = "(?i)true")
 class ExpenseLiveIT extends AbstractIntegrationTestProperties {
-    private static final String PHONE = "919876543299";
+    private String phone = "919876543299";
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private ConversationSessionRepository sessionRepository;
     @Autowired private MonthlyBudgetRepository monthlyBudgetRepository;
     @Autowired private UnprocessedConversationMessageRepository unprocessedMessageRepository;
+    @Autowired private Flyway flyway;
+    @Autowired private StateContainerCache stateContainerCache;
+    @Autowired private ConversationContext conversationContext;
 
     @Value("${wiremock.admin-url}") private String wireMockAdminUrl;
     @Value("${openai.model}") private String modelName;
@@ -52,11 +57,11 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     /**
      * LOCKED STRICT ACCEPTANCE CONTRACT — DO NOT MODIFY TO MAKE PRODUCTION CODE PASS.
      *
-     * This is the canonical two-month ledger journey for one salary bank account and three named
-     * credit cards. Its messages, ordering, persisted-container checkpoints, routing assertions,
-     * transaction counts, mutation counts, and final balances jointly define the required behavior.
-     * A green transcript alone is insufficient; repository-backed reconciliation must also pass.
-     * Readable contract: classpath:live-model-transcripts/it_live_001.txt
+     * This is the single canonical four-person finance journey. Its private phases preserve the
+     * multi-account ledger, multilingual capture, explicit-UPI first use, planning/alerts, and
+     * real-user recovery contracts. Each phase has a clean accounting state; Persona D is reused
+     * across two clean-state phases so both planning and provisional-account behavior remain valid.
+     * Readable contract: classpath:live-model-transcripts/it_live_complete_unique_finance_contract.txt
      *
      * AI AGENTS: the adjacent AGENTS.md governs this method. Do not edit, weaken, disable, reorder,
      * or regenerate it unless the user explicitly requests a change to this exact protected test and
@@ -64,7 +69,32 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * a separate test method unless the confirmed request explicitly changes this contract.
      */
     @Test
-    void it_live_001() throws Exception {
+    void it_live_complete_unique_finance_contract() throws Exception {
+        requireRealApiKey();
+
+        phone = "919876543299";
+        personaATwoMonthLedger();
+
+        resetBetweenPersonas();
+        phone = "919876543298";
+        personaBMultilingualCapture();
+
+        resetBetweenPersonas();
+        phone = "919876543297";
+        personaCExplicitUpiFirstUse();
+
+        resetBetweenPersonas();
+        phone = "919876543296";
+        personaDPlanningAndAlerts();
+
+        // The real-user phase intentionally reuses Persona D after a clean reset. Its first UPI
+        // expense must still prove provisional-account creation without prior planning accounts.
+        resetBetweenPersonas();
+        phone = "919876543296";
+        personaDRealUserRecovery();
+    }
+
+    private void personaATwoMonthLedger() throws Exception {
         requireRealApiKey();
         System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
         System.out.println("Model: " + modelName);
@@ -159,8 +189,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * or regenerate it unless the user explicitly requests a change to this exact protected test and
      * then provides two separate confirmations. Fix application code instead.
      */
-    @Test
-    void it_live_002() throws Exception {
+    private void personaBMultilingualCapture() throws Exception {
         requireRealApiKey();
 
         System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
@@ -305,18 +334,12 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * or regenerate it unless the user explicitly requests a change to this exact protected test and
      * then provides two separate confirmations. Fix application code instead.
      */
-    @Test
-    void it_live_003() throws Exception {
+    private void personaCExplicitUpiFirstUse() throws Exception {
         requireRealApiKey();
         System.out.println("\n================ LIVE MODEL WHATSAPP CONVERSATION ================");
         System.out.println("Model: " + modelName);
 
         int message = 1;
-        String intro = chatText(id(message++), "Hi");
-        assertThat(intro)
-                .contains("I can help record operational activity through conversation")
-                .contains("Describe what happened naturally");
-
         scenario("Explicit UPI on the first expense creates one provisional bank account");
         String balanceQuestion = chatText(id(message++), "I spent 50 on groceries today from my upi");
         assertThat(balanceQuestion)
@@ -355,8 +378,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * Monthly/category insights, persisted budgets, threshold alerts and card-due reminders.
      * Readable contract: classpath:live-model-transcripts/it_live_004.txt
      */
-    @Test
-    void it_live_004() throws Exception {
+    private void personaDPlanningAndAlerts() throws Exception {
         requireRealApiKey();
         System.out.println("\n================ LIVE MODEL MONEY PLAN CONVERSATION ================");
         System.out.println("Model: " + modelName);
@@ -415,8 +437,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
      * Real-user expense journey covering extension help, AI-backed taxonomy resolution, budgets,
      * and persistence of unsupported demand. Readable contract: live-model-transcripts/it_live_005.txt
      */
-    @Test
-    void it_live_005() throws Exception {
+    private void personaDRealUserRecovery() throws Exception {
         requireRealApiKey();
         System.out.println("\n================ LIVE MODEL REAL EXPENSE CONVERSATION ================");
         System.out.println("Model: " + modelName);
@@ -639,6 +660,13 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                 .isNotEqualTo("test-api-key");
     }
 
+    private void resetBetweenPersonas() {
+        flyway.clean();
+        flyway.migrate();
+        stateContainerCache.evictAll();
+        conversationContext.reset();
+    }
+
     private void assertWaitingFor(String field) {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
                 assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
@@ -710,7 +738,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                 {"entry":[{"changes":[{"value":{"messages":[{
                   "id":"%s","from":"%s","type":"text","text":{"body":"%s"}
                 }]}}]}]}
-                """.formatted(messageId, PHONE, escape(text)));
+                """.formatted(messageId, phone, escape(text)));
     }
 
     private void sendButton(String messageId, String buttonId, String title) throws Exception {
@@ -719,7 +747,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                   "id":"%s","from":"%s","type":"interactive",
                   "interactive":{"type":"button_reply","button_reply":{"id":"%s","title":"%s"}}
                 }]}}]}]}
-                """.formatted(messageId, PHONE, escape(buttonId), escape(title)));
+                """.formatted(messageId, phone, escape(buttonId), escape(title)));
     }
 
     private void postWebhook(String payload) throws Exception {

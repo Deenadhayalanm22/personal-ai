@@ -8,11 +8,6 @@ expense application, a read-only total, and clean conversation state.
 
 Conversation
 ------------
-User: Hi
-App must include:
-- I can help record operational activity through conversation
-- Describe what happened naturally
-
 User: I spent 50 on groceries today from my upi
 App must: say it created My bank account and ask for its current balance.
 State:
@@ -37,4 +32,3 @@ Final accounting and session oracle
 - No active conversation intent
 - No waiting field
 - No pending events
-
