@@ -10,4 +10,6 @@ public interface BusinessExtension {
     default Collection<ContextContributor> contextContributors() { return java.util.List.of(); }
     default Collection<DeterministicEventRouter> deterministicRouters() { return java.util.List.of(); }
     default Collection<InterpretationPromptContributor> promptContributors() { return java.util.List.of(); }
+    /** Extension-owned user guidance shown for greetings and explicit help requests. */
+    default String help(String locale) { return ""; }
 }

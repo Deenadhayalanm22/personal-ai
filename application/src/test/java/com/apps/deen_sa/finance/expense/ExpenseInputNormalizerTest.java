@@ -10,7 +10,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ExpenseInputNormalizerTest {
 
-    private final ExpenseInputNormalizer normalizer = new ExpenseInputNormalizer();
+    private final ExpenseInputNormalizer normalizer = new ExpenseInputNormalizer(
+            new ExpenseCategoryResolver(null, null) {
+                @Override public void canonicalize(ExpenseDto expense, String originalText) { }
+            });
 
     @Test
     void suppliesDeterministicAmountAndTodayWhenLlmOmitsThem() {
@@ -39,4 +42,5 @@ class ExpenseInputNormalizerTest {
         assertThat(HumanAmountParser.parse("1.5 lakh")).contains(new java.math.BigDecimal("150000.0"));
         assertThat(HumanAmountParser.parse("2 crore")).contains(new java.math.BigDecimal("20000000"));
     }
+
 }

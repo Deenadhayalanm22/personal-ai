@@ -11,7 +11,11 @@ import java.util.List;
 @Service
 public class BudgetSetHandler implements StructuredEventHandler {
     private final MonthlyBudgetRepository budgets;
-    public BudgetSetHandler(MonthlyBudgetRepository budgets) { this.budgets = budgets; }
+    private final com.apps.deen_sa.finance.expense.ExpenseCategoryResolver categories;
+    public BudgetSetHandler(MonthlyBudgetRepository budgets,
+                            com.apps.deen_sa.finance.expense.ExpenseCategoryResolver categories) {
+        this.budgets = budgets; this.categories = categories;
+    }
     @Override public String intentType() { return "BUDGET_SET"; }
     @Override public SpeechResult handleSpeech(String text, ConversationContext context) {
         return SpeechResult.invalid("Budgets must be supplied through structured interpretation.");
@@ -22,7 +26,7 @@ public class BudgetSetHandler implements StructuredEventHandler {
     @Override @Transactional
     public SpeechResult handleInterpreted(EventPatch event, String rawText, ConversationContext context) {
         Object rawAmount = event.fields().asMap().get("amount");
-        String category = text(event.fields().asMap().get("category"));
+        String category = categories.resolveBudgetScope(text(event.fields().asMap().get("category")), rawText).orElse(null);
         if (category == null || category.isBlank())
             return SpeechResult.followup("Which category is this monthly budget for?", List.of("category"), event);
         if (rawAmount == null) return SpeechResult.followup("What is the monthly budget amount?", List.of("amount"), event);

@@ -30,6 +30,29 @@ public class SareeJobWorkExtension implements BusinessExtension {
 
     @Override public Collection<EventCapability> events() { return events; }
 
+    @Override public String help(String locale) {
+        if (locale != null && locale.toLowerCase(Locale.ROOT).startsWith("ta")) return """
+                புடவை ஜாப்-வொர்க் செயல்பாடுகளை பதிவு செய்ய நான் உதவ முடியும்:
+                • தொழிலாளருக்கு நூல் வழங்குதல்
+                • முடிக்கப்பட்ட புடவைகளை சரண்டர் செய்தல்
+                • வாராந்திர கூலியை உறுதிப்படுத்துதல்
+                • பணம் அல்லது வங்கி மூலம் கூலி செலுத்துதல்
+                • நூல் கையிருப்பு மற்றும் செலுத்த வேண்டிய கூலியை பார்க்குதல்
+
+                உதாரணம்: “செல்விக்கு இன்று 1,000 மீட்டர் நூல் கொடுத்தேன்.”
+                """;
+        return """
+                I can help with saree job-work operations:
+                • Issue thread or yarn to a worker
+                • Record surrendered or completed sarees
+                • Review and approve weekly wages
+                • Record wage payments by cash, bank, or UPI
+                • Check thread custody and wages payable
+
+                For example: “Give Selvi 1,000 metres of thread today.”
+                """;
+    }
+
     @Override public Collection<DeterministicEventRouter> deterministicRouters() {
         return List.of(text -> {
             String value = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);

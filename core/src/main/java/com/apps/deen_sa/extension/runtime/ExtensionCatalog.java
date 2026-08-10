@@ -51,6 +51,12 @@ public class ExtensionCatalog {
                 .map(BusinessExtension::descriptor).toList();
     }
 
+    public String help(Long tenantId, String locale) {
+        return extensions.values().stream().filter(e -> installations.isEnabled(tenantId, e.descriptor().id()))
+                .map(extension -> extension.help(locale)).filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining("\n\n"));
+    }
+
     public Collection<ExtensionDescriptor> installedDescriptors() {
         return extensions.values().stream().map(BusinessExtension::descriptor).toList();
     }
@@ -78,6 +84,12 @@ public class ExtensionCatalog {
         return extensions.values().stream().filter(e -> installations.isEnabled(tenantId, e.descriptor().id()))
                 .flatMap(e -> e.deterministicRouters().stream()).flatMap(router -> router.events(text).stream())
                 .filter(candidate -> event(tenantId, candidate.eventType()).isPresent()).toList();
+    }
+
+    public Optional<String> queryDeterministically(Long tenantId, String text) {
+        return extensions.values().stream().filter(e -> installations.isEnabled(tenantId, e.descriptor().id()))
+                .flatMap(e -> e.deterministicRouters().stream()).map(router -> router.query(text))
+                .flatMap(Optional::stream).findFirst();
     }
 
     public String interpretationInstructions(Long tenantId) {

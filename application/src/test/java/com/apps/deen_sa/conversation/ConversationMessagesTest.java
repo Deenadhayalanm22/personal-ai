@@ -16,4 +16,12 @@ class ConversationMessagesTest {
     void keepsRomanizedTamilOnEnglishFallbackUntilUserChoosesTamilScript() {
         assertThat(messages.gettingStarted("ta-Latn")).contains("operational activity");
     }
+
+    @Test
+    void uncertainInputGetsAnHonestReviewQueueMessage() {
+        assertThat(messages.unprocessed("en-IN"))
+                .contains("couldn't understand")
+                .contains("recorded this message")
+                .contains("type Help");
+    }
 }

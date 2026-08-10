@@ -108,6 +108,13 @@ public class QueryHandler implements SpeechHandler {
                     .collect(Collectors.joining(", "));
             result += " Category breakdown: " + breakdown + ".";
         }
+        if (summary.getSpendBySubcategory() != null && !summary.getSpendBySubcategory().isEmpty()) {
+            String breakdown = summary.getSpendBySubcategory().entrySet().stream()
+                    .filter(entry -> entry.getKey() != null)
+                    .map(entry -> entry.getKey() + " ₹" + entry.getValue().stripTrailingZeros().toPlainString())
+                    .collect(Collectors.joining(", "));
+            if (!breakdown.isBlank()) result += " Details: " + breakdown + ".";
+        }
         return result;
     }
 }

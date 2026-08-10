@@ -63,3 +63,14 @@
 2. A persisted language preference survives code-switching and can be changed by voice/text.
 3. Prompts, choices, confirmations, errors, units, numbers, and summaries have reviewed localized templates.
 4. Comprehension and completion are tested with intended users, including low-literacy voice-first participants.
+
+## CORE-006 — Explain enabled capabilities and retain unresolved demand
+
+**Status:** Done · **Priority:** P1
+
+### Acceptance criteria
+
+1. Greetings and `help` render guidance supplied only by the business extensions enabled for that tenant.
+2. The reusable core contains no expense or saree vocabulary; every extension owns and localizes its examples.
+3. Ambiguous, unsupported, and unrecognized follow-up messages receive an honest recovery response and create no business movement.
+4. Unprocessed messages are retained in an idempotent review queue with tenant, user, channel, locale, reason, and interpreter version.

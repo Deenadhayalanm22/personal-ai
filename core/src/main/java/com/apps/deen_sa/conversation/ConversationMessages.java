@@ -26,6 +26,12 @@ public class ConversationMessages {
                 : "Should I record this as a new activity, or show existing records?";
     }
 
+    public String unprocessed(String locale) {
+        return isTamil(locale)
+                ? "இந்த கோரிக்கையை என்னால் புரிந்துகொள்ள முடியவில்லை. மேம்படுத்தவும் பின்னர் பரிசீலிக்கவும் இந்த செய்தியை பதிவு செய்துள்ளோம். வேறு வார்த்தைகளில் மீண்டும் முயற்சிக்கலாம் அல்லது Help என தட்டச்சு செய்யலாம்."
+                : "I couldn't understand that request. I've recorded this message for review so we can improve and follow up. Please try rephrasing it, or type Help to see what I can do.";
+    }
+
     public String queryPeriodQuestion(String locale) {
         return isTamil(locale) ? "எந்த காலத்தை பார்க்க விரும்புகிறீர்கள் — இன்று, இந்த வாரம் அல்லது இந்த மாதம்?"
                 : "Which period should I show — today, this week, or this month?";

@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import com.apps.deen_sa.finance.budget.MonthlyBudgetRepository;
+import com.apps.deen_sa.conversation.UnprocessedConversationMessageRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -43,6 +44,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private ConversationSessionRepository sessionRepository;
     @Autowired private MonthlyBudgetRepository monthlyBudgetRepository;
+    @Autowired private UnprocessedConversationMessageRepository unprocessedMessageRepository;
 
     @Value("${wiremock.admin-url}") private String wireMockAdminUrl;
     @Value("${openai.model}") private String modelName;
@@ -176,6 +178,10 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         scenario("English · complete sentence");
         assertRecorded(chatText(id(message++), "Paid BESCOM electricity bill of 1850 using UPI"), "1850");
         assertExpenseApplied(3, "1850");
+
+        //ask balance in normal way and it should give the balance
+        String balanceSummary = chatText(id(message++), "what is my current balance in my bank");
+        //fill the remaining.
 
         scenario("Tamil · complete sentence");
         assertRecorded(chatText(id(message++), "இன்று மளிகை பொருட்களுக்கு 230 ரூபாய் UPI மூலம் செலவு செய்தேன்"), "230");
@@ -368,6 +374,98 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
             });
         });
         System.out.println("====================================================================\n");
+    }
+
+    /**
+     * Real-user expense journey covering extension help, AI-backed taxonomy resolution, budgets,
+     * and persistence of unsupported demand. Readable contract: live-model-transcripts/it_live_005.txt
+     */
+    @Test
+    void it_live_005() throws Exception {
+        requireRealApiKey();
+        System.out.println("\n================ LIVE MODEL REAL EXPENSE CONVERSATION ================");
+        System.out.println("Model: " + modelName);
+
+        int message = 1;
+        scenario("Expense-specific greeting and help");
+        String greeting = chatText(id(message++), "Hi");
+        assertThat(greeting)
+                .containsIgnoringCase("personal expenses")
+                .containsIgnoringCase("Record expenses and income")
+                .containsIgnoringCase("monthly category budgets");
+        String help = chatText(id(message++), "Help");
+        assertThat(help).isEqualTo(greeting);
+
+        scenario("First UPI expense creates and completes the provisional bank account");
+        String balanceQuestion = chatText(id(message++),
+                "i spent 55 today morning for some snacks and i paid using upi");
+        assertThat(balanceQuestion).containsIgnoringCase("created My bank account")
+                .containsIgnoringCase("current balance");
+        assertWaitingFor("sourceBalance");
+        String balanceConfirmation = chatText(id(message++), "10000");
+        assertThat(balanceConfirmation).contains("55").contains("9945");
+
+        scenario("Natural budget wording is resolved to a configured taxonomy scope");
+        String budget = chatText(id(message++), "my grocery balance for this month is only 2000.");
+        assertThat(budget).containsIgnoringCase("Groceries").contains("2000");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(monthlyBudgetRepository.findAll()).singleElement().satisfies(value -> {
+                    assertThat(value.getCategory()).isEqualTo("Groceries");
+                    assertThat(value.getMonthlyLimit()).isEqualByComparingTo("2000");
+                }));
+
+        String initialBudgetStatus = chatText(id(message++), "how much my grocery budget for this month");
+        assertThat(initialBudgetStatus).contains("Groceries").contains("2000").containsIgnoringCase("remaining");
+
+        scenario("Misspelled free text is semantically mapped by the model to the configured taxonomy");
+        String vegetables = chatText(id(message++), "i spent 1300 on the buying vegitables using my upi");
+        assertRecorded(vegetables, "1300");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateChangeRepository.findAll())
+                        .filteredOn(value -> value.getAmount().compareTo(new BigDecimal("1300")) == 0)
+                        .singleElement().satisfies(value -> {
+                            assertThat(value.getCategory()).isEqualTo("Food & Dining");
+                            assertThat(value.getSubcategory()).isEqualTo("Groceries");
+                        }));
+
+        String plannedStatus = chatText(id(message++),
+                "how am i doing my grocery budget against this month planned");
+        assertThat(plannedStatus).contains("1300").contains("2000").contains("700")
+                .containsIgnoringCase("remaining");
+
+        scenario("Crossing the canonical budget creates an over-budget alert");
+        String overBudget = chatText(id(message++), "i spent 800 on groceries today paid using upi");
+        assertRecorded(overBudget, "800");
+        assertThat(overBudget).containsIgnoringCase("Budget alert").containsIgnoringCase("over").contains("100");
+
+        String today = chatText(id(message++), "how much i spent today");
+        assertThat(today).contains("2155").containsIgnoringCase("Groceries");
+
+        scenario("Unsupported demand receives an honest response and enters the review queue");
+        String unsupportedText = "Purple silence sideways banana orbit";
+        String unsupportedMessageId = id(message++);
+        String unsupported = chatText(unsupportedMessageId, unsupportedText);
+        assertThat(unsupported).containsIgnoringCase("couldn't understand")
+                .containsIgnoringCase("recorded this message").containsIgnoringCase("Help");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(unprocessedMessageRepository.findAll()).singleElement().satisfies(value -> {
+                    assertThat(value.getMessageText()).isEqualTo(unsupportedText);
+                    assertThat(value.getChannel()).isEqualTo("WHATSAPP");
+                    assertThat(value.getStatus()).isEqualTo("NEW");
+                    assertThat(value.getReason()).isIn("AMBIGUOUS_OR_UNSUPPORTED", "UNKNOWN_COMMAND");
+                    assertThat(value.getExternalMessageId()).isEqualTo(unsupportedMessageId);
+                }));
+
+        scenario("Help remains available after an unsupported turn");
+        assertThat(chatText(id(message++), "help")).isEqualTo(greeting);
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(stateChangeRepository.findAll()).hasSize(3);
+            assertThat(stateMutationRepository.findAll()).hasSize(3);
+            assertThat(monthlyBudgetRepository.findAll()).hasSize(1);
+            assertThat(unprocessedMessageRepository.findAll()).hasSize(1);
+        });
+        System.out.println("======================================================================\n");
     }
 
     private String id(int sequence) {

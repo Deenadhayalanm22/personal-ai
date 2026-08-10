@@ -6,6 +6,7 @@ import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.conversation.SpeechStatus;
 import com.apps.deen_sa.conversation.ConversationMessages;
+import com.apps.deen_sa.conversation.UnprocessedConversationService;
 import com.apps.deen_sa.extension.api.EventCapability;
 import com.apps.deen_sa.extension.runtime.ExtensionCatalog;
 import org.springframework.stereotype.Service;
@@ -29,18 +30,35 @@ public class UnifiedConversationEngine {
     private final ExtensionCatalog extensions;
     private final MutationAuthorizationPolicy mutationPolicy;
     private final ConversationMessages messages;
+    private final UnprocessedConversationService unprocessed;
 
     public UnifiedConversationEngine(ConversationInterpreter interpreter, ExtensionCatalog extensions,
-                                     MutationAuthorizationPolicy mutationPolicy, ConversationMessages messages) {
+                                     MutationAuthorizationPolicy mutationPolicy, ConversationMessages messages,
+                                     UnprocessedConversationService unprocessed) {
         this.interpreter = interpreter;
         this.extensions = extensions;
         this.mutationPolicy = mutationPolicy;
         this.messages = messages;
+        this.unprocessed = unprocessed;
     }
 
     public SpeechResult process(String text, ConversationContext context) {
         SpeechResult deterministic = deterministicTurn(text, context);
         if (deterministic != null) return finishDeterministicTurn(text, deterministic, context);
+
+        String deterministicQuery = extensions.queryDeterministically(tenantId(context), text).orElse(null);
+        if (deterministicQuery != null) {
+            QueryPeriod query;
+            try { query = QueryPeriod.valueOf(deterministicQuery); }
+            catch (IllegalArgumentException invalid) { query = QueryPeriod.NONE; }
+            if (query != QueryPeriod.NONE) {
+                String queryName = query.name();
+                SpeechResult result = extensions.query(tenantId(context), "QUERY")
+                        .map(capability -> toSpeechResult(capability.handle(queryName, context)))
+                        .orElseGet(() -> SpeechResult.unknown("That query capability is not enabled for this business."));
+                return finishDeterministicTurn(text, result, context);
+            }
+        }
 
         List<com.apps.deen_sa.extension.api.DeterministicEventCandidate> extracted =
                 extensions.extractDeterministically(tenantId(context), text);
@@ -51,8 +69,10 @@ public class UnifiedConversationEngine {
                             evidenceFor(field.getValue(), text), 1.0)).toList())).toList();
             TurnInterpretation turn = new TurnInterpretation(events.size() == 1 ? TurnType.NEW_EVENT : TurnType.NEW_EVENTS,
                     events.getFirst().eventType(), context.getLocale(), null, events, null, QueryPeriod.NONE, List.of(), 1.0);
-            if (!mutationPolicy.isAuthorized(turn, text))
+            if (!mutationPolicy.isAuthorized(turn, text)) {
+                unprocessed.record(text, "MUTATION_NOT_GROUNDED", context);
                 return finishDeterministicTurn(text, SpeechResult.info(messages.mutationNeedsClarification(context.getLocale())), context);
+            }
             return finishDeterministicTurn(text, execute(turn, text, context), context);
         }
 
@@ -76,6 +96,7 @@ public class UnifiedConversationEngine {
         validate(turn, context);
         applyTurnLanguage(turn, context);
         if (!mutationPolicy.isAuthorized(turn, text)) {
+            unprocessed.record(text, "MUTATION_NOT_GROUNDED", context);
             SpeechResult safeReply = SpeechResult.info(messages.mutationNeedsClarification(context.getLocale()));
             appendTurn(context, "user", text);
             appendTurn(context, "assistant", safeReply.getMessage());
@@ -113,15 +134,16 @@ public class UnifiedConversationEngine {
     }
 
     private SpeechResult execute(TurnInterpretation turn, String text, ConversationContext context) {
-        if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), context);
+        if (turn.turnType() == TurnType.COMMAND) return command(turn.command(), text, context);
         if (context.isInFollowup() && (turn.turnType() == TurnType.AMBIGUOUS
                 || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY && turn.turnType() != TurnType.COMMAND)) {
+            unprocessed.record(text, "UNRECOGNIZED_FOLLOWUP", context);
             String question = context.getLastQuestion() == null
                     ? messages.mutationNeedsClarification(context.getLocale()) : context.getLastQuestion();
             return SpeechResult.followup(question, List.of(context.getWaitingForField()), context.getPartialObject());
         }
         if (turn.turnType() == TurnType.AMBIGUOUS || turn.events().isEmpty() && turn.turnType() != TurnType.QUERY) {
-            return SpeechResult.info(messages.gettingStarted(context.getLocale()));
+            return unresolved(text, "AMBIGUOUS_OR_UNSUPPORTED", context);
         }
         if (turn.turnType() == TurnType.QUERY) {
             if (turn.query() != null && turn.query() != QueryPeriod.NONE) {
@@ -199,7 +221,11 @@ public class UnifiedConversationEngine {
                 turn.targetEventId(), List.of(fallback), null, QueryPeriod.NONE, turn.ambiguities(), 1.0);
     }
 
-    private SpeechResult command(String command, ConversationContext context) {
+    private SpeechResult command(String command, String originalText, ConversationContext context) {
+        if (command != null && Set.of("HELP", "GREETING").contains(command.toUpperCase(Locale.ROOT))) {
+            return isHelpRequest(originalText) ? SpeechResult.info(help(context))
+                    : unresolved(originalText, "UNGROUNDED_HELP_COMMAND", context);
+        }
         if ("SKIP_PENDING".equals(command)) {
             context.reset();
             return SpeechResult.info(messages.skipped(context.getLocale()));
@@ -208,8 +234,8 @@ public class UnifiedConversationEngine {
             context.reset();
             return SpeechResult.info(messages.cancelled(context.getLocale()));
         }
-        // Greetings, help requests, and unknown non-mutating commands should teach the user what the app can do.
-        return SpeechResult.info(messages.gettingStarted(context.getLocale()));
+        // Greetings and help are handled before interpretation. Unknown commands belong in the review queue.
+        return unresolved(originalText, "UNKNOWN_COMMAND", context);
     }
 
     private void validate(TurnInterpretation turn, ConversationContext context) {
@@ -228,7 +254,7 @@ public class UnifiedConversationEngine {
     private SpeechResult deterministicTurn(String text, ConversationContext context) {
         String normalized = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);
         if (!context.isInFollowup() && HELP_COMMANDS.contains(normalized)) {
-            return SpeechResult.info(messages.gettingStarted(context.getLocale()));
+            return SpeechResult.info(help(context));
         }
         if (context.isInFollowup() && Set.of("skip", "later", "not sure", "தவிர்").contains(normalized)) {
             context.reset();
@@ -259,6 +285,25 @@ public class UnifiedConversationEngine {
         context.setLastQuestion(Boolean.TRUE.equals(result.getNeedFollowup()) ? result.getMessage() : null);
         context.setInterpreterVersion(VERSION);
         return result;
+    }
+
+    private String help(ConversationContext context) {
+        String value = extensions.help(tenantId(context), context.getLocale());
+        return value == null || value.isBlank() ? messages.gettingStarted(context.getLocale()) : value;
+    }
+
+    static boolean isHelpRequest(String text) {
+        if (text == null) return false;
+        String normalized = text.trim().toLowerCase(Locale.ROOT).replaceAll("[.!?]+$", "").trim();
+        if (HELP_COMMANDS.contains(normalized)) return true;
+        return normalized.matches("(?:please\\s+)?(?:show|tell)\\s+me\\s+(?:help|what you can do)")
+                || normalized.matches("(?:can|could)\\s+you\\s+help(?:\\s+me)?")
+                || normalized.matches("what\\s+can\\s+you\\s+do");
+    }
+
+    private SpeechResult unresolved(String text, String reason, ConversationContext context) {
+        unprocessed.record(text, reason, context);
+        return SpeechResult.info(messages.unprocessed(context.getLocale()));
     }
 
     private void applyTurnLanguage(TurnInterpretation turn, ConversationContext context) {

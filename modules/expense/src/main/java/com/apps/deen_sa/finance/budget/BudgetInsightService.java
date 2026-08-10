@@ -25,7 +25,9 @@ public class BudgetInsightService {
     public Optional<String> alert(StateChangeEntity expense, String timezone) {
         if (expense == null || expense.getCategory() == null || expense.getTimestamp() == null) return Optional.empty();
         Long userId = Long.valueOf(expense.getUserId());
-        MonthlyBudgetEntity budget = budgets.findByUserIdAndCategoryIgnoreCase(userId, expense.getCategory())
+        MonthlyBudgetEntity budget = (expense.getSubcategory() == null ? Optional.<MonthlyBudgetEntity>empty()
+                : budgets.findByUserIdAndCategoryIgnoreCase(userId, expense.getSubcategory()))
+                .or(() -> budgets.findByUserIdAndCategoryIgnoreCase(userId, expense.getCategory()))
                 .filter(MonthlyBudgetEntity::isActive).orElse(null);
         if (budget == null) return Optional.empty();
         ZoneId zone = zone(timezone); YearMonth month = YearMonth.from(expense.getTimestamp().atZone(zone));

@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 
 @Component
 public class ExpenseInputNormalizer {
+    private final ExpenseCategoryResolver categoryResolver;
+
+    public ExpenseInputNormalizer(ExpenseCategoryResolver categoryResolver) { this.categoryResolver = categoryResolver; }
 
     private static final Pattern EXPLICIT_SPEND_AMOUNT = Pattern.compile(
             "(?i)\\b(?:spent|paid)\\s*(?:rs\\.?|inr|₹)?\\s*"
@@ -27,6 +30,7 @@ public class ExpenseInputNormalizer {
         if (dto.getAmount() == null) {
             explicitAmount(originalText).ifPresent(dto::setAmount);
         }
+        categoryResolver.canonicalize(dto, originalText);
         return dto;
     }
 

@@ -51,4 +51,21 @@ public class ExpenseTaxonomyRegistry {
         return taxonomy.values().stream()
                 .anyMatch(set -> set.contains(value));
     }
+
+    public Set<String> allLabels() {
+        Set<String> labels = new LinkedHashSet<>(taxonomy.keySet());
+        taxonomy.values().forEach(labels::addAll);
+        return Set.copyOf(labels);
+    }
+
+    public Optional<String> canonicalLabel(String value) {
+        if (value == null || value.isBlank()) return Optional.empty();
+        return allLabels().stream().filter(label -> label.equalsIgnoreCase(value.trim())).findFirst();
+    }
+
+    public Optional<String> parentCategory(String subcategory) {
+        if (subcategory == null) return Optional.empty();
+        return taxonomy.entrySet().stream().filter(entry -> entry.getValue().stream()
+                .anyMatch(value -> value.equalsIgnoreCase(subcategory.trim()))).map(Map.Entry::getKey).findFirst();
+    }
 }

@@ -16,7 +16,8 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
     @Query(value = """
             SELECT COALESCE(SUM(amount), 0) FROM state_change
             WHERE user_id = :userId AND transaction_type = 'EXPENSE'
-              AND LOWER(category) = LOWER(:category) AND tx_time >= :start AND tx_time < :end
+              AND (LOWER(category) = LOWER(:category) OR LOWER(subcategory) = LOWER(:category))
+              AND tx_time >= :start AND tx_time < :end
             """, nativeQuery = true)
     BigDecimal sumExpenseCategory(@Param("userId") String userId, @Param("category") String category,
                                   @Param("start") Instant start, @Param("end") Instant end);

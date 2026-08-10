@@ -39,9 +39,9 @@ class FinanceDeterministicEventRouterTest {
 
         assertThat(events).hasSize(2);
         assertThat(events.get(0).fields()).containsEntry("amount", new java.math.BigDecimal("80"))
-                .containsEntry("category", "Food").containsEntry("sourceAccount", "UPI");
+                .containsEntry("merchantName", "tea").containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
         assertThat(events.get(1).fields()).containsEntry("amount", new java.math.BigDecimal("120"))
-                .containsEntry("category", "Transport").containsEntry("sourceAccount", "UPI");
+                .containsEntry("merchantName", "auto").containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
     }
 
     @org.junit.jupiter.api.Test
@@ -49,7 +49,7 @@ class FinanceDeterministicEventRouterTest {
         var event = router.events("I spent 500 on groceries").getFirst();
 
         assertThat(event.fields()).containsEntry("amount", new java.math.BigDecimal("500"))
-                .containsEntry("category", "Groceries")
+                .containsEntry("merchantName", "groceries").doesNotContainKey("category")
                 .doesNotContainKey("sourceAccount");
     }
 
@@ -58,7 +58,7 @@ class FinanceDeterministicEventRouterTest {
         var event = router.events("I spent 50 on groceries today from my upi").getFirst();
 
         assertThat(event.fields()).containsEntry("amount", new java.math.BigDecimal("50"))
-                .containsEntry("category", "Groceries")
+                .doesNotContainKey("category")
                 .containsEntry("sourceAccount", "my upi");
     }
 
@@ -67,36 +67,62 @@ class FinanceDeterministicEventRouterTest {
         var event = router.events("Set my monthly groceries budget to ₹10k").getFirst();
 
         assertThat(event.eventType()).isEqualTo("BUDGET_SET");
-        assertThat(event.fields()).containsEntry("category", "Groceries")
+        assertThat(event.fields()).containsEntry("category", "groceries")
                 .containsEntry("amount", new java.math.BigDecimal("10000"));
+    }
+
+    @org.junit.jupiter.api.Test
+    void extractsNaturalMonthlyScopeBalanceAsBudgetMutation() {
+        var event = router.events("my grocery balance for this month is only 2000.").getFirst();
+
+        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
+        assertThat(event.fields()).containsEntry("category", "grocery")
+                .containsEntry("amount", new java.math.BigDecimal("2000"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "how much my grocery budget for this month",
+            "how am i doing my grocery budget against this month planned"
+    })
+    void routesBudgetStatusQuestionsWithoutTheModel(String text) {
+        assertThat(router.query(text)).contains("CURRENT_STATUS");
+    }
+
+    @org.junit.jupiter.api.Test
+    void leavesVegetableMeaningForTaxonomyBackedSemanticResolution() {
+        var event = router.events("I spent 1300 on the buying vegitables using my upi").getFirst();
+
+        assertThat(event.fields()).containsEntry("merchantName", "the buying vegitables").doesNotContainKey("category");
     }
 
     @org.junit.jupiter.api.Test
     void extractsSingleExpenseWithPaymentAndPaidForGrammar() {
         var food = router.events("I spent 58 on curd and some ice cream through UPI").getFirst();
         assertThat(food.fields()).containsEntry("amount", new java.math.BigDecimal("58"))
-                .containsEntry("category", "Food").containsEntry("sourceAccount", "UPI");
+                .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
 
         var utility = router.events("Paid BESCOM electricity bill of 1850 using UPI").getFirst();
         assertThat(utility.fields()).containsEntry("amount", new java.math.BigDecimal("1850"))
-                .containsEntry("category", "Utilities").containsEntry("sourceAccount", "UPI");
+                .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
     }
 
     @org.junit.jupiter.api.Test
     void extractsTamilAndTanglishScenarioGrammarDeterministically() {
         var tamil = router.events("இன்று மளிகை பொருட்களுக்கு 230 ரூபாய் UPI மூலம் செலவு செய்தேன்").getFirst();
         assertThat(tamil.fields()).containsEntry("amount", new java.math.BigDecimal("230"))
-                .containsEntry("category", "Groceries").containsEntry("sourceAccount", "UPI");
+                .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
 
         var tamilMissingPayment = router.events("நேற்று மின்சார கட்டணத்திற்கு 650 ரூபாய் செலவு செய்தேன்").getFirst();
         assertThat(tamilMissingPayment.fields()).containsEntry("amount", new java.math.BigDecimal("650"))
-                .containsEntry("category", "Utilities").doesNotContainKey("sourceAccount");
+                .doesNotContainKey("category").doesNotContainKey("sourceAccount");
 
         var tanglish = router.events("Inniku bike petrol ku 350 rupees UPI la spend pannen").getFirst();
         assertThat(tanglish.fields()).containsEntry("amount", new java.math.BigDecimal("350"))
-                .containsEntry("category", "Transport").containsEntry("sourceAccount", "UPI");
+                .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
 
         var missingAmount = router.events("Nethu office lunch ku spend pannen").getFirst();
-        assertThat(missingAmount.fields()).containsEntry("category", "Food").doesNotContainKey("amount");
+        assertThat(missingAmount.fields()).containsEntry("merchantName", "office lunch")
+                .doesNotContainKey("category").doesNotContainKey("amount");
     }
 }
