@@ -14,6 +14,16 @@
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
         <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
         <dependency><groupId>com.openai</groupId><artifactId>openai-java</artifactId><version>4.6.1</version></dependency>
+        <dependency><groupId>org.knowm.xchart</groupId><artifactId>xchart</artifactId><version>3.8.8</version></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                <configuration><systemPropertyVariables><java.awt.headless>true</java.awt.headless></systemPropertyVariables></configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

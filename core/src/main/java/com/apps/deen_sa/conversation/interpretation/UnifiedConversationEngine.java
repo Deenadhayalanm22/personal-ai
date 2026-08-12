@@ -338,7 +338,8 @@ public class UnifiedConversationEngine {
         catch (Exception ignored) { status = SpeechStatus.UNKNOWN; }
         return SpeechResult.builder().status(status).message(result.message()).needFollowup(result.followup())
                 .missingFields(result.missingFields()).partial(result.partial()).savedEntity(result.savedEntity())
-                .actions(result.actions().stream().map(value -> new ResponseAction(value.id(), value.title())).toList()).build();
+                .actions(result.actions().stream().map(value -> new ResponseAction(value.id(), value.title())).toList())
+                .media(result.media()).build();
     }
 
     private void appendTurn(ConversationContext context, String role, String text) {

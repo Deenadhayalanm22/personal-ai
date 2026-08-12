@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,6 +39,45 @@ public class WhatsAppReplySender {
                 "type", "text",
                 "text", Map.of("body", message)
         ));
+    }
+
+    /** Uploads media to Meta and sends it by media id. Returns false so callers can fall back to text. */
+    public boolean sendImageReply(String to, ResponseMedia media, String caption) {
+        try {
+            String mediaId = upload(media);
+            Map<String, Object> image = new java.util.HashMap<>();
+            image.put("id", mediaId);
+            if (caption != null && !caption.isBlank()) image.put("caption", limit(caption, 1024));
+            sendPayloadOrThrow(to, "expense chart", Map.of(
+                    "messaging_product", "whatsapp",
+                    "to", to,
+                    "type", "image",
+                    "image", image));
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to upload or send WhatsApp image to {}", to, e);
+            return false;
+        }
+    }
+
+    private String upload(ResponseMedia media) {
+        String url = apiBaseUrl + "/v19.0/" + phoneNumberId + "/media";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth(accessToken);
+
+        ByteArrayResource file = new ByteArrayResource(media.content()) {
+            @Override public String getFilename() { return media.filename(); }
+        };
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("messaging_product", "whatsapp");
+        body.add("type", media.contentType());
+        body.add("file", file);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = restTemplate.postForObject(url, new HttpEntity<>(body, headers), Map.class);
+        Object id = response == null ? null : response.get("id");
+        if (id == null || id.toString().isBlank()) throw new IllegalStateException("Meta media upload returned no id");
+        return id.toString();
     }
 
     public void sendAudioConfirmation(String to, String transcription, String confirmationId) {
@@ -112,6 +154,16 @@ public class WhatsAppReplySender {
 
     private void sendPayload(String to, String description, Map<String, Object> payload) {
 
+        try {
+            sendPayloadOrThrow(to, description, payload);
+        } catch (Exception e) {
+            // webhook flow must never break
+            log.error("Failed to send WhatsApp reply to {}", to, e);
+        }
+    }
+
+    private void sendPayloadOrThrow(String to, String description, Map<String, Object> payload) {
+
         String url =
                 apiBaseUrl + "/v19.0/"
                     + phoneNumberId
@@ -124,12 +176,7 @@ public class WhatsAppReplySender {
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(payload, headers);
 
-        try {
-            restTemplate.postForEntity(url, request, String.class);
-            log.info("Successfully pushed {} to {}", description, to);
-        } catch (Exception e) {
-            // swallow or log — webhook flow must never break
-            log.error("Failed to send WhatsApp reply to {}", to, e);
-        }
+        restTemplate.postForEntity(url, request, String.class);
+        log.info("Successfully pushed {} to {}", description, to);
     }
 }

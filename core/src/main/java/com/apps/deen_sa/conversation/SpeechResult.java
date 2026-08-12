@@ -1,6 +1,7 @@
 package com.apps.deen_sa.conversation;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
 
@@ -32,6 +33,9 @@ public class SpeechResult {
     private String nextAction;
 
     private List<ResponseAction> actions;
+
+    @JsonIgnore
+    private ResponseMedia media;
 
     // ---------- FACTORY METHODS ---------- //
 

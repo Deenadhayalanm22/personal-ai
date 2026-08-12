@@ -23,7 +23,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -482,6 +486,21 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertThat(financeAnalyticsRepository.findAll())
                 .filteredOn(projection -> projection.isActive())
                 .hasSize(7);
+
+        scenario("Charts · Generate corrected spending images for WhatsApp");
+        Path todayChart = chatChart(id(message++),
+                "Show my spending summary for today by category", "today-spending.png");
+        assertThat(todayChart).isRegularFile();
+        assertThat(Files.readAllBytes(todayChart)).startsWith(
+                (byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47);
+
+        Path monthChart = chatChart(id(message++),
+                "Give me this month's spending summary by category", "month-spending.png");
+        assertThat(monthChart).isRegularFile();
+        assertThat(Files.size(monthChart)).isGreaterThan(10_000);
+        System.out.println("Generated chart images:");
+        System.out.println("  • " + todayChart.toAbsolutePath());
+        System.out.println("  • " + monthChart.toAbsolutePath());
     }
 
 
@@ -1185,6 +1204,22 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         return reply;
     }
 
+    private Path chatChart(String messageId, String userText, String filename) throws Exception {
+        int imageMessagesBefore = outgoingImageMessages().size();
+        int uploadsBefore = outgoingMediaUploads().size();
+        System.out.println("Deena: " + userText);
+        sendText(messageId, userText);
+
+        ImageMessage image = awaitNextImageMessage(imageMessagesBefore);
+        assertThat(image.caption()).contains("₹").containsIgnoringCase("Category breakdown");
+        byte[] png = awaitNextPngUpload(uploadsBefore);
+        Path output = Path.of("target", "live-charts", filename);
+        Files.createDirectories(output.getParent());
+        Files.write(output, png);
+        System.out.println("App: " + image.caption() + " [image saved to " + output.toAbsolutePath() + "]");
+        return output;
+    }
+
     private String chatButton(String messageId, String buttonId, String title) throws Exception {
         int before = outgoingMessages().size();
         int expensesBefore = recordedExpenseCount();
@@ -1347,5 +1382,87 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         }
     }
 
+    private ImageMessage awaitNextImageMessage(int previousCount) {
+        ImageMessage[] result = new ImageMessage[1];
+        await().atMost(Duration.ofSeconds(90)).pollInterval(Duration.ofMillis(300)).untilAsserted(() -> {
+            List<ImageMessage> images = outgoingImageMessages();
+            assertThat(images).hasSizeGreaterThan(previousCount);
+            result[0] = images.getLast();
+            assertThat(result[0].mediaId()).isNotBlank();
+        });
+        return result[0];
+    }
+
+    private byte[] awaitNextPngUpload(int previousCount) {
+        byte[][] result = new byte[1][];
+        await().atMost(Duration.ofSeconds(90)).pollInterval(Duration.ofMillis(300)).untilAsserted(() -> {
+            List<byte[]> uploads = outgoingMediaUploads();
+            assertThat(uploads).hasSizeGreaterThan(previousCount);
+            result[0] = extractPng(uploads.getLast());
+            assertThat(result[0]).startsWith((byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47);
+        });
+        return result[0];
+    }
+
+    private List<ImageMessage> outgoingImageMessages() {
+        try {
+            JsonNode root = wireMockRequests();
+            List<ImageMessage> messages = new ArrayList<>();
+            for (JsonNode entry : root.path("requests")) {
+                JsonNode request = entry.path("request");
+                if (!request.path("url").asText().endsWith("/messages")) continue;
+                JsonNode payload = objectMapper.readTree(request.path("body").asText());
+                if (!"image".equals(payload.path("type").asText())) continue;
+                messages.add(new ImageMessage(request.path("loggedDate").asLong(),
+                        payload.path("image").path("id").asText(),
+                        payload.path("image").path("caption").asText()));
+            }
+            messages.sort(Comparator.comparingLong(ImageMessage::loggedAt));
+            return messages;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to read outgoing WhatsApp images", exception);
+        }
+    }
+
+    private List<byte[]> outgoingMediaUploads() {
+        JsonNode root = wireMockRequests();
+        List<Map.Entry<Long, byte[]>> uploads = new ArrayList<>();
+        for (JsonNode entry : root.path("requests")) {
+            JsonNode request = entry.path("request");
+            if (!request.path("url").asText().endsWith("/media")) continue;
+            uploads.add(Map.entry(request.path("loggedDate").asLong(),
+                    Base64.getDecoder().decode(request.path("bodyAsBase64").asText())));
+        }
+        uploads.sort(Map.Entry.comparingByKey());
+        return uploads.stream().map(Map.Entry::getValue).toList();
+    }
+
+    private JsonNode wireMockRequests() {
+        try {
+            return objectMapper.readTree(RestClient.create(wireMockAdminUrl).get().uri("/requests")
+                    .retrieve().body(String.class));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to read WireMock requests", exception);
+        }
+    }
+
+    private byte[] extractPng(byte[] multipartBody) {
+        byte[] startMarker = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+        byte[] endMarker = {0x49, 0x45, 0x4e, 0x44, (byte) 0xae, 0x42, 0x60, (byte) 0x82};
+        int start = indexOf(multipartBody, startMarker, 0);
+        int end = indexOf(multipartBody, endMarker, Math.max(0, start));
+        if (start < 0 || end < 0) throw new IllegalStateException("WhatsApp upload did not contain a complete PNG");
+        return Arrays.copyOfRange(multipartBody, start, end + endMarker.length);
+    }
+
+    private int indexOf(byte[] value, byte[] marker, int from) {
+        outer: for (int i = from; i <= value.length - marker.length; i++) {
+            for (int j = 0; j < marker.length; j++) if (value[i + j] != marker[j]) continue outer;
+            return i;
+        }
+        return -1;
+    }
+
     private record OutgoingMessage(long loggedAt, String text) { }
+    private record ImageMessage(long loggedAt, String mediaId, String caption) { }
 }

@@ -18,6 +18,6 @@ final class FinanceQueryCapability implements QueryCapability {
             throw new IllegalArgumentException("Finance compatibility adapter requires the host conversation bridge");
         SpeechResult result = handler.handleInterpreted(period, context);
         return new CapabilityResult(result.getStatus().name(), result.getMessage(), Boolean.TRUE.equals(result.getNeedFollowup()),
-                result.getMissingFields(), result.getPartial(), result.getSavedEntity(), java.util.List.of());
+                result.getMissingFields(), result.getPartial(), result.getSavedEntity(), java.util.List.of(), result.getMedia());
     }
 }

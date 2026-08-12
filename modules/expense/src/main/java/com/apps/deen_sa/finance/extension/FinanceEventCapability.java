@@ -67,6 +67,6 @@ final class FinanceEventCapability implements EventCapability {
         return new CapabilityResult(result.getStatus().name(), result.getMessage(), Boolean.TRUE.equals(result.getNeedFollowup()),
                 result.getMissingFields(), result.getPartial(), result.getSavedEntity(),
                 result.getActions() == null ? java.util.List.of() : result.getActions().stream()
-                        .map(value -> new CapabilityAction(value.id(), value.title())).toList());
+                        .map(value -> new CapabilityAction(value.id(), value.title())).toList(), result.getMedia());
     }
 }

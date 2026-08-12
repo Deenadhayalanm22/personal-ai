@@ -148,13 +148,7 @@ public class WhatsAppMessageProcessor {
             SpeechResult result = conversation.process("WHATSAPP", from, messageId, text);
 
             log.info("Processed message - {} from {} and reply is ready - {}", text, from, result.getMessage());
-            if (result.getMessage() != null) {
-                if (result.getActions() != null && !result.getActions().isEmpty()) {
-                    replySender.sendInteractiveReply(from, result.getMessage(), result.getActions());
-                } else {
-                    replySender.sendTextReply(from, result.getMessage());
-                }
-            }
+            deliver(from, result);
         }
     }
 
@@ -162,13 +156,19 @@ public class WhatsAppMessageProcessor {
         Object lock = userLocks[Math.floorMod(from.hashCode(), userLocks.length)];
         synchronized (lock) {
             SpeechResult result = conversation.processTrustedAnswer("WHATSAPP", from, messageId, answer);
-            if (result.getMessage() != null) {
-                if (result.getActions() != null && !result.getActions().isEmpty()) {
-                    replySender.sendInteractiveReply(from, result.getMessage(), result.getActions());
-                } else {
-                    replySender.sendTextReply(from, result.getMessage());
-                }
-            }
+            deliver(from, result);
         }
+    }
+
+    private void deliver(String to, SpeechResult result) {
+        if (result.getMedia() != null) {
+            if (!replySender.sendImageReply(to, result.getMedia(), result.getMessage()) && result.getMessage() != null)
+                replySender.sendTextReply(to, result.getMessage());
+            return;
+        }
+        if (result.getMessage() == null) return;
+        if (result.getActions() != null && !result.getActions().isEmpty())
+            replySender.sendInteractiveReply(to, result.getMessage(), result.getActions());
+        else replySender.sendTextReply(to, result.getMessage());
     }
 }

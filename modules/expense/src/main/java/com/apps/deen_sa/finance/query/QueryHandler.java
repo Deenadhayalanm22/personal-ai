@@ -30,13 +30,15 @@ public class QueryHandler implements SpeechHandler {
     private final BudgetInsightService budgetInsights;
     private final CardDueReminderService cardReminders;
     private final StateContainerRepository stateContainers;
+    private final ExpenseChartRenderer chartRenderer;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
             ExpenseAnalyticsService expenseAnalyticsService,
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
             QueryContextFormatter queryContextFormatter, BudgetInsightService budgetInsights,
-            CardDueReminderService cardReminders, StateContainerRepository stateContainers
+            CardDueReminderService cardReminders, StateContainerRepository stateContainers,
+            ExpenseChartRenderer chartRenderer
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
@@ -46,6 +48,7 @@ public class QueryHandler implements SpeechHandler {
         this.budgetInsights = budgetInsights;
         this.cardReminders = cardReminders;
         this.stateContainers = stateContainers;
+        this.chartRenderer = chartRenderer;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
@@ -62,7 +65,11 @@ public class QueryHandler implements SpeechHandler {
         ExpenseQuery query = expenseQueryBuilder.from(result, context.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
-        return SpeechResult.info(summary(context.getLocale(), period, summary));
+        String message = summary(context.getLocale(), period, summary);
+        return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                .message(message)
+                .media(chartRenderer.categoryDonut(chartTitle(period), summary.getSpendByCategory(), context.getLocale()))
+                .build();
     }
 
     private String accountBalances(Long userId) {
@@ -95,7 +102,10 @@ public class QueryHandler implements SpeechHandler {
         String response =
                 expenseSummaryExplainer.explain(summary, userText, context);
 
-        return SpeechResult.info(response);
+        return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                .message(response)
+                .media(chartRenderer.categoryDonut("Spending by category", summary.getSpendByCategory(), ctx.getLocale()))
+                .build();
     }
 
     @Override
@@ -138,5 +148,17 @@ public class QueryHandler implements SpeechHandler {
             if (!breakdown.isBlank()) result += " Details: " + breakdown + ".";
         }
         return result;
+    }
+
+    private String chartTitle(String period) {
+        return switch (period) {
+            case "TODAY" -> "Today's spending by category";
+            case "THIS_WEEK" -> "This week's spending by category";
+            case "THIS_MONTH" -> "This month's spending by category";
+            case "THIS_YEAR" -> "This year's spending by category";
+            case "LAST_MONTH" -> "Last month's spending by category";
+            case "LAST_3_MONTHS" -> "Last 3 months' spending by category";
+            default -> "Spending by category";
+        };
     }
 }
