@@ -79,6 +79,15 @@ public class ExpenseTaxonomyRegistry {
         return Optional.ofNullable(aliases.get(value.trim().toLowerCase(Locale.ROOT)));
     }
 
+    public Optional<String> canonicalAliasInText(String value) {
+        if (value == null || value.isBlank()) return Optional.empty();
+        String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+        return aliases.entrySet().stream()
+                .filter(entry -> (" " + normalized + " ").contains(" " + entry.getKey() + " "))
+                .sorted(Map.Entry.<String, String>comparingByKey(Comparator.comparingInt(String::length)).reversed())
+                .map(Map.Entry::getValue).findFirst();
+    }
+
     public Optional<String> parentCategory(String subcategory) {
         if (subcategory == null) return Optional.empty();
         return taxonomy.entrySet().stream().filter(entry -> entry.getValue().stream()

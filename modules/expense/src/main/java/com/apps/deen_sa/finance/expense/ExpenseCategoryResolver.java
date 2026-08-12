@@ -18,19 +18,27 @@ public class ExpenseCategoryResolver {
         String subcategory = taxonomy.canonicalLabel(expense.getSubcategory()).orElse(null);
         String category = taxonomy.canonicalLabel(expense.getCategory()).orElse(null);
         if (subcategory != null && taxonomy.parentCategory(subcategory).isPresent()) {
-            expense.setSubcategory(subcategory); expense.setCategory(taxonomy.parentCategory(subcategory).orElseThrow()); return;
+            String parent = taxonomy.parentCategory(subcategory).orElseThrow();
+            String raw = firstMeaningful(expense.getMerchantName(), originalText);
+            expense.setSubcategory(resolveWithinCategory(parent, raw).orElse(subcategory));
+            expense.setCategory(parent);
+            return;
         }
         if (category != null) {
             Optional<String> parent = taxonomy.parentCategory(category);
             if (parent.isPresent()) { expense.setCategory(parent.get()); expense.setSubcategory(category); }
-            else { expense.setCategory(category); expense.setSubcategory(null); }
+            else {
+                expense.setCategory(category);
+                expense.setSubcategory(resolveWithinCategory(category,
+                        firstMeaningful(expense.getMerchantName(), originalText)).orElse(null));
+            }
             return;
         }
 
         String raw = firstMeaningful(expense.getSubcategory(), expense.getCategory(),
                 expense.getMerchantName(), originalText);
         if (raw == null) { expense.setCategory(null); expense.setSubcategory(null); return; }
-        String alias = taxonomy.canonicalAlias(raw).orElse(null);
+        String alias = taxonomy.canonicalAlias(raw).or(() -> taxonomy.canonicalAliasInText(raw)).orElse(null);
         if (alias != null) {
             Optional<String> parent = taxonomy.parentCategory(alias);
             if (parent.isPresent()) { expense.setCategory(parent.get()); expense.setSubcategory(alias); }
@@ -46,12 +54,41 @@ public class ExpenseCategoryResolver {
     }
 
     public Optional<String> resolveBudgetScope(String proposed, String originalText) {
+        String explicit = explicitBudgetScope(originalText);
+        String explicitCanonical = taxonomy.canonicalLabel(explicit)
+                .or(() -> taxonomy.canonicalAlias(explicit))
+                .or(() -> taxonomy.canonicalAliasInText(explicit)).orElse(null);
+        if (explicitCanonical != null) return Optional.of(explicitCanonical);
         String exact = taxonomy.canonicalLabel(proposed).orElse(null);
         if (exact != null) return Optional.of(exact);
         String raw = firstMeaningful(proposed, originalText);
         if (raw == null) return Optional.empty();
         Map<String, String> matches = semanticMatcher.match(taxonomy.allLabels().stream().sorted().toList(), List.of(raw));
         return taxonomy.canonicalLabel(matches == null ? null : matches.get(raw));
+    }
+
+    private String explicitBudgetScope(String text) {
+        if (text == null) return null;
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                "(?i)^(?:set|keep|setup|set\\s+up)\\s+(?:my\\s+)?(?:monthly\\s+)?(.+?)\\s+budget\\b")
+                .matcher(text.trim());
+        if (matcher.find()) return matcher.group(1).trim();
+        matcher = java.util.regex.Pattern.compile(
+                "(?i)^(?:my\\s+)?(.+?)\\s+(?:balance|budget|limit)\\s+for\\s+(?:this|the)\\s+month\\b")
+                .matcher(text.trim());
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private Optional<String> resolveWithinCategory(String category, String raw) {
+        if (raw == null) return Optional.empty();
+        List<String> candidates = taxonomy.subcategoriesFor(category).stream().sorted().toList();
+        if (candidates.isEmpty()) return Optional.empty();
+        String alias = taxonomy.canonicalAlias(raw).or(() -> taxonomy.canonicalAliasInText(raw))
+                .filter(candidates::contains).orElse(null);
+        if (alias != null) return Optional.of(alias);
+        Map<String, String> matches = semanticMatcher.match(candidates, List.of(raw));
+        String resolved = matches == null ? null : matches.get(raw);
+        return candidates.stream().filter(candidate -> candidate.equalsIgnoreCase(resolved)).findFirst();
     }
 
     private String firstMeaningful(String... values) {

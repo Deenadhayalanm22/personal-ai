@@ -7,6 +7,20 @@ One literal live-model test method executes all unique personal-finance acceptan
 four isolated WhatsApp personas. The detailed phase contracts remain in it_live_001.txt through
 it_live_005.txt and are incorporated here by reference.
 
+Expense authorization (applies to every persona)
+------------------------------------------------
+Every expense-producing turn first returns a preview containing amount, category, subcategory, and
+verified source (or null plus the detected unconfigured account). No expense or balance mutation may
+exist at preview time. The conversation then sends the Confirm button before applying the existing
+accounting oracle. An unconfigured source is set up only after confirmation; skipping setup preserves
+the confirmed expense without a balance mutation. Discarded previews contribute no ledger entries.
+
+Budget authorization (applies wherever budgets are configured)
+----------------------------------------------------------------
+A budget scope must already occur in that persona's confirmed expense history. The app previews the
+monthly amount and category/subcategory relationship, writes nothing before Confirm, and saves only
+after the Confirm button. Unknown user scopes instruct the user to record relevant expense data first.
+
 Persona A — two-month ledger
 ----------------------------
 Executes the complete it_live_001 contract, including named-card and generic all-container balance
@@ -15,7 +29,7 @@ queries. Final oracle: 12 state changes and 16 mutations with the documented acc
 Persona B — multilingual conversation
 --------------------------------------
 Executes the complete it_live_002 contract: greeting, provisional account via payment button,
-English/Tamil/Tanglish expenses, missing-field follow-ups, two expenses in one turn, balance query,
+English/Tamil/Tanglish expenses, missing-field follow-ups, two independently confirmed expenses, balance query,
 multilingual summaries, and clean-session reconciliation.
 
 Persona C — explicit-UPI first use

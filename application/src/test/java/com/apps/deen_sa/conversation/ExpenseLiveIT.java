@@ -20,6 +20,9 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -41,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnabledIfEnvironmentVariable(named = "RUN_LIVE_MODEL_TESTS", matches = "(?i)true")
 class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     private String phone = "919876543299";
+    private boolean autoAuthorizeFinancialWrites = true;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -53,11 +57,237 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
 
     @Value("${wiremock.admin-url}") private String wireMockAdminUrl;
 
+    /**
+     * Focused live-model coverage for manual Discard, Not now, and optional source setup choices.
+     * The master contract uses the same preview assertions while confirming its ledger expenses.
+     */
+    @Test
+    void it_live_expense_confirmation_and_optional_source_setup() throws Exception {
+        requireRealApiKey();
+        resetBetweenPersonas();
+        autoAuthorizeFinancialWrites = false;
+        int message = 1;
+
+        scenario("AI proposes classification; Discard leaves no financial record");
+        String discardedPreview = chatText(id(message++),
+                "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.");
+        assertThat(discardedPreview)
+                .contains("Amount: ₹3400")
+                .containsIgnoringCase("Category: Food")
+                .containsIgnoringCase("Subcategory: Eating Out")
+                .contains("Source: null")
+                .containsIgnoringCase("Detected account: HDFC Credit Card")
+                .containsIgnoringCase("Confirm this expense");
+        assertWaitingFor("EXPENSE", "confirmExpense");
+        assertExpenseCount(0);
+        assertThat(chatButton(id(message++), "answer:DISCARD_EXPENSE", "Discard"))
+                .containsIgnoringCase("nothing was saved");
+        assertExpenseCount(0);
+
+        scenario("Confirm saves; unconfigured source setup remains optional");
+        String confirmedPreview = chatText(id(message++),
+                "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.");
+        assertThat(confirmedPreview).contains("Source: null").containsIgnoringCase("Confirm this expense");
+        String setupOffer = chatButton(id(message++), "answer:CONFIRM_EXPENSE", "Confirm");
+        assertThat(setupOffer)
+                .contains("3400")
+                .containsIgnoringCase("HDFC Credit Card is not set up")
+                .containsIgnoringCase("Set it up");
+        assertWaitingFor("EXPENSE", "setupSourceAccount");
+        assertExpenseCount(1);
+        assertThat(stateContainerRepository.findAll()).isEmpty();
+
+        assertRecorded(chatButton(id(message++), "answer:SKIP_SOURCE_SETUP", "Not now"), "3400");
+        assertExpenseCount(1);
+        assertThat(stateContainerRepository.findAll()).isEmpty();
+        assertThat(stateMutationRepository.findAll()).isEmpty();
+
+        scenario("A later transaction can opt into setup after it is confirmed");
+        String secondPreview = chatText(id(message++),
+                "Lunch at Pizza Hut for ₹1,200 paid via HDFC Credit Card.");
+        assertThat(secondPreview).contains("Source: null").containsIgnoringCase("Confirm this expense");
+        assertThat(chatButton(id(message++), "answer:CONFIRM_EXPENSE", "Confirm"))
+                .containsIgnoringCase("not set up");
+        String balanceQuestion = chatButton(id(message++), "answer:SETUP_SOURCE_ACCOUNT", "Set up account");
+        assertThat(balanceQuestion)
+                .containsIgnoringCase("HDFC Credit Card")
+                .containsIgnoringCase("credit limit");
+        assertWaitingFor("EXPENSE", "creditLimit");
+        assertExpenseCount(2);
+        assertThat(stateContainerRepository.findAll()).singleElement().satisfies(account -> {
+            assertThat(account.getName()).isEqualToIgnoringCase("HDFC Credit Card");
+            assertThat(account.getCurrentValue()).isNull();
+        });
+        autoAuthorizeFinancialWrites = true;
+    }
+
     @Test
     void it_live_test() throws Exception {
         requireRealApiKey();
         int message = 1;
-        assertSaved(chatText(id(message++), "Setup my hdfc bank account where i have 40243 current balance"), "HDFC");
+
+        scenario("Day 1 · Set up accounts, receive allowances, transfer money, and configure budgets");
+        // Prepaid/capped cards currently use balance-bearing account semantics. This intentionally
+        // exercises overdrafts instead of incorrectly treating them as revolving credit cards.
+        assertSaved(chatText(id(message++),
+                "Create my HDFC bank account with a current balance of 10"), "HDFC");
+        assertThat(chatText(id(message++),
+                "Setup my HDFC bank account with a current balance of 100"))
+                .containsIgnoringCase("already exists")
+                .containsIgnoringCase("did not create a duplicate");
+        assertSaved(chatText(id(message++), "Create my HDFC Food Card bank account with a current balance of 0"), "Food Card");
+        assertSaved(chatText(id(message++), "Create my HDFC Petrol Card bank account with a current balance of 0"), "Petrol Card");
+        assertSaved(chatText(id(message++),
+                "Create my HDFC credit card with limit 300000, outstanding 0 and due day 21"), "HDFC credit card");
+
+        String salaryAccountQuestion = chatText(id(message++),
+                "Salary credited: ₹1,00,000 received today.");
+        assertThat(salaryAccountQuestion)
+                .containsIgnoringCase("Which bank account")
+                .containsIgnoringCase("received this money");
+        assertWaitingFor("INCOME", "destinationAccount");
+        assertRecorded(chatText(id(message++), "HDFC bank account"), "100000");
+        assertRecorded(chatText(id(message++),
+                "₹4,000 monthly allowance was credited to my HDFC Food Card bank account."), "4000");
+        assertAccount("HDFC Food Card", "BANK_ACCOUNT", "4000", null, null);
+
+        assertRecorded(chatText(id(message++),
+                "₹2,500 monthly petrol allowance was credited to my HDFC Petrol Card bank account."), "2500");
+        assertAccount("HDFC Petrol Card", "BANK_ACCOUNT", "2500", null, null);
+        int expensesBeforeMom = recordedExpenseCount();
+        String momReply = chatText(id(message++),
+                "Sent ₹10,000 from my HDFC bank account to my mom via UPI.");
+        if (momReply.toLowerCase().contains("expense for")) {
+            assertWaitingFor("category");
+            assertRecorded(chatText(id(message++), "Parents Support"), "10000");
+        } else {
+            assertRecorded(momReply, "10000");
+        }
+        assertLatestExpense(expensesBeforeMom, "10000", "Parents Support", "HDFC bank account");
+
+        int expensesBeforeWife = recordedExpenseCount();
+        String wifeReply = chatText(id(message++),
+                "Sent ₹10,000 from my HDFC bank account to my wife via UPI.");
+        if (wifeReply.toLowerCase().contains("expense for")) {
+            assertWaitingFor("category");
+            assertRecorded(chatText(id(message++), "Family Support"), "10000");
+        } else {
+            assertRecorded(wifeReply, "10000");
+        }
+        assertLatestExpense(expensesBeforeWife, "10000", "Family Support", "HDFC bank account");
+        assertRecorded(chatText(id(message++),
+                "Paid ₹16,000 house rent directly from my HDFC bank account via net banking."), "16000");
+
+        scenario("Days 2–12 · Record ordinary spending before alert thresholds");
+        assertRecorded(chatText(id(message++),
+                "Ordered quick groceries on Blinkit for ₹420 using my HDFC food card."), "420");
+        assertThat(chatText(id(message++), "Setup my grocery budget ₹5,000 for this month."))
+                .containsIgnoringCase("Groceries").contains("5000");
+        assertRecorded(chatText(id(message++),
+                "Bought fresh veggies from the local vendor for ₹180 using my HDFC bank account via UPI."), "180");
+        assertRecorded(chatText(id(message++),
+                "Paid monthly ACT Fiber net bill of ₹1,000 using my HDFC Credit Card."), "1000");
+        assertRecorded(chatText(id(message++),
+                "Recharged mobile for ₹799 using HDFC Credit Card."), "799");
+        assertRecorded(chatText(id(message++),
+                "Filled car petrol for ₹4,000 at Bharat Petroleum using my HDFC Petrol card."), "4000");
+        assertRecorded(chatText(id(message++),
+                "Swiggy lunch order at office for ₹340 paid using my food card."), "340");
+        assertExpenseClassification("340", "Eating Out");
+        assertThat(chatText(id(message++), "Setup my eating out budget ₹5,000 for this month."))
+                .containsIgnoringCase("Eating Out").contains("5000");
+        assertRecorded(chatText(id(message++),
+                "Bought daily essentials and soap at the local store for ₹850 using my food card."), "850");
+        assertRecorded(chatText(id(message++),
+                "Paid electricity bill of ₹2,150 through my HDFC bank account via UPI."), "2150");
+        assertRecorded(chatText(id(message++),
+                "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card."), "3400");
+        assertExpenseClassification("3400", "Eating Out");
+        assertRecorded(chatText(id(message++),
+                "Booked movie tickets on BookMyShow for ₹900 using HDFC Credit Card."), "900");
+        int mutationsBeforeBudgetQuery = stateMutationRepository.findAll().size();
+        String budgetStatus = chatText(id(message++), "Show my budget status");
+        assertThat(budgetStatus).containsIgnoringCase("Eating Out").contains("3740").contains("1260");
+        assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeBudgetQuery);
+
+        scenario("Days 14–17 · Trigger near-limit and over-budget alerts");
+        String shoppingWarning = chatText(id(message++),
+                "Ordered clothes online from Zudio via Dunzo delivery for ₹1,800 paid via HDFC Credit Card.");
+        assertRecorded(shoppingWarning, "1800");
+        assertExpenseClassification("1800", "Clothing");
+        assertThat(chatText(id(message++), "Setup my shopping budget ₹2,000 for this month."))
+                .containsIgnoringCase("Shopping").contains("2000");
+
+        assertRecorded(chatText(id(message++),
+                "Zepto daily milk and snacks order for ₹260 paid using food card."), "260");
+        assertRecorded(chatText(id(message++),
+                "Refilled bike petrol for ₹600 at HPCL using my HDFC Petrol card."), "600");
+
+        String eatingOutExceeded = chatText(id(message++),
+                "Team lunch at Social Bar for ₹1,500 paid via HDFC Credit Card.");
+        assertRecorded(eatingOutExceeded, "1500");
+        assertExpenseClassification("1500", "Eating Out");
+        assertThat(eatingOutExceeded).containsIgnoringCase("Budget alert")
+                .containsIgnoringCase("over").contains("240");
+
+        scenario("Days 18–21 · Continue spending and pay the credit-card bill");
+        String shoppingExceeded = chatText(id(message++),
+                "Bought shoes online on Myntra sale for ₹3,200 using my HDFC Credit Card.");
+        assertRecorded(shoppingExceeded, "3200");
+        assertThat(shoppingExceeded).containsIgnoringCase("Budget alert")
+                .containsIgnoringCase("over").contains("3000");
+        assertExpenseClassification("3200", "Clothing");
+        assertRecorded(chatText(id(message++),
+                "Car minor service and wash at local garage cost ₹2,500, paid using my HDFC bank account via UPI."), "2500");
+        assertRecorded(chatText(id(message++),
+                "Yearly term insurance premium of ₹50,000 paid using HDFC Credit Card."), "50000");
+        assertRecorded(chatText(id(message++),
+                "Bought evening snacks and tea at local stall for ₹120 via my HDFC bank account UPI."), "120");
+        String paymentPreview = chatText(id(message++),
+                "Paid HDFC Credit Card bill amount ₹61,299 directly from my HDFC bank account via Net Banking.");
+        assertThat(paymentPreview)
+                .contains("Amount: ₹61299")
+                .containsIgnoringCase("From: HDFC bank account")
+                .containsIgnoringCase("To: HDFC credit card")
+                .containsIgnoringCase("Confirm this payment");
+        assertWaitingFor("LIABILITY_PAYMENT", "confirmLiabilityPayment");
+        assertThat(stateChangeRepository.findAll()).filteredOn(change ->
+                "TRANSFER".equals(change.getTransactionType().name())).isEmpty();
+        assertLiabilityPayment(chatButton(id(message++),
+                        "answer:CONFIRM_LIABILITY_PAYMENT", "Confirm"),
+                "61299", "HDFC Credit Card", 1);
+
+        scenario("Days 23–29 · Cross the grocery budget and finish the month");
+        assertRecorded(chatText(id(message++),
+                "Ordered big grocery restocking on BigBasket for ₹2,100 using food card."), "2100");
+        assertRecorded(chatText(id(message++),
+                "Filled car petrol again for ₹3,500 using HDFC Petrol card."), "3500");
+
+        String groceriesExceeded = chatText(id(message++),
+                "Restocked dry fruits and imported snacks from local gourmet supermarket for ₹1,500 using my HDFC bank account via UPI.");
+        assertRecorded(groceriesExceeded, "1500");
+        assertThat(groceriesExceeded).containsIgnoringCase("Budget alert")
+                .containsIgnoringCase("over").contains("310");
+
+        assertRecorded(chatText(id(message++),
+                "Ordered medicine on Tata 1mg for ₹1,200 using HDFC Credit Card."), "1200");
+        assertRecorded(chatText(id(message++),
+                "Swiggy Instamart ice cream order for ₹310 using food card."), "310");
+        assertRecorded(chatText(id(message++),
+                "Bike puncture and chain oiling at local shop for ₹150 paid via my HDFC bank account UPI."), "150");
+
+        String finalDinner = chatText(id(message++),
+                "Dinner out at local restaurant for ₹1,450 paid using HDFC Credit Card.");
+        assertRecorded(finalDinner, "1450");
+        assertExpenseClassification("1450", "Eating Out");
+        assertThat(finalDinner).containsIgnoringCase("Budget alert")
+                .containsIgnoringCase("over").contains("1690");
+
+        assertAccount("HDFC Petrol Card", "BANK_ACCOUNT", "-5600", null, null);
+        assertAccount("HDFC Food Card", "BANK_ACCOUNT", "-280", null, null);
+        assertAccount("HDFC bank account", "BANK_ACCOUNT", "-3889", null, null);
+        assertAccount("HDFC credit card", "CREDIT_CARD", "3950", "300000", 21);
+        assertDayOneMonthLedgerReconciled();
     }
 
 
@@ -213,7 +443,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         String paymentQuestion = chatText(id(message++), "I spent 500 on groceries");
         assertThat(paymentQuestion).isEqualTo("How did you pay?");
         assertWaitingFor("sourceAccount");
-        assertExpenseCount(1);
+        assertExpenseCount(0);
 
         String balanceQuestion = chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI");
         assertThat(balanceQuestion)
@@ -292,10 +522,9 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertRecorded(chatButton(id(message++), "answer:BANK_ACCOUNT", "Bank / UPI"), "450");
         assertExpenseApplied(8, "450");
 
-        scenario("English · two expenses in one natural sentence");
-        String multiExpenseReply = chatText(id(message++), "Spent 80 on tea and 120 on auto using UPI");
-        assertRecorded(multiExpenseReply, "80");
-        assertRecorded(multiExpenseReply, "120");
+        scenario("English · two expenses are independently previewed and confirmed");
+        assertRecorded(chatText(id(message++), "Spent 80 on tea using UPI"), "80");
+        assertRecorded(chatText(id(message++), "Spent 120 on auto using UPI"), "120");
         assertExpenseApplied(10, "80");
         assertExpenseApplied(10, "120");
 
@@ -397,7 +626,11 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertSaved(chatText(id(message++), "Create my HDFC salary bank account with a current balance of 20000"), "HDFC");
         assertSaved(chatText(id(message++), "Create my ICICI Coral credit card with limit 50000, outstanding 2500 and due day 12"), "ICICI Coral");
 
-        scenario("Create an updatable monthly category budget");
+        scenario("Establish a user-owned grocery scope before budgeting");
+        String warning = chatText(id(message++), "I spent 850 on groceries using my HDFC salary bank account");
+        assertRecorded(warning, "850");
+
+        scenario("Create an updatable monthly category budget from confirmed expense data");
         String budgetReply = chatText(id(message++), "Set my monthly groceries budget to 1000");
         assertThat(budgetReply).containsIgnoringCase("Groceries").contains("1000");
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
@@ -407,11 +640,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                     assertThat(budget.isActive()).isTrue();
                 }));
 
-        scenario("Cross warning and overspend thresholds through ordinary expense capture");
-        String warning = chatText(id(message++), "I spent 850 on groceries using my HDFC salary bank account");
-        assertRecorded(warning, "850");
-        assertThat(warning).containsIgnoringCase("Budget alert").containsIgnoringCase("remaining");
-
+        scenario("Cross the overspend threshold through ordinary expense capture");
         String exceeded = chatText(id(message++), "I spent 300 on groceries using my HDFC salary bank account");
         assertRecorded(exceeded, "300");
         assertThat(exceeded).containsIgnoringCase("Budget alert").containsIgnoringCase("over");
@@ -470,18 +699,6 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         String balanceConfirmation = chatText(id(message++), "10000");
         assertThat(balanceConfirmation).contains("55").contains("9945");
 
-        scenario("Natural budget wording is resolved to a configured taxonomy scope");
-        String budget = chatText(id(message++), "my grocery balance for this month is only 2000.");
-        assertThat(budget).containsIgnoringCase("Groceries").contains("2000");
-        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
-                assertThat(monthlyBudgetRepository.findAll()).singleElement().satisfies(value -> {
-                    assertThat(value.getCategory()).isEqualTo("Groceries");
-                    assertThat(value.getMonthlyLimit()).isEqualByComparingTo("2000");
-                }));
-
-        String initialBudgetStatus = chatText(id(message++), "how much my grocery budget for this month");
-        assertThat(initialBudgetStatus).contains("Groceries").contains("2000").containsIgnoringCase("remaining");
-
         scenario("Misspelled free text is semantically mapped by the model to the configured taxonomy");
         String vegetables = chatText(id(message++), "i spent 1300 on the buying vegitables using my upi");
         assertRecorded(vegetables, "1300");
@@ -492,6 +709,19 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                             assertThat(value.getCategory()).isEqualTo("Food & Dining");
                             assertThat(value.getSubcategory()).isEqualTo("Groceries");
                         }));
+
+        scenario("Natural budget wording is linked to the user's confirmed grocery scope");
+        String budget = chatText(id(message++), "my grocery balance for this month is only 2000.");
+        assertThat(budget).containsIgnoringCase("Groceries").contains("2000");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(monthlyBudgetRepository.findAll()).singleElement().satisfies(value -> {
+                    assertThat(value.getCategory()).isEqualTo("Groceries");
+                    assertThat(value.getMonthlyLimit()).isEqualByComparingTo("2000");
+                }));
+
+        String initialBudgetStatus = chatText(id(message++), "how much my grocery budget for this month");
+        assertThat(initialBudgetStatus).contains("Groceries").contains("2000").contains("700")
+                .containsIgnoringCase("remaining");
 
         String plannedStatus = chatText(id(message++),
                 "how am i doing my grocery budget against this month planned");
@@ -545,9 +775,68 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertThat(reply)
                 .as("The turn must be completed, not left as an unsafe/unsupported interpretation")
                 .contains(amount)
+                .doesNotContainIgnoringCase("what was the")
+                .doesNotContainIgnoringCase("which account")
+                .doesNotContainIgnoringCase("which bank account")
+                .doesNotContainIgnoringCase("how did you pay")
+                .doesNotContainIgnoringCase("please provide")
                 .doesNotContainIgnoringCase("cannot safely")
                 .doesNotContainIgnoringCase("not safe")
                 .doesNotContainIgnoringCase("could not");
+    }
+
+    private int recordedExpenseCount() {
+        return (int) stateChangeRepository.findAll().stream()
+                .filter(change -> "EXPENSE".equals(change.getTransactionType().name()))
+                .count();
+    }
+
+    private void assertLatestExpense(int previousCount, String amount, String classification,
+                                     String sourceAccountName) {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var expenses = stateChangeRepository.findAll().stream()
+                    .filter(change -> "EXPENSE".equals(change.getTransactionType().name()))
+                    .sorted(Comparator.comparingLong(change -> change.getId()))
+                    .toList();
+            assertThat(expenses).hasSize(previousCount + 1);
+            var expense = expenses.getLast();
+            assertThat(expense.getAmount()).isEqualByComparingTo(amount);
+            assertThat(java.util.stream.Stream.of(expense.getCategory(), expense.getSubcategory())
+                    .filter(java.util.Objects::nonNull).toList()).contains(classification);
+            assertThat(expense.isFinanciallyApplied()).isTrue();
+            Long expectedSourceId = stateContainerRepository.findAll().stream()
+                    .filter(account -> account.getName().equalsIgnoreCase(sourceAccountName))
+                    .findFirst().orElseThrow().getId();
+            assertThat(expense.getSourceContainerId()).isEqualTo(expectedSourceId);
+        });
+    }
+
+    private void assertExpenseClassification(String amount, String classification) {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateChangeRepository.findAll()).filteredOn(change ->
+                                "EXPENSE".equals(change.getTransactionType().name())
+                                        && change.getAmount().compareTo(new BigDecimal(amount)) == 0)
+                        .singleElement().satisfies(expense ->
+                                assertThat(java.util.stream.Stream.of(expense.getCategory(), expense.getSubcategory())
+                                        .filter(java.util.Objects::nonNull).toList()).contains(classification)));
+    }
+
+    private void assertDayOneMonthLedgerReconciled() {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var changes = stateChangeRepository.findAll();
+            assertThat(changes).hasSize(32);
+            assertThat(changes).filteredOn(change -> "INCOME".equals(change.getTransactionType().name())).hasSize(3);
+            assertThat(changes).filteredOn(change -> "EXPENSE".equals(change.getTransactionType().name())).hasSize(28);
+            assertThat(changes).filteredOn(change -> "TRANSFER".equals(change.getTransactionType().name())).hasSize(1);
+            assertThat(changes).allSatisfy(change -> assertThat(change.isFinanciallyApplied()).isTrue());
+            assertThat(stateMutationRepository.findAll()).hasSize(33);
+            assertThat(monthlyBudgetRepository.findAll()).hasSize(3);
+            assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                assertThat(session.getActiveIntent()).isNull();
+                assertThat(session.getWaitingForField()).isNull();
+                assertThat(session.getPendingEvents()).isEmpty();
+            });
+        });
     }
 
     private void assertLiabilityPayment(String reply, String amount, String cardName, int expectedTransfers) {
@@ -677,9 +966,13 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     }
 
     private void assertWaitingFor(String field) {
+        assertWaitingFor("EXPENSE", field);
+    }
+
+    private void assertWaitingFor(String intent, String field) {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
                 assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
-                    assertThat(session.getActiveIntent()).isEqualTo("EXPENSE");
+                    assertThat(session.getActiveIntent()).isEqualTo(intent);
                     assertThat(session.getWaitingForField()).isEqualTo(field);
                     assertThat(session.getLastQuestion()).isNotBlank();
                 }));
@@ -687,14 +980,62 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
 
     private String chatText(String messageId, String userText) throws Exception {
         int before = outgoingMessages().size();
+        int expensesBefore = recordedExpenseCount();
+        int budgetsBefore = monthlyBudgetRepository.findAll().size();
         System.out.println("Deena: " + userText);
         sendText(messageId, userText);
         String reply = printReply(awaitNextReply(before));
+        reply = authorizeExpenseIfPreviewed(messageId, reply, expensesBefore);
+        reply = authorizeBudgetIfPreviewed(messageId, reply, budgetsBefore);
         printContainerSnapshot();
         return reply;
     }
 
     private String chatButton(String messageId, String buttonId, String title) throws Exception {
+        int before = outgoingMessages().size();
+        int expensesBefore = recordedExpenseCount();
+        int budgetsBefore = monthlyBudgetRepository.findAll().size();
+        System.out.println("Deena: " + title + "  [button]");
+        sendButton(messageId, buttonId, title);
+        String reply = printReply(awaitNextReply(before));
+        reply = authorizeExpenseIfPreviewed(messageId, reply, expensesBefore);
+        return authorizeBudgetIfPreviewed(messageId, reply, budgetsBefore);
+    }
+
+    private String authorizeExpenseIfPreviewed(String messageId, String reply, int expensesBefore) throws Exception {
+        if (!autoAuthorizeFinancialWrites || !reply.contains("Confirm this expense?")) return reply;
+
+        assertThat(reply)
+                .contains("Amount: ₹")
+                .contains("Category:")
+                .contains("Subcategory:")
+                .contains("Source:");
+        assertWaitingFor("EXPENSE", "confirmExpense");
+        assertThat(recordedExpenseCount())
+                .as("An expense preview must not persist before Confirm")
+                .isEqualTo(expensesBefore);
+
+        String confirmed = rawChatButton(messageId + "-confirm", "answer:CONFIRM_EXPENSE", "Confirm");
+        if (!confirmed.contains("Set it up for balance and spending insights?")) return confirmed;
+        return rawChatButton(messageId + "-setup", "answer:SETUP_SOURCE_ACCOUNT", "Set up account");
+    }
+
+    private String authorizeBudgetIfPreviewed(String messageId, String reply, int budgetsBefore) throws Exception {
+        if (!autoAuthorizeFinancialWrites || !reply.contains("Confirm this budget?")) return reply;
+
+        assertThat(reply)
+                .contains("Monthly budget: ₹")
+                .contains("Category:")
+                .contains("Subcategory:")
+                .contains("Budget scope:");
+        assertWaitingFor("BUDGET_SET", "confirmBudget");
+        assertThat(monthlyBudgetRepository.findAll())
+                .as("A budget preview must not persist before Confirm")
+                .hasSize(budgetsBefore);
+        return rawChatButton(messageId + "-confirm-budget", "answer:CONFIRM_BUDGET", "Confirm");
+    }
+
+    private String rawChatButton(String messageId, String buttonId, String title) throws Exception {
         int before = outgoingMessages().size();
         System.out.println("Deena: " + title + "  [button]");
         sendButton(messageId, buttonId, title);
@@ -710,24 +1051,47 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         var accounts = stateContainerRepository.findAll().stream()
                 .sorted(java.util.Comparator.comparing(account -> account.getContainerType() + account.getName()))
                 .toList();
-        if (accounts.isEmpty()) return;
+        if (!accounts.isEmpty()) {
+            System.out.println("State containers (persisted):");
+            accounts.forEach(account -> {
+                String valueType = "CREDIT_CARD".equals(account.getContainerType()) ? "outstanding" : "balance";
+                String value = account.getCurrentValue() == null
+                        ? "unknown" : "₹" + account.getCurrentValue().stripTrailingZeros().toPlainString();
+                StringBuilder line = new StringBuilder("  • ")
+                        .append(account.getName()).append(" — ").append(valueType).append(" ").append(value);
+                if ("CREDIT_CARD".equals(account.getContainerType())) {
+                    if (account.getCapacityLimit() != null) {
+                        line.append(", limit ₹").append(account.getCapacityLimit().stripTrailingZeros().toPlainString());
+                    }
+                    if (account.getDetails() != null && account.getDetails().get("dueDay") != null) {
+                        line.append(", due day ").append(account.getDetails().get("dueDay"));
+                    }
+                }
+                System.out.println(line);
+            });
+        }
 
-        System.out.println("State containers (persisted):");
-        accounts.forEach(account -> {
-            String valueType = "CREDIT_CARD".equals(account.getContainerType()) ? "outstanding" : "balance";
-            String value = account.getCurrentValue() == null
-                    ? "unknown" : "₹" + account.getCurrentValue().stripTrailingZeros().toPlainString();
-            StringBuilder line = new StringBuilder("  • ")
-                    .append(account.getName()).append(" — ").append(valueType).append(" ").append(value);
-            if ("CREDIT_CARD".equals(account.getContainerType())) {
-                if (account.getCapacityLimit() != null) {
-                    line.append(", limit ₹").append(account.getCapacityLimit().stripTrailingZeros().toPlainString());
-                }
-                if (account.getDetails() != null && account.getDetails().get("dueDay") != null) {
-                    line.append(", due day ").append(account.getDetails().get("dueDay"));
-                }
-            }
-            System.out.println(line);
+        var budgets = monthlyBudgetRepository.findAll().stream()
+                .sorted(Comparator.comparing(budget -> budget.getCategory().toLowerCase()))
+                .toList();
+        if (budgets.isEmpty()) return;
+        ZoneId zone = ZoneId.of("Asia/Kolkata");
+        YearMonth month = YearMonth.now(zone);
+        Instant start = month.atDay(1).atStartOfDay(zone).toInstant();
+        Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+        System.out.println("Monthly budgets (persisted, " + month + "):");
+        budgets.forEach(budget -> {
+            BigDecimal spent = stateChangeRepository.sumExpenseCategory(
+                    String.valueOf(budget.getUserId()), budget.getCategory(), start, end);
+            if (spent == null) spent = BigDecimal.ZERO;
+            BigDecimal remaining = budget.getMonthlyLimit().subtract(spent);
+            String position = remaining.signum() >= 0
+                    ? "remaining ₹" + remaining.stripTrailingZeros().toPlainString()
+                    : "over ₹" + remaining.abs().stripTrailingZeros().toPlainString();
+            System.out.println("  • " + budget.getCategory()
+                    + " — spent ₹" + spent.stripTrailingZeros().toPlainString()
+                    + " / limit ₹" + budget.getMonthlyLimit().stripTrailingZeros().toPlainString()
+                    + ", " + position + ", active=" + budget.isActive());
         });
     }
 

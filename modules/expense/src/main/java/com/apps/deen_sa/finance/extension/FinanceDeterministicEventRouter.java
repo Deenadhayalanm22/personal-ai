@@ -22,8 +22,10 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     private static final Pattern ACCOUNT_SETUP = Pattern.compile(
             "(?i)^\\s*create\\s+my\\s+.+?\\s+(?:bank\\s+account|credit\\s+card)\\s+with\\s+.+$");
     private static final Pattern BUDGET_SET = Pattern.compile(
-            "(?i)^\\s*(?:set|keep)\\s+(?:my\\s+)?(?:monthly\\s+)?(.+?)\\s+budget\\s+(?:to|at|as)\\s*"
-                    + "(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?(?:\\s*(?:k|thousand|lakh|lac))?)\\s*[.!]?\\s*$");
+            "(?i)^\\s*(?:set|keep|setup|set\\s+up)\\s+(?:my\\s+)?(?:monthly\\s+)?(.+?)\\s+budget\\s+"
+                    + "(?:(?:to|at|as)\\s*)?"
+                    + "(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?(?:\\s*(?:k|thousand|lakh|lac))?)"
+                    + "(?:\\s+for\\s+(?:this|the)\\s+month)?\\s*[.!]?\\s*$");
     private static final Pattern MONTHLY_SCOPE_BALANCE_SET = Pattern.compile(
             "(?i)^\\s*(?:my\\s+)?(.+?)\\s+(?:balance|budget|limit)\\s+for\\s+(?:this|the)\\s+month\\s+"
                     + "(?:is|is\\s+only|should\\s+be|=)\\s*(?:₹|rs\\.?|inr)?\\s*"
@@ -50,6 +52,14 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     private static final Pattern PAID_FOR = Pattern.compile(
             "(?i)^\\s*paid\\s+(.+?)\\s+(?:of|for)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
+    private static final Pattern DESCRIPTION_FOR_AMOUNT_WITH_SOURCE = Pattern.compile(
+            "(?i)^\\s*(.+?)\\s+for\\s+(?:₹|rs\\.?|inr)?\\s*"
+                    + "([0-9][0-9,]*(?:\\.[0-9]+)?(?:\\s*(?:k|thousand|lakh|lac|crore|cr))?)"
+                    + "\\s+(?:paid\\s+)?(?:using|through|via)\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern DESCRIPTION_OF_AMOUNT_WITH_SOURCE = Pattern.compile(
+            "(?i)^\\s*(.+?)\\s+of\\s+(?:₹|rs\\.?|inr)?\\s*"
+                    + "([0-9][0-9,]*(?:\\.[0-9]+)?(?:\\s*(?:k|thousand|lakh|lac|crore|cr))?)"
+                    + "\\s+paid\\s+(?:using|through|via)\\s+(.+?)\\s*[.!]?\\s*$");
     private static final Pattern DATED_PURCHASE = Pattern.compile(
             "(?i)^\\s*on\\s+([0-9]{1,2}\\s+[a-z]+\\s+[0-9]{4})\\s+i\\s+(?:purchased|bought)\\s+(.+?)"
                     + "\\s+for\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
@@ -105,6 +115,12 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         matcher = PAID_FOR.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));
+        matcher = DESCRIPTION_FOR_AMOUNT_WITH_SOURCE.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(humanAmount(matcher.group(2)).toPlainString(), matcher.group(1), matcher.group(3), text));
+        matcher = DESCRIPTION_OF_AMOUNT_WITH_SOURCE.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(humanAmount(matcher.group(2)).toPlainString(), matcher.group(1), matcher.group(3), text));
         matcher = TANGLISH_COMPLETE.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(2), matcher.group(1), matcher.group(3), text));

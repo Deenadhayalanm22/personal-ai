@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Legacy state-store port retained while old finance rows are projected into the generic ledger.
@@ -21,4 +22,12 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             """, nativeQuery = true)
     BigDecimal sumExpenseCategory(@Param("userId") String userId, @Param("category") String category,
                                   @Param("start") Instant start, @Param("end") Instant end);
+
+    @Query(value = """
+            SELECT DISTINCT category, subcategory FROM state_change
+            WHERE user_id = :userId AND transaction_type = 'EXPENSE'
+              AND category IS NOT NULL
+            ORDER BY category, subcategory
+            """, nativeQuery = true)
+    List<Object[]> findExpenseScopes(@Param("userId") String userId);
 }

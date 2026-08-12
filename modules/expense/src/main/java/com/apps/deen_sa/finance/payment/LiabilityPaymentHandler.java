@@ -3,6 +3,7 @@ package com.apps.deen_sa.finance.payment;
 import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
+import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
 import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
 import com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum;
@@ -36,6 +37,8 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class LiabilityPaymentHandler implements SpeechHandler {
+
+    private static final String CONFIRM_PAYMENT = "confirmLiabilityPayment";
 
     private final LiabilityPaymentClassifier llm;
     private final StateChangeRepository transactionRepository;
@@ -93,7 +96,35 @@ public class LiabilityPaymentHandler implements SpeechHandler {
             );
         }
 
-        // Create transaction entity
+        ctx.setActiveIntent(intentType());
+        ctx.setWaitingForField(CONFIRM_PAYMENT);
+        ctx.setPartialObject(dto);
+        ctx.setActiveTransactionId(null);
+
+        return SpeechResult.followup(
+                "I identified:\n"
+                        + "Amount: ₹" + dto.getAmount().stripTrailingZeros().toPlainString() + "\n"
+                        + "From: " + sourceContainer.getName() + "\n"
+                        + "To: " + targetContainer.getName() + "\n\n"
+                        + "Confirm this payment?",
+                List.of(CONFIRM_PAYMENT),
+                dto,
+                List.of(
+                        new ResponseAction("answer:CONFIRM_LIABILITY_PAYMENT", "Confirm"),
+                        new ResponseAction("answer:DISCARD_LIABILITY_PAYMENT", "Discard")));
+    }
+
+    private SpeechResult saveConfirmedPayment(LiabilityPaymentDto dto, ConversationContext ctx) {
+        Long userId = ctx.getUserId();
+        StateContainerEntity sourceContainer = resolveSourceContainer(dto, userId);
+        StateContainerEntity targetContainer = resolveTargetLiability(dto, userId);
+        if (sourceContainer == null || targetContainer == null) {
+            ctx.reset();
+            return SpeechResult.invalid(
+                    "The payment accounts could not be resolved anymore. Nothing was saved; please try again.");
+        }
+
+        // Create transaction entity only after explicit authorization.
         StateChangeEntity transaction = createTransactionEntity(dto, userId, sourceContainer, targetContainer);
 
         // Save transaction
@@ -120,16 +151,35 @@ public class LiabilityPaymentHandler implements SpeechHandler {
 
     @Override
     public SpeechResult handleFollowup(String answer, ConversationContext ctx) {
-        // Liability payments are straightforward - no follow-up needed for now
-        return SpeechResult.invalid("Follow-up not supported for liability payments yet");
+        if (!CONFIRM_PAYMENT.equals(ctx.getWaitingForField())
+                || !(ctx.getPartialObject() instanceof LiabilityPaymentDto dto)) {
+            return SpeechResult.invalid("No liability payment is waiting for confirmation.");
+        }
+        if ("DISCARD_LIABILITY_PAYMENT".equalsIgnoreCase(answer)) {
+            ctx.reset();
+            return SpeechResult.info("Discarded. Nothing was saved.");
+        }
+        if (!"CONFIRM_LIABILITY_PAYMENT".equalsIgnoreCase(answer)) {
+            return SpeechResult.followup(
+                    "Please confirm or discard the pending payment.",
+                    List.of(CONFIRM_PAYMENT), dto,
+                    List.of(
+                            new ResponseAction("answer:CONFIRM_LIABILITY_PAYMENT", "Confirm"),
+                            new ResponseAction("answer:DISCARD_LIABILITY_PAYMENT", "Discard")));
+        }
+        return saveConfirmedPayment(dto, ctx);
     }
 
     /**
      * Resolve source container (where money comes from).
      * Defaults to BANK_ACCOUNT if not specified.
      */
-    private StateContainerEntity resolveSourceContainer(LiabilityPaymentDto dto, Long userId) {
-        List<StateContainerEntity> containers = stateContainerService.getActiveContainers(userId);
+    StateContainerEntity resolveSourceContainer(LiabilityPaymentDto dto, Long userId) {
+        return resolveSourceContainer(dto, stateContainerService.getActiveContainers(userId));
+    }
+
+    static StateContainerEntity resolveSourceContainer(
+            LiabilityPaymentDto dto, List<StateContainerEntity> containers) {
 
         String sourceType = dto.getSourceAccount() != null ? dto.getSourceAccount() : "BANK_ACCOUNT";
 
@@ -138,8 +188,25 @@ public class LiabilityPaymentHandler implements SpeechHandler {
                 .filter(c -> c.getContainerType().equals(sourceType))
                 .toList();
 
-        // Return first matching container (or null if none found)
-        return matching.isEmpty() ? null : matching.get(0);
+        if (matching.size() <= 1) {
+            return matching.isEmpty() ? null : matching.getFirst();
+        }
+
+        // The extractor currently returns the source account type, not its name. When a user has
+        // several bank accounts, use the account name explicitly present in the original message.
+        // Never debit whichever account happens to be returned first by the repository.
+        String rawText = dto.getRawText() == null ? "" : normalizeMention(dto.getRawText());
+        List<StateContainerEntity> namedMatches = matching.stream()
+                .filter(c -> c.getName() != null && rawText.contains(normalizeMention(c.getName())))
+                .toList();
+
+        return namedMatches.size() == 1 ? namedMatches.getFirst() : null;
+    }
+
+    private static String normalizeMention(String value) {
+        return value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .trim();
     }
 
     /**

@@ -52,6 +52,109 @@ class ExpenseCategoryResolverTest {
         assertThat(auto.getSubcategory()).isEqualTo("Public Transport");
     }
 
+    @Test
+    void refinesBroadCategoryWithinItsConfiguredSubcategoriesForBudgetAccounting() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy,
+                matcherWithin("BBQ Nation family dinner", "Eating Out"));
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Food & Dining");
+        expense.setMerchantName("BBQ Nation family dinner");
+
+        resolver.canonicalize(expense, "Dinner with family at BBQ Nation");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Eating Out");
+    }
+
+    @Test
+    void doesNotAcceptAResolvedSubcategoryFromAnotherParentCategory() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy,
+                matcherWithin("family meal venue", "Fuel"));
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Food & Dining");
+        expense.setMerchantName("family meal venue");
+
+        resolver.canonicalize(expense, "Family meal at a venue");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isNull();
+    }
+
+    @Test
+    void resolvesExplicitDiningLanguageWithoutAFlakySemanticModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Food & Dining");
+        expense.setMerchantName("Swiggy lunch order at office");
+
+        resolver.canonicalize(expense, "Swiggy lunch order at office for ₹340");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Eating Out");
+    }
+
+    @Test
+    void explicitBudgetSubcategoryOverridesBroaderModelProposal() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+
+        assertThat(resolver.resolveBudgetScope("Food & Dining",
+                "Setup my eating out budget ₹5,000 for this month."))
+                .contains("Eating Out");
+    }
+
+    @Test
+    void correctsCanonicalButWrongSiblingUsingTransactionEvidence() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy,
+                matcherWithin("Social Bar team lunch", "Eating Out"));
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Food & Dining");
+        expense.setSubcategory("Celebration Meal/Home Cooked");
+        expense.setMerchantName("Social Bar team lunch");
+
+        resolver.canonicalize(expense, "Team lunch at Social Bar");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Eating Out");
+    }
+
+    @Test
+    void resolvesTermInsurancePremiumFromConfiguredTaxonomyWithoutModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setMerchantName("Yearly term insurance premium");
+
+        resolver.canonicalize(expense,
+                "Yearly term insurance premium of ₹50,000 paid using HDFC Credit Card.");
+
+        assertThat(expense.getCategory()).isEqualTo("Insurance");
+        assertThat(expense.getSubcategory()).isEqualTo("Life Insurance");
+    }
+
+    @Test
+    void resolvesCarServiceFromConfiguredTaxonomyWithoutModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setMerchantName("Car minor service and wash at local garage");
+
+        resolver.canonicalize(expense,
+                "Car minor service and wash at local garage cost ₹2,500, paid using my HDFC bank account via UPI.");
+
+        assertThat(expense.getCategory()).isEqualTo("Transportation");
+        assertThat(expense.getSubcategory()).isEqualTo("Vehicle Maintenance");
+    }
+
+    @Test
+    void prefersSpecificInstamartAliasOverBroadSwiggyAlias() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setMerchantName("Swiggy Instamart ice cream order");
+
+        resolver.canonicalize(expense, "Swiggy Instamart ice cream order for ₹310 using food card.");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Groceries");
+    }
+
     private TagSemanticMatcher matcherMustNotRun() {
         return new TagSemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
@@ -64,6 +167,17 @@ class ExpenseCategoryResolverTest {
         return new TagSemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
                 assertThat(canonical).contains("Groceries", "Fuel", "Medicines");
+                return Map.of(raw, resolved);
+            }
+        };
+    }
+
+    private TagSemanticMatcher matcherWithin(String raw, String resolved) {
+        return new TagSemanticMatcher(null, null) {
+            @Override public Map<String, String> match(List<String> canonical, List<String> values) {
+                assertThat(canonical).containsExactlyInAnyOrder(
+                        "Groceries", "Eating Out", "Snacks & Beverages", "Celebration Meal/Home Cooked");
+                assertThat(values).containsExactly(raw);
                 return Map.of(raw, resolved);
             }
         };

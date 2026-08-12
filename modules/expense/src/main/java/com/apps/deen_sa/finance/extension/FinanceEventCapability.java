@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
             "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardDueDay",
-            "transactionDate", "tags", "rawText");
+            "transactionDate", "tags", "rawText", "confirmBudget");
     private final String eventType;
     private final SpeechHandler delegate;
     private final FinanceLedgerProjector projector;

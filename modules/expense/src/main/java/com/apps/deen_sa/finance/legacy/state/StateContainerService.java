@@ -56,11 +56,16 @@ public class StateContainerService {
     }
 
     public StateContainerEntity createProvisional(Long ownerId, String containerType) {
+        return createProvisional(ownerId, containerType, null);
+    }
+
+    public StateContainerEntity createProvisional(Long ownerId, String containerType, String detectedName) {
         StateContainerEntity container = new StateContainerEntity();
         container.setOwnerType("USER");
         container.setOwnerId(ownerId);
         container.setContainerType(containerType);
-        container.setName(defaultName(containerType));
+        container.setName(detectedName == null || detectedName.isBlank()
+                ? defaultName(containerType) : detectedName.trim());
         container.setStatus("ACTIVE");
         container.setCurrency("INR");
         container.setOpenedAt(Instant.now());

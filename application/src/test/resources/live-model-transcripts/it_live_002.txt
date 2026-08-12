@@ -7,6 +7,13 @@ Multilingual expense capture covering follow-ups, trusted buttons, multiple expe
 read-only queries, and final ledger/session reconciliation. Live-model prose can vary except where
 the test explicitly requires an exact reply.
 
+Expense authorization
+---------------------
+After missing-field follow-ups are complete, and for every complete expense sentence, the app first
+shows a structured preview. The test verifies no expense was persisted, presses Confirm, and only then
+checks application and balances. The former two-expenses sentence is represented as two independently
+previewed and confirmed messages so each financial write receives explicit authorization.
+
 Introduction and first expense/account setup
 --------------------------------------------
 User: Hi
@@ -16,6 +23,7 @@ App must include:
 
 User: I spent 500 on groceries
 App (exact): How did you pay?
+State: no expense is persisted while payment source is unresolved.
 State: one pending expense; conversation waits for sourceAccount.
 
 User button: Bank / UPI [answer:BANK_ACCOUNT]
@@ -107,4 +115,3 @@ Final accounting and session oracle
 - Exactly 10 state mutations
 - One BANK_ACCOUNT with final balance ₹5,452
 - Conversation has no active intent, waiting field, or pending events
-

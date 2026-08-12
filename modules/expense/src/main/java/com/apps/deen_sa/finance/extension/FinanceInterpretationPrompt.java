@@ -17,6 +17,18 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
               Preserve the complete current message in rawText for deterministic extraction by the capability.
             - Incoming salary, receipts, refunds, interest and gifts are INCOME; a receiving account is destinationAccount.
             - Paying a credit-card bill or loan is LIABILITY_PAYMENT. Buying goods using a card remains EXPENSE.
+            - Money sent or paid to another person (for example mom, wife, friend, employee, or vendor) is EXPENSE
+              unless both source and destination are explicitly the user's own accounts. The person is merchantName
+              and the paying account is sourceAccount. Never classify a person-to-person payment as ASSET_SELL.
+            - TRANSFER is only movement between two explicitly owned accounts. Do not use TRANSFER for gifts,
+              family support, purchases, bills, or payments to another person.
+            - ASSET_SELL requires explicit evidence that the user sold a named owned investment or asset, normally
+              including an asset identifier, quantity, and sale price. Words such as sent, paid, or transferred money
+              do not by themselves mean ASSET_SELL.
+            - Within Food & Dining, restaurant, cafe, bar, office/team lunch, dining out, and prepared-meal delivery
+              are Eating Out. Snacks & Beverages is for a snack, tea, coffee, or beverage purchase that is not a meal.
+              Celebration Meal/Home Cooked requires evidence of a celebration meal or food cooked at home; a family
+              dinner at a restaurant remains Eating Out.
             - Use a broad category and a specific subcategory. Never invent a date, account, amount or classification.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
             - Expense queries use QUERY with TODAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, LAST_MONTH or LAST_3_MONTHS.

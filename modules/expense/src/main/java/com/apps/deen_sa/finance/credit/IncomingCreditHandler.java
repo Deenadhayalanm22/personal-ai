@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -56,18 +57,25 @@ public class IncomingCreditHandler implements StructuredEventHandler {
     @Transactional
     @Override
     public SpeechResult handleInterpreted(EventPatch event, String rawText, ConversationContext context) {
-        EventFields fields = event.fields();
-        Map<String, Object> facts = fields.asMap();
+        Map<String, Object> facts = mergedFacts(event.fields(), context);
         BigDecimal amount = decimal(facts.get("amount"));
         if (amount == null) {
-            return SpeechResult.followup("How much money did you receive?", List.of("amount"), event);
+            context.setActiveIntent(intentType());
+            context.setWaitingForField("amount");
+            context.setPartialObject(new LinkedHashMap<>(facts));
+            return SpeechResult.followup("How much money did you receive?", List.of("amount"), facts);
         }
 
-        StateContainerEntity destination = resolveDestination(string(facts.get("destinationAccount")), context.getUserId());
+        String requestedDestination = string(facts.get("destinationAccount"));
+        if (!destinationGrounded(requestedDestination, rawText)) requestedDestination = null;
+        StateContainerEntity destination = resolveDestination(requestedDestination, context.getUserId());
         if (destination == null) {
+            context.setActiveIntent(intentType());
+            context.setWaitingForField("destinationAccount");
+            context.setPartialObject(new LinkedHashMap<>(facts));
             return SpeechResult.followup(
                     "Which bank account, cash account, or wallet received this money?",
-                    List.of("destinationAccount"), event);
+                    List.of("destinationAccount"), facts);
         }
         if (destination.getCurrentValue() == null) {
             return SpeechResult.invalid("I found " + destination.getName()
@@ -107,6 +115,15 @@ public class IncomingCreditHandler implements StructuredEventHandler {
                 .build();
     }
 
+    private Map<String, Object> mergedFacts(EventFields fields, ConversationContext context) {
+        Map<String, Object> merged = new LinkedHashMap<>();
+        if (intentType().equals(context.getActiveIntent()) && context.getPartialObject() instanceof Map<?, ?> partial) {
+            partial.forEach((key, value) -> merged.put(String.valueOf(key), value));
+        }
+        merged.putAll(fields.asMap());
+        return merged;
+    }
+
     private String string(Object value) { return value == null ? null : value.toString(); }
     private BigDecimal decimal(Object value) { return value == null ? null : new BigDecimal(value.toString()); }
     private LocalDate date(Object value) { return value == null ? null : value instanceof LocalDate date ? date : LocalDate.parse(value.toString()); }
@@ -116,8 +133,14 @@ public class IncomingCreditHandler implements StructuredEventHandler {
                 .filter(account -> CREDITABLE_TYPES.contains(account.getContainerType()))
                 .toList();
         if (requestedAccount == null || requestedAccount.isBlank()) {
-            return eligible.size() == 1 ? eligible.getFirst() : null;
+            return null;
         }
+        String requestedIdentity = accountIdentity(requestedAccount);
+        List<StateContainerEntity> exact = eligible.stream()
+                .filter(account -> accountIdentity(account.getName()).equals(requestedIdentity))
+                .toList();
+        if (exact.size() == 1) return exact.getFirst();
+        if (!exact.isEmpty()) return null;
         String requested = normalize(requestedAccount);
         List<StateContainerEntity> matches = eligible.stream()
                 .filter(account -> {
@@ -125,6 +148,20 @@ public class IncomingCreditHandler implements StructuredEventHandler {
                     return name.contains(requested) || requested.contains(name);
                 }).toList();
         return matches.size() == 1 ? matches.getFirst() : null;
+    }
+
+    static String accountIdentity(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                .replaceFirst("^(?:my|the)\\s+", "")
+                .replaceAll("[^\\p{L}\\p{N}]", "");
+    }
+
+    static boolean destinationGrounded(String requestedDestination, String currentMessage) {
+        if (requestedDestination == null || requestedDestination.isBlank()
+                || currentMessage == null || currentMessage.isBlank()) return false;
+        String requested = accountIdentity(requestedDestination);
+        String message = accountIdentity(currentMessage);
+        return !requested.isBlank() && message.contains(requested);
     }
 
     private String normalize(String value) {

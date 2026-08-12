@@ -15,7 +15,7 @@ FILTER EXTRACTION (STRICT)
 Extract ONLY if explicitly mentioned, else null:
 
 - category        → Housing, Food & Dining, Shopping, etc.
-- subcategory     → Rent, Groceries, Online Purchase, etc.
+- subcategory     → Rent, Groceries, Clothing, etc.
 - merchant        → Amazon, Swiggy, Zomato, FirstCry
 - tag             → child, delivery, subscription
 

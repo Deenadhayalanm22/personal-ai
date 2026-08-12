@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.math.BigDecimal;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.conversation.interpretation.EventPatch;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +31,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 @Log4j2
 public class ExpenseHandler implements SpeechHandler {
+
+    private static final String CONFIRM_EXPENSE = "confirmExpense";
+    private static final String SETUP_SOURCE_ACCOUNT = "setupSourceAccount";
+    private static final Pattern NAMED_CREDIT_CARD = Pattern.compile(
+            "(?i)\\b(?:via|using|from|on|with)\\s+(?:my\\s+|the\\s+)?"
+                    + "([\\p{L}\\p{N}]+(?:\\s+[\\p{L}\\p{N}]+){0,2}\\s+credit\\s+card)\\b");
+    private static final Pattern NAMED_BANK_ACCOUNT = Pattern.compile(
+            "(?i)\\b(?:via|using|from|on|with)\\s+(?:my\\s+|the\\s+)?"
+                    + "([\\p{L}\\p{N}]+(?:\\s+[\\p{L}\\p{N}]+){0,2}\\s+bank\\s+account)\\b");
 
     private final ExpenseClassifier llm;
     private final StateChangeRepository repo;
@@ -90,16 +101,8 @@ public class ExpenseHandler implements SpeechHandler {
         // Always find missing fields (used for UI / follow-up)
         List<String> missing = ExpenseValidator.findMissingFields(dto);
 
-        // 🔹 CASE 1: MINIMAL completeness
-        // We SAVE, but still ask follow-up to improve quality
+        // Minimal expenses remain only in conversation state until confirmation.
         if (level == CompletenessLevelEnum.MINIMAL) {
-
-            StateChangeEntity saved = saveExpense(dto, ctx.getUserId()); // sourceContainerId will be NULL
-            saved.setNeedsEnrichment(true);
-            saved.setFinanciallyApplied(false);
-            repo.save(saved);
-
-            // If there are missing fields, guide the user
             if (!missing.isEmpty()) {
                 String nextField = missing.getFirst();
                 String followupQ = questionFor(nextField, dto);
@@ -107,7 +110,7 @@ public class ExpenseHandler implements SpeechHandler {
                 ctx.setActiveIntent("EXPENSE");
                 ctx.setWaitingForField(nextField);
                 ctx.setPartialObject(dto);
-                ctx.setActiveTransactionId(saved.getId());
+                ctx.setActiveTransactionId(null);
 
                 return SpeechResult.followup(
                         followupQ,
@@ -117,51 +120,17 @@ public class ExpenseHandler implements SpeechHandler {
                 );
             }
 
-            ctx.reset();
-            return SpeechResult.saved(saved);
+            return confirmationPreview(dto, ctx);
         }
 
-        // 🔹 CASE 2: OPERATIONAL completeness
-        // Save + map container, but no balance mutation
+        // Operational data is presented for authorization before any write.
         if (level == CompletenessLevelEnum.OPERATIONAL) {
-
-            StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
-            // based on the container, enrichment being handled.
-            saved.setNeedsEnrichment(saved.getSourceContainerId() == null || !canApplyFinancialImpact(saved));
-
-            // ✅ APPLY FINANCIAL IMPACT IF POSSIBLE
-            if (canApplyFinancialImpact(saved)
-                    && !saved.isFinanciallyApplied()) {
-
-                applyFinancialImpact(saved);
-                saved.setFinanciallyApplied(true);
-            }
-
-            repo.save(saved);
-            SpeechResult accountSetup = accountInitializationFollowup(saved, dto, ctx);
-            if (accountSetup != null) return accountSetup;
-            ctx.reset();
-
-            return expenseConfirmation(saved, ctx.getTimezone());
+            return confirmationPreview(dto, ctx);
         }
 
-        // 🔹 CASE 3: FINANCIAL completeness
-        // Full save + balance mutation
+        // Financially complete data still requires explicit authorization.
         if (level == CompletenessLevelEnum.FINANCIAL) {
-
-            StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
-            if (canApplyFinancialImpact(saved) && !saved.isFinanciallyApplied()) {
-                applyFinancialImpact(saved);
-                saved.setFinanciallyApplied(true);
-            }
-
-            saved.setNeedsEnrichment(!saved.isFinanciallyApplied());
-            repo.save(saved);
-            SpeechResult accountSetup = accountInitializationFollowup(saved, dto, ctx);
-            if (accountSetup != null) return accountSetup;
-            ctx.reset();
-
-            return expenseConfirmation(saved, ctx.getTimezone());
+            return confirmationPreview(dto, ctx);
         }
 
         // Should never reach here
@@ -178,17 +147,24 @@ public class ExpenseHandler implements SpeechHandler {
         ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
         Long transactionId = ctx.getActiveTransactionId();
 
-        if (transactionId == null) {
-            return SpeechResult.invalid("No active transaction to update.");
+        if (CONFIRM_EXPENSE.equals(missingField)) {
+            return handleExpenseConfirmation(userAnswer, ctx);
+        }
+        if (SETUP_SOURCE_ACCOUNT.equals(missingField)) {
+            return handleOptionalSourceSetup(userAnswer, ctx);
+        }
+        if (transactionId == null && "sourceAccount".equals(missingField)
+                && "NO_SOURCE".equalsIgnoreCase(userAnswer)) {
+            return confirmationPreview(dto, ctx);
         }
 
-        if ("sourceBalance".equals(missingField)) {
+        if (transactionId != null && "sourceBalance".equals(missingField)) {
             return completeSourceBalance(userAnswer, ctx, transactionId);
         }
-        if ("creditLimit".equals(missingField)) {
+        if (transactionId != null && "creditLimit".equals(missingField)) {
             return completeCreditLimit(userAnswer, ctx, transactionId);
         }
-        if ("creditCardDueDay".equals(missingField)) {
+        if (transactionId != null && "creditCardDueDay".equals(missingField)) {
             return completeCreditCardDueDay(userAnswer, ctx, transactionId);
         }
 
@@ -203,6 +179,14 @@ public class ExpenseHandler implements SpeechHandler {
 
     /** Applies an interpreter-produced patch to the pending expense without another model call. */
     public SpeechResult handleInterpretedFollowup(EventPatch patch, String userAnswer, ConversationContext ctx) {
+        if (CONFIRM_EXPENSE.equals(ctx.getWaitingForField())
+                || SETUP_SOURCE_ACCOUNT.equals(ctx.getWaitingForField())) {
+            return handleFollowup(userAnswer, ctx);
+        }
+        if ("sourceAccount".equals(ctx.getWaitingForField())
+                && "NO_SOURCE".equalsIgnoreCase(userAnswer)) {
+            return confirmationPreview((ExpenseDto) ctx.getPartialObject(), ctx);
+        }
         if ("creditLimit".equals(ctx.getWaitingForField())) {
             return completeCreditLimit(userAnswer, ctx, ctx.getActiveTransactionId());
         }
@@ -218,12 +202,11 @@ public class ExpenseHandler implements SpeechHandler {
         ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
         Long transactionId = ctx.getActiveTransactionId();
 
-        if (transactionId == null && "amount".equals(missingField)) {
+        if (transactionId == null) {
             ExpenseMerger.merge(dto, refined);
             dto.setRawText(dto.getRawText() + " " + userAnswer);
             return handleExpense(dto, ctx);
         }
-        if (transactionId == null) return SpeechResult.invalid("No active transaction to update.");
         if ("sourceBalance".equals(missingField)) return completeSourceBalance(userAnswer, ctx, transactionId);
 
         // ----------------------------
@@ -379,18 +362,24 @@ public class ExpenseHandler implements SpeechHandler {
 
         String requested = normalizeSourceType(dto.getSourceAccount());
         String requestedName = normalizeAccountName(dto.getSourceAccount());
-        List<StateContainerEntity> matching =
+        List<StateContainerEntity> namedMatches =
                 containers.stream()
-                        .filter(c -> c.getContainerType().equals(requested)
-                                || c.getName().equalsIgnoreCase(dto.getSourceAccount())
-                                || normalizeAccountName(c.getName()).equals(requestedName))
+                        .filter(c -> c.getName().equalsIgnoreCase(dto.getSourceAccount())
+                                || normalizeAccountName(c.getName()).equals(requestedName)
+                                || !requestedName.isBlank() && (
+                                        normalizeAccountName(c.getName()).contains(requestedName)
+                                                || requestedName.contains(normalizeAccountName(c.getName()))))
                         .toList();
+        if (namedMatches.size() == 1) return namedMatches.getFirst();
 
-        if (matching.size() == 1) return matching.getFirst();
-        if (matching.isEmpty() && isSupportedSource(requested)) {
-            return stateContainerService.createProvisional(userId, requested);
-        }
-        return null;
+        String compactSource = normalizeAccountName(dto.getSourceAccount()).toUpperCase(Locale.ROOT);
+        boolean genericSource = Set.of("UPI", "BANK", "BANKUPI", "BANKACCOUNT", "CARD", "CREDIT",
+                "CREDITCARD", "CASH", "WALLET").contains(compactSource);
+        if (!genericSource) return null;
+        List<StateContainerEntity> typeMatches = containers.stream()
+                .filter(c -> c.getContainerType().equals(requested))
+                .toList();
+        return typeMatches.size() == 1 ? typeMatches.getFirst() : null;
     }
 
     private String normalizeAccountName(String value) {
@@ -404,10 +393,12 @@ public class ExpenseHandler implements SpeechHandler {
                 .replaceAll("[^A-Z0-9]+", "_")
                 .replaceAll("^_+|_+$", "");
         String compact = normalized.replace("_", "");
-        if (Set.of("BANK", "UPI", "BANKUPI", "BANKACCOUNT").contains(compact)) {
+        if (Set.of("BANK", "UPI", "BANKUPI", "BANKACCOUNT").contains(compact)
+                || compact.endsWith("BANKACCOUNT")) {
             return "BANK_ACCOUNT";
         }
-        if (Set.of("CARD", "CREDIT", "CREDITCARD").contains(compact)) return "CREDIT_CARD";
+        if (Set.of("CARD", "CREDIT", "CREDITCARD").contains(compact)
+                || compact.endsWith("CREDITCARD")) return "CREDIT_CARD";
         return normalized;
     }
 
@@ -433,7 +424,7 @@ public class ExpenseHandler implements SpeechHandler {
                     new ResponseAction("answer:CASH", "Cash"),
                     new ResponseAction("answer:BANK_ACCOUNT", "Bank / UPI"),
                     new ResponseAction("answer:CREDIT_CARD", "Credit Card"),
-                    new ResponseAction("control:skip", "Skip")
+                    new ResponseAction("answer:NO_SOURCE", "Not now")
             );
         }
         return List.of(new ResponseAction("control:skip", "Skip for now"));
@@ -548,6 +539,130 @@ public class ExpenseHandler implements SpeechHandler {
         return "CREDIT_CARD".equals(source.getContainerType())
                 ? "What is the card's current outstanding amount? Reply 0 if nothing is due."
                 : "What is its current balance?";
+    }
+
+    private SpeechResult confirmationPreview(ExpenseDto dto, ConversationContext ctx) {
+        dto.setSourceAccount(specificSourceAccount(dto));
+        StateContainerEntity linked = resolveSourceContainer(dto, ctx.getUserId());
+        String detected = displayValue(dto.getSourceAccount());
+        String message = "I identified:\n"
+                + "Amount: ₹" + dto.getAmount().stripTrailingZeros().toPlainString() + "\n"
+                + "Category: " + displayValue(dto.getCategory()) + "\n"
+                + "Subcategory: " + displayValue(dto.getSubcategory()) + "\n"
+                + "Source: " + (linked == null ? "null" : linked.getName());
+        if (linked == null && !"null".equals(detected)) {
+            message += "\nDetected account: " + detected + " (not configured)";
+        }
+        message += "\n\nConfirm this expense?";
+
+        ctx.setActiveIntent("EXPENSE");
+        ctx.setWaitingForField(CONFIRM_EXPENSE);
+        ctx.setPartialObject(dto);
+        ctx.setActiveTransactionId(null);
+        return SpeechResult.followup(message, List.of(CONFIRM_EXPENSE), dto, List.of(
+                new ResponseAction("answer:CONFIRM_EXPENSE", "Confirm"),
+                new ResponseAction("answer:DISCARD_EXPENSE", "Discard")
+        ));
+    }
+
+    private SpeechResult handleExpenseConfirmation(String answer, ConversationContext ctx) {
+        if ("DISCARD_EXPENSE".equalsIgnoreCase(answer)) {
+            ctx.reset();
+            return SpeechResult.info("Discarded. Nothing was saved.");
+        }
+        if (!"CONFIRM_EXPENSE".equalsIgnoreCase(answer)) {
+            return confirmationPreview((ExpenseDto) ctx.getPartialObject(), ctx);
+        }
+
+        ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
+        StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
+        if (canApplyFinancialImpact(saved)) {
+            applyFinancialImpact(saved);
+            saved.setFinanciallyApplied(true);
+        }
+        saved.setNeedsEnrichment(!saved.isFinanciallyApplied());
+        repo.save(saved);
+
+        // A linked but incomplete account is still optional to finish configuring.
+        SpeechResult existingAccountSetup = accountInitializationFollowup(saved, dto, ctx);
+        if (existingAccountSetup != null) return existingAccountSetup;
+
+        if (saved.getSourceContainerId() == null && dto.getSourceAccount() != null
+                && isSupportedSource(normalizeSourceType(dto.getSourceAccount()))) {
+            ctx.setActiveIntent("EXPENSE");
+            ctx.setWaitingForField(SETUP_SOURCE_ACCOUNT);
+            ctx.setPartialObject(dto);
+            ctx.setActiveTransactionId(saved.getId());
+            return SpeechResult.builder()
+                    .status(com.apps.deen_sa.conversation.SpeechStatus.FOLLOWUP)
+                    .message("Added ₹" + saved.getAmount().stripTrailingZeros().toPlainString()
+                            + ". " + dto.getSourceAccount()
+                            + " is not set up. Set it up for balance and spending insights?")
+                    .needFollowup(true)
+                    .missingFields(List.of(SETUP_SOURCE_ACCOUNT))
+                    .partial(dto)
+                    .savedEntity(saved)
+                    .actions(List.of(
+                            new ResponseAction("answer:SETUP_SOURCE_ACCOUNT", "Set up account"),
+                            new ResponseAction("answer:SKIP_SOURCE_SETUP", "Not now")))
+                    .build();
+        }
+
+        ctx.reset();
+        return expenseConfirmation(saved, ctx.getTimezone());
+    }
+
+    private SpeechResult handleOptionalSourceSetup(String answer, ConversationContext ctx) {
+        StateChangeEntity tx = repo.findById(ctx.getActiveTransactionId())
+                .orElseThrow(() -> new IllegalStateException("Transaction not found"));
+        if ("SKIP_SOURCE_SETUP".equalsIgnoreCase(answer)) {
+            ctx.reset();
+            return expenseConfirmation(tx, ctx.getTimezone());
+        }
+        if (!"SETUP_SOURCE_ACCOUNT".equalsIgnoreCase(answer)) {
+            return SpeechResult.invalid("Choose Set up account or Not now.");
+        }
+
+        ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
+        String type = normalizeSourceType(dto.getSourceAccount());
+        StateContainerEntity source = stateContainerService.createProvisional(
+                ctx.getUserId(), type, specificAccountName(dto.getSourceAccount()));
+        tx.setSourceContainerId(source.getId());
+        tx.setNeedsEnrichment(true);
+        repo.save(tx);
+        return accountInitializationFollowup(tx, dto, ctx);
+    }
+
+    private String displayValue(String value) {
+        return value == null || value.isBlank() ? "null" : value;
+    }
+
+    private String specificAccountName(String source) {
+        if (source == null) return null;
+        String compact = normalizeAccountName(source).toUpperCase(Locale.ROOT);
+        return Set.of("UPI", "BANK", "BANKUPI", "BANKACCOUNT", "CARD", "CREDIT", "CREDITCARD",
+                "CASH", "WALLET").contains(compact) ? null : source;
+    }
+
+    static String specificSourceAccount(ExpenseDto dto) {
+        String source = dto.getSourceAccount();
+        if (source == null || source.isBlank()) return source;
+        String type = normalizeSourceType(source);
+        Pattern pattern = switch (type) {
+            case "CREDIT_CARD" -> NAMED_CREDIT_CARD;
+            case "BANK_ACCOUNT" -> NAMED_BANK_ACCOUNT;
+            default -> null;
+        };
+        if (pattern == null || dto.getRawText() == null) return source;
+        Matcher matcher = pattern.matcher(dto.getRawText());
+        if (!matcher.find()) return source;
+        String detected = matcher.group(1).trim();
+        String cleaned;
+        do {
+            cleaned = detected;
+            detected = detected.replaceFirst("(?i)^(?:paid|via|using|from|on|with|my|the)\\s+", "");
+        } while (!detected.equals(cleaned));
+        return detected;
     }
 
     private SpeechResult expenseConfirmation(StateChangeEntity expense, String timezone) {

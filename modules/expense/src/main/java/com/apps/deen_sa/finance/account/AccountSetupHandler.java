@@ -18,6 +18,7 @@ import java.beans.PropertyDescriptor;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class AccountSetupHandler implements SpeechHandler {
@@ -62,6 +63,11 @@ public class AccountSetupHandler implements SpeechHandler {
         }
 
         applyProfileDefaults(dto);
+        StateContainerEntity duplicate = findActiveDuplicate(dto, ctx.getUserId());
+        if (duplicate != null) {
+            ctx.reset();
+            return duplicateAccount(duplicate);
+        }
         StateContainerEntity saved = save(dto, ctx.getUserId());
         ctx.reset();
         return setupConfirmation(saved);
@@ -94,6 +100,11 @@ public class AccountSetupHandler implements SpeechHandler {
         }
 
         applyProfileDefaults(dto);
+        StateContainerEntity duplicate = findActiveDuplicate(dto, ctx.getUserId());
+        if (duplicate != null) {
+            ctx.reset();
+            return duplicateAccount(duplicate);
+        }
         StateContainerEntity saved = save(dto, ctx.getUserId());
         ctx.reset();
         return setupConfirmation(saved);
@@ -133,6 +144,26 @@ public class AccountSetupHandler implements SpeechHandler {
         if (dto.getAvailableValue() == null && dto.getCurrentValue() != null) {
             dto.setAvailableValue(dto.getCurrentValue());
         }
+    }
+
+    private StateContainerEntity findActiveDuplicate(AccountSetupDto dto, Long userId) {
+        String identity = normalizeIdentity(dto.getName());
+        return repo.findActiveByOwnerId(userId).stream()
+                .filter(account -> account.getContainerType().equals(dto.getContainerType()))
+                .filter(account -> normalizeIdentity(account.getName()).equals(identity))
+                .findFirst()
+                .orElse(null);
+    }
+
+    static String normalizeIdentity(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                .replaceFirst("^(?:my|the)\\s+", "")
+                .replaceAll("[^\\p{L}\\p{N}]", "");
+    }
+
+    private SpeechResult duplicateAccount(StateContainerEntity existing) {
+        return SpeechResult.invalid(existing.getName()
+                + " already exists. I did not create a duplicate account.");
     }
 
     private SpeechResult setupConfirmation(StateContainerEntity saved) {

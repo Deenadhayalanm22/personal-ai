@@ -6,6 +6,7 @@ Food & Dining:
 
 Transportation:
   - Fuel
+  - Vehicle Maintenance
   - Public Transport
   - Parking
   - Toll
@@ -13,7 +14,6 @@ Transportation:
 Shopping:
   - Electronics
   - Clothing
-  - Online Purchase
   - Gifts
 
 Housing:
@@ -34,6 +34,11 @@ Medical:
   - Medicines
   - Lab Tests
   - Hospital Charges
+
+Insurance:
+  - Life Insurance
+  - Health Insurance
+  - Vehicle Insurance
 
 Entertainment:
   - Movies

@@ -73,6 +73,15 @@ class FinanceDeterministicEventRouterTest {
     }
 
     @org.junit.jupiter.api.Test
+    void extractsSetupStyleSubcategoryBudgetWithoutTheModel() {
+        var event = router.events("Setup my eating out budget ₹5,000 for this month.").getFirst();
+
+        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
+        assertThat(event.fields()).containsEntry("category", "eating out")
+                .containsEntry("amount", new java.math.BigDecimal("5000"));
+    }
+
+    @org.junit.jupiter.api.Test
     void extractsNaturalMonthlyScopeBalanceAsBudgetMutation() {
         var event = router.events("my grocery balance for this month is only 2000.").getFirst();
 
@@ -129,6 +138,59 @@ class FinanceDeterministicEventRouterTest {
         var utility = router.events("Paid BESCOM electricity bill of 1850 using UPI").getFirst();
         assertThat(utility.fields()).containsEntry("amount", new java.math.BigDecimal("1850"))
                 .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.",
+            "Lunch at Pizza Hut for ₹1,200 paid via HDFC Credit Card.",
+            "Booked movie tickets on BookMyShow for ₹900 using HDFC Credit Card."
+    })
+    void extractsDescriptionFirstExpensesWithoutModelRouting(String text) {
+        var events = router.events(text);
+
+        assertThat(events).singleElement().satisfies(event -> {
+            assertThat(event.eventType()).isEqualTo("EXPENSE");
+            assertThat(event.fields())
+                    .containsKey("amount")
+                    .containsEntry("sourceAccount", "HDFC Credit Card")
+                    .doesNotContainKey("category");
+        });
+    }
+
+    @org.junit.jupiter.api.Test
+    void extractsBbqNationExpenseFactsExactly() {
+        var event = router.events(
+                "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.").getFirst();
+
+        assertThat(event.fields())
+                .containsEntry("amount", new java.math.BigDecimal("3400"))
+                .containsEntry("merchantName", "Weekend dinner with family at BBQ Nation")
+                .containsEntry("sourceAccount", "HDFC Credit Card");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "Yearly term insurance premium of ₹50,000 paid using HDFC Credit Card.",
+            "Health insurance premium of ₹12,500 paid via ICICI Credit Card."
+    })
+    void routesPremiumPaidByCardAsExpenseNotLiabilityPayment(String text) {
+        var event = router.events(text).getFirst();
+
+        assertThat(event.eventType()).isEqualTo("EXPENSE");
+        assertThat(event.fields()).containsKeys("amount", "merchantName", "sourceAccount")
+                .doesNotContainKey("category");
+    }
+
+    @org.junit.jupiter.api.Test
+    void extractsInsurancePremiumFactsExactly() {
+        var event = router.events(
+                "Yearly term insurance premium of ₹50,000 paid using HDFC Credit Card.").getFirst();
+
+        assertThat(event.fields())
+                .containsEntry("amount", new java.math.BigDecimal("50000"))
+                .containsEntry("merchantName", "Yearly term insurance premium")
+                .containsEntry("sourceAccount", "HDFC Credit Card");
     }
 
     @org.junit.jupiter.params.ParameterizedTest
