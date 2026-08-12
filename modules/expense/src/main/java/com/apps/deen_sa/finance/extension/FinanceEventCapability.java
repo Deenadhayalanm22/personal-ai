@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
             "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardDueDay",
-            "transactionDate", "tags", "rawText", "confirmBudget");
+            "transactionDate", "tags", "rawText", "confirmBudget", "correctionChoice");
     private final String eventType;
     private final SpeechHandler delegate;
     private final FinanceLedgerProjector projector;
@@ -57,7 +57,8 @@ final class FinanceEventCapability implements EventCapability {
         } else {
             result = continuation ? delegate.handleFollowup(rawText, context) : delegate.handleSpeech(rawText, context);
         }
-        if (result != null && result.getStatus() == SpeechStatus.SAVED) projector.project(event, result, rawText, context);
+        if (result != null && result.getStatus() == SpeechStatus.SAVED && !"EXPENSE_CORRECTION".equals(eventType))
+            projector.project(event, result, rawText, context);
         return result;
     }
 

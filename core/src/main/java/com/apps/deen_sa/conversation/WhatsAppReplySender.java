@@ -60,8 +60,11 @@ public class WhatsAppReplySender {
     }
 
     public void sendInteractiveReply(String to, String message, List<ResponseAction> actions) {
+        if (actions.size() > 3) {
+            sendListReply(to, message, actions);
+            return;
+        }
         List<Map<String, Object>> buttons = actions.stream()
-                .limit(3)
                 .map(action -> replyButton(limit(action.id(), 256), limit(action.title(), 20)))
                 .toList();
         Map<String, Object> payload = Map.of(
@@ -75,6 +78,28 @@ public class WhatsAppReplySender {
                 )
         );
         sendPayload(to, "interactive follow-up", payload);
+    }
+
+    private void sendListReply(String to, String message, List<ResponseAction> actions) {
+        List<Map<String, Object>> rows = actions.stream().limit(10)
+                .map(action -> Map.<String, Object>of(
+                        "id", limit(action.id(), 200),
+                        "title", limit(action.title(), 24)))
+                .toList();
+        Map<String, Object> payload = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "list",
+                        "body", Map.of("text", limit(message, 1024)),
+                        "action", Map.of(
+                                "button", "Choose",
+                                "sections", List.of(Map.of("title", "Options", "rows", rows))
+                        )
+                )
+        );
+        sendPayload(to, "interactive list follow-up", payload);
     }
 
     private Map<String, Object> replyButton(String id, String title) {

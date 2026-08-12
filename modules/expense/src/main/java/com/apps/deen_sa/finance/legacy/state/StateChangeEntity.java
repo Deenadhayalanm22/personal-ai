@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
 
 @Entity
 @Table(name = "state_change")
@@ -99,6 +100,25 @@ public class StateChangeEntity {
 
     @Column(name = "needs_enrichment", nullable = false)
     private boolean needsEnrichment = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "record_status", nullable = false, length = 20)
+    private ExpenseRecordStatus recordStatus = ExpenseRecordStatus.ACTIVE;
+
+    @Column(name = "root_transaction_id")
+    private Long rootTransactionId;
+
+    @Column(name = "replaces_transaction_id")
+    private Long replacesTransactionId;
+
+    @Column(name = "record_version", nullable = false)
+    private int recordVersion = 1;
+
+    @Column(name = "corrected_at")
+    private Instant correctedAt;
+
+    @Column(name = "correction_reason", length = 100)
+    private String correctionReason;
 
 
 }

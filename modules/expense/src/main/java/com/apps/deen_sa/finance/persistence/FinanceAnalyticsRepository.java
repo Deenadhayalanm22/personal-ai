@@ -15,9 +15,21 @@ import java.util.stream.Collectors;
 /** Finance-owned read model over the legacy projection. */
 public interface FinanceAnalyticsRepository extends JpaRepository<FinanceExpenseProjectionEntity, Long> {
     boolean existsByCoreEventId(Long coreEventId);
+    java.util.Optional<FinanceExpenseProjectionEntity> findByLegacyTransactionId(Long legacyTransactionId);
+    @Query(value = """
+            SELECT p.* FROM fin_expense_projection p
+            JOIN core_event e ON e.id = p.core_event_id
+            WHERE p.user_id = :userId AND p.active = TRUE
+              AND CAST(e.facts ->> 'amount' AS NUMERIC) = :amount
+              AND e.facts ->> 'rawText' = :rawText
+            ORDER BY p.id
+            """, nativeQuery = true)
+    List<FinanceExpenseProjectionEntity> findLegacyCandidates(@Param("userId") String userId,
+                                                               @Param("amount") BigDecimal amount,
+                                                               @Param("rawText") String rawText);
     @Query(value = """
             SELECT COALESCE(SUM(t.amount), 0) FROM fin_expense_projection t
-            WHERE t.user_id = :userId
+            WHERE t.user_id = :userId AND t.active = TRUE
               AND t.occurred_at BETWEEN :start AND :end
               AND (:category IS NULL OR t.category = :category)
               AND (:sourceAccount IS NULL OR t.source_account = :sourceAccount)
@@ -28,7 +40,7 @@ public interface FinanceAnalyticsRepository extends JpaRepository<FinanceExpense
 
     @Query(value = """
             SELECT t.category, COALESCE(SUM(t.amount), 0) FROM fin_expense_projection t
-            WHERE t.user_id = :userId AND t.occurred_at BETWEEN :start AND :end
+            WHERE t.user_id = :userId AND t.active = TRUE AND t.occurred_at BETWEEN :start AND :end
               AND (:sourceAccount IS NULL OR t.source_account = :sourceAccount)
             GROUP BY t.category ORDER BY SUM(t.amount) DESC
             """, nativeQuery = true)
@@ -36,7 +48,7 @@ public interface FinanceAnalyticsRepository extends JpaRepository<FinanceExpense
 
     @Query(value = """
             SELECT t.subcategory, COALESCE(SUM(t.amount), 0) FROM fin_expense_projection t
-            WHERE t.user_id = :userId AND t.occurred_at BETWEEN :start AND :end
+            WHERE t.user_id = :userId AND t.active = TRUE AND t.occurred_at BETWEEN :start AND :end
               AND (:category IS NULL OR t.category = :category)
               AND (:sourceAccount IS NULL OR t.source_account = :sourceAccount)
             GROUP BY t.subcategory ORDER BY SUM(t.amount) DESC
@@ -46,7 +58,7 @@ public interface FinanceAnalyticsRepository extends JpaRepository<FinanceExpense
 
     @Query(value = """
             SELECT t.source_account, COALESCE(SUM(t.amount), 0) FROM fin_expense_projection t
-            WHERE t.user_id = :userId AND t.occurred_at BETWEEN :start AND :end
+            WHERE t.user_id = :userId AND t.active = TRUE AND t.occurred_at BETWEEN :start AND :end
               AND (:category IS NULL OR t.category = :category)
             GROUP BY t.source_account ORDER BY SUM(t.amount) DESC
             """, nativeQuery = true)
@@ -55,6 +67,7 @@ public interface FinanceAnalyticsRepository extends JpaRepository<FinanceExpense
     @Query(value = """
             SELECT COUNT(*) FROM state_change
             WHERE category = 'Repayment' AND subcategory = 'Loan EMI'
+              AND record_status = 'ACTIVE'
               AND details ->> 'loanContainerId' = CAST(:loanId AS TEXT)
             """, nativeQuery = true)
     int countLoanEmis(@Param("loanId") Long loanId);

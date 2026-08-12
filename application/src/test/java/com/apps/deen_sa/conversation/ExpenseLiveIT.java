@@ -28,6 +28,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import com.apps.deen_sa.finance.budget.MonthlyBudgetRepository;
+import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
+import com.apps.deen_sa.finance.persistence.FinanceAnalyticsRepository;
 import com.apps.deen_sa.conversation.UnprocessedConversationMessageRepository;
 import com.apps.deen_sa.finance.legacy.state.cache.StateContainerCache;
 import org.flywaydb.core.Flyway;
@@ -51,6 +53,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     @Autowired private ConversationSessionRepository sessionRepository;
     @Autowired private MonthlyBudgetRepository monthlyBudgetRepository;
     @Autowired private UnprocessedConversationMessageRepository unprocessedMessageRepository;
+    @Autowired private FinanceAnalyticsRepository financeAnalyticsRepository;
     @Autowired private Flyway flyway;
     @Autowired private StateContainerCache stateContainerCache;
     @Autowired private ConversationContext conversationContext;
@@ -122,7 +125,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     }
 
     @Test
-    void it_live_test() throws Exception {
+    void it_live_full_month_scenario() throws Exception {
         requireRealApiKey();
         int message = 1;
 
@@ -288,6 +291,197 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertAccount("HDFC bank account", "BANK_ACCOUNT", "-3889", null, null);
         assertAccount("HDFC credit card", "CREDIT_CARD", "3950", "300000", 21);
         assertDayOneMonthLedgerReconciled();
+    }
+
+    @Test
+    void it_live_edit_delete_scenario() throws Exception {
+        requireRealApiKey();
+        int message = 1;
+
+        scenario("Day 1 · Set up accounts, receive allowances, transfer money, and configure budgets");
+        // Prepaid/capped cards currently use balance-bearing account semantics. This intentionally
+        // exercises overdrafts instead of incorrectly treating them as revolving credit cards.
+        assertSaved(chatText(id(message++),
+                "Create my HDFC bank account with a current balance of 10"), "HDFC");
+        assertThat(chatText(id(message++),
+                "Setup my HDFC bank account with a current balance of 100"))
+                .containsIgnoringCase("already exists")
+                .containsIgnoringCase("did not create a duplicate");
+        assertSaved(chatText(id(message++), "Create my HDFC Food Card bank account with a current balance of 0"), "Food Card");
+        assertSaved(chatText(id(message++), "Create my HDFC Petrol Card bank account with a current balance of 0"), "Petrol Card");
+        assertSaved(chatText(id(message++),
+                "Create my HDFC credit card with limit 300000, outstanding 0 and due day 21"), "HDFC credit card");
+
+        String salaryAccountQuestion = chatText(id(message++),
+                "Salary credited: ₹1,00,000 received today.");
+        assertThat(salaryAccountQuestion)
+                .containsIgnoringCase("Which bank account")
+                .containsIgnoringCase("received this money");
+        assertWaitingFor("INCOME", "destinationAccount");
+        assertRecorded(chatText(id(message++), "HDFC bank account"), "100000");
+        assertRecorded(chatText(id(message++),
+                "₹4,000 monthly allowance was credited to my HDFC Food Card bank account."), "4000");
+        assertAccount("HDFC Food Card", "BANK_ACCOUNT", "4000", null, null);
+
+        assertRecorded(chatText(id(message++),
+                "₹2,500 monthly petrol allowance was credited to my HDFC Petrol Card bank account."), "2500");
+        assertAccount("HDFC Petrol Card", "BANK_ACCOUNT", "2500", null, null);
+        int expensesBeforeMom = recordedExpenseCount();
+        String momReply = chatText(id(message++),
+                "Sent ₹10,000 from my HDFC bank account to my mom via UPI.");
+        if (momReply.toLowerCase().contains("expense for")) {
+            assertWaitingFor("category");
+            assertRecorded(chatText(id(message++), "Parents Support"), "10000");
+        } else {
+            assertRecorded(momReply, "10000");
+        }
+        assertLatestExpense(expensesBeforeMom, "10000", "Parents Support", "HDFC bank account");
+
+        int expensesBeforeWife = recordedExpenseCount();
+        String wifeReply = chatText(id(message++),
+                "Sent ₹10,000 from my HDFC bank account to my wife via UPI.");
+        if (wifeReply.toLowerCase().contains("expense for")) {
+            assertWaitingFor("category");
+            assertRecorded(chatText(id(message++), "Family Support"), "10000");
+        } else {
+            assertRecorded(wifeReply, "10000");
+        }
+        assertLatestExpense(expensesBeforeWife, "10000", "Family Support", "HDFC bank account");
+        assertRecorded(chatText(id(message++),
+                "Paid ₹16,000 house rent directly from my HDFC bank account via net banking."), "16000");
+
+        scenario("Days 2–12 · Record ordinary spending before alert thresholds");
+        assertRecorded(chatText(id(message++),
+                "Ordered quick groceries on Blinkit for ₹420 using my HDFC food card."), "420");
+        assertThat(chatText(id(message++), "Setup my grocery budget ₹5,000 for this month."))
+                .containsIgnoringCase("Groceries").contains("5000");
+        assertRecorded(chatText(id(message++),
+                "Bought fresh veggies from the local vendor for ₹180 using my HDFC bank account via UPI."), "180");
+        assertRecorded(chatText(id(message++),
+                "Paid monthly ACT Fiber net bill of ₹1,000 using my HDFC Credit Card."), "1000");
+        assertRecorded(chatText(id(message++),
+                "Recharged mobile for ₹799 using HDFC Credit Card."), "799");
+        assertRecorded(chatText(id(message++),
+                "Filled car petrol for ₹4,000 at Bharat Petroleum using my HDFC Petrol card."), "4000");
+
+        scenario("Edit the older Blinkit expense and preserve its accounting history");
+        var blinkit = stateChangeRepository.findAll().stream()
+                .filter(change -> change.getTransactionType().name().equals("EXPENSE"))
+                .filter(change -> change.getAmount().compareTo(new BigDecimal("420")) == 0)
+                .filter(change -> change.getMainEntity() != null
+                        && change.getMainEntity().toLowerCase().contains("blinkit"))
+                .findFirst().orElseThrow();
+        int mutationsBeforeEdit = stateMutationRepository.findAll().size();
+
+        String editChoices = chatText(id(message++), "I want to edit a transaction");
+        assertThat(editChoices)
+                .containsIgnoringCase("Select a transaction")
+                .contains("₹4000", "₹799", "₹1000", "₹180", "₹420");
+        assertWaitingFor("EXPENSE_CORRECTION", "correctionChoice");
+
+        String editFields = chatButton(id(message++), "answer:SELECT_" + blinkit.getId(), "5");
+        assertThat(editFields).containsIgnoringCase("What do you want to change");
+        assertWaitingFor("EXPENSE_CORRECTION", "correctionChoice");
+
+        assertThat(chatButton(id(message++), "answer:FIELD_AMOUNT", "Amount"))
+                .containsIgnoringCase("correct amount");
+        String editPreview = chatText(id(message++), "520");
+        assertThat(editPreview)
+                .contains("₹420", "₹520")
+                .containsIgnoringCase("Confirm this update");
+
+        String edited = chatButton(id(message++), "answer:CONFIRM", "Confirm update");
+        assertThat(edited).containsIgnoringCase("updated").contains("₹520");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var original = stateChangeRepository.findById(blinkit.getId()).orElseThrow();
+            assertThat(original.getRecordStatus()).isEqualTo(ExpenseRecordStatus.SUPERSEDED);
+            assertThat(original.getCorrectionReason()).isEqualTo("USER_EDITED_AMOUNT");
+            assertThat(original.getCorrectedAt()).isNotNull();
+
+            assertThat(stateChangeRepository.findAll())
+                    .filteredOn(change -> change.getReplacesTransactionId() != null
+                            && change.getReplacesTransactionId().equals(blinkit.getId()))
+                    .singleElement().satisfies(replacement -> {
+                        assertThat(replacement.getRecordStatus()).isEqualTo(ExpenseRecordStatus.ACTIVE);
+                        assertThat(replacement.getAmount()).isEqualByComparingTo("520");
+                        assertThat(replacement.getRootTransactionId()).isEqualTo(blinkit.getId());
+                        assertThat(replacement.getRecordVersion()).isEqualTo(2);
+                        assertThat(replacement.isFinanciallyApplied()).isTrue();
+                    });
+            assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeEdit + 2)
+                    .anySatisfy(mutation -> {
+                        assertThat(mutation.getTransactionId()).isEqualTo(blinkit.getId());
+                        assertThat(mutation.getAmount()).isEqualByComparingTo("-420");
+                        assertThat(mutation.getReason()).isEqualTo("EXPENSE_CORRECTION_REVERSAL");
+                    })
+                    .anySatisfy(mutation -> {
+                        assertThat(mutation.getAmount()).isEqualByComparingTo("520");
+                        assertThat(mutation.getReason()).isEqualTo("EXPENSE_CORRECTION_REPLACEMENT");
+                    });
+        });
+        assertAccount("HDFC Food Card", "BANK_ACCOUNT", "3480", null, null);
+
+        scenario("Delete the mobile recharge by voiding it and reversing its balance impact");
+        var mobileRecharge = stateChangeRepository.findAll().stream()
+                .filter(change -> change.getTransactionType().name().equals("EXPENSE"))
+                .filter(change -> change.getAmount().compareTo(new BigDecimal("799")) == 0)
+                .findFirst().orElseThrow();
+        int mutationsBeforeDelete = stateMutationRepository.findAll().size();
+
+        String deleteChoices = chatText(id(message++), "I want to delete a transaction");
+        assertThat(deleteChoices)
+                .containsIgnoringCase("Select a transaction")
+                .contains("₹520", "₹4000", "₹799", "₹1000", "₹180");
+        String deletePreview = chatButton(id(message++),
+                "answer:SELECT_" + mobileRecharge.getId(), "3");
+        assertThat(deletePreview)
+                .containsIgnoringCase("Delete this transaction")
+                .contains("₹799")
+                .containsIgnoringCase("voided")
+                .containsIgnoringCase("balance impact");
+
+        String deleted = chatButton(id(message++), "answer:CONFIRM", "Delete transaction");
+        assertThat(deleted)
+                .containsIgnoringCase("Transaction deleted")
+                .containsIgnoringCase("voided")
+                .contains("₹799");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var voided = stateChangeRepository.findById(mobileRecharge.getId()).orElseThrow();
+            assertThat(voided.getRecordStatus()).isEqualTo(ExpenseRecordStatus.VOIDED);
+            assertThat(voided.getCorrectionReason()).isEqualTo("USER_DELETED");
+            assertThat(voided.getCorrectedAt()).isNotNull();
+            assertThat(stateMutationRepository.findAll()).hasSize(mutationsBeforeDelete + 1)
+                    .anySatisfy(mutation -> {
+                        assertThat(mutation.getTransactionId()).isEqualTo(mobileRecharge.getId());
+                        assertThat(mutation.getAmount()).isEqualByComparingTo("-799");
+                        assertThat(mutation.getReason()).isEqualTo("EXPENSE_CORRECTION_REVERSAL");
+                    });
+        });
+        assertAccount("HDFC credit card", "CREDIT_CARD", "1000", "300000", 21);
+
+        scenario("Corrected records are the only versions included in budgets and spending reports");
+        ZoneId zone = ZoneId.of("Asia/Kolkata");
+        Instant dayStart = java.time.LocalDate.now(zone).atStartOfDay(zone).toInstant();
+        Instant dayEnd = java.time.LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant();
+        assertThat(stateChangeRepository.sumExpenseCategory(
+                blinkit.getUserId(), "Groceries", dayStart, dayEnd))
+                .isEqualByComparingTo("700");
+        assertThat(financeAnalyticsRepository.sumExpenses(
+                blinkit.getUserId(), dayStart, dayEnd, null, null))
+                .isEqualByComparingTo("41700");
+        assertThat(financeAnalyticsRepository.findByLegacyTransactionId(blinkit.getId()))
+                .get().extracting(projection -> projection.isActive()).isEqualTo(false);
+        assertThat(financeAnalyticsRepository.findByLegacyTransactionId(mobileRecharge.getId()))
+                .get().extracting(projection -> projection.isActive()).isEqualTo(false);
+        assertThat(stateChangeRepository.findAll())
+                .filteredOn(change -> change.getTransactionType().name().equals("EXPENSE")
+                        && change.getRecordStatus() == ExpenseRecordStatus.ACTIVE)
+                .hasSize(7)
+                .noneSatisfy(change -> assertThat(change.getAmount()).isEqualByComparingTo("420"))
+                .noneSatisfy(change -> assertThat(change.getAmount()).isEqualByComparingTo("799"));
+        assertThat(financeAnalyticsRepository.findAll())
+                .filteredOn(projection -> projection.isActive())
+                .hasSize(7);
     }
 
 

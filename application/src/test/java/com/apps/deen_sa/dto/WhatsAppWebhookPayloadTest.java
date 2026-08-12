@@ -9,6 +9,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WhatsAppWebhookPayloadTest {
 
     @Test
+    void extractsListRepliesAsTrustedInteractiveAnswers() {
+        WhatsAppWebhookPayload.Message message = new WhatsAppWebhookPayload.Message(
+                "wamid.list-1", "919876543210", "interactive", null, null,
+                new WhatsAppWebhookPayload.Interactive("list_reply", null,
+                        new WhatsAppWebhookPayload.ListReply("answer:SELECT_42", "1", null)));
+        WhatsAppWebhookPayload payload = new WhatsAppWebhookPayload(List.of(
+                new WhatsAppWebhookPayload.Entry(List.of(new WhatsAppWebhookPayload.Change(
+                        new WhatsAppWebhookPayload.Value(List.of(message)))))));
+
+        assertThat(payload.extractInteractiveMessages()).containsExactly(
+                new WhatsAppWebhookPayload.InteractiveMessage("919876543210", "answer:SELECT_42", "wamid.list-1"));
+    }
+
+    @Test
     void extractsAudioMessagesWithoutTreatingThemAsText() {
         WhatsAppWebhookPayload.Message message = new WhatsAppWebhookPayload.Message(
                 "wamid.audio-1",

@@ -5,9 +5,9 @@ import com.apps.deen_sa.extension.api.InterpretationPromptContributor;
 final class FinanceInterpretationPrompt implements InterpretationPromptContributor {
     @Override public String instructions() { return """
             PERSONAL-FINANCE EXTENSION
-            Supported event types: EXPENSE, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, ASSET_BUY, ASSET_SELL, BUDGET_SET.
+            Supported event types: EXPENSE, EXPENSE_CORRECTION, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, ASSET_BUY, ASSET_SELL, BUDGET_SET.
             Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
+            creditLimit, creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText, correctionChoice.
             - A new financial movement amount must have exact evidence in the current message.
             - Existing accounts are reference candidates only. Populate an account only when stated now or when it
               directly answers a pending question.
@@ -31,6 +31,9 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
               dinner at a restaurant remains Eating Out.
             - Use a broad category and a specific subcategory. Never invent a date, account, amount or classification.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
+            - Requests to find, edit, correct, remove, void, or delete an earlier expense are EXPENSE_CORRECTION.
+              Never reinterpret them as a new EXPENSE. During its pending flow, put the user's literal answer in
+              correctionChoice; the capability performs selection, validation, and confirmation deterministically.
             - Expense queries use QUERY with TODAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, LAST_MONTH or LAST_3_MONTHS.
             - Questions asking for an account, bank, UPI, cash or card balance use QUERY with ACCOUNT_BALANCE.
             - Questions about budget remaining, budget status or overspending use QUERY with CURRENT_STATUS.

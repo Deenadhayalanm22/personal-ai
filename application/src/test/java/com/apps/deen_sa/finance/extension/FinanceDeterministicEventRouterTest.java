@@ -9,6 +9,16 @@ class FinanceDeterministicEventRouterTest {
     private final FinanceDeterministicEventRouter router = new FinanceDeterministicEventRouter();
 
     @ParameterizedTest
+    @ValueSource(strings = {
+            "I want to edit a transaction",
+            "delete my last expense",
+            "Show me today's groceries transactions"
+    })
+    void routesExpenseCorrectionAndBrowseRequestsWithoutTheModel(String text) {
+        assertThat(router.eventType(text)).contains("EXPENSE_CORRECTION");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"I spent 260", "spent ₹260", "Paid Rs. 1,850", "I spent 10k."})
     void routesUnambiguousSparseExpensesWithoutTheModel(String text) {
         assertThat(router.eventType(text)).contains("EXPENSE");

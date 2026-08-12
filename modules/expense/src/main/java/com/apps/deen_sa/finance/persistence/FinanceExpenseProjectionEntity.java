@@ -20,4 +20,6 @@ public class FinanceExpenseProjectionEntity {
     private String subcategory;
     @Column(name = "source_account") private String sourceAccount;
     @Column(name = "occurred_at", nullable = false) private Instant occurredAt;
+    @Column(name = "legacy_transaction_id") private Long legacyTransactionId;
+    @Column(nullable = false) private boolean active = true;
 }

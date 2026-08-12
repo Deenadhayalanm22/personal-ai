@@ -45,9 +45,9 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
                         : Stream.empty())
                 .filter(m -> "interactive".equals(m.type())
                         && m.interactive() != null
-                        && m.interactive().buttonReply() != null)
+                        && (m.interactive().buttonReply() != null || m.interactive().listReply() != null))
                 .map(m -> new InteractiveMessage(
-                        m.from(), m.interactive().buttonReply().id(), m.id()))
+                        m.from(), m.interactive().replyId(), m.id()))
                 .toList();
     }
 
@@ -59,9 +59,13 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
     public record Audio(String id, @JsonProperty("mime_type") String mimeType) {}
     public record Interactive(
             String type,
-            @JsonProperty("button_reply") ButtonReply buttonReply
-    ) {}
+            @JsonProperty("button_reply") ButtonReply buttonReply,
+            @JsonProperty("list_reply") ListReply listReply
+    ) {
+        String replyId() { return buttonReply != null ? buttonReply.id() : listReply.id(); }
+    }
     public record ButtonReply(String id, String title) {}
+    public record ListReply(String id, String title, String description) {}
     public record AudioMessage(String from, String mediaId, String mimeType, String messageId) {}
     public record InteractiveMessage(String from, String buttonId, String messageId) {}
 }

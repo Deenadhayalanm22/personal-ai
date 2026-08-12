@@ -77,10 +77,16 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
             "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+(.+?)\\s+மூலம்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
     private static final Pattern TAMIL_WITHOUT_SOURCE = Pattern.compile(
             "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
+    private static final Pattern EXPENSE_CORRECTION = Pattern.compile(
+            "(?i)^\\s*(?:(?:i\\s+)?(?:want|need|would\\s+like)\\s+to\\s+)?(?:edit|delete|remove|void|correct|update|change)\\b.*$");
+    private static final Pattern TRANSACTION_BROWSE = Pattern.compile(
+            "(?i)^\\s*(?:show|find|list)\\b.*\\b(?:expense|expenses|transaction|transactions)\\b.*$");
 
     @Override
     public Optional<String> eventType(String text) {
         if (text == null) return Optional.empty();
+        if (EXPENSE_CORRECTION.matcher(text).matches() || TRANSACTION_BROWSE.matcher(text).matches())
+            return Optional.of("EXPENSE_CORRECTION");
         if (ACCOUNT_SETUP.matcher(text).matches()) return Optional.of("ACCOUNT_SETUP");
         if (BUDGET_SET.matcher(text).matches() || MONTHLY_SCOPE_BALANCE_SET.matcher(text).matches())
             return Optional.of("BUDGET_SET");

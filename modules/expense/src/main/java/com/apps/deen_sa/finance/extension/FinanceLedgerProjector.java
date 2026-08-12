@@ -47,6 +47,8 @@ class FinanceLedgerProjector {
             projection.setUserId(String.valueOf(context.getUserId())); projection.setAmount(amount);
             projection.setCategory(string(facts.get("category"))); projection.setSubcategory(string(facts.get("subcategory")));
             projection.setSourceAccount(string(facts.get("sourceAccount"))); projection.setOccurredAt(committed.getOccurredAt());
+            projection.setLegacyTransactionId(result != null && result.getSavedEntity() instanceof StateChangeEntity saved
+                    ? saved.getId() : null);
             projections.save(projection);
         }
     }
@@ -54,6 +56,7 @@ class FinanceLedgerProjector {
     private Map<String, Object> completedFacts(Map<String, Object> proposed, Object savedEntity) {
         Map<String, Object> facts = new LinkedHashMap<>(proposed);
         if (savedEntity instanceof StateChangeEntity saved) {
+            put(facts, "transactionId", saved.getId());
             put(facts, "amount", saved.getAmount());
             put(facts, "category", saved.getCategory());
             put(facts, "subcategory", saved.getSubcategory());

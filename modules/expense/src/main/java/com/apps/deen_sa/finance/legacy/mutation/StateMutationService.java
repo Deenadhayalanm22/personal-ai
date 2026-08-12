@@ -55,4 +55,21 @@ public class StateMutationService {
         container.setLastActivityAt(Instant.now());
         stateContainerService.UpdateValueContainer(container);
     }
+
+    @Transactional
+    public void reverse(StateContainerEntity container, StateMutationCommand original, String reason) {
+        StateMutationEntity audit = new StateMutationEntity();
+        audit.setTransactionId(original.getReferenceTxId());
+        audit.setContainerId(container.getId());
+        audit.setAdjustmentType(original.getType());
+        audit.setAmount(original.getAmount().negate());
+        audit.setReason(reason);
+        audit.setOccurredAt(Instant.now());
+        audit.setCreatedAt(Instant.now());
+        adjustmentRepository.save(audit);
+
+        strategyResolver.resolve(container).reverse(container, original);
+        container.setLastActivityAt(Instant.now());
+        stateContainerService.UpdateValueContainer(container);
+    }
 }
