@@ -52,7 +52,14 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     @Autowired private ConversationContext conversationContext;
 
     @Value("${wiremock.admin-url}") private String wireMockAdminUrl;
-    @Value("${openai.model}") private String modelName;
+
+    @Test
+    void it_live_test() throws Exception {
+        requireRealApiKey();
+        int message = 1;
+        assertSaved(chatText(id(message++), "Setup my hdfc bank account where i have 40243 current balance"), "HDFC");
+    }
+
 
     /**
      * LOCKED STRICT ACCEPTANCE CONTRACT — DO NOT MODIFY TO MAKE PRODUCTION CODE PASS.
@@ -93,6 +100,8 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         phone = "919876543296";
         personaDRealUserRecovery();
     }
+
+    @Value("${openai.model}") private String modelName;
 
     private void personaATwoMonthLedger() throws Exception {
         requireRealApiKey();

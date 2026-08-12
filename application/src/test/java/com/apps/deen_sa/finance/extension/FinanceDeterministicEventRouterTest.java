@@ -102,6 +102,17 @@ class FinanceDeterministicEventRouterTest {
         assertThat(router.query(text)).contains("ACCOUNT_BALANCE");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Setup my hdfc bank account where i have 40243 current balance",
+            "Set up an HDFC account with an opening balance of 40243",
+            "Add my salary account; its available balance is 40243",
+            "Open a bank account for me with 40243 as the current balance"
+    })
+    void neverRoutesFreeFormAccountMutationsAsBalanceQueries(String text) {
+        assertThat(router.query(text)).isEmpty();
+    }
+
     @org.junit.jupiter.api.Test
     void leavesVegetableMeaningForTaxonomyBackedSemanticResolution() {
         var event = router.events("I spent 1300 on the buying vegitables using my upi").getFirst();

@@ -32,10 +32,11 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
             "(?i)^.*\\b(?:budget|planned)\\b.*(?:how\\s+much|status|doing|remaining|remain|left|against).*$|"
                     + "^.*(?:how\\s+much|status|doing|remaining|remain|left|against).*\\b(?:budget|planned)\\b.*$");
     private static final Pattern ACCOUNT_BALANCE_QUERY = Pattern.compile(
-            "(?i)^.*(?:\\b(?:current|curent|available)\\s+balance\\b|"
-                    + "\\b(?:bank|account|upi|cash|card)\\s+balance\\b|"
-                    + "\\bbalance\\s+(?:in|of)\\s+(?:my\\s+)?(?:bank|account|upi|cash|card)\\b|"
-                    + "\\b(?:what\\s+is|what's|show|tell)\\s+(?:me\\s+)?my\\s+balance\\b).*$");
+            "(?i)^\\s*(?:(?:what\\s+is|what's|show|tell|how\\s+much)\\b.*\\bbalance\\b.*|"
+                    + ".*\\bbalance\\b.*\\?)\\s*$");
+    private static final Pattern ACCOUNT_MUTATION_REQUEST = Pattern.compile(
+            "(?i)^\\s*(?:please\\s+)?(?:create|add|open|register|set\\s*up|setup)\\b.*"
+                    + "\\b(?:bank\\s+account|account|credit\\s+card|card|wallet|cash)\\b.*$");
     private static final Pattern TWO_EXPENSES = Pattern.compile(
             "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+on\\s+(.+?)\\s+and\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
@@ -123,6 +124,7 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         if (text == null) return Optional.empty();
         String query = text.trim();
         if (ACCOUNT_SETUP.matcher(query).matches()
+                || ACCOUNT_MUTATION_REQUEST.matcher(query).matches()
                 || BUDGET_SET.matcher(query).matches()
                 || MONTHLY_SCOPE_BALANCE_SET.matcher(query).matches()) return Optional.empty();
         if (ACCOUNT_BALANCE_QUERY.matcher(query).matches() && !query.toLowerCase(Locale.ROOT).contains("budget"))
