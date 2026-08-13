@@ -1,0 +1,11 @@
+Repayment:
+  Loan EMI:
+    description: Monthly EMI repayment
+    details:
+      required:
+        - loanContainerId
+        - emiAmount
+        - dueDay
+      optional:
+        - emiIndex
+        - penaltyAmount

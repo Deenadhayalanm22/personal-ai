@@ -18,8 +18,8 @@ if [ -z "${OPENAI_API_KEY:-}" ] || [ "$OPENAI_API_KEY" = "replace-with-your-open
   exit 1
 fi
 
-live_it_classes=${LIVE_IT_CLASSES:-SareeLiveIT}
+live_it_classes=${LIVE_IT_CLASSES:-ExpenseLiveIT}
 
 exec "$project_dir/mvnw" -pl application -am -Pintegration \
-  -Dtest=SareeEventCapabilityTest \
+  -Dtest=ExpenseConfirmationFlowTest \
   -Dit.test="$live_it_classes" verify

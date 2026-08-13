@@ -9,38 +9,47 @@
         <relativePath/>
     </parent>
     <groupId>com.apps.deen-sa</groupId>
-    <artifactId>personal-ai-parent</artifactId>
+    <artifactId>personal-ai</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
-    <name>personal-ai-parent</name>
+    <name>personal-ai</name>
+    <description>Personal expense assistant</description>
     <properties>
         <java.version>21</java.version>
         <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
     </properties>
-    <modules>
-        <module>core</module>
-        <module>modules/expense</module>
-        <module>modules/saree-work</module>
-        <module>application</module>
-    </modules>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.testcontainers</groupId><artifactId>testcontainers-bom</artifactId>
-                <version>1.19.0</version><type>pom</type><scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>personal-ai-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>expense</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.apps.deen-sa</groupId><artifactId>saree-work</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <dependencies>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webflux</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
+        <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
+        <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
+        <dependency><groupId>com.openai</groupId><artifactId>openai-java</artifactId><version>4.6.1</version></dependency>
+        <dependency><groupId>org.knowm.xchart</groupId><artifactId>xchart</artifactId><version>3.8.8</version></dependency>
+        <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId></dependency>
+        <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><version>1.19.0</version><scope>test</scope></dependency>
+        <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><version>1.19.0</version><scope>test</scope></dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration><excludes><exclude><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId></exclude></excludes></configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.1.2</version>
+                <configuration><argLine>--enable-preview</argLine><systemPropertyVariables><java.awt.headless>true</java.awt.headless></systemPropertyVariables></configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile><id>integration</id><build><plugins><plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.1.2</version>
+            <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
+            <configuration><includes><include>**/*IT.java</include></includes><argLine>--enable-preview</argLine></configuration>
+        </plugin></plugins></build></profile>
+    </profiles>
 </project>

@@ -1,181 +1,35 @@
-# Conversational Operations Platform
+## Personal AI expense assistant
 
-This project is evolving from a personal-finance application into a reusable conversational operations platform. It lets people record simple real-world work through WhatsApp voice or text instead of forms. Domain extensions provide business vocabulary and rules; the core provides conversation, extraction, follow-up questions, events, signed movements, auditing, and safe execution.
+This repository contains one Spring Boot application for conversational personal-expense tracking.
+It accepts text or WhatsApp messages, records expenses, maintains payment-account balances, supports
+safe corrections, monthly budgets, and expense summaries.
 
-The codebase is now a Maven modular monolith. It has a versioned extension API, tenant-scoped extension catalog, generic ledger, personal-expense extension, and saree job-work extension. Only business domains live under `modules/`; shared adapters and runtime infrastructure remain in `core`, and `application` composes the deployable service.
+WhatsApp access is stored once per number in `user_feature_flag`. The seeded `SUPER_ADMIN` can
+manage normal users from WhatsApp with `add user <country-code-number>` and
+`remove user <country-code-number>`. Replace the clearly marked placeholder super-admin number in
+`src/main/resources/db/migration/V1__init.sql` before starting with a fresh database.
 
-## Product documentation
+### Structure
 
-The maintained product backlog and requirements live in **[docs/jira/README.md](docs/jira/README.md)**. Separate initiatives cover the reusable core, personal expense extension, and saree job-work extension.
+The application uses a feature-oriented MVC layout under `src/`:
 
-## 🚀 Quick Start
+- `controller` and `conversation`: inbound HTTP/WhatsApp adapters and conversation orchestration
+- `finance/expense`: expense capture, validation, categorization, and correction use cases
+- `finance/account`, `finance/payment`, `finance/budget`, `finance/credit`: supporting expense features
+- `finance/query`: expense reporting
+- `finance/legacy`: expense transactions, payment accounts, and their balance adjustments
+- `dto`: transport objects
+- `llm`: model adapters; business rules remain in services
 
-### Prerequisites
-- Java 21
-- PostgreSQL database
-- Maven 3.6+
-- OpenAI API key
+Assets, investments, lending, loans, and unrelated business domains are intentionally not part of
+this baseline. Add each future domain as a feature package with its own controller/service/repository
+boundary; do not create another Maven module or duplicate the `state_change` expense transaction table.
 
-### Setup
-1. Clone the repository
-2. Provide PostgreSQL configuration (currently in `application.yaml` or standard Spring datasource overrides) and the integration credentials you use:
-   ```bash
-   export SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/personal_ai'
-   export SPRING_DATASOURCE_USERNAME='your_user'
-   export SPRING_DATASOURCE_PASSWORD='your_password'
-   export OPENAI_API_KEY=sk-your-key
-   ```
-3. Build and run:
-   ```bash
-   ./mvnw clean install
-   ./mvnw -pl application spring-boot:run
-   ```
-
-### Test the API
-```bash
-# Health check
-curl http://localhost:8080/health
-
-# Process a natural-language message
-curl -X POST http://localhost:8080/api/v1/process \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Spent 500 on groceries at BigBasket"}'
-```
-
-## 🎯 Key Features
-
-- **Natural Language Processing**: Use conversational language to record expenses
-- **Multi-turn Conversations**: System asks follow-up questions for missing details
-- **Intelligent Classification**: AI-powered categorization and intent detection
-- **Value Containers**: Unified model for accounts, credit cards, loans, inventory
-- **Financial Impact Tracking**: Automatic balance updates with full audit trail
-- **Progressive Enrichment**: Save incomplete data and enrich over time
-- **WhatsApp Integration**: Record expenses directly from WhatsApp messages
-
-## 🏗️ Architecture Highlights
-
-- **Domain-First Design**: Organized by business domains (core, finance, conversation) rather than technical layers
-- **Shared Kernel**: Core concepts (transaction, value) isolated and reused across domains
-- **Deterministic-First Interpretation**: Explicit business grammar and workflow state are handled in code; OpenAI GPT-4.1 Mini enriches language that remains ambiguous
-- **Strategy Pattern**: Different financial adjustment strategies for different container types
-- **Mutation Audit Trail**: Balance changes are represented by `StateMutationEntity`
-- **User-Scoped Data Model**: User identifiers exist; production authorization remains tracked work
-
-### Module Structure
-```
-personal-ai-parent
-├── core
-│   └── contracts, runtime, conversation, adapters, persistence and observability
-├── modules
-│   ├── expense
-│   └── saree-work
-└── application
-```
-
-The application is the composition root. Business extensions depend on the neutral API and generic ledger; core does not depend on an extension.
-
-## 📖 Use Case: Recording an Expense
-
-```
-User: "Spent 500 on groceries"
-  → System classifies intent as EXPENSE
-  → Extracts: amount=500, category=groceries
-  → Saves transaction (MINIMAL completeness)
-  → Asks: "Which account did you pay from?"
-
-User: "Cash"
-  → Updates transaction with sourceAccount=cash
-  → Resolves cash container
-  → Applies financial impact (debits cash balance)
-  → Creates audit record
-  → Confirms: "Recorded ₹500 expense from Cash"
-```
-
-## 💰 Financial correctness
-
-Financial correctness is a product requirement. The application is still in development and must satisfy the production-readiness stories before handling real financial data.
-
-### Testing strategy
-
-**Unit Tests**: Fast feedback on business logic (mocks allowed)
-```bash
-mvn clean test
-```
-
-**Integration Tests**: Run tests named `*IT` through the Maven integration profile
-```bash
-mvn clean verify -Pintegration
-```
-
-Financial writes must be deterministic, auditable, and idempotent. An unknown balance remains unknown (`null`), never zero. See [FIN-EPIC-002](docs/jira/personal-expense/FIN-EPIC-002-correctness.md) for the extension's correctness contract.
-
----
-
-## 🧪 Testing (General)
+### Run
 
 ```bash
-# Run unit tests only
-mvn clean test
-
-# Run integration tests (requires Docker)
-mvn clean verify -Pintegration
-
-# Run a specific test
-mvn test -Dtest=ExpenseCompletenessEvaluatorTest
+./mvnw spring-boot:run
 ```
 
-## 📊 Database schema
-
-Flyway migrations are packaged by their owner: shared platform/channel tables in `core`, and expense projections in `modules/expense`. The application composition root does not package migrations itself.
-
-## 🤖 LLM Integration
-
-The application uses OpenAI GPT-4.1 Mini for:
-- **Intent Classification**: Determine user's goal (expense, query, account setup, etc.)
-- **Expense Extraction**: Parse natural language into structured data
-- **Query Understanding**: Convert questions into database queries
-- **Natural Language Generation**: Explain results in conversational language
-
-## 🔧 Configuration
-
-Main configuration is in `application/src/main/resources/application.yaml`:
-- Database connection
-- OpenAI API settings
-- Server configuration
-- JPA/Hibernate settings
-
-### WhatsApp-only deployment
-
-This application currently has no browser frontend. Leave `APP_CORS_ALLOWED_ORIGINS` unset so that no cross-origin browser access is enabled. CORS does not apply to WhatsApp webhooks or other server-to-server calls.
-
-## Invite-only alpha instructions
-
-Before inviting a friend, share this privacy and support note with them:
-
-> This is an experimental expense app. It stores the WhatsApp messages you send, expense and account details extracted from them, conversation state, and confirmed voice-note transcriptions. Message text and voice recordings or transcriptions may be sent to OpenAI to understand your request. Do not send passwords, PINs, OTPs, full card numbers, or other secrets. To request a copy or deletion of your data, contact the owner of this app. If a confirmation or result looks incorrect, take a screenshot and send it to the owner before continuing. Do not rely on calculated balances or summaries as authoritative financial records during this test.
-
-Support process for the alpha:
-
-1. Ask the user to take a screenshot of an incorrect confirmation, unexpected result, or repeated processing error.
-2. Ask them to send the screenshot and a short description to the owner of the app.
-3. Ask them not to confirm the transaction again or rely on the displayed balance until the owner checks it.
-4. Handle data-access and deletion requests manually and confirm completion to the user.
-
-## 📝 Contributing
-
-When adding new features:
-1. Link the change to a story in `docs/jira/` and keep its acceptance criteria current
-2. Keep business logic separate from LLM calls
-3. Ensure financial operations are idempotent
-4. Add tests for new functionality
-5. Update documentation
-
-## 📄 License
-
-[Add license information]
-
-## 👥 Contact
-
-[Add contact information]
-
-Start with the [Jira product documentation](docs/jira/README.md), then open the epic for the product area you are changing.
+Run unit tests with `./mvnw test`. Integration tests require the infrastructure described in
+`src/test/resources/infra/podman-compose.yml` and run through `./mvnw verify -Pintegration`.
