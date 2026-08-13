@@ -63,7 +63,7 @@ CREATE TABLE user_feature_flag (
 
 -- Replace this test number with your own country-code-prefixed WhatsApp number before deployment.
 INSERT INTO user_feature_flag (channel, external_user_id, role, enabled)
-VALUES ('WHATSAPP', '919876543210', 'SUPER_ADMIN', TRUE);
+VALUES ('WHATSAPP', '919004656025', 'SUPER_ADMIN', TRUE);
 
 CREATE TABLE state_container (
     id BIGSERIAL PRIMARY KEY,
