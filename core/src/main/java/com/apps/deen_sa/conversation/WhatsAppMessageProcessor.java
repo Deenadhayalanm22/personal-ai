@@ -44,7 +44,7 @@ public class WhatsAppMessageProcessor {
             // Never let async failure kill future messages
             replySender.sendTextReply(
                     from,
-                    "Something went wrong. Please try again."
+                    "Something went wrong. Please try again. If it keeps happening, take a screenshot and send it to the owner of this app."
             );
         }
     }
@@ -116,7 +116,7 @@ public class WhatsAppMessageProcessor {
         } catch (Exception e) {
             confirmationService.release(confirmationId);
             log.error("Failed to process confirmed audio transcription {} from {}", confirmationId, from, e);
-            replySender.sendTextReply(from, "Something went wrong. Please tap Yes again.");
+            replySender.sendTextReply(from, "Something went wrong. Please tap Yes again. If it keeps happening, take a screenshot and send it to the owner of this app.");
         }
     }
 

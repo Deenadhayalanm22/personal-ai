@@ -28,8 +28,8 @@ public class ConversationMessages {
 
     public String unprocessed(String locale) {
         return isTamil(locale)
-                ? "இந்த கோரிக்கையை என்னால் புரிந்துகொள்ள முடியவில்லை. மேம்படுத்தவும் பின்னர் பரிசீலிக்கவும் இந்த செய்தியை பதிவு செய்துள்ளோம். வேறு வார்த்தைகளில் மீண்டும் முயற்சிக்கலாம் அல்லது Help என தட்டச்சு செய்யலாம்."
-                : "I couldn't understand that request. I've recorded this message for review so we can improve and follow up. Please try rephrasing it, or type Help to see what I can do.";
+                ? "இந்த கோரிக்கையை என்னால் புரிந்துகொள்ள முடியவில்லை. மேம்படுத்தவும் பின்னர் பரிசீலிக்கவும் இந்த செய்தியை பதிவு செய்துள்ளோம். வேறு வார்த்தைகளில் மீண்டும் முயற்சிக்கலாம் அல்லது Help என தட்டச்சு செய்யலாம். இது தொடர்ந்து நடந்தால், ஸ்கிரீன்ஷாட் எடுத்து இந்த செயலியின் உரிமையாளருக்கு அனுப்புங்கள்."
+                : "I couldn't understand that request. I've recorded this message for review so we can improve and follow up. Please try rephrasing it, or type Help to see what I can do. If it keeps happening, take a screenshot and send it to the owner of this app.";
     }
 
     public String queryPeriodQuestion(String locale) {

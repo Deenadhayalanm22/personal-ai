@@ -144,6 +144,23 @@ Main configuration is in `application/src/main/resources/application.yaml`:
 - Server configuration
 - JPA/Hibernate settings
 
+### WhatsApp-only deployment
+
+This application currently has no browser frontend. Leave `APP_CORS_ALLOWED_ORIGINS` unset so that no cross-origin browser access is enabled. CORS does not apply to WhatsApp webhooks or other server-to-server calls.
+
+## Invite-only alpha instructions
+
+Before inviting a friend, share this privacy and support note with them:
+
+> This is an experimental expense app. It stores the WhatsApp messages you send, expense and account details extracted from them, conversation state, and confirmed voice-note transcriptions. Message text and voice recordings or transcriptions may be sent to OpenAI to understand your request. Do not send passwords, PINs, OTPs, full card numbers, or other secrets. To request a copy or deletion of your data, contact the owner of this app. If a confirmation or result looks incorrect, take a screenshot and send it to the owner before continuing. Do not rely on calculated balances or summaries as authoritative financial records during this test.
+
+Support process for the alpha:
+
+1. Ask the user to take a screenshot of an incorrect confirmation, unexpected result, or repeated processing error.
+2. Ask them to send the screenshot and a short description to the owner of the app.
+3. Ask them not to confirm the transaction again or rely on the displayed balance until the owner checks it.
+4. Handle data-access and deletion requests manually and confirm completion to the user.
+
 ## 📝 Contributing
 
 When adding new features:
