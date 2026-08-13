@@ -20,7 +20,17 @@ public class ExpenseCategoryResolver {
         if (subcategory != null && taxonomy.parentCategory(subcategory).isPresent()) {
             String parent = taxonomy.parentCategory(subcategory).orElseThrow();
             String raw = firstMeaningful(expense.getMerchantName(), originalText);
-            expense.setSubcategory(resolveWithinCategory(parent, raw).orElse(subcategory));
+            String explicitAlias = taxonomy.canonicalAlias(raw)
+                    .or(() -> taxonomy.canonicalAliasInText(raw))
+                    .filter(taxonomy.subcategoriesFor(parent)::contains)
+                    .orElse(null);
+            // Once a valid pair exists, keep it stable. Only deterministic aliases
+            // may refine it; repeated semantic-model calls would reclassify the
+            // same transaction differently across requests.
+            boolean alreadyConsistent = parent.equals(category);
+            expense.setSubcategory(explicitAlias != null ? explicitAlias
+                    : alreadyConsistent ? subcategory
+                    : resolveWithinCategory(parent, raw).orElse(subcategory));
             expense.setCategory(parent);
             return;
         }

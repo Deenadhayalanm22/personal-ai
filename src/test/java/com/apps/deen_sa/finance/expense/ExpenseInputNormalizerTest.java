@@ -43,4 +43,23 @@ class ExpenseInputNormalizerTest {
         assertThat(HumanAmountParser.parse("2 crore")).contains(new java.math.BigDecimal("20000000"));
     }
 
+    @Test
+    void convertsSubcategoryReturnedAsCategoryIntoItsConfiguredParentPair() {
+        ExpenseInputNormalizer taxonomyNormalizer = new ExpenseInputNormalizer(
+                new ExpenseCategoryResolver(new ExpenseTaxonomyRegistry(), new com.apps.deen_sa.llm.impl.TagSemanticMatcher(null, null) {
+                    @Override
+                    public java.util.Map<String, String> match(java.util.List<String> canonical,
+                                                               java.util.List<String> values) {
+                        throw new AssertionError("An exact configured label must not require a model call");
+                    }
+                }));
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Groceries");
+
+        taxonomyNormalizer.normalize(expense, "I spent 1300 on groceries", new ConversationContext());
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Groceries");
+    }
+
 }

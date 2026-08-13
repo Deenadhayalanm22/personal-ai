@@ -205,6 +205,7 @@ public class ExpenseHandler implements SpeechHandler {
         if (transactionId == null) {
             ExpenseMerger.merge(dto, refined);
             dto.setRawText(dto.getRawText() + " " + userAnswer);
+            inputNormalizer.normalize(dto, dto.getRawText(), ctx);
             return handleExpense(dto, ctx);
         }
         if ("sourceBalance".equals(missingField)) return completeSourceBalance(userAnswer, ctx, transactionId);
@@ -214,6 +215,7 @@ public class ExpenseHandler implements SpeechHandler {
         // ----------------------------
         ExpenseMerger.merge(dto, refined);
         dto.setRawText(dto.getRawText() + " " + userAnswer);
+        inputNormalizer.normalize(dto, dto.getRawText(), ctx);
 
         // ----------------------------
         // Step C – Re-evaluate completeness
@@ -338,6 +340,10 @@ public class ExpenseHandler implements SpeechHandler {
     // INTERNAL SAVE LOGIC
     // -----------------------------------------------------
     private StateChangeEntity saveExpense(ExpenseDto dto, Long userId) {
+
+        // Persistence boundary invariant: never store an LLM label before it has
+        // been reconciled with the configured category/subcategory hierarchy.
+        inputNormalizer.normalize(dto, dto.getRawText(), new ConversationContext());
 
         StateChangeEntity transaction =
                 ExpenseDtoToEntityMapper.toEntity(dto, userId);

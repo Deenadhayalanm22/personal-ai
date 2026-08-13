@@ -23,6 +23,19 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
+    void keepsAnAlreadyValidPairStableWithoutCallingTheSemanticModelAgain() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Food & Dining");
+        expense.setSubcategory("Groceries");
+
+        resolver.canonicalize(expense, "I spent 1300 on groceries");
+
+        assertThat(expense.getCategory()).isEqualTo("Food & Dining");
+        assertThat(expense.getSubcategory()).isEqualTo("Groceries");
+    }
+
+    @Test
     void rejectsInventedModelLabelsInsteadOfPersistingFreeText() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcher("something unusual", "Made Up"));
         ExpenseDto expense = new ExpenseDto();
