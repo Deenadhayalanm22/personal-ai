@@ -123,6 +123,25 @@ class FinanceDeterministicEventRouterTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
+            "Show my spending summary for today by category",
+            "Give me today's expense chart",
+            "Show a category breakdown for today"
+    })
+    void routesExplicitTodaySummaryAndChartRequestsWithoutTheModel(String text) {
+        assertThat(router.query(text)).contains("TODAY");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Give me this month's spending summary by category",
+            "Show my expense chart for this month"
+    })
+    void routesExplicitMonthlySummaryAndChartRequestsWithoutTheModel(String text) {
+        assertThat(router.query(text)).contains("THIS_MONTH");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
             "Setup my hdfc bank account where i have 40243 current balance",
             "Set up an HDFC account with an opening balance of 40243",
             "Add my salary account; its available balance is 40243",

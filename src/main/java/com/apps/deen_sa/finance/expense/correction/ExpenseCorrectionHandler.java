@@ -150,7 +150,9 @@ public class ExpenseCorrectionHandler implements SpeechHandler {
         String message = outcome.deleted() ? "✓ Transaction deleted. It was voided and removed from spending reports."
                 : "✓ Transaction updated to " + summary(outcome.replacement(), context) + ".";
         if (outcome.balanceImpact() != null) message += " " + outcome.balanceImpact() + " to the affected balance.";
-        return SpeechResult.builder().status(SpeechStatus.SAVED).message(message).needFollowup(false).build();
+        Object recordedEntity = outcome.replacement() == null ? outcome.original() : outcome.replacement();
+        return SpeechResult.builder().status(SpeechStatus.SAVED).message(message)
+                .savedEntity(recordedEntity).needFollowup(false).build();
     }
 
     private SpeechResult deleteConfirmation(ConversationContext context, ExpenseCorrectionState state, StateChangeEntity expense) {

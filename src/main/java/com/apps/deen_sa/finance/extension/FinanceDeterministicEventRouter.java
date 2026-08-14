@@ -81,6 +81,11 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
             "(?i)^\\s*(?:(?:i\\s+)?(?:want|need|would\\s+like)\\s+to\\s+)?(?:edit|delete|remove|void|correct|update|change)\\b.*$");
     private static final Pattern TRANSACTION_BROWSE = Pattern.compile(
             "(?i)^\\s*(?:show|find|list)\\b.*\\b(?:expense|expenses|transaction|transactions)\\b.*$");
+    private static final Pattern EXPENSE_SUMMARY_QUERY = Pattern.compile(
+            "(?i)^.*\\b(?:summary|chart|breakdown|total|spent|spending)\\b.*"
+                    + "\\b(?:today|this\\s+week|this\\s+month|this\\s+year|last\\s+month|last\\s+(?:3|three)\\s+months)\\b.*$|"
+                    + "^.*\\b(?:today|this\\s+week|this\\s+month|this\\s+year|last\\s+month|last\\s+(?:3|three)\\s+months)\\b.*"
+                    + "\\b(?:summary|chart|breakdown|total|spent|spending)\\b.*$");
 
     @Override
     public Optional<String> eventType(String text) {
@@ -151,7 +156,18 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
                 || MONTHLY_SCOPE_BALANCE_SET.matcher(query).matches()) return Optional.empty();
         if (ACCOUNT_BALANCE_QUERY.matcher(query).matches() && !query.toLowerCase(Locale.ROOT).contains("budget"))
             return Optional.of("ACCOUNT_BALANCE");
+        if (EXPENSE_SUMMARY_QUERY.matcher(query).matches()) return Optional.of(summaryPeriod(query));
         return BUDGET_QUERY.matcher(query).matches() ? Optional.of("CURRENT_STATUS") : Optional.empty();
+    }
+
+    private String summaryPeriod(String query) {
+        String normalized = query.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        if (normalized.contains("last 3 months") || normalized.contains("last three months")) return "LAST_3_MONTHS";
+        if (normalized.contains("last month")) return "LAST_MONTH";
+        if (normalized.contains("this year")) return "THIS_YEAR";
+        if (normalized.contains("this month")) return "THIS_MONTH";
+        if (normalized.contains("this week")) return "THIS_WEEK";
+        return "TODAY";
     }
 
     private DeterministicEventCandidate candidate(String amount, String description, String source, String rawText) {

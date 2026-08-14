@@ -385,7 +385,17 @@ public class ExpenseHandler implements SpeechHandler {
         List<StateContainerEntity> typeMatches = containers.stream()
                 .filter(c -> c.getContainerType().equals(requested))
                 .toList();
-        return typeMatches.size() == 1 ? typeMatches.getFirst() : null;
+        if (typeMatches.size() == 1) return typeMatches.getFirst();
+        if (typeMatches.size() > 1) {
+            // Generic channels such as UPI do not identify a bank by name. Reuse
+            // the user's last confirmed account of that type instead of offering
+            // to create a duplicate account on every expense.
+            return repo.findMostRecentlyUsedActiveSource(userId.toString(), requested)
+                    .filter(recent -> typeMatches.stream()
+                            .anyMatch(active -> java.util.Objects.equals(active.getId(), recent.getId())))
+                    .orElse(null);
+        }
+        return null;
     }
 
     private String normalizeAccountName(String value) {

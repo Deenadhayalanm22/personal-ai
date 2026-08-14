@@ -12,11 +12,13 @@ public class DefaultConversationChannelGateway implements ConversationChannelGat
     private final AppUserService users;
     private final ConversationSessionService sessions;
     private final UnifiedConversationEngine engine;
+    private final ConversationDiagnosticService diagnostics;
 
     @Override public SpeechResult process(String channel, String externalUserId, String messageId, String text) {
         Context context = context(channel, externalUserId, messageId);
         SpeechResult result = engine.process(text, context.value());
         sessions.save(context.value());
+        diagnostics.record("MESSAGE", externalUserId, messageId, text, context.value(), result);
         return result;
     }
 
@@ -24,6 +26,7 @@ public class DefaultConversationChannelGateway implements ConversationChannelGat
         Context context = context(channel, externalUserId, messageId);
         SpeechResult result = engine.processTrustedAnswer(answer, context.value());
         sessions.save(context.value());
+        diagnostics.record("TRUSTED_ANSWER", externalUserId, messageId, answer, context.value(), result);
         return result;
     }
 
