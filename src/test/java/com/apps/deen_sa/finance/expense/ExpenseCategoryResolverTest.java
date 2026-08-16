@@ -180,6 +180,45 @@ class ExpenseCategoryResolverTest {
         assertThat(expense.getSubcategory()).isEqualTo("School Supplies");
     }
 
+    @Test
+    void mapsTransferToSpouseToFamilySupportWithoutCategoryFollowup() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+
+        resolver.canonicalize(expense,
+                "Transferred 2000 to my wife from my hdfc bank account");
+
+        assertThat(expense.getCategory()).isEqualTo("Family Support");
+        assertThat(expense.getSubcategory()).isEqualTo("Family Transfer");
+    }
+
+    @Test
+    void canonicalizesFamilySharingFollowupToFamilyTransfer() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Family sharing");
+
+        resolver.canonicalize(expense, "Family sharing");
+
+        assertThat(expense.getCategory()).isEqualTo("Family Support");
+        assertThat(expense.getSubcategory()).isEqualTo("Family Transfer");
+    }
+
+    @Test
+    void distinguishesParentSupportFromSpouseTransferInExistingMonthlyScenario() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto mom = new ExpenseDto();
+        ExpenseDto wife = new ExpenseDto();
+
+        resolver.canonicalize(mom, "Sent ₹10,000 from my HDFC bank account to my mom via UPI.");
+        resolver.canonicalize(wife, "Sent ₹10,000 from my HDFC bank account to my wife via UPI.");
+
+        assertThat(mom.getCategory()).isEqualTo("Family Support");
+        assertThat(mom.getSubcategory()).isEqualTo("Parents Support");
+        assertThat(wife.getCategory()).isEqualTo("Family Support");
+        assertThat(wife.getSubcategory()).isEqualTo("Family Transfer");
+    }
+
     private TagSemanticMatcher matcherMustNotRun() {
         return new TagSemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
