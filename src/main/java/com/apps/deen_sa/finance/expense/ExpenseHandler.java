@@ -390,10 +390,10 @@ public class ExpenseHandler implements SpeechHandler {
             // Generic channels such as UPI do not identify a bank by name. Reuse
             // the user's last confirmed account of that type instead of offering
             // to create a duplicate account on every expense.
-            return repo.findMostRecentlyUsedActiveSource(userId.toString(), requested)
-                    .filter(recent -> typeMatches.stream()
-                            .anyMatch(active -> java.util.Objects.equals(active.getId(), recent.getId())))
-                    .orElse(null);
+            Long recentId = repo.findMostRecentlyUsedActiveSourceId(userId.toString(), requested).orElse(null);
+            return typeMatches.stream()
+                    .filter(active -> java.util.Objects.equals(active.getId(), recentId))
+                    .findFirst().orElse(null);
         }
         return null;
     }

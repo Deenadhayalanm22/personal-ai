@@ -168,6 +168,18 @@ class ExpenseCategoryResolverTest {
         assertThat(expense.getSubcategory()).isEqualTo("Groceries");
     }
 
+    @Test
+    void mapsSchoolBagsToSchoolSuppliesInsteadOfSchoolFees() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setMerchantName("buying school bags paid");
+
+        resolver.canonicalize(expense, "Spent 760 on buying school bags paid using UPI yesterday");
+
+        assertThat(expense.getCategory()).isEqualTo("Education");
+        assertThat(expense.getSubcategory()).isEqualTo("School Supplies");
+    }
+
     private TagSemanticMatcher matcherMustNotRun() {
         return new TagSemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {

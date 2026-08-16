@@ -38,7 +38,7 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
     Optional<StateChangeEntity> findExpenseForUpdate(@Param("id") Long id, @Param("userId") String userId);
 
     @Query(value = """
-            SELECT c.* FROM state_change t
+            SELECT c.id FROM state_change t
             JOIN state_container c ON c.id = t.source_container_id
             WHERE t.user_id = :userId
               AND t.transaction_type = 'EXPENSE'
@@ -48,7 +48,7 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             ORDER BY t.id DESC
             LIMIT 1
             """, nativeQuery = true)
-    Optional<StateContainerEntity> findMostRecentlyUsedActiveSource(
+    Optional<Long> findMostRecentlyUsedActiveSourceId(
             @Param("userId") String userId, @Param("containerType") String containerType);
 
     @Query(value = """

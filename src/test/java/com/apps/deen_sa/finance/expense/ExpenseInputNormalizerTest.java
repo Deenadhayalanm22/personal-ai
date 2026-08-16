@@ -62,4 +62,20 @@ class ExpenseInputNormalizerTest {
         assertThat(expense.getSubcategory()).isEqualTo("Groceries");
     }
 
+    @Test
+    void separatesGenericUpiFromTrailingDateAndPurposeAndAppliesYesterday() {
+        ConversationContext context = new ConversationContext();
+        context.setTimezone("Asia/Kolkata");
+        ExpenseDto expense = new ExpenseDto();
+        expense.setSourceAccount("upi, yesterday for my bike");
+        expense.setTransactionDate(LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")));
+
+        ExpenseDto normalized = normalizer.normalize(expense,
+                "Paid 20 on parking fees using upi, yesterday for my bike", context);
+
+        assertThat(normalized.getSourceAccount()).isEqualTo("UPI");
+        assertThat(normalized.getTransactionDate()).isEqualTo(
+                LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).minusDays(1));
+    }
+
 }

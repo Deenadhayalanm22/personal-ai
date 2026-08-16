@@ -24,14 +24,32 @@ public class ExpenseInputNormalizer {
         if (dto == null) dto = new ExpenseDto();
         dto.setRawText(originalText);
 
-        if (dto.getTransactionDate() == null) {
-            dto.setTransactionDate(LocalDate.now(resolveZone(context.getTimezone())));
-        }
+        LocalDate today = LocalDate.now(resolveZone(context.getTimezone()));
+        if (containsWord(originalText, "yesterday")) dto.setTransactionDate(today.minusDays(1));
+        else if (containsWord(originalText, "today")) dto.setTransactionDate(today);
+        else if (dto.getTransactionDate() == null) dto.setTransactionDate(today);
         if (dto.getAmount() == null) {
             explicitAmount(originalText).ifPresent(dto::setAmount);
         }
+        dto.setSourceAccount(canonicalPaymentSource(dto.getSourceAccount()));
         categoryResolver.canonicalize(dto, originalText);
         return dto;
+    }
+
+    private String canonicalPaymentSource(String source) {
+        if (source == null || source.isBlank()) return source;
+        String normalized = source.trim();
+        // Extraction patterns may capture temporal/purpose words following a
+        // generic payment rail. Those words are not part of the account name.
+        if (normalized.matches("(?i)^(?:my\\s+)?upi\\b.*$")) return "UPI";
+        if (normalized.matches("(?i)^(?:my\\s+)?(?:bank\\s*[/&]\\s*upi|bank\\s+upi)\\b.*$"))
+            return "BANK_ACCOUNT";
+        return normalized;
+    }
+
+    private boolean containsWord(String text, String word) {
+        return text != null && Pattern.compile("(?i)(?:^|[^\\p{L}])" + Pattern.quote(word)
+                + "(?:$|[^\\p{L}])").matcher(text).find();
     }
 
     private java.util.Optional<BigDecimal> explicitAmount(String text) {
