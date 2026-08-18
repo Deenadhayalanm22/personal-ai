@@ -52,7 +52,7 @@ class PendingFieldScopeTest {
                 new FieldEvidence("amount", "260", "I spent 260", 0.90),
                 new FieldEvidence("category", "Food", "Coffee and snacks outside", 0.95)
         ));
-        TurnInterpretation modelTurn = new TurnInterpretation(TurnType.NEW_EVENT, "EXPENSE", "en-IN", null,
+        TurnInterpretation modelTurn = new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT, "EXPENSE", "en-IN", null,
                 List.of(modelPatch), null, QueryPeriod.NONE, List.of(), 0.90);
 
         TurnInterpretation scoped = UnifiedConversationEngine.scopePendingTurn(modelTurn, context);
@@ -61,6 +61,24 @@ class PendingFieldScopeTest {
         assertThat(scoped.events()).singleElement().satisfies(event ->
                 assertThat(event.fields().asMap()).containsExactlyEntriesOf(Map.of("category", "Food")));
         assertThat(new MutationAuthorizationPolicy().isAuthorized(scoped, "Coffee and snacks outside")).isTrue();
+    }
+
+    @Test
+    void explicitNewExpenseSupersedesPendingExpense() {
+        ConversationContext context = new ConversationContext();
+        context.setActiveIntent("EXPENSE");
+        context.setWaitingForField("confirmExpense");
+        context.setPartialObject(Map.of("amount", 300));
+        EventPatch amazon = new EventPatch(null, "EXPENSE", Map.of("amount", 505, "merchantName", "Amazon grocery"),
+                List.of(), List.of(), List.of(new FieldEvidence("amount", "505", "505", 1.0)));
+        TurnInterpretation modelTurn = new TurnInterpretation(TurnType.NEW_EVENT, "EXPENSE", "en-IN", null,
+                List.of(amazon), null, QueryPeriod.NONE, List.of(), 1.0);
+
+        TurnInterpretation scoped = UnifiedConversationEngine.scopePendingTurn(modelTurn, context);
+
+        assertThat(scoped).isSameAs(modelTurn);
+        assertThat(context.isInFollowup()).isFalse();
+        assertThat(scoped.events().getFirst().fields().asMap()).containsEntry("amount", 505);
     }
 
     @Test

@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +29,11 @@ public class ExpenseInputNormalizer {
         LocalDate today = LocalDate.now(resolveZone(context.getTimezone()));
         if (containsWord(originalText, "yesterday")) dto.setTransactionDate(today.minusDays(1));
         else if (containsWord(originalText, "today")) dto.setTransactionDate(today);
-        else if (dto.getTransactionDate() == null) dto.setTransactionDate(today);
+        else {
+            DayOfWeek weekday = mentionedWeekday(originalText);
+            if (weekday != null) dto.setTransactionDate(today.with(TemporalAdjusters.previousOrSame(weekday)));
+            else if (dto.getTransactionDate() == null) dto.setTransactionDate(today);
+        }
         if (dto.getAmount() == null) {
             explicitAmount(originalText).ifPresent(dto::setAmount);
         }
@@ -44,7 +50,22 @@ public class ExpenseInputNormalizer {
         if (normalized.matches("(?i)^(?:my\\s+)?upi\\b.*$")) return "UPI";
         if (normalized.matches("(?i)^(?:my\\s+)?(?:bank\\s*[/&]\\s*upi|bank\\s+upi)\\b.*$"))
             return "BANK_ACCOUNT";
+        if (normalized.matches("(?i)^(?:on\\s+)?(?:today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$"))
+            return null;
+        if (normalized.matches("(?i)^(?:on\\s+)?(?:today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\s+from\\s+(?:my\\s+)?bank\\s+account$"))
+            return "BANK_ACCOUNT";
+        if (normalized.matches("(?i)^(?:my\\s+)?bank\\s+account\\b.*$")) return "BANK_ACCOUNT";
+        if (normalized.matches("(?i)^(?:my\\s+)?cash\\b.*$")) return "CASH";
+        if (normalized.matches("(?i)^(?:my\\s+)?(?:credit\\s+)?card\\b.*$")) return "CREDIT_CARD";
         return normalized;
+    }
+
+    private DayOfWeek mentionedWeekday(String text) {
+        if (text == null) return null;
+        for (DayOfWeek day : DayOfWeek.values()) {
+            if (containsWord(text, day.name())) return day;
+        }
+        return null;
     }
 
     private boolean containsWord(String text, String word) {

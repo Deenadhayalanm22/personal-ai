@@ -24,7 +24,7 @@ import java.util.Set;
 public class UnifiedConversationEngine {
     private static final int HISTORY_LIMIT = 4;
     private static final String VERSION = "unified-v2";
-    private static final Set<String> HELP_COMMANDS = Set.of("hi", "hello", "hey", "help", "வணக்கம்", "உதவி");
+    private static final Set<String> HELP_COMMANDS = Set.of("hi", "hello", "hey", "help", "/start", "வணக்கம்", "உதவி");
 
     private final ConversationInterpreter interpreter;
     private final ExtensionCatalog extensions;
@@ -194,6 +194,11 @@ public class UnifiedConversationEngine {
     static TurnInterpretation scopePendingTurn(TurnInterpretation turn, ConversationContext context) {
         if (turn == null || context == null || !context.isInFollowup() || turn.events().isEmpty()
                 || turn.turnType() == TurnType.QUERY || turn.turnType() == TurnType.COMMAND) return turn;
+        if ((turn.turnType() == TurnType.NEW_EVENT || turn.turnType() == TurnType.NEW_EVENTS)
+                && turn.events().stream().anyMatch(UnifiedConversationEngine::hasCurrentMessageAmountEvidence)) {
+            context.reset();
+            return turn;
+        }
         List<EventPatch> events = turn.events().stream()
                 .filter(event -> context.getActiveIntent().equalsIgnoreCase(event.eventType()))
                 .map(event -> scopeToPendingField(event, context.getWaitingForField()))
@@ -201,6 +206,12 @@ public class UnifiedConversationEngine {
         if (events.isEmpty()) return turn;
         return new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT, context.getActiveIntent(), turn.language(),
                 turn.targetEventId(), events, turn.command(), turn.query(), turn.ambiguities(), turn.confidence());
+    }
+
+    private static boolean hasCurrentMessageAmountEvidence(EventPatch event) {
+        if (event == null || !event.fields().asMap().containsKey("amount")) return false;
+        return event.evidence().stream().anyMatch(item -> item != null && "amount".equals(item.field())
+                && item.evidence() != null && !item.evidence().isBlank());
     }
 
     static TurnInterpretation recoverPendingTextAnswer(TurnInterpretation turn, String text,

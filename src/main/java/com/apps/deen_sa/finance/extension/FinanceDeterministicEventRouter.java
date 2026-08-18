@@ -44,11 +44,18 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
                     + "\\s+on\\s+(.+?)\\s+and\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+on\\s+(.+?)\\s+(?:using|through|via)\\s+(.+?)\\s*[.!]?\\s*$");
     private static final Pattern SPENT_ON = Pattern.compile(
-            "(?i)^\\s*(?:i\\s+)?(?:spent|paid)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+            "(?i)^\\s*(?:i\\s+)?(?:spent|spend|paid|add|record)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+on\\s+(.+?)(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
+    private static final Pattern VERB_DESCRIPTION_AMOUNT = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?(?:spent|spend|paid|add|record)\\s+(?:for\\s+)?(.+?)\\s+"
+                    + "(?:for\\s+)?(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*[.!]?\\s*$");
     private static final Pattern SPENT_TODAY_FROM = Pattern.compile(
             "(?i)^\\s*(?:i\\s+)?spent\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+on\\s+(.+?)\\s+today\\s+from\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern AMOUNT_FOR_DESCRIPTION_ON_DAY_FROM = Pattern.compile(
+            "(?i)^\\s*(?:add|record)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
+                    + "\\s+for\\s+(.+?)\\s+on\\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
+                    + "\\s+from\\s+(.+?)\\s*[.!]?\\s*$");
     private static final Pattern PAID_FOR = Pattern.compile(
             "(?i)^\\s*paid\\s+(.+?)\\s+(?:of|for)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
@@ -86,6 +93,8 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
                     + "\\b(?:today|this\\s+week|this\\s+month|this\\s+year|last\\s+month|last\\s+(?:3|three)\\s+months)\\b.*$|"
                     + "^.*\\b(?:today|this\\s+week|this\\s+month|this\\s+year|last\\s+month|last\\s+(?:3|three)\\s+months)\\b.*"
                     + "\\b(?:summary|chart|breakdown|total|spent|spending)\\b.*$");
+    private static final Pattern GENERAL_EXPENSE_SUMMARY_QUERY = Pattern.compile(
+            "(?i)^.*(?:\\b(?:summary|breakdown)\\b|\\bspending\\s+patterns?\\b).*$");
 
     @Override
     public Optional<String> eventType(String text) {
@@ -117,9 +126,15 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         matcher = SPENT_TODAY_FROM.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
+        matcher = AMOUNT_FOR_DESCRIPTION_ON_DAY_FROM.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(4), text));
         matcher = SPENT_ON.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
+        matcher = VERB_DESCRIPTION_AMOUNT.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(2), matcher.group(1), null, text));
         matcher = DATED_PURCHASE.matcher(text);
         if (matcher.matches())
             return List.of(datedCandidate(matcher.group(3), matcher.group(2), matcher.group(4), matcher.group(1), text));
@@ -157,6 +172,7 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         if (ACCOUNT_BALANCE_QUERY.matcher(query).matches() && !query.toLowerCase(Locale.ROOT).contains("budget"))
             return Optional.of("ACCOUNT_BALANCE");
         if (EXPENSE_SUMMARY_QUERY.matcher(query).matches()) return Optional.of(summaryPeriod(query));
+        if (GENERAL_EXPENSE_SUMMARY_QUERY.matcher(query).matches()) return Optional.of("THIS_MONTH");
         return BUDGET_QUERY.matcher(query).matches() ? Optional.of("CURRENT_STATUS") : Optional.empty();
     }
 

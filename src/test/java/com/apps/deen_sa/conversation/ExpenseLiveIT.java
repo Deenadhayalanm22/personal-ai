@@ -168,6 +168,71 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         autoAuthorizeFinancialWrites = true;
     }
 
+    /** Regression coverage derived from the 14–18 August 2026 production usability export. */
+    @Test
+    void it_live_usage_report_regressions() throws Exception {
+        requireRealApiKey();
+        resetBetweenPersonas();
+        autoAuthorizeFinancialWrites = false;
+        phone = "919876543298";
+
+        scenario("Telegram-style start command is treated as help");
+        assertThat(chatText("wamid.regression-start", "/start"))
+                .containsIgnoringCase("personal expenses");
+
+        scenario("A complete new expense replaces a stale confirmation without saving the stale amount");
+        String stalePreview = chatText("wamid.regression-stale",
+                "And fish for 300 using bank account");
+        assertThat(stalePreview).contains("₹300").containsIgnoringCase("Confirm this expense");
+        assertWaitingFor("EXPENSE", "confirmExpense");
+        assertThat(stateChangeRepository.findAll()).isEmpty();
+
+        String replacement = chatText("wamid.regression-replacement", "Spend for Amazon grocery 505");
+        assertThat(replacement).containsIgnoringCase("How did you pay");
+        assertWaitingFor("EXPENSE", "sourceAccount");
+        assertThat(sessionRepository.findAll()).singleElement().satisfies(session ->
+                assertThat(String.valueOf(session.getPartialJson().get("amount"))).startsWith("505"));
+        assertThat(stateChangeRepository.findAll()).isEmpty();
+
+        String replacementPreview = chatButton("wamid.regression-source", "answer:BANK_ACCOUNT", "Bank / UPI");
+        assertThat(replacementPreview).contains("₹505").containsIgnoringCase("Confirm this expense");
+        String setupOffer = chatButton("wamid.regression-confirm", "answer:CONFIRM_EXPENSE", "Confirm");
+        assertThat(setupOffer).contains("505").containsIgnoringCase("not set up");
+        assertThat(chatButton("wamid.regression-setup", "answer:SETUP_SOURCE_ACCOUNT", "Set up account"))
+                .containsIgnoringCase("current balance");
+        assertThat(chatText("wamid.regression-balance", "1000")).contains("495");
+        assertThat(stateChangeRepository.findAll()).singleElement()
+                .satisfies(expense -> assertThat(expense.getAmount()).isEqualByComparingTo("505"));
+
+        scenario("Named weekday is a date and never part of an account name");
+        String saturdayPreview = chatText("wamid.regression-saturday",
+                "Add 42.5 for grocery on Saturday from bank account");
+        assertThat(saturdayPreview).contains("₹42.5").containsIgnoringCase("My bank account")
+                .doesNotContainIgnoringCase("Saturday from bank account");
+        assertThat(chatButton("wamid.regression-saturday-confirm", "answer:CONFIRM_EXPENSE", "Confirm"))
+                .contains("42.5");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(stateChangeRepository.findAll()).filteredOn(expense ->
+                                expense.getAmount().compareTo(new BigDecimal("42.5")) == 0)
+                        .singleElement().satisfies(expense -> {
+                            var expected = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))
+                                    .with(java.time.temporal.TemporalAdjusters.previousOrSame(
+                                            java.time.DayOfWeek.SATURDAY));
+                            assertThat(expense.getTimestamp().atZone(ZoneId.of("UTC")).toLocalDate())
+                                    .isEqualTo(expected);
+                        }));
+        assertThat(stateContainerRepository.findAll())
+                .noneSatisfy(account -> assertThat(account.getName()).containsIgnoringCase("Saturday"));
+
+        scenario("Flexible summary and last-transaction wording remain available");
+        assertThat(chatText("wamid.regression-summary", "What my spending summary"))
+                .contains("547.5");
+        assertThat(chatText("wamid.regression-last", "Show my last transaction as I want to edit"))
+                .contains("42.5");
+
+        autoAuthorizeFinancialWrites = true;
+    }
+
     @Test
     void it_live_full_month_scenario() throws Exception {
         requireRealApiKey();

@@ -78,4 +78,29 @@ class ExpenseInputNormalizerTest {
                 LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).minusDays(1));
     }
 
+    @Test
+    void separatesNamedWeekdayFromBankAccountAndUsesTheMostRecentWeekday() {
+        ConversationContext context = new ConversationContext();
+        context.setTimezone("Asia/Kolkata");
+        ExpenseDto expense = new ExpenseDto();
+        expense.setSourceAccount("Saturday from bank account");
+
+        ExpenseDto normalized = normalizer.normalize(expense,
+                "Add 42.5 for grocery on Saturday from bank account", context);
+
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        assertThat(normalized.getSourceAccount()).isEqualTo("BANK_ACCOUNT");
+        assertThat(normalized.getTransactionDate()).isEqualTo(
+                today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.SATURDAY)));
+    }
+
+    @Test
+    void rejectsTemporalWordsAsAccountNames() {
+        ExpenseDto expense = new ExpenseDto();
+        expense.setSourceAccount("TODAY");
+
+        assertThat(normalizer.normalize(expense, "I bought mutton for 400 today", new ConversationContext())
+                .getSourceAccount()).isNull();
+    }
+
 }

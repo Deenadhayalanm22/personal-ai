@@ -169,6 +169,35 @@ class FinanceDeterministicEventRouterTest {
                 .containsEntry("sourceAccount", "UPI").doesNotContainKey("category");
     }
 
+    @org.junit.jupiter.api.Test
+    void extractsProductionMessageThatInterruptedAPendingConfirmation() {
+        var event = router.events("Spend for Amazon grocery 505").getFirst();
+
+        assertThat(event.fields()).containsEntry("amount", new java.math.BigDecimal("505"))
+                .containsEntry("merchantName", "Amazon grocery")
+                .doesNotContainKey("sourceAccount");
+    }
+
+    @org.junit.jupiter.api.Test
+    void extractsProductionWeekdayAndBankAccountMessage() {
+        var event = router.events("Add 42.5 for grocery on Saturday from bank account").getFirst();
+
+        assertThat(event.fields()).containsEntry("amount", new java.math.BigDecimal("42.5"))
+                .containsEntry("merchantName", "grocery")
+                .containsEntry("sourceAccount", "bank account");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"What my spending summary", "Show my spending summary", "Show me my spending patterns"})
+    void defaultsFlexibleSummaryWordingToThisMonth(String text) {
+        assertThat(router.query(text)).contains("THIS_MONTH");
+    }
+
+    @org.junit.jupiter.api.Test
+    void ordinaryExpenseIsNeverMisroutedAsASummaryQuery() {
+        assertThat(router.query("I spent 400 on vegetables paid using upi")).isEmpty();
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {
             "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.",

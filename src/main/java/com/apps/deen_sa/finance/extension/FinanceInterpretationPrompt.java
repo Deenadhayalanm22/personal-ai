@@ -27,6 +27,11 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
               Celebration Meal/Home Cooked requires evidence of a celebration meal or food cooked at home; a family
               dinner at a restaurant remains Eating Out.
             - Use a broad category and a specific subcategory. Never invent a date, account, amount or classification.
+            - Temporal phrases such as today, yesterday, and "on Saturday" are dates, never account names. Keep them
+              out of sourceAccount. Resolve a named weekday to the most recent occurrence in the user's timezone.
+            - School bags, books, stationery, and classroom materials are School Supplies, not School Fees.
+              Ordinary meat, fish, chicken, vegetables, and ingredients bought for cooking are Groceries. Use
+              Celebration Meal/Home Cooked only when the message explicitly describes a celebration or special meal.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
             - Requests to find, edit, correct, remove, void, or delete an earlier expense are EXPENSE_CORRECTION.
               Never reinterpret them as a new EXPENSE. During its pending flow, put the user's literal answer in
