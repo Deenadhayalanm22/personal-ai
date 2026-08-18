@@ -1,6 +1,6 @@
 spring:
   application:
-    name: deen-sa
+    name: cooking-ai
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -37,6 +37,7 @@ whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN:}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
   api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
+  verify-token: ${WHATSAPP_VERIFY_TOKEN:}
 
 logging:
   level:

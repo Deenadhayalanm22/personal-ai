@@ -48,7 +48,7 @@ public class WhatsAppReplySender {
             Map<String, Object> image = new java.util.HashMap<>();
             image.put("id", mediaId);
             if (caption != null && !caption.isBlank()) image.put("caption", limit(caption, 1024));
-            sendPayloadOrThrow(to, "expense chart", Map.of(
+            sendPayloadOrThrow(to, "image", Map.of(
                     "messaging_product", "whatsapp",
                     "to", to,
                     "type", "image",

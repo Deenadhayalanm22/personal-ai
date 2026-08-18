@@ -9,10 +9,10 @@
         <relativePath/>
     </parent>
     <groupId>com.apps.deen-sa</groupId>
-    <artifactId>personal-ai</artifactId>
+    <artifactId>cooking-ai</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>personal-ai</name>
-    <description>Personal expense assistant</description>
+    <name>cooking-ai</name>
+    <description>WhatsApp AI cooking coach</description>
     <properties>
         <java.version>21</java.version>
         <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
@@ -26,10 +26,10 @@
         <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
         <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
         <dependency><groupId>com.openai</groupId><artifactId>openai-java</artifactId><version>4.6.1</version></dependency>
-        <dependency><groupId>org.knowm.xchart</groupId><artifactId>xchart</artifactId><version>3.8.8</version></dependency>
         <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId></dependency>
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.awaitility</groupId><artifactId>awaitility</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><version>1.19.0</version><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><version>1.19.0</version><scope>test</scope></dependency>
     </dependencies>
