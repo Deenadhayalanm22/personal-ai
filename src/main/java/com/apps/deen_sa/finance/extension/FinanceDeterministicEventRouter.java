@@ -56,6 +56,10 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
             "(?i)^\\s*(?:add|record)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "\\s+for\\s+(.+?)\\s+on\\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
                     + "\\s+from\\s+(.+?)\\s*[.!]?\\s*$");
+    private static final Pattern PERSON_PAYMENT = Pattern.compile(
+            "(?i)^\\s*(?:i\\s+)?(?:transferred|transfer|sent|send|paid)\\s+"
+                    + "(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+to\\s+"
+                    + "(?:my\\s+)?(.+?)\\s+(?:paid\\s+)?(?:using|through|via|from)\\s+(.+?)\\s*[.!]?\\s*$");
     private static final Pattern PAID_FOR = Pattern.compile(
             "(?i)^\\s*paid\\s+(.+?)\\s+(?:of|for)\\s+(?:₹|rs\\.?|inr)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)"
                     + "(?:\\s+(?:using|through|via)\\s+(.+?))?\\s*[.!]?\\s*$");
@@ -129,6 +133,9 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
         matcher = AMOUNT_FOR_DESCRIPTION_ON_DAY_FROM.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(4), text));
+        matcher = PERSON_PAYMENT.matcher(text);
+        if (matcher.matches())
+            return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));
         matcher = SPENT_ON.matcher(text);
         if (matcher.matches())
             return List.of(candidate(matcher.group(1), matcher.group(2), matcher.group(3), text));

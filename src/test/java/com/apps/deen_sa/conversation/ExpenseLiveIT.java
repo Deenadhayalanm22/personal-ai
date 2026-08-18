@@ -230,6 +230,16 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
         assertThat(chatText("wamid.regression-last", "Show my last transaction as I want to edit"))
                 .contains("42.5");
 
+        scenario("A family-support payment retains its explicit UPI source on the first turn");
+        String parentSupport = chatText("wamid.regression-parent-support",
+                "transferred 500 to my father paid using upi");
+        assertThat(parentSupport).contains("₹500")
+                .containsIgnoringCase("Family Support")
+                .containsIgnoringCase("Parents Support")
+                .containsIgnoringCase("Source: My bank account")
+                .containsIgnoringCase("Confirm this expense")
+                .doesNotContainIgnoringCase("How did you pay");
+
         autoAuthorizeFinancialWrites = true;
     }
 

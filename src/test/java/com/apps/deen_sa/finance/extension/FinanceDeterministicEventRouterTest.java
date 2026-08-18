@@ -198,6 +198,16 @@ class FinanceDeterministicEventRouterTest {
         assertThat(router.query("I spent 400 on vegetables paid using upi")).isEmpty();
     }
 
+    @org.junit.jupiter.api.Test
+    void extractsExplicitPaymentSourceWhenSendingMoneyToAParent() {
+        var event = router.events("transferred 500 to my father paid using upi").getFirst();
+
+        assertThat(event.eventType()).isEqualTo("EXPENSE");
+        assertThat(event.fields()).containsEntry("amount", new java.math.BigDecimal("500"))
+                .containsEntry("merchantName", "father")
+                .containsEntry("sourceAccount", "upi");
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {
             "Weekend dinner with family at BBQ Nation for ₹3,400 paid via HDFC Credit Card.",
