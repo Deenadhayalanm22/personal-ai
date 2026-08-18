@@ -1,0 +1,11 @@
+{
+  "valid": "boolean",
+  "reason": "string (only if valid=false)",
+  "amount": "number",
+  "sourceAccount": "string",
+  "targetLiability": "string",
+  "targetName": "string",
+  "paymentType": "string",
+  "paymentDate": "string (YYYY-MM-DD)",
+  "rawText": "string"
+}

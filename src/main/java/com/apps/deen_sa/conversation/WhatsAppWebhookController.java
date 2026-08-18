@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,8 +15,6 @@ import org.springframework.web.bind.annotation.*;
 public class WhatsAppWebhookController {
 
     private final WhatsAppMessageProcessor messageProcessor;
-    @Value("${whatsapp.verify-token:}")
-    private String verifyToken;
 
     // 🔹 1. Verification endpoint (GET)
     @GetMapping
@@ -27,7 +24,8 @@ public class WhatsAppWebhookController {
             @RequestParam("hub.challenge") String challenge
     ) {
 
-        if ("subscribe".equals(mode) && !verifyToken.isBlank() && verifyToken.equals(token)) {
+        // keep this token in config, not hardcoded
+        if ("subscribe".equals(mode) && "my-tellme-app-token".equals(token)) {
             return ResponseEntity.ok(challenge);
         }
 

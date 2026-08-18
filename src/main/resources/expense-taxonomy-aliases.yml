@@ -1,0 +1,40 @@
+# Exact, locale-aware aliases for common terms whose meaning should not require a model call.
+tea: Snacks & Beverages
+auto: Public Transport
+flight tickets: Public Transport
+medicines: Medicines
+lunch: Eating Out
+dinner: Eating Out
+restaurant: Eating Out
+swiggy: Eating Out
+swiggy instamart: Groceries
+school bag: School Supplies
+school bags: School Supplies
+family sharing: Family Transfer
+family transfer: Family Transfer
+wife: Family Transfer
+husband: Family Transfer
+spouse: Family Transfer
+mom: Parents Support
+mother: Parents Support
+dad: Parents Support
+father: Parents Support
+bbq nation: Eating Out
+insurance premium: Insurance
+term insurance: Life Insurance
+term insurance premium: Life Insurance
+life insurance: Life Insurance
+life insurance premium: Life Insurance
+health insurance: Health Insurance
+health insurance premium: Health Insurance
+vehicle insurance: Vehicle Insurance
+vehicle insurance premium: Vehicle Insurance
+car insurance: Vehicle Insurance
+car insurance premium: Vehicle Insurance
+car service: Vehicle Maintenance
+car servicing: Vehicle Maintenance
+vehicle service: Vehicle Maintenance
+vehicle servicing: Vehicle Maintenance
+bike service: Vehicle Maintenance
+garage: Vehicle Maintenance
+car wash: Vehicle Maintenance

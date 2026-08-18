@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: test_password
   wiremock:
     image: wiremock/wiremock:3.6.0
-    container_name: cooking-ai-it-wiremock
+    container_name: personal-ai-it-wiremock
     ports:
       - "9091:8080"
     volumes:

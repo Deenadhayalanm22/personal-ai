@@ -1,0 +1,73 @@
+ExpenseLiveIT.it_live_005 — REAL EXPENSE CONVERSATION CONTRACT
+===============================================================
+
+Purpose
+-------
+Reproduces a real user journey involving expense-specific help, provisional UPI setup, naturally
+worded budgets, misspelled spending descriptions, budget tracking, and unsupported-message review.
+Semantic interpretation may vary in prose, but persisted taxonomy and accounting are strict.
+
+Expense authorization
+---------------------
+Every expense, including the initial UPI expense and misspelled grocery descriptions, is previewed and
+confirmed before persistence. The misspelled grocery expense establishes the user's Groceries scope;
+only then is the grocery budget previewed and confirmed. The initial unconfigured UPI source is set up
+only after confirmation; all final taxonomy, budget, balance, and ledger totals remain unchanged.
+
+Help
+----
+User: Hi
+App must: describe personal-expense features including capture, accounts, summaries, budgets, and reminders.
+
+User: Help
+App must: return the same enabled-extension-specific instructions.
+
+UPI setup
+---------
+User: i spent 55 today morning for some snacks and i paid using upi
+App must: create My bank account and request its current balance.
+
+User: 10000
+App must: apply ₹55 and report a ₹9,945 balance.
+
+AI taxonomy resolution
+----------------------
+User: i spent 1300 on the buying vegitables using my upi
+App must: record ₹1,300. Persisted taxonomy must be Food & Dining / Groceries; arbitrary category
+text such as "the buying vegitables" must not become a category key.
+
+Budget
+------
+User: my grocery balance for this month is only 2000.
+App must: preview Food & Dining / Groceries and ₹2,000 without persisting.
+
+User button: Confirm [answer:CONFIRM_BUDGET]
+App must: persist a ₹2,000 monthly budget with canonical scope Groceries.
+
+User: how much my grocery budget for this month
+App must: report ₹1,300 spent and ₹700 remaining.
+
+User: how am i doing my grocery budget against this month planned
+App must: report ₹1,300 spent from ₹2,000 with ₹700 remaining.
+
+User: i spent 800 on groceries today paid using upi
+App must: record ₹800 and warn that Groceries is ₹100 over budget.
+
+User: how much i spent today
+App must: report ₹2,155 total and include Groceries in the breakdown.
+
+Unsupported demand
+------------------
+User: Purple silence sideways banana orbit
+App must: honestly say it could not understand and that the message was recorded for review.
+State: one NEW unprocessed_conversation_message exists with exact text, WhatsApp message ID, and no movement.
+
+User: help
+App must: still return the expense-specific instructions.
+
+Final oracle
+------------
+- Three applied expenses and three balance mutations: ₹55, ₹1,300, and ₹800.
+- One canonical Groceries budget of ₹2,000.
+- One idempotently stored unresolved message.
+- Help and unsupported turns create no financial movement.

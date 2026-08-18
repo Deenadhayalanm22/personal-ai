@@ -1,0 +1,28 @@
+{
+  "status": "SAVED",
+  "message": "Created hdfc credit card. Opening balance recorded.",
+  "needFollowup": false,
+  "savedEntity": {
+    "ownerType": "USER",
+    "ownerId": 1,
+    "containerType": "CREDIT_CARD",
+    "name": "hdfc credit card",
+    "status": "ACTIVE",
+    "currency": "INR",
+    "currentValue": 0,
+    "availableValue": 0,
+    "unit": null,
+    "capacityLimit": 30000,
+    "minThreshold": null,
+    "priorityOrder": null,
+    "closedAt": null,
+    "lastActivityAt": null,
+    "externalRefType": null,
+    "externalRefId": "hdfc credit card",
+    "details": {
+      "dueDay": 21
+    },
+    "overLimit": false,
+    "overLimitAmount": null
+  }
+}

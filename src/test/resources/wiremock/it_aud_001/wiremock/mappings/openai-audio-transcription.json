@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/audio/transcriptions",
+    "headers": {"Authorization": {"equalTo": "Bearer test-api-key"}},
+    "bodyPatterns": [
+      {"contains": "gpt-4o-mini-transcribe"},
+      {"contains": "voice-note.ogg"}
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "jsonBody": {
+      "text": "Setup my hdfc bank account where i have currently 40k balance as of now"
+    }
+  }
+}
