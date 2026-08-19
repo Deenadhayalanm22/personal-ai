@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import com.apps.deen_sa.finance.budget.BudgetInsightService;
 import com.apps.deen_sa.finance.credit.CardDueReminderService;
@@ -23,6 +24,8 @@ import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.finance.presentation.FinancialPresentationRequest;
 import com.apps.deen_sa.finance.presentation.VisualizationPlan;
 import com.apps.deen_sa.finance.presentation.VisualizationPlanner;
+import com.apps.deen_sa.finance.presentation.PresentationAnalyticsService;
+import com.apps.deen_sa.finance.presentation.PresentationDataset;
 
 @Service
 public class QueryHandler implements SpeechHandler {
@@ -37,6 +40,7 @@ public class QueryHandler implements SpeechHandler {
     private final StateContainerRepository stateContainers;
     private final ExpenseChartRenderer chartRenderer;
     private final VisualizationPlanner visualizationPlanner;
+    private final PresentationAnalyticsService presentationAnalytics;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
@@ -44,7 +48,8 @@ public class QueryHandler implements SpeechHandler {
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
             QueryContextFormatter queryContextFormatter, BudgetInsightService budgetInsights,
             CardDueReminderService cardReminders, StateContainerRepository stateContainers,
-            ExpenseChartRenderer chartRenderer, VisualizationPlanner visualizationPlanner
+            ExpenseChartRenderer chartRenderer, VisualizationPlanner visualizationPlanner,
+            PresentationAnalyticsService presentationAnalytics
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
@@ -56,6 +61,7 @@ public class QueryHandler implements SpeechHandler {
         this.stateContainers = stateContainers;
         this.chartRenderer = chartRenderer;
         this.visualizationPlanner = visualizationPlanner;
+        this.presentationAnalytics = presentationAnalytics;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
@@ -92,11 +98,13 @@ public class QueryHandler implements SpeechHandler {
         result.setGroupByCategory(true);
         ExpenseQuery query = expenseQueryBuilder.from(result, context.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
+        PresentationDataset presentation = presentationAnalytics.load(context.getUserId(), query.getTimeRange(),
+                plan, context.getTimezone());
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
         String message = summary(context.getLocale(), period, summary);
         return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
                 .message(message)
-                .media(chartRenderer.render(plan, chartTitle(period), summary, context.getLocale()))
+                .media(chartRenderer.render(plan, chartTitle(period), summary, presentation, context.getLocale()))
                 .build();
     }
 
@@ -143,7 +151,8 @@ public class QueryHandler implements SpeechHandler {
 
         return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
                 .message(response)
-                .media(chartRenderer.render(plan, "Spending by category", summary, ctx.getLocale()))
+                .media(chartRenderer.render(plan, "Spending by category", summary,
+                        PresentationDataset.empty(), ctx.getLocale()))
                 .build();
     }
 
@@ -161,33 +170,54 @@ public class QueryHandler implements SpeechHandler {
         BigDecimal total = summary.getTotalSpend() == null ? BigDecimal.ZERO : summary.getTotalSpend();
         String amount = "₹" + total.stripTrailingZeros().toPlainString();
         boolean tamil = locale != null && Set.of("ta", "ta-in").contains(locale.toLowerCase(Locale.ROOT));
-        if (tamil) return switch (period) {
-            case "TODAY" -> "இன்று உங்கள் மொத்த செலவு " + amount + ".";
-            case "THIS_MONTH" -> "இந்த மாதம் உங்கள் மொத்த செலவு " + amount + ".";
-            default -> "கேட்ட காலத்தில் உங்கள் மொத்த செலவு " + amount + ".";
-        };
-        String result = "You spent a total of " + amount + " " + switch (period) {
+        String periodLabel = switch (period) {
             case "TODAY" -> "today";
             case "THIS_WEEK" -> "this week";
             case "THIS_MONTH" -> "this month";
             case "THIS_YEAR" -> "this year";
             case "LAST_7_DAYS" -> "in the last 7 days";
             default -> "for the requested period";
-        } + ".";
+        };
+        StringBuilder result = new StringBuilder(tamil
+                ? "💰 *மொத்த செலவு: " + amount + "*"
+                : "💰 *Total spent: " + amount + "* " + periodLabel);
         if (summary.getSpendByCategory() != null && !summary.getSpendByCategory().isEmpty()) {
-            String breakdown = summary.getSpendByCategory().entrySet().stream()
-                    .map(entry -> entry.getKey() + " ₹" + entry.getValue().stripTrailingZeros().toPlainString())
-                    .collect(Collectors.joining(", "));
-            result += " Category breakdown: " + breakdown + ".";
+            result.append(tamil ? "\n\n📊 *வகை வாரியான செலவு*" : "\n\n📊 *Category breakdown*");
+            summary.getSpendByCategory().entrySet().stream().limit(6).forEach(entry -> {
+                BigDecimal value = entry.getValue() == null ? BigDecimal.ZERO : entry.getValue();
+                long percentage = total.signum() == 0 ? 0 : value.multiply(BigDecimal.valueOf(100))
+                        .divide(total, 0, java.math.RoundingMode.HALF_UP).longValue();
+                result.append("\n• ").append(categoryEmoji(entry.getKey())).append(" ")
+                        .append(entry.getKey()).append(" — ₹")
+                        .append(value.stripTrailingZeros().toPlainString()).append(" · ")
+                        .append(percentage).append("%");
+            });
         }
         if (summary.getSpendBySubcategory() != null && !summary.getSpendBySubcategory().isEmpty()) {
-            String breakdown = summary.getSpendBySubcategory().entrySet().stream()
-                    .filter(entry -> entry.getKey() != null)
-                    .map(entry -> entry.getKey() + " ₹" + entry.getValue().stripTrailingZeros().toPlainString())
-                    .collect(Collectors.joining(", "));
-            if (!breakdown.isBlank()) result += " Details: " + breakdown + ".";
+            List<Map.Entry<String, BigDecimal>> details = summary.getSpendBySubcategory().entrySet().stream()
+                    .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank()).limit(5).toList();
+            if (!details.isEmpty()) {
+                result.append(tamil ? "\n\n🔎 *முக்கிய விவரங்கள்*" : "\n\n🔎 *Top details*");
+                details.forEach(entry -> result.append("\n• ").append(entry.getKey()).append(" — ₹")
+                        .append(entry.getValue().stripTrailingZeros().toPlainString()));
+            }
         }
-        return result;
+        return result.toString();
+    }
+
+    private String categoryEmoji(String category) {
+        if (category == null) return "📌";
+        String value = category.toLowerCase(Locale.ROOT);
+        if (value.contains("food") || value.contains("dining")) return "🍽️";
+        if (value.contains("family")) return "👨‍👩‍👧";
+        if (value.contains("education")) return "🎓";
+        if (value.contains("transport") || value.contains("travel")) return "🚗";
+        if (value.contains("medical") || value.contains("health")) return "💊";
+        if (value.contains("entertainment")) return "🎬";
+        if (value.contains("shopping")) return "🛍️";
+        if (value.contains("housing") || value.contains("home")) return "🏠";
+        if (value.contains("bill") || value.contains("utilities")) return "💡";
+        return "📌";
     }
 
     private String chartTitle(String period) {

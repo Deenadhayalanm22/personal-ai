@@ -116,4 +116,43 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             """, nativeQuery = true)
     List<Object[]> sumBySourceAccount(@Param("userId") String userId, @Param("start") Instant start,
                                       @Param("end") Instant end, @Param("category") String category);
+
+    @Query(value = """
+            SELECT TO_CHAR((t.tx_time AT TIME ZONE 'UTC') AT TIME ZONE :timezone, 'YYYY-MM-DD'),
+                   COALESCE(SUM(t.amount), 0)
+            FROM state_change t
+            WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            GROUP BY 1 ORDER BY 1
+            """, nativeQuery = true)
+    List<Object[]> sumExpensesByLocalDay(@Param("userId") String userId, @Param("start") Instant start,
+                                         @Param("end") Instant end, @Param("timezone") String timezone);
+
+    @Query(value = """
+            SELECT COALESCE(t.category, 'Uncategorized'), COALESCE(t.subcategory, 'Other'),
+                   COALESCE(t.main_entity, 'Other'), COALESCE(SUM(t.amount), 0)
+            FROM state_change t
+            WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            GROUP BY 1, 2, 3 ORDER BY SUM(t.amount) DESC
+            """, nativeQuery = true)
+    List<Object[]> sumExpenseHierarchy(@Param("userId") String userId, @Param("start") Instant start,
+                                       @Param("end") Instant end);
+
+    @Query(value = """
+            SELECT COALESCE(c.name, 'Unallocated'), COALESCE(t.category, 'Uncategorized'), COALESCE(SUM(t.amount), 0)
+            FROM state_change t LEFT JOIN state_container c ON c.id = t.source_container_id
+            WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            GROUP BY 1, 2 ORDER BY SUM(t.amount) DESC
+            """, nativeQuery = true)
+    List<Object[]> sumExpenseFlow(@Param("userId") String userId, @Param("start") Instant start,
+                                  @Param("end") Instant end);
+
+    @Query(value = """
+            SELECT COALESCE(SUM(t.amount), 0) FROM state_change t
+            WHERE t.user_id = :userId AND t.transaction_type = 'INCOME' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            """, nativeQuery = true)
+    BigDecimal sumIncome(@Param("userId") String userId, @Param("start") Instant start, @Param("end") Instant end);
 }

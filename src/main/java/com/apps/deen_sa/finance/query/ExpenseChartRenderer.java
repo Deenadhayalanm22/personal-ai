@@ -6,6 +6,9 @@ import com.apps.deen_sa.finance.presentation.PresentationMood;
 import com.apps.deen_sa.finance.presentation.VisualizationPlan;
 import com.apps.deen_sa.finance.presentation.VisualizationType;
 import com.apps.deen_sa.finance.budget.BudgetProgress;
+import com.apps.deen_sa.finance.presentation.PresentationDataset;
+import com.apps.deen_sa.finance.presentation.FlowPoint;
+import com.apps.deen_sa.finance.presentation.HierarchyPoint;
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.PieChart;
 import org.knowm.xchart.PieChartBuilder;
@@ -46,14 +49,19 @@ public class ExpenseChartRenderer {
     };
 
     /** Transitional registry entry point. Renderers can be split into independent strategies without changing callers. */
-    public ResponseMedia render(VisualizationPlan plan, String title, ExpenseSummary summary, String locale) {
+    public ResponseMedia render(VisualizationPlan plan, String title, ExpenseSummary summary,
+                                PresentationDataset dataset, String locale) {
         Map<String, BigDecimal> categories = summary == null ? Map.of() : summary.getSpendByCategory();
         return switch (plan.type()) {
             case RANKED_HORIZONTAL_BARS -> rankedBars(title, categories, plan.mood(), locale);
             case SPENDING_REPORT_CARD -> reportCard(title, summary, plan.mood(), locale);
-            // These data contracts are catalogued but the current ledger does not yet expose their required projections.
-            // A truthful category ranking is preferable to fabricating daily, comparison or flow data.
-            default -> rankedBars(title, categories, plan.mood(), locale);
+            case CALENDAR_HEATMAP -> calendarHeatmap("Daily spending", dataset.dailySpend(), plan.mood(), locale);
+            case PAIRED_BARS, SLOPE_CHART -> comparisonBars("This month vs last month",
+                    dataset.currentCategories(), dataset.previousCategories(), plan.mood(), locale);
+            case SANKEY_MONEY_FLOW -> moneyFlow("Where your money went", dataset.flows(),
+                    dataset.incomeTotal(), plan.mood(), locale);
+            case CATEGORY_TREEMAP -> categoryTreemap("Category hierarchy", dataset.hierarchy(), plan.mood(), locale);
+            case ACCOUNT_STACK, BUDGET_PROGRESS_BARS -> null;
         };
     }
 
@@ -178,6 +186,115 @@ public class ExpenseChartRenderer {
         }
         g.dispose(); return png(image, "budget-progress.png");
     }
+
+    public ResponseMedia calendarHeatmap(String title, Map<String, BigDecimal> daily,
+                                         PresentationMood mood, String locale) {
+        if (daily == null || daily.isEmpty()) return emptyGraphic(title, "No daily spending in this period", "daily-heatmap.png", mood);
+        List<java.time.LocalDate> dates = daily.keySet().stream().map(java.time.LocalDate::parse).sorted().toList();
+        java.time.YearMonth month = java.time.YearMonth.from(dates.getLast());
+        BigDecimal max = daily.values().stream().max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+        int width = 1080, height = 760; BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = graphics(image); g.setColor(SURFACE); g.fillRect(0, 0, width, height);
+        g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 40)); g.drawString(title + " · " + month, 58, 72);
+        String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        g.setFont(new Font("SansSerif", Font.BOLD, 20));
+        for (int i = 0; i < 7; i++) g.drawString(days[i], 62 + i * 142, 125);
+        java.time.LocalDate first = month.atDay(1); int offset = first.getDayOfWeek().getValue() - 1;
+        Color base = accent(mood);
+        for (int day = 1; day <= month.lengthOfMonth(); day++) {
+            int cell = offset + day - 1, col = cell % 7, row = cell / 7;
+            BigDecimal amount = daily.getOrDefault(month.atDay(day).toString(), BigDecimal.ZERO);
+            double intensity = max.signum() == 0 ? 0 : amount.doubleValue() / max.doubleValue();
+            Color fill = intensity == 0 ? new Color(226, 232, 240)
+                    : blend(Color.WHITE, base, .25 + .75 * intensity);
+            int x = 54 + col * 142, y = 150 + row * 100;
+            g.setColor(fill); g.fillRoundRect(x, y, 116, 76, 18, 18);
+            g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 18)); g.drawString(String.valueOf(day), x + 12, y + 26);
+            if (amount.signum() > 0) { g.setFont(new Font("SansSerif", Font.PLAIN, 15)); g.drawString(money(amount, locale), x + 12, y + 56); }
+        }
+        g.dispose(); return png(image, "daily-heatmap.png");
+    }
+
+    public ResponseMedia comparisonBars(String title, Map<String, BigDecimal> current,
+                                        Map<String, BigDecimal> previous, PresentationMood mood, String locale) {
+        java.util.Set<String> keys = new java.util.LinkedHashSet<>(); keys.addAll(current.keySet()); keys.addAll(previous.keySet());
+        if (keys.isEmpty()) return emptyGraphic(title, "No spending in either month", "period-comparison.png", mood);
+        List<String> categories = keys.stream().sorted(Comparator.comparing((String key) ->
+                current.getOrDefault(key, BigDecimal.ZERO).max(previous.getOrDefault(key, BigDecimal.ZERO))).reversed()).limit(7).toList();
+        BigDecimal max = categories.stream().flatMap(key -> java.util.stream.Stream.of(
+                current.getOrDefault(key, BigDecimal.ZERO), previous.getOrDefault(key, BigDecimal.ZERO)))
+                .max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+        int width = 1200, height = 190 + categories.size() * 115; BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = graphics(image); g.setColor(SURFACE); g.fillRect(0, 0, width, height);
+        g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 40)); g.drawString(title, 60, 70);
+        g.setFont(new Font("SansSerif", Font.PLAIN, 20)); g.setColor(new Color(100,116,139)); g.drawString("Previous", 810, 108);
+        g.setColor(accent(mood)); g.drawString("Current", 970, 108); int y = 150;
+        for (String category : categories) {
+            g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 22)); g.drawString(category, 60, y + 28);
+            BigDecimal old = previous.getOrDefault(category, BigDecimal.ZERO), now = current.getOrDefault(category, BigDecimal.ZERO);
+            int oldBar = max.signum() == 0 ? 0 : (int)(700 * old.doubleValue()/max.doubleValue());
+            int nowBar = max.signum() == 0 ? 0 : (int)(700 * now.doubleValue()/max.doubleValue());
+            g.setColor(new Color(148,163,184)); g.fillRoundRect(390, y, Math.max(5, oldBar), 24, 14, 14);
+            g.setColor(accent(mood)); g.fillRoundRect(390, y + 35, Math.max(5, nowBar), 24, 14, 14); y += 115;
+        }
+        g.dispose(); return png(image, "period-comparison.png");
+    }
+
+    public ResponseMedia moneyFlow(String title, List<FlowPoint> flows, BigDecimal income,
+                                   PresentationMood mood, String locale) {
+        if (flows == null || flows.isEmpty()) return emptyGraphic(title, "No expense flows in this period", "money-flow.png", mood);
+        int width = 1200, height = Math.max(650, 220 + flows.size() * 72); BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = graphics(image); g.setColor(SURFACE); g.fillRect(0, 0, width, height);
+        g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 40)); g.drawString(title, 55, 68);
+        g.setFont(new Font("SansSerif", Font.BOLD, 25)); g.setColor(accent(mood));
+        g.drawString("Income " + money(income == null ? BigDecimal.ZERO : income, locale), 55, 125);
+        BigDecimal max = flows.stream().map(FlowPoint::amount).max(BigDecimal::compareTo).orElse(BigDecimal.ONE); int y = 180;
+        for (FlowPoint flow : flows) {
+            int stroke = Math.max(3, (int)(24 * flow.amount().doubleValue()/max.doubleValue()));
+            g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 21)); g.drawString(flow.account(), 55, y + 8);
+            g.setColor(accent(mood)); g.setStroke(new BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.drawLine(330, y, 820, y); g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 21));
+            g.drawString(flow.category() + " · " + money(flow.amount(), locale), 850, y + 8); y += 72;
+        }
+        g.dispose(); return png(image, "money-flow.png");
+    }
+
+    public ResponseMedia categoryTreemap(String title, List<HierarchyPoint> points,
+                                         PresentationMood mood, String locale) {
+        if (points == null || points.isEmpty()) return emptyGraphic(title, "No category hierarchy in this period", "category-treemap.png", mood);
+        List<HierarchyPoint> visible = points.stream().limit(12).toList();
+        BigDecimal total = visible.stream().map(HierarchyPoint::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        int width = 1200, height = 800; BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = graphics(image); g.setColor(SURFACE); g.fillRect(0, 0, width, height);
+        g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 40)); g.drawString(title, 55, 68);
+        int x = 50, y = 110, usable = 1100, consumed = 0, index = 0;
+        for (HierarchyPoint point : visible) {
+            int areaWidth = index == visible.size() - 1 ? usable - consumed
+                    : Math.max(90, (int)(usable * point.amount().doubleValue()/total.doubleValue()));
+            if (consumed + areaWidth > usable || x + areaWidth > 1150) { x = 50; y += 235; consumed = 0; areaWidth = Math.min(usable, areaWidth); }
+            Color color = PALETTE[index % PALETTE.length]; g.setColor(blend(Color.WHITE, color, .82));
+            g.fillRoundRect(x, y, areaWidth - 8, 210, 24, 24); g.setColor(Color.WHITE);
+            g.setFont(new Font("SansSerif", Font.BOLD, 20)); g.drawString(clip(point.category(), 18), x + 16, y + 38);
+            g.setFont(new Font("SansSerif", Font.PLAIN, 17)); g.drawString(clip(point.subcategory(), 20), x + 16, y + 70);
+            g.drawString(clip(point.merchant(), 20), x + 16, y + 100); g.setFont(new Font("SansSerif", Font.BOLD, 22));
+            g.drawString(money(point.amount(), locale), x + 16, y + 170); x += areaWidth; consumed += areaWidth; index++;
+        }
+        g.dispose(); return png(image, "category-treemap.png");
+    }
+
+    private ResponseMedia emptyGraphic(String title, String message, String filename, PresentationMood mood) {
+        BufferedImage image = new BufferedImage(1080, 420, BufferedImage.TYPE_INT_ARGB); Graphics2D g = graphics(image);
+        g.setColor(SURFACE); g.fillRect(0, 0, 1080, 420); g.setColor(INK); g.setFont(new Font("SansSerif", Font.BOLD, 40));
+        g.drawString(title, 58, 76); g.setColor(accent(mood)); g.fillRoundRect(54, 125, 972, 210, 30, 30);
+        g.setColor(Color.WHITE); g.setFont(new Font("SansSerif", Font.BOLD, 28)); g.drawString(message, 92, 235); g.dispose();
+        return png(image, filename);
+    }
+
+    private Color blend(Color from, Color to, double ratio) {
+        double r = Math.max(0, Math.min(1, ratio)); return new Color((int)(from.getRed()*(1-r)+to.getRed()*r),
+                (int)(from.getGreen()*(1-r)+to.getGreen()*r), (int)(from.getBlue()*(1-r)+to.getBlue()*r));
+    }
+    private String clip(String value, int max) { return value.length() <= max ? value : value.substring(0, max - 1) + "…"; }
 
     private Graphics2D graphics(BufferedImage image) {
         Graphics2D g = image.createGraphics();

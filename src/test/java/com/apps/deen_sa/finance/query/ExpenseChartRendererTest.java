@@ -4,6 +4,8 @@ import com.apps.deen_sa.conversation.ResponseMedia;
 import com.apps.deen_sa.dto.ExpenseSummary;
 import com.apps.deen_sa.finance.presentation.PresentationMood;
 import com.apps.deen_sa.finance.budget.BudgetProgress;
+import com.apps.deen_sa.finance.presentation.FlowPoint;
+import com.apps.deen_sa.finance.presentation.HierarchyPoint;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -79,5 +81,27 @@ class ExpenseChartRendererTest {
         assertThat(progress.filename()).isEqualTo("budget-progress.png");
         assertThat(progress.content().length).isGreaterThan(10_000);
         assertThat(empty.content()).startsWith((byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47);
+    }
+
+    @Test
+    void specializedAnalyticsProduceDistinctGraphics() {
+        ResponseMedia heatmap = renderer.calendarHeatmap("Daily", Map.of(
+                "2026-08-18", new BigDecimal("200"), "2026-08-19", new BigDecimal("900")),
+                PresentationMood.NEUTRAL, "en-IN");
+        ResponseMedia comparison = renderer.comparisonBars("Comparison",
+                Map.of("Food", new BigDecimal("900")), Map.of("Food", new BigDecimal("600")),
+                PresentationMood.CURIOUS, "en-IN");
+        ResponseMedia flow = renderer.moneyFlow("Flow", List.of(
+                new FlowPoint("HDFC", "Food", new BigDecimal("900"))), new BigDecimal("5000"),
+                PresentationMood.NEUTRAL, "en-IN");
+        ResponseMedia treemap = renderer.categoryTreemap("Hierarchy", List.of(
+                new HierarchyPoint("Food", "Groceries", "Amazon", new BigDecimal("900"))),
+                PresentationMood.NEUTRAL, "en-IN");
+
+        assertThat(List.of(heatmap.filename(), comparison.filename(), flow.filename(), treemap.filename()))
+                .containsExactly("daily-heatmap.png", "period-comparison.png", "money-flow.png", "category-treemap.png")
+                .doesNotHaveDuplicates();
+        assertThat(List.of(heatmap, comparison, flow, treemap)).allSatisfy(media ->
+                assertThat(media.content()).startsWith((byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47));
     }
 }

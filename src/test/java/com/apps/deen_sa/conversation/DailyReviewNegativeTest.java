@@ -222,7 +222,7 @@ class DailyReviewNegativeTest extends AbstractIntegrationTestProperties {
         assertThat(summary).contains("record this as a new activity");
 
         String safeSummary = chatText("wamid.flow-7", "Show today's spending");
-        assertThat(safeSummary).isEqualTo("You spent a total of ₹500 today.");
+        assertThat(safeSummary).contains("Total spent: ₹500", "Category breakdown");
 
         awaitState(() -> {
             assertThat(stateChangeRepository.findAll()).singleElement().satisfies(expense -> {
