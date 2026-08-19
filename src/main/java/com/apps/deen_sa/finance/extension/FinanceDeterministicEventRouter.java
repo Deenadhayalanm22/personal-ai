@@ -103,8 +103,8 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
     @Override
     public Optional<String> eventType(String text) {
         if (text == null) return Optional.empty();
-        if (EXPENSE_CORRECTION.matcher(text).matches() || TRANSACTION_BROWSE.matcher(text).matches())
-            return Optional.of("EXPENSE_CORRECTION");
+        // Corrections require multilingual semantic extraction of action and category scope.
+        // They intentionally go through the unified interpreter.
         if (ACCOUNT_SETUP.matcher(text).matches()) return Optional.of("ACCOUNT_SETUP");
         if (BUDGET_SET.matcher(text).matches() || MONTHLY_SCOPE_BALANCE_SET.matcher(text).matches())
             return Optional.of("BUDGET_SET");
@@ -178,19 +178,9 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
                 || MONTHLY_SCOPE_BALANCE_SET.matcher(query).matches()) return Optional.empty();
         if (ACCOUNT_BALANCE_QUERY.matcher(query).matches() && !query.toLowerCase(Locale.ROOT).contains("budget"))
             return Optional.of("ACCOUNT_BALANCE");
-        if (EXPENSE_SUMMARY_QUERY.matcher(query).matches()) return Optional.of(summaryPeriod(query));
-        if (GENERAL_EXPENSE_SUMMARY_QUERY.matcher(query).matches()) return Optional.of("THIS_MONTH");
+        // Spending questions require semantic analysis (intent, period and presentation mood).
+        // Do not short-circuit them with English-only patterns.
         return BUDGET_QUERY.matcher(query).matches() ? Optional.of("CURRENT_STATUS") : Optional.empty();
-    }
-
-    private String summaryPeriod(String query) {
-        String normalized = query.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
-        if (normalized.contains("last 3 months") || normalized.contains("last three months")) return "LAST_3_MONTHS";
-        if (normalized.contains("last month")) return "LAST_MONTH";
-        if (normalized.contains("this year")) return "THIS_YEAR";
-        if (normalized.contains("this month")) return "THIS_MONTH";
-        if (normalized.contains("this week")) return "THIS_WEEK";
-        return "TODAY";
     }
 
     private DeterministicEventCandidate candidate(String amount, String description, String source, String rawText) {

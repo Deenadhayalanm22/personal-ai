@@ -14,6 +14,8 @@ public class ExpenseCorrectionState {
     private CorrectionField field;
     private String proposedValue;
     private String searchTerm;
+    private String category;
+    private String subcategory;
     private Instant periodStart;
     private Instant periodEnd;
     private List<Long> visibleTransactionIds = new ArrayList<>();

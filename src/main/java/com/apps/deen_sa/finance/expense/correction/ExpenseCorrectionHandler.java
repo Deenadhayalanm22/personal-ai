@@ -5,6 +5,8 @@ import com.apps.deen_sa.conversation.ResponseAction;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.conversation.SpeechStatus;
+import com.apps.deen_sa.conversation.interpretation.EventPatch;
+import com.apps.deen_sa.conversation.interpretation.StructuredEventHandler;
 import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
 import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
 import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
@@ -23,12 +25,9 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
-public class ExpenseCorrectionHandler implements SpeechHandler {
+public class ExpenseCorrectionHandler implements StructuredEventHandler {
     private static final String INTENT = "EXPENSE_CORRECTION";
     private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("d MMM, h:mm a", Locale.ENGLISH);
-    private static final Set<String> GENERIC_SEARCH_WORDS = Set.of("show", "me", "my", "today", "todays", "expense",
-            "expenses", "transaction", "transactions", "edit", "delete", "change", "correct", "want", "to", "i", "a", "an");
-
     private final ExpenseCorrectionFinder finder;
     private final ExpenseCorrectionService corrections;
     private final StateChangeRepository transactions;
@@ -46,7 +45,19 @@ public class ExpenseCorrectionHandler implements SpeechHandler {
 
     @Override
     public SpeechResult handleSpeech(String text, ConversationContext context) {
-        ExpenseCorrectionState state = initialState(text, context);
+        return start(new ExpenseCorrectionState(), context);
+    }
+
+    @Override
+    public SpeechResult handleInterpreted(EventPatch event, String rawText, ConversationContext context) {
+        ExpenseCorrectionState state = new ExpenseCorrectionState();
+        state.setAction(enumValue(event.fields().asMap().get("correctionAction")));
+        state.setCategory(text(event.fields().asMap().get("category")));
+        state.setSubcategory(text(event.fields().asMap().get("subcategory")));
+        return start(state, context);
+    }
+
+    private SpeechResult start(ExpenseCorrectionState state, ConversationContext context) {
         context.setActiveIntent(INTENT);
         context.setWaitingForField("correctionChoice");
         context.setPartialObject(state);
@@ -169,6 +180,14 @@ public class ExpenseCorrectionHandler implements SpeechHandler {
             context.reset();
             return SpeechResult.info(prefix == null ? "I couldn't find any matching active expenses." : prefix);
         }
+        if (page.transactions().size() == 1) {
+            StateChangeEntity expense = page.transactions().getFirst();
+            state.setVisibleTransactionIds(List.of(expense.getId()));
+            state.setBeforeId(null);
+            state.setStage(CorrectionStage.BROWSING);
+            return followup(context, state, "Is this the transaction you want to " + actionVerb(state) + "?\n\n"
+                    + summary(expense, context), List.of(action("SELECT_" + expense.getId(), "Yes"), cancel()));
+        }
         state.setVisibleTransactionIds(page.transactions().stream().map(StateChangeEntity::getId).toList());
         state.setBeforeId(page.nextCursor());
         state.setStage(CorrectionStage.BROWSING);
@@ -184,23 +203,18 @@ public class ExpenseCorrectionHandler implements SpeechHandler {
         return followup(context, state, message.toString(), actions);
     }
 
-    private ExpenseCorrectionState initialState(String text, ConversationContext context) {
-        ExpenseCorrectionState state = new ExpenseCorrectionState();
-        String normalized = text == null ? "" : text.toLowerCase(Locale.ROOT)
-                .replace("'s", "").replace("’s", "");
-        if (normalized.matches(".*\\b(delete|remove|void)\\b.*")) state.setAction(CorrectionAction.DELETE);
-        else if (normalized.matches(".*\\b(edit|change|correct|update)\\b.*")) state.setAction(CorrectionAction.EDIT);
-        ZoneId zone = zone(context);
-        if (normalized.matches(".*\\btoday(?:'s|s)?\\b.*")) {
-            LocalDate today = LocalDate.now(zone);
-            state.setPeriodStart(today.atStartOfDay(zone).toInstant());
-            state.setPeriodEnd(today.plusDays(1).atStartOfDay(zone).toInstant());
-        }
-        String term = normalized.replaceAll("[^\\p{L}0-9]+", " ").trim();
-        term = java.util.Arrays.stream(term.split("\\s+")).filter(value -> !GENERIC_SEARCH_WORDS.contains(value))
-                .collect(java.util.stream.Collectors.joining(" "));
-        state.setSearchTerm(term.isBlank() ? null : term);
-        return state;
+    private String actionVerb(ExpenseCorrectionState state) {
+        return state.getAction() == CorrectionAction.DELETE ? "delete" : "edit";
+    }
+
+    private CorrectionAction enumValue(Object value) {
+        if (value == null) return null;
+        try { return CorrectionAction.valueOf(value.toString().toUpperCase(Locale.ROOT)); }
+        catch (IllegalArgumentException ignored) { return null; }
+    }
+
+    private String text(Object value) {
+        return value == null || value.toString().isBlank() ? null : value.toString().trim();
     }
 
     private Long selectedId(ExpenseCorrectionState state, String answer) {

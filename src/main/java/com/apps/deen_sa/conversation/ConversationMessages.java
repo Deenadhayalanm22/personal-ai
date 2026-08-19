@@ -37,6 +37,12 @@ public class ConversationMessages {
                 : "Which period should I show — today, this week, or this month?";
     }
 
+    public String defaultQueryPeriodGuidance(String locale) {
+        return isTamil(locale)
+                ? "கடந்த 7 நாட்களைக் காட்டியுள்ளேன். இன்று, இந்த வாரம், இந்த மாதம் அல்லது வேறு குறிப்பிட்ட காலத்தையும் கேட்கலாம்."
+                : "I showed the last 7 days by default. You can also ask for today, this week, this month, or another specific period.";
+    }
+
     public String skipped(String locale) {
         return isTamil(locale) ? "பரவாயில்லை — விடுபட்ட விவரத்தை பின்னர் சேர்க்கலாம்."
                 : "No problem — I saved what you told me. You can add the missing detail later.";

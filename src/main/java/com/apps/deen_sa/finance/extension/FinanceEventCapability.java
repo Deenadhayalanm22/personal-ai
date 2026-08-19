@@ -13,6 +13,8 @@ final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
             "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardDueDay",
             "transactionDate", "tags", "rawText", "confirmBudget", "correctionChoice");
+    private static final Set<String> CORRECTION_FIELDS = Set.of("correctionAction", "category", "subcategory",
+            "correctionChoice");
     private final String eventType;
     private final SpeechHandler delegate;
     private final TransactionTemplate transactions;
@@ -25,7 +27,7 @@ final class FinanceEventCapability implements EventCapability {
 
     @Override public String eventType() { return eventType; }
     @Override public String schemaVersion() { return "1.0.0"; }
-    @Override public Set<String> fields() { return FINANCE_FIELDS; }
+    @Override public Set<String> fields() { return "EXPENSE_CORRECTION".equals(eventType) ? CORRECTION_FIELDS : FINANCE_FIELDS; }
     @Override public java.util.Map<String, String> fieldTypes() {
         java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
         fields().forEach(field -> values.put(field, "string"));

@@ -14,10 +14,15 @@ import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import com.apps.deen_sa.finance.budget.BudgetInsightService;
 import com.apps.deen_sa.finance.credit.CardDueReminderService;
 import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
+import com.apps.deen_sa.finance.presentation.FinancialPresentationRequest;
+import com.apps.deen_sa.finance.presentation.VisualizationPlan;
+import com.apps.deen_sa.finance.presentation.VisualizationPlanner;
 
 @Service
 public class QueryHandler implements SpeechHandler {
@@ -31,6 +36,7 @@ public class QueryHandler implements SpeechHandler {
     private final CardDueReminderService cardReminders;
     private final StateContainerRepository stateContainers;
     private final ExpenseChartRenderer chartRenderer;
+    private final VisualizationPlanner visualizationPlanner;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
@@ -38,7 +44,7 @@ public class QueryHandler implements SpeechHandler {
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
             QueryContextFormatter queryContextFormatter, BudgetInsightService budgetInsights,
             CardDueReminderService cardReminders, StateContainerRepository stateContainers,
-            ExpenseChartRenderer chartRenderer
+            ExpenseChartRenderer chartRenderer, VisualizationPlanner visualizationPlanner
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
@@ -49,12 +55,34 @@ public class QueryHandler implements SpeechHandler {
         this.cardReminders = cardReminders;
         this.stateContainers = stateContainers;
         this.chartRenderer = chartRenderer;
+        this.visualizationPlanner = visualizationPlanner;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
     public SpeechResult handleInterpreted(String period, ConversationContext context) {
-        if ("ACCOUNT_BALANCE".equals(period)) return SpeechResult.info(accountBalances(context.getUserId()));
-        if ("CURRENT_STATUS".equals(period)) return SpeechResult.info(budgetInsights.status(context.getUserId(), context.getTimezone()));
+        return handleInterpreted(period, null, null, context);
+    }
+
+    public SpeechResult handleInterpreted(String period, String analysisIntent, String presentationMood,
+                                          ConversationContext context) {
+        VisualizationPlan plan = visualizationPlanner.plan(
+                FinancialPresentationRequest.fromAi(analysisIntent, presentationMood));
+        if ("ACCOUNT_BALANCE".equals(period)) {
+            Map<String, BigDecimal> balances = accountBalanceValues(context.getUserId());
+            return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                    .message(accountBalances(context.getUserId()))
+                    .media(chartRenderer.accountStack("Balances across accounts", balances, plan.mood(), context.getLocale()))
+                    .build();
+        }
+        if ("CURRENT_STATUS".equals(period)) {
+            String message = budgetInsights.status(context.getUserId(), context.getTimezone());
+            return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                    .message(message)
+                    .media(chartRenderer.budgetProgress("Monthly budget progress",
+                            budgetInsights.progress(context.getUserId(), context.getTimezone()),
+                            plan.mood(), context.getLocale()))
+                    .build();
+        }
         if ("UPCOMING_DUE".equals(period)) return SpeechResult.info(cardReminders.reminders(context.getUserId(), context.getTimezone()));
         QueryResult result = new QueryResult();
         result.setIntent("QUERY");
@@ -68,7 +96,7 @@ public class QueryHandler implements SpeechHandler {
         String message = summary(context.getLocale(), period, summary);
         return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
                 .message(message)
-                .media(chartRenderer.categoryDonut(chartTitle(period), summary.getSpendByCategory(), context.getLocale()))
+                .media(chartRenderer.render(plan, chartTitle(period), summary, context.getLocale()))
                 .build();
     }
 
@@ -79,6 +107,16 @@ public class QueryHandler implements SpeechHandler {
                 .toList();
         if (accounts.isEmpty()) return "You have no active financial accounts yet.";
         return accounts.stream().map(this::balanceLine).collect(Collectors.joining("\n"));
+    }
+
+    private Map<String, BigDecimal> accountBalanceValues(Long userId) {
+        Map<String, BigDecimal> values = new LinkedHashMap<>();
+        stateContainers.findActiveByOwnerId(userId).stream()
+                .filter(account -> Set.of("BANK_ACCOUNT", "CASH", "WALLET", "CREDIT_CARD")
+                        .contains(account.getContainerType()))
+                .filter(account -> account.getCurrentValue() != null)
+                .forEach(account -> values.put(account.getName(), account.getCurrentValue()));
+        return values;
     }
 
     private String balanceLine(StateContainerEntity account) {
@@ -95,6 +133,7 @@ public class QueryHandler implements SpeechHandler {
 
         ExpenseQuery query = expenseQueryBuilder.from(result, ctx.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
+        VisualizationPlan plan = visualizationPlanner.plan(FinancialPresentationRequest.fromAi(null, null));
 
         String context =
                 queryContextFormatter.describe(result);
@@ -104,7 +143,7 @@ public class QueryHandler implements SpeechHandler {
 
         return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
                 .message(response)
-                .media(chartRenderer.categoryDonut("Spending by category", summary.getSpendByCategory(), ctx.getLocale()))
+                .media(chartRenderer.render(plan, "Spending by category", summary, ctx.getLocale()))
                 .build();
     }
 
@@ -132,6 +171,7 @@ public class QueryHandler implements SpeechHandler {
             case "THIS_WEEK" -> "this week";
             case "THIS_MONTH" -> "this month";
             case "THIS_YEAR" -> "this year";
+            case "LAST_7_DAYS" -> "in the last 7 days";
             default -> "for the requested period";
         } + ".";
         if (summary.getSpendByCategory() != null && !summary.getSpendByCategory().isEmpty()) {
@@ -157,6 +197,7 @@ public class QueryHandler implements SpeechHandler {
             case "THIS_MONTH" -> "This month's spending by category";
             case "THIS_YEAR" -> "This year's spending by category";
             case "LAST_MONTH" -> "Last month's spending by category";
+            case "LAST_7_DAYS" -> "Last 7 days' spending by category";
             case "LAST_3_MONTHS" -> "Last 3 months' spending by category";
             default -> "Spending by category";
         };

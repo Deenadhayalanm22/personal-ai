@@ -8,6 +8,7 @@ public enum QueryPeriod {
     THIS_MONTH,
     THIS_YEAR,
     LAST_MONTH,
+    LAST_7_DAYS,
     LAST_3_MONTHS,
     ACCOUNT_BALANCE,
     CURRENT_STATUS,

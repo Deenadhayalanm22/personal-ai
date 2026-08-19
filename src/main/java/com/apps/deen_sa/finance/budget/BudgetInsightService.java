@@ -22,6 +22,14 @@ public class BudgetInsightService {
         return active.stream().map(budget -> line(budget, spend(userId, budget.getCategory(), month, zone))).reduce((a, b) -> a + "\n" + b).orElseThrow();
     }
 
+    public List<BudgetProgress> progress(Long userId, String timezone) {
+        ZoneId zone = zone(timezone); YearMonth month = YearMonth.now(zone);
+        return budgets.findByUserIdAndActiveTrueOrderByCategoryAsc(userId).stream()
+                .map(budget -> new BudgetProgress(budget.getCategory(),
+                        spend(userId, budget.getCategory(), month, zone), budget.getMonthlyLimit()))
+                .toList();
+    }
+
     public Optional<String> alert(StateChangeEntity expense, String timezone) {
         if (expense == null || expense.getCategory() == null || expense.getTimestamp() == null) return Optional.empty();
         Long userId = Long.valueOf(expense.getUserId());

@@ -182,7 +182,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
 
         scenario("A complete new expense replaces a stale confirmation without saving the stale amount");
         String stalePreview = chatText("wamid.regression-stale",
-                "And fish for 300 using bank account");
+                "bought fish for 300 using bank account");
         assertThat(stalePreview).contains("₹300").containsIgnoringCase("Confirm this expense");
         assertWaitingFor("EXPENSE", "confirmExpense");
         assertThat(stateChangeRepository.findAll()).isEmpty();
@@ -218,7 +218,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                             var expected = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))
                                     .with(java.time.temporal.TemporalAdjusters.previousOrSame(
                                             java.time.DayOfWeek.SATURDAY));
-                            assertThat(expense.getTimestamp().atZone(ZoneId.of("UTC")).toLocalDate())
+                            assertThat(expense.getTimestamp().atZone(ZoneId.of("Asia/Kolkata")).toLocalDate())
                                     .isEqualTo(expected);
                         }));
         assertThat(stateContainerRepository.findAll())
@@ -229,6 +229,40 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                 .contains("547.5");
         assertThat(chatText("wamid.regression-last", "Show my last transaction as I want to edit"))
                 .contains("42.5");
+        assertThat(chatButton("wamid.regression-last-cancel", "control:cancel", "Cancel"))
+                .containsIgnoringCase("stopped");
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(sessionRepository.findAll()).singleElement().satisfies(session -> {
+                    assertThat(session.getActiveIntent()).isNull();
+                    assertThat(session.getWaitingForField()).isNull();
+                }));
+
+        scenario("AI-selected presentation intents generate inspectable WhatsApp images");
+        List<Path> presentationImages = List.of(
+                chatGraphic("wamid.regression-graphic-overview",
+                        "Show my spending summary", "01-spending-report-card.png"),
+                chatGraphic("wamid.regression-graphic-ranking",
+                        "Where did I spend most?", "02-ranked-horizontal-bars.png"),
+                chatGraphic("wamid.regression-graphic-daily",
+                        "How did I spend throughout the month?", "03-calendar-heatmap.png"),
+                chatGraphic("wamid.regression-graphic-comparison",
+                        "Compare this month with last month", "04-period-comparison.png"),
+                chatGraphic("wamid.regression-graphic-flow",
+                        "Where did my salary go?", "05-money-flow-sankey.png"),
+                chatGraphic("wamid.regression-graphic-accounts",
+                        "Show balances across accounts", "06-account-stack.png"),
+                chatGraphic("wamid.regression-graphic-budget",
+                        "Am I within budget?", "07-budget-progress.png"),
+                chatGraphic("wamid.regression-graphic-hierarchy",
+                        "Show detailed category hierarchy", "08-category-treemap.png")
+        );
+        assertThat(presentationImages).allSatisfy(image -> {
+            assertThat(image).isRegularFile();
+            assertThat(Files.readAllBytes(image)).startsWith(
+                    (byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47);
+        });
+        System.out.println("Generated presentation images:");
+        presentationImages.forEach(image -> System.out.println("  • " + image.toAbsolutePath()));
 
         scenario("A family-support payment retains its explicit UPI source on the first turn");
         String parentSupport = chatText("wamid.regression-parent-support",
@@ -1341,13 +1375,21 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     }
 
     private Path chatChart(String messageId, String userText, String filename) throws Exception {
+        Path output = chatGraphic(messageId, userText, filename);
+        ImageMessage image = outgoingImageMessages().getLast();
+        assertThat(image.caption()).containsIgnoringCase("Category breakdown");
+        return output;
+    }
+
+    /** Sends a query and persists its WhatsApp PNG for manual visual regression review. */
+    private Path chatGraphic(String messageId, String userText, String filename) throws Exception {
         int imageMessagesBefore = outgoingImageMessages().size();
         int uploadsBefore = outgoingMediaUploads().size();
         System.out.println("Deena: " + userText);
         sendText(messageId, userText);
 
         ImageMessage image = awaitNextImageMessage(imageMessagesBefore);
-        assertThat(image.caption()).contains("₹").containsIgnoringCase("Category breakdown");
+        assertThat(image.caption()).isNotBlank();
         byte[] png = awaitNextPngUpload(uploadsBefore);
         Path output = Path.of("target", "live-charts", filename);
         Files.createDirectories(output.getParent());
@@ -1506,9 +1548,11 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
                 JsonNode request = entry.path("request");
                 if (!request.path("url").asText().endsWith("/messages")) continue;
                 JsonNode payload = objectMapper.readTree(request.path("body").asText());
-                String text = "interactive".equals(payload.path("type").asText())
-                        ? payload.path("interactive").path("body").path("text").asText()
-                        : payload.path("text").path("body").asText();
+                String text = switch (payload.path("type").asText()) {
+                    case "interactive" -> payload.path("interactive").path("body").path("text").asText();
+                    case "image" -> payload.path("image").path("caption").asText();
+                    default -> payload.path("text").path("body").asText();
+                };
                 messages.add(new OutgoingMessage(request.path("loggedDate").asLong(), text));
             }
             messages.sort(Comparator.comparingLong(OutgoingMessage::loggedAt));

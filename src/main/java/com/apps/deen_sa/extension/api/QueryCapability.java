@@ -6,4 +6,17 @@ public interface QueryCapability {
     String queryType();
     Set<String> periods();
     CapabilityResult handle(String period, CapabilityContext context);
+
+    /**
+     * Query text is presentation context, not part of the database contract.  The
+     * default keeps third-party capabilities source compatible.
+     */
+    default CapabilityResult handle(String period, String rawText, CapabilityContext context) {
+        return handle(period, context);
+    }
+
+    default CapabilityResult handle(String period, String rawText, String analysisIntent,
+                                    String presentationMood, CapabilityContext context) {
+        return handle(period, rawText, context);
+    }
 }

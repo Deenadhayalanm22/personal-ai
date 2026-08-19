@@ -32,13 +32,10 @@ class ExpenseCorrectionFinder {
             if (state.getBeforeId() != null) predicates.add(cb.lessThan(root.get("id"), state.getBeforeId()));
             if (state.getPeriodStart() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), state.getPeriodStart()));
             if (state.getPeriodEnd() != null) predicates.add(cb.lessThan(root.get("timestamp"), state.getPeriodEnd()));
-            if (state.getSearchTerm() != null && !state.getSearchTerm().isBlank()) {
-                String pattern = "%" + state.getSearchTerm().toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("category")), pattern),
-                        cb.like(cb.lower(root.get("subcategory")), pattern),
-                        cb.like(cb.lower(root.get("mainEntity")), pattern)));
-            }
+            if (state.getCategory() != null && !state.getCategory().isBlank())
+                predicates.add(cb.equal(cb.lower(root.get("category")), state.getCategory().toLowerCase()));
+            if (state.getSubcategory() != null && !state.getSubcategory().isBlank())
+                predicates.add(cb.equal(cb.lower(root.get("subcategory")), state.getSubcategory().toLowerCase()));
             query.orderBy(cb.desc(root.get("id")));
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
