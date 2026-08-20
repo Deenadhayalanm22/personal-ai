@@ -11,7 +11,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
-            "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardDueDay",
+            "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardBillingDay", "creditCardDueDay",
             "transactionDate", "tags", "rawText", "confirmBudget", "correctionChoice");
     private static final Set<String> CORRECTION_FIELDS = Set.of("correctionAction", "category", "subcategory",
             "correctionChoice");
@@ -32,7 +32,7 @@ final class FinanceEventCapability implements EventCapability {
         java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
         fields().forEach(field -> values.put(field, "string"));
         java.util.Set.of("amount", "sourceBalance", "creditLimit").forEach(field -> values.put(field, "number"));
-        values.put("creditCardDueDay", "integer"); values.put("tags", "array");
+        values.put("creditCardBillingDay", "integer"); values.put("creditCardDueDay", "integer"); values.put("tags", "array");
         return java.util.Map.copyOf(values);
     }
     @Override public String extractionInstructions() { return "Extract only explicitly evidenced personal-finance facts."; }

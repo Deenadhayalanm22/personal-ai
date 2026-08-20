@@ -17,8 +17,10 @@ import org.springframework.stereotype.Service;
 import java.beans.PropertyDescriptor;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class AccountSetupHandler implements SpeechHandler {
@@ -82,8 +84,9 @@ public class AccountSetupHandler implements SpeechHandler {
         AccountSetupDto refined =
                 llm.extractFieldFromFollowup(dto, missingField, answer);
 
-        // merge (simple overwrite)
+        Map<String, Object> mergedDetails = mergeDetails(dto.getDetails(), refined.getDetails());
         BeanUtils.copyProperties(refined, dto, getNullPropertyNames(refined));
+        dto.setDetails(mergedDetails);
         dto.setRawText(dto.getRawText() + " " + answer);
 
         List<String> missing = AccountSetupValidator.findMissingFields(dto);
@@ -108,6 +111,14 @@ public class AccountSetupHandler implements SpeechHandler {
         StateContainerEntity saved = save(dto, ctx.getUserId());
         ctx.reset();
         return setupConfirmation(saved);
+    }
+
+    private Map<String, Object> mergeDetails(Map<String, Object> existing, Map<String, Object> supplied) {
+        if (existing == null && supplied == null) return null;
+        Map<String, Object> merged = new HashMap<>();
+        if (existing != null) merged.putAll(existing);
+        if (supplied != null) merged.putAll(supplied);
+        return merged;
     }
 
     private StateContainerEntity save(AccountSetupDto dto, Long userId) {

@@ -19,6 +19,12 @@ public class AccountSetupValidator {
         normalizeAccountIdentifier(dto);
         normalizeCreditCardDetails(dto);
 
+        if ("CREDIT_CARD".equals(dto.getContainerType())) {
+            Map<String, Object> details = dto.getDetails();
+            if (details == null || details.get("billingDay") == null) missing.add("billingDay");
+            if (details == null || details.get("dueDay") == null) missing.add("dueDay");
+        }
+
         return missing;
     }
 
@@ -38,17 +44,25 @@ public class AccountSetupValidator {
 
     /**
      * Keep persisted account details canonical even if the extractor returns the
-     * common semantic alias "dueDate" instead of the contract key "dueDay".
+     * common date aliases instead of the canonical monthly day keys.
      */
     private static Map<String, Object> normalizeCreditCardDetails(AccountSetupDto dto) {
         Map<String, Object> details = dto.getDetails();
-        if (details == null || details.containsKey("dueDay") || !details.containsKey("dueDate")) {
-            return details;
-        }
+        if (details == null) return null;
 
         Map<String, Object> normalized = new HashMap<>(details);
-        normalized.put("dueDay", normalized.remove("dueDate"));
+        moveAlias(normalized, "dueDate", "dueDay");
+        moveAlias(normalized, "billingDate", "billingDay");
+        moveAlias(normalized, "billGenerationDay", "billingDay");
+        moveAlias(normalized, "statementDay", "billingDay");
         dto.setDetails(normalized);
         return normalized;
+    }
+
+    private static void moveAlias(Map<String, Object> details, String alias, String canonical) {
+        if (!details.containsKey(canonical) && details.containsKey(alias)) {
+            details.put(canonical, details.get(alias));
+        }
+        details.remove(alias);
     }
 }

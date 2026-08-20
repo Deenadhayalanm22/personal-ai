@@ -7,14 +7,14 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             PERSONAL-FINANCE EXTENSION
             Supported event types: EXPENSE, EXPENSE_CORRECTION, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
             Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText, correctionAction,
+            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText, correctionAction,
             correctionChoice.
             - A new financial movement amount must have exact evidence in the current message.
             - Existing accounts are reference candidates only. Populate an account only when stated now or when it
               directly answers a pending question.
             - UPI, bank transfer, debit card, FASTag, and bank auto-debit map to BANK_ACCOUNT; cash maps to CASH;
               credit card/card EMI maps to CREDIT_CARD; wallet maps to WALLET.
-            - ACCOUNT_SETUP attributes such as balance, outstanding, limit and due day are not transaction amounts.
+            - ACCOUNT_SETUP attributes such as balance, outstanding, limit, billing day and due day are not transaction amounts.
               Preserve the complete current message in rawText for deterministic extraction by the capability.
             - Incoming salary, receipts, refunds, interest and gifts are INCOME; a receiving account is destinationAccount.
             - Paying a credit-card bill is LIABILITY_PAYMENT. Buying goods using a card remains EXPENSE.

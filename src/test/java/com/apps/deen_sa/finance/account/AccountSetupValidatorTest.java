@@ -12,7 +12,7 @@ class AccountSetupValidatorTest {
 
     @Test
     void acceptsAndCanonicalizesDueDateAliasFromExtractor() {
-        AccountSetupDto dto = validCreditCard(Map.of("dueDate", 21));
+        AccountSetupDto dto = validCreditCard(Map.of("billingDay", 1, "dueDate", 21));
 
         assertThat(AccountSetupValidator.findMissingFields(dto)).isEmpty();
         assertThat(dto.getDetails())
@@ -22,7 +22,7 @@ class AccountSetupValidatorTest {
 
     @Test
     void acceptsCanonicalDueDay() {
-        AccountSetupDto dto = validCreditCard(Map.of("dueDay", 21));
+        AccountSetupDto dto = validCreditCard(Map.of("billingDay", 1, "dueDay", 21));
 
         assertThat(AccountSetupValidator.findMissingFields(dto)).isEmpty();
         assertThat(dto.getDetails()).containsEntry("dueDay", 21);
@@ -52,16 +52,22 @@ class AccountSetupValidatorTest {
     }
 
     @Test
-    void creditCardCanStartWithoutOutstandingLimitOrDueDay() {
+    void creditCardRequiresBillingAndDueDaysButNotOutstandingOrLimit() {
         AccountSetupDto dto = validCreditCard(Map.of("dueDay", 21));
         dto.setCurrentValue(null);
         dto.setExternalRefId(null);
 
         dto.setCapacityLimit(null);
-        dto.setDetails(null);
+        assertThat(AccountSetupValidator.findMissingFields(dto)).containsExactly("billingDay");
+        assertThat(dto.getExternalRefId()).isEqualTo("hdfc credit card");
+    }
+
+    @Test
+    void canonicalizesBillGenerationDayAlias() {
+        AccountSetupDto dto = validCreditCard(Map.of("billGenerationDay", 1, "dueDay", 21));
 
         assertThat(AccountSetupValidator.findMissingFields(dto)).isEmpty();
-        assertThat(dto.getExternalRefId()).isEqualTo("hdfc credit card");
+        assertThat(dto.getDetails()).containsEntry("billingDay", 1).doesNotContainKey("billGenerationDay");
     }
 
     @Test

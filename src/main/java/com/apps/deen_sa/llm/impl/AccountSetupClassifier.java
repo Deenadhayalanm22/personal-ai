@@ -83,8 +83,15 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             - name; currency, currentValue and externalRefId may be enriched later
 
             CREDIT_CARD:
-            - name; current outstanding, externalRefId, capacityLimit and dueDay
-              may be enriched later
+            - name; current outstanding, externalRefId and capacityLimit may be enriched later
+            - billingDay and dueDay are required so statement cycles can be tracked correctly
+
+            details.billingDay:
+            - For CREDIT_CARD, extract the monthly bill/statement generation day as an integer from 1 to 31.
+            - Phrases such as "bill generated on the 1st", "billing date is 1", and
+              "statement day 1" all mean {"billingDay": 1}.
+            - This is the first day of the fresh statement cycle. Do not confuse it with the payment due day.
+            - Always use the exact key "billingDay".
 
             details.dueDay:
             - For CREDIT_CARD, extract the monthly payment due day as an integer from 1 to 31.
@@ -110,6 +117,7 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
               "externalRefType": "BANK",
               "externalRefId": "Savings-1234",
               "details": {
+                "billingDay": 1,
                 "dueDay": 21
               },
               "rawText": ""
@@ -175,6 +183,12 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
         }
         if ("externalRefId".equals(field)) {
             return "What safe identifier should I use for this account, such as a nickname or the last four digits? Please do not share the full account or card number.";
+        }
+        if ("billingDay".equals(field)) {
+            return "On which day of every month is the credit-card bill generated (the start of a fresh statement cycle)?";
+        }
+        if ("dueDay".equals(field)) {
+            return "On which day of every month is the credit-card payment due?";
         }
         return "Please provide " + field.replaceAll("([A-Z])", " $1").toLowerCase();
     }
