@@ -6,11 +6,15 @@ import com.apps.deen_sa.conversation.SpeechStatus;
 import com.apps.deen_sa.conversation.interpretation.EventPatch;
 import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
+import com.apps.deen_sa.finance.account.enrichment.AccountEnrichmentPreferenceRepository;
+import com.apps.deen_sa.finance.account.enrichment.AccountEnrichmentPreferenceEntity;
+import com.apps.deen_sa.finance.account.enrichment.AccountEnrichmentService;
 import com.apps.deen_sa.finance.budget.BudgetInsightService;
 import com.apps.deen_sa.finance.legacy.mutation.StateMutationService;
 import com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum;
 import com.apps.deen_sa.finance.legacy.state.StateChangeEntity;
 import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
+import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.finance.legacy.state.StateContainerService;
 import com.apps.deen_sa.llm.impl.ExpenseClassifier;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,6 +41,9 @@ class ExpenseConfirmationFlowTest {
     private final ExpenseCompletenessEvaluator completeness = mock(ExpenseCompletenessEvaluator.class);
     private final ExpenseInputNormalizer normalizer = mock(ExpenseInputNormalizer.class);
     private final BudgetInsightService budgets = mock(BudgetInsightService.class);
+    private final AccountEnrichmentPreferenceRepository enrichmentPreferences = mock(AccountEnrichmentPreferenceRepository.class);
+    private final AccountEnrichmentService enrichment = new AccountEnrichmentService(enrichmentPreferences);
+    private final Map<String, AccountEnrichmentPreferenceEntity> enrichmentState = new java.util.HashMap<>();
     private ExpenseHandler handler;
     private ConversationContext context;
 
@@ -45,7 +52,7 @@ class ExpenseConfirmationFlowTest {
         handler = new ExpenseHandler(
                 mock(ExpenseClassifier.class), repository, containers, completeness,
                 mock(AdjustmentCommandFactory.class), mock(StateMutationService.class), normalizer,
-                new ObjectMapper().findAndRegisterModules(), budgets);
+                new ObjectMapper().findAndRegisterModules(), budgets, enrichment);
         context = new ConversationContext();
         context.setUserId(7L);
         when(normalizer.normalize(any(ExpenseDto.class), anyString(), any(ConversationContext.class)))
@@ -57,6 +64,14 @@ class ExpenseConfirmationFlowTest {
             StateChangeEntity entity = call.getArgument(0);
             if (entity.getId() == null) entity.setId(42L);
             return entity;
+        });
+        enrichmentState.clear();
+        when(enrichmentPreferences.findByAccountIdAndFieldName(any(), anyString())).thenAnswer(call ->
+                Optional.ofNullable(enrichmentState.get(call.getArgument(0) + ":" + call.getArgument(1))));
+        when(enrichmentPreferences.save(any())).thenAnswer(call -> {
+            AccountEnrichmentPreferenceEntity value = call.getArgument(0);
+            enrichmentState.put(value.getAccountId() + ":" + value.getFieldName(), value);
+            return value;
         });
     }
 
@@ -101,6 +116,53 @@ class ExpenseConfirmationFlowTest {
         assertThat(skipped.getStatus()).isEqualTo(SpeechStatus.SAVED);
         assertThat(context.isInFollowup()).isFalse();
         verify(containers, never()).createProvisional(any(), anyString(), anyString());
+    }
+
+    @Test
+    void asksForMissingBillingDayBeforeConfirmingExpenseOnExistingCard() {
+        StateContainerEntity card = new StateContainerEntity();
+        card.setId(9L);
+        card.setContainerType("CREDIT_CARD");
+        card.setName("HDFC Credit Card");
+        card.setCurrentValue(BigDecimal.ZERO);
+        card.setCapacityLimit(new BigDecimal("50000"));
+        card.setDetails(new java.util.HashMap<>(Map.of("dueDay", 21)));
+        when(containers.getActiveContainers(7L)).thenReturn(List.of(card));
+
+        SpeechResult billingQuestion = handler.handleInterpreted(expensePatch(), rawText(), context);
+
+        assertThat(billingQuestion.getStatus()).isEqualTo(SpeechStatus.FOLLOWUP);
+        assertThat(billingQuestion.getMissingFields()).containsExactly("creditCardBillingDay");
+        assertThat(billingQuestion.getMessage()).contains("bill generated").contains("fresh statement cycle");
+        verify(repository, never()).save(any());
+
+        SpeechResult preview = handler.handleInterpretedFollowup(emptyPatch(), "1st", context);
+
+        assertThat(card.getDetails()).containsEntry("billingDay", 1).containsEntry("dueDay", 21);
+        assertThat(preview.getMessage()).contains("Confirm this expense?");
+        verify(containers).UpdateValueContainer(card);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void remindMeLaterSnoozesFieldAndContinuesPendingExpense() {
+        StateContainerEntity card = new StateContainerEntity();
+        card.setId(9L);
+        card.setOwnerId(7L);
+        card.setContainerType("CREDIT_CARD");
+        card.setName("HDFC Credit Card");
+        card.setCurrentValue(BigDecimal.ZERO);
+        card.setCapacityLimit(new BigDecimal("50000"));
+        card.setDetails(new java.util.HashMap<>(Map.of("dueDay", 21)));
+        when(containers.getActiveContainers(7L)).thenReturn(List.of(card));
+
+        handler.handleInterpreted(expensePatch(), rawText(), context);
+        SpeechResult preview = handler.handleInterpretedFollowup(emptyPatch(), "ENRICH_LATER", context);
+
+        assertThat(enrichmentState.get("9:creditCardBillingDay").getPromptStatus()).isEqualTo("SNOOZED");
+        assertThat(enrichmentState.get("9:creditCardBillingDay").getRemindAfter()).isNotNull();
+        assertThat(preview.getMessage()).contains("Confirm this expense?");
+        verify(repository, never()).save(any());
     }
 
     private EventPatch expensePatch() {

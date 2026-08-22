@@ -181,6 +181,30 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
+    void correctsHouseholdItemsMisclassifiedAsPaidHouseholdHelp() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Family Support");
+        expense.setSubcategory("Household Help");
+
+        resolver.canonicalize(expense, "Spent 10 on house holding items paid using my credit card");
+
+        assertThat(expense.getCategory()).isEqualTo("Shopping");
+        assertThat(expense.getSubcategory()).isEqualTo("Household Items");
+    }
+
+    @Test
+    void identifiesHaircutAsPersonalCareWithoutSemanticModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+
+        resolver.canonicalize(expense, "Paid 300 for a haircut using UPI");
+
+        assertThat(expense.getCategory()).isEqualTo("Personal Care");
+        assertThat(expense.getSubcategory()).isEqualTo("Haircut & Grooming");
+    }
+
+    @Test
     void mapsTransferToSpouseToFamilySupportWithoutCategoryFollowup() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
         ExpenseDto expense = new ExpenseDto();

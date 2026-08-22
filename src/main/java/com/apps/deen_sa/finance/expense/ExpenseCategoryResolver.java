@@ -17,9 +17,20 @@ public class ExpenseCategoryResolver {
     public void canonicalize(ExpenseDto expense, String originalText) {
         String subcategory = taxonomy.canonicalLabel(expense.getSubcategory()).orElse(null);
         String category = taxonomy.canonicalLabel(expense.getCategory()).orElse(null);
+        String evidence = firstMeaningful(expense.getMerchantName(), originalText);
+        String evidencedAlias = taxonomy.canonicalAlias(evidence)
+                .or(() -> taxonomy.canonicalAliasInText(evidence)).orElse(null);
+        if (evidencedAlias != null) {
+            Optional<String> evidencedParent = taxonomy.parentCategory(evidencedAlias);
+            if (evidencedParent.isPresent() && !evidencedParent.get().equals(category)) {
+                expense.setCategory(evidencedParent.get());
+                expense.setSubcategory(evidencedAlias);
+                return;
+            }
+        }
         if (subcategory != null && taxonomy.parentCategory(subcategory).isPresent()) {
             String parent = taxonomy.parentCategory(subcategory).orElseThrow();
-            String raw = firstMeaningful(expense.getMerchantName(), originalText);
+            String raw = evidence;
             String explicitAlias = taxonomy.canonicalAlias(raw)
                     .or(() -> taxonomy.canonicalAliasInText(raw))
                     .filter(taxonomy.subcategoriesFor(parent)::contains)

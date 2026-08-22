@@ -30,7 +30,10 @@ public class AccountSetupClassifier extends BaseLLMExtractor {
             3. Extract ONLY what the user explicitly states.
             4. If a value is unclear or missing, set it to null.
             5. Always return STRICT JSON only.
-            6. This extractor handles SETUP / RECORDING only, not payments.
+            6. This extractor handles SETUP, RECORDING, and enrichment updates to an
+               existing supported account, but not payments. For example, "My HDFC
+               card bill is generated on the 1st" is a valid CREDIT_CARD update;
+               extract the account name and details.billingDay.
             7. The currency defaults to "INR" when the user does not specify it.
             8. For any unsupported account type, return the INVALID CASE.
             9. currentValue is optional during initial setup. Never invent or

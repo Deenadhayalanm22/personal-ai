@@ -47,6 +47,9 @@ public class AccountSetupHandler implements SpeechHandler {
 
         AccountSetupDto dto = deterministicParser.parse(text).orElseGet(() -> llm.extractAccount(text));
         dto.setRawText(text);
+        StateContainerEntity existing = findActiveDuplicate(dto, ctx.getUserId());
+        boolean update = existing != null && isAccountUpdateRequest(text);
+        if (update) hydrateFromExisting(dto, existing);
 
         List<String> missing = AccountSetupValidator.findMissingFields(dto);
 
@@ -68,6 +71,7 @@ public class AccountSetupHandler implements SpeechHandler {
         StateContainerEntity duplicate = findActiveDuplicate(dto, ctx.getUserId());
         if (duplicate != null) {
             ctx.reset();
+            if (update) return updateAccount(duplicate, dto);
             return duplicateAccount(duplicate);
         }
         StateContainerEntity saved = save(dto, ctx.getUserId());
@@ -80,6 +84,8 @@ public class AccountSetupHandler implements SpeechHandler {
 
         AccountSetupDto dto = (AccountSetupDto) ctx.getPartialObject();
         String missingField = ctx.getWaitingForField();
+        StateContainerEntity existing = findActiveDuplicate(dto, ctx.getUserId());
+        boolean update = existing != null && isAccountUpdateRequest(dto.getRawText());
 
         AccountSetupDto refined =
                 llm.extractFieldFromFollowup(dto, missingField, answer);
@@ -106,6 +112,7 @@ public class AccountSetupHandler implements SpeechHandler {
         StateContainerEntity duplicate = findActiveDuplicate(dto, ctx.getUserId());
         if (duplicate != null) {
             ctx.reset();
+            if (update) return updateAccount(duplicate, dto);
             return duplicateAccount(duplicate);
         }
         StateContainerEntity saved = save(dto, ctx.getUserId());
@@ -164,6 +171,43 @@ public class AccountSetupHandler implements SpeechHandler {
                 .filter(account -> normalizeIdentity(account.getName()).equals(identity))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private boolean isAccountUpdateRequest(String text) {
+        if (text == null) return false;
+        if (text.matches("(?is)^\\s*(create|setup|set\\s+up|add|open)\\b.*")) return false;
+        return true;
+    }
+
+    private void hydrateFromExisting(AccountSetupDto dto, StateContainerEntity existing) {
+        if (dto.getOwnerType() == null) dto.setOwnerType(existing.getOwnerType());
+        if (dto.getCurrency() == null) dto.setCurrency(existing.getCurrency());
+        if (dto.getCurrentValue() == null) dto.setCurrentValue(existing.getCurrentValue());
+        if (dto.getAvailableValue() == null) dto.setAvailableValue(existing.getAvailableValue());
+        if (dto.getCapacityLimit() == null) dto.setCapacityLimit(existing.getCapacityLimit());
+        if (dto.getMinThreshold() == null) dto.setMinThreshold(existing.getMinThreshold());
+        if (dto.getExternalRefType() == null) dto.setExternalRefType(existing.getExternalRefType());
+        if (dto.getExternalRefId() == null) dto.setExternalRefId(existing.getExternalRefId());
+        dto.setDetails(mergeDetails(existing.getDetails(), dto.getDetails()));
+    }
+
+    private SpeechResult updateAccount(StateContainerEntity existing, AccountSetupDto dto) {
+        existing.setCurrency(dto.getCurrency());
+        existing.setCurrentValue(dto.getCurrentValue());
+        existing.setAvailableValue(dto.getAvailableValue());
+        existing.setCapacityLimit(dto.getCapacityLimit());
+        existing.setMinThreshold(dto.getMinThreshold());
+        existing.setExternalRefType(dto.getExternalRefType());
+        existing.setExternalRefId(dto.getExternalRefId());
+        existing.setDetails(dto.getDetails());
+        StateContainerEntity saved = repo.save(existing);
+        stateContainerService.evictCache(existing.getOwnerId());
+        return SpeechResult.builder()
+                .status(com.apps.deen_sa.conversation.SpeechStatus.SAVED)
+                .message("Updated " + saved.getName() + " account details.")
+                .savedEntity(saved)
+                .needFollowup(false)
+                .build();
     }
 
     static String normalizeIdentity(String value) {
