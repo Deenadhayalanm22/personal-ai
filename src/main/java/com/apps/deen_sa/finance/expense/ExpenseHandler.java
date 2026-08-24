@@ -356,6 +356,10 @@ public class ExpenseHandler implements SpeechHandler {
         // Persistence boundary invariant: never store an LLM label before it has
         // been reconciled with the configured category/subcategory hierarchy.
         inputNormalizer.normalize(dto, dto.getRawText(), new ConversationContext());
+        List<String> missing = ExpenseValidator.findMissingFields(dto);
+        if (missing.contains("category") || missing.contains("subcategory")) {
+            throw new IllegalStateException("An expense cannot be saved without category and subcategory");
+        }
 
         StateChangeEntity transaction =
                 ExpenseDtoToEntityMapper.toEntity(dto, userId);
@@ -447,6 +451,7 @@ public class ExpenseHandler implements SpeechHandler {
                     new ResponseAction("answer:Transportation", "Travel")
             );
         }
+        if ("subcategory".equals(field)) return List.of();
         if ("sourceAccount".equals(field)) {
             return List.of(
                     new ResponseAction("answer:CASH", "Cash"),
@@ -461,7 +466,9 @@ public class ExpenseHandler implements SpeechHandler {
     private String questionFor(String field, ExpenseDto dto) {
         return switch (field) {
             case "category" -> "What was the ₹" + dto.getAmount().stripTrailingZeros().toPlainString()
-                    + " expense for? Reply with something like groceries, fuel, rent, or choose below. Type Skip to leave it uncategorized.";
+                    + " expense for? Reply with something like groceries, fuel, rent, or choose below.";
+            case "subcategory" -> "What kind of " + dto.getCategory()
+                    + " expense was this? Please provide a little more detail so I can categorize it correctly.";
             case "sourceAccount" -> "How did you pay?";
             case "amount" -> "How much did you spend?";
             case "spentAt" -> "When did you spend it?";

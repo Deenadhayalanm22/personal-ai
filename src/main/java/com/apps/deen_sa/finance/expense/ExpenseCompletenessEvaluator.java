@@ -35,6 +35,8 @@ public class ExpenseCompletenessEvaluator {
     private boolean hasOperational(ExpenseDto dto) {
         return dto.getCategory() != null
                 && !dto.getCategory().isBlank()
+                && dto.getSubcategory() != null
+                && !dto.getSubcategory().isBlank()
                 && dto.getSourceAccount() != null
                 && !dto.getSourceAccount().isBlank();
     }
