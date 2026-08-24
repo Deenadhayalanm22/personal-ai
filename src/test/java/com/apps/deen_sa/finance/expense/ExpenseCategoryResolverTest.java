@@ -205,6 +205,17 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
+    void identifiesGiftWrappingAsARegularShoppingExpense() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+
+        resolver.canonicalize(expense, "Did gift wrapping for the toy for 20 paid using api.");
+
+        assertThat(expense.getCategory()).isEqualTo("Shopping");
+        assertThat(expense.getSubcategory()).isEqualTo("Gifts");
+    }
+
+    @Test
     void mapsTransferToSpouseToFamilySupportWithoutCategoryFollowup() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
         ExpenseDto expense = new ExpenseDto();

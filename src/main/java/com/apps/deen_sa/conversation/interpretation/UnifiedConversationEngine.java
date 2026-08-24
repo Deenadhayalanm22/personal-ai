@@ -288,7 +288,8 @@ public class UnifiedConversationEngine {
         if (!context.isInFollowup()) return null;
         String field = context.getWaitingForField();
         EventCapability capability = extensions.event(tenantId(context), context.getActiveIntent()).orElse(null);
-        if (capability == null || !"number".equals(capability.fieldTypes().get(field))) return null;
+        String fieldType = capability == null ? null : capability.fieldTypes().get(field);
+        if (fieldType == null || !Set.of("number", "integer").contains(fieldType)) return null;
         java.math.BigDecimal value = parsePositiveDecimal(text);
         if (value == null || value.signum() < 0) return null;
         EventPatch patch = new EventPatch(null, context.getActiveIntent(), Map.of(field, value),
