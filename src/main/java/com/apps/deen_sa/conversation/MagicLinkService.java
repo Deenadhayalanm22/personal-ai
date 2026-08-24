@@ -79,7 +79,7 @@ public class MagicLinkService {
                 .toUriString();
     }
 
-    static String hash(String token) {
+    public static String hash(String token) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(token.getBytes(StandardCharsets.UTF_8));

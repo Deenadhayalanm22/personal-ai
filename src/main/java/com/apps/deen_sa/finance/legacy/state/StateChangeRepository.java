@@ -94,6 +94,17 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
                                  @Param("end") Instant end, @Param("sourceAccount") String sourceAccount);
 
     @Query(value = """
+            SELECT COALESCE(t.category, 'Uncategorized'), COALESCE(SUM(t.amount), 0)
+            FROM state_change t
+            WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            GROUP BY 1 ORDER BY SUM(t.amount) DESC
+            """, nativeQuery = true)
+    List<Object[]> sumExpensesByCategoryForPeriod(@Param("userId") String userId,
+                                                   @Param("start") Instant start,
+                                                   @Param("end") Instant end);
+
+    @Query(value = """
             SELECT t.subcategory, COALESCE(SUM(t.amount), 0) FROM state_change t
             LEFT JOIN state_container c ON c.id = t.source_container_id
             WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
