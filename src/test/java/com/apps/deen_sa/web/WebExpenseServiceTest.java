@@ -22,7 +22,8 @@ class WebExpenseServiceTest {
     private final StateChangeRepository expenses = mock(StateChangeRepository.class);
     private final StateContainerRepository accounts = mock(StateContainerRepository.class);
     private final ExpenseCorrectionService corrections = mock(ExpenseCorrectionService.class);
-    private final WebExpenseService service = new WebExpenseService(expenses, accounts, corrections);
+    private final WebExpenseTaxonomyService taxonomy = mock(WebExpenseTaxonomyService.class);
+    private final WebExpenseService service = new WebExpenseService(expenses, accounts, corrections, taxonomy);
     private final AppUserEntity user = new AppUserEntity();
 
     @BeforeEach
@@ -57,6 +58,8 @@ class WebExpenseServiceTest {
         replacement.setSubcategory("Groceries");
         when(corrections.editClassification(42L, 12L, 3, "Food", "Groceries"))
                 .thenReturn(replacement);
+        when(taxonomy.validate("Food", "Groceries"))
+                .thenReturn(new WebExpenseTaxonomyService.Classification("Food", "Groceries"));
 
         var result = service.editClassification(user, 12L,
                 new WebExpenseService.ClassificationUpdate(" Food ", " Groceries ", 3));

@@ -18,10 +18,12 @@ public class WebExpenseService {
     private final StateChangeRepository expenses;
     private final StateContainerRepository accounts;
     private final ExpenseCorrectionService corrections;
+    private final WebExpenseTaxonomyService taxonomy;
 
     public WebExpenseService(StateChangeRepository expenses, StateContainerRepository accounts,
-                             ExpenseCorrectionService corrections) {
+                             ExpenseCorrectionService corrections, WebExpenseTaxonomyService taxonomy) {
         this.expenses = expenses; this.accounts = accounts; this.corrections = corrections;
+        this.taxonomy = taxonomy;
     }
 
     public ExpensePage list(AppUserEntity user, YearMonth month, int requestedLimit, Long beforeId) {
@@ -44,11 +46,10 @@ public class WebExpenseService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
         String category = clean(request.category(), "category");
         String subcategory = clean(request.subcategory(), "subcategory");
-        if (category == null && subcategory == null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category or subcategory is required");
+        WebExpenseTaxonomyService.Classification classification = taxonomy.validate(category, subcategory);
         try {
             StateChangeEntity updated = corrections.editClassification(
-                    user.getId(), id, request.version(), category, subcategory);
+                    user.getId(), id, request.version(), classification.category(), classification.subcategory());
             return item(updated, user.getCurrency(), accountNames(List.of(updated)));
         } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());

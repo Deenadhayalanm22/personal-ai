@@ -65,6 +65,26 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             @Param("userId") String userId, @Param("containerType") String containerType);
 
     @Query(value = """
+            SELECT activity.account_id, COUNT(DISTINCT activity.transaction_id)
+            FROM (
+                SELECT id AS transaction_id, source_container_id AS account_id
+                FROM state_change
+                WHERE user_id = :userId AND record_status = 'ACTIVE'
+                  AND tx_time >= :start AND tx_time < :end
+                UNION ALL
+                SELECT id AS transaction_id, target_container_id AS account_id
+                FROM state_change
+                WHERE user_id = :userId AND record_status = 'ACTIVE'
+                  AND tx_time >= :start AND tx_time < :end
+            ) activity
+            WHERE activity.account_id IS NOT NULL
+            GROUP BY activity.account_id
+            """, nativeQuery = true)
+    List<Object[]> countActiveTransactionsByAccount(@Param("userId") String userId,
+                                                     @Param("start") Instant start,
+                                                     @Param("end") Instant end);
+
+    @Query(value = """
             SELECT COALESCE(SUM(amount), 0) FROM state_change
             WHERE user_id = :userId AND transaction_type = 'EXPENSE'
               AND record_status = 'ACTIVE'

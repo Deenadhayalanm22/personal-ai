@@ -16,16 +16,18 @@ public class WebFinanceController {
     private final MonthlyExpenseService monthlyExpenses;
     private final WebExpenseService expenses;
     private final DashboardAccountService accounts;
+    private final WebExpenseTaxonomyService taxonomy;
     private final boolean secureCookies;
     private final String cookieSameSite;
 
     public WebFinanceController(WebAuthenticationService authentication, MonthlyExpenseService monthlyExpenses,
-            WebExpenseService expenses, DashboardAccountService accounts,
+            WebExpenseService expenses, DashboardAccountService accounts, WebExpenseTaxonomyService taxonomy,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.monthlyExpenses = monthlyExpenses;
         this.expenses = expenses;
         this.accounts = accounts;
+        this.taxonomy = taxonomy;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
     }
 
@@ -55,7 +57,8 @@ public class WebFinanceController {
             @RequestParam(required = false) YearMonth month) {
         AppUserEntity user = authentication.authenticate(token);
         YearMonth selected = selectedMonth(user, month);
-        return new DashboardResponse(monthlyExpenses.summarize(user, selected), accounts.activeAccounts(user.getId()),
+        return new DashboardResponse(monthlyExpenses.summarize(user, selected),
+                accounts.activeAccounts(user.getId(), ZoneId.of(user.getTimezone())),
                 expenses.list(user, selected, 10, null));
     }
 
@@ -67,6 +70,13 @@ public class WebFinanceController {
             @RequestParam(required = false) Long beforeId) {
         AppUserEntity user = authentication.authenticate(token);
         return expenses.list(user, selectedMonth(user, month), limit, beforeId);
+    }
+
+    @GetMapping("/expense-taxonomy")
+    public WebExpenseTaxonomyService.TaxonomyResponse expenseTaxonomy(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        authentication.authenticate(token);
+        return taxonomy.options();
     }
 
     @PatchMapping("/expenses/{id}/classification")
