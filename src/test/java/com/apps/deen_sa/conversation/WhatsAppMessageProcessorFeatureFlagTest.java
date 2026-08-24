@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,7 @@ class WhatsAppMessageProcessorFeatureFlagTest {
     private final InboundMessageService inboundMessages = mock(InboundMessageService.class);
     private final WhatsAppReplySender replies = mock(WhatsAppReplySender.class);
     private final UserFeatureFlagService featureFlags = mock(UserFeatureFlagService.class);
+    private final MagicLinkService magicLinks = mock(MagicLinkService.class);
     private WhatsAppMessageProcessor processor;
 
     @BeforeEach
@@ -27,7 +29,8 @@ class WhatsAppMessageProcessorFeatureFlagTest {
                 mock(AudioTranscriber.class),
                 mock(AudioConfirmationService.class),
                 featureFlags,
-                mock(WhatsAppAccessCommandService.class));
+                mock(WhatsAppAccessCommandService.class),
+                magicLinks);
     }
 
     @Test
@@ -55,5 +58,21 @@ class WhatsAppMessageProcessorFeatureFlagTest {
         verify(conversation).process("WHATSAPP", MOBILE, "message-2", "Paid 500 for groceries");
         verify(replies).sendTextReply(MOBILE, "Expense saved.");
         verify(inboundMessages).complete(43L);
+    }
+
+    @Test
+    void generatesAndRepliesWithLinkForAnEnabledMobile() {
+        when(inboundMessages.claim("WHATSAPP", "message-3", MOBILE)).thenReturn(44L);
+        when(featureFlags.hasAnyEnabledFeature("WHATSAPP", MOBILE)).thenReturn(true);
+        when(magicLinks.generateForWhatsAppUser(MOBILE))
+                .thenReturn("https://money.example.com/access?token=secret");
+
+        processor.processIncomingMessage(MOBILE, "show me my link", "message-3");
+
+        verify(magicLinks).generateForWhatsAppUser(MOBILE);
+        verify(replies).sendTextReply(MOBILE,
+                "Open your page: https://money.example.com/access?token=secret");
+        verify(conversation, never()).process(anyString(), anyString(), anyString(), anyString());
+        verify(inboundMessages).complete(44L);
     }
 }

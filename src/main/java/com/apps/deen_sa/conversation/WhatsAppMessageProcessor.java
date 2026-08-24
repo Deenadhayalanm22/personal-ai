@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 @Service
@@ -23,6 +24,11 @@ public class WhatsAppMessageProcessor {
     private final AudioConfirmationService confirmationService;
     private final UserFeatureFlagService featureFlags;
     private final WhatsAppAccessCommandService accessCommands;
+    private final MagicLinkService magicLinks;
+
+    private static final Pattern MAGIC_LINK_REQUEST = Pattern.compile(
+            "(?i)^\\s*(?:(?:please\\s+)?(?:show|send|give)(?:\\s+me)?\\s+(?:my\\s+)?(?:magic\\s+)?link|"
+                    + "(?:get|generate)\\s+(?:my\\s+)?(?:magic\\s+)?link)\\s*[.!?]?\\s*$");
 
     private static final String ACCESS_DENIED_MESSAGE =
             "Access is not enabled for this mobile number. Please contact the administrator.";
@@ -149,6 +155,12 @@ public class WhatsAppMessageProcessor {
     }
 
     private void processText(String from, String text, String messageId) {
+        if (text != null && MAGIC_LINK_REQUEST.matcher(text).matches()) {
+            String link = magicLinks.generateForWhatsAppUser(from);
+            replySender.sendTextReply(from, "Open your page: " + link);
+            return;
+        }
+
         Object lock = userLocks[Math.floorMod(from.hashCode(), userLocks.length)];
         synchronized (lock) {
             log.info("Received message - {} from {}", text, from);

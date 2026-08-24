@@ -22,7 +22,8 @@ class WhatsAppChartDeliveryTest {
         when(replies.sendImageReply("9199", chart, "You spent ₹12,000.")).thenReturn(true);
         WhatsAppMessageProcessor processor = new WhatsAppMessageProcessor(conversation, inbound, replies,
                 mock(WhatsAppMediaDownloader.class), mock(AudioTranscriber.class),
-                mock(AudioConfirmationService.class), flags, mock(WhatsAppAccessCommandService.class));
+                mock(AudioConfirmationService.class), flags, mock(WhatsAppAccessCommandService.class),
+                mock(MagicLinkService.class));
 
         processor.processIncomingMessage("9199", "show spending", "m1");
 
@@ -44,7 +45,8 @@ class WhatsAppChartDeliveryTest {
         when(replies.sendImageReply("9199", chart, "Summary")).thenReturn(false);
         WhatsAppMessageProcessor processor = new WhatsAppMessageProcessor(conversation, inbound, replies,
                 mock(WhatsAppMediaDownloader.class), mock(AudioTranscriber.class),
-                mock(AudioConfirmationService.class), flags, mock(WhatsAppAccessCommandService.class));
+                mock(AudioConfirmationService.class), flags, mock(WhatsAppAccessCommandService.class),
+                mock(MagicLinkService.class));
 
         processor.processIncomingMessage("9199", "chart", "m2");
 
