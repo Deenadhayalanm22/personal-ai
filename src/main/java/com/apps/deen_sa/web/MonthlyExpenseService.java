@@ -23,9 +23,10 @@ public class MonthlyExpenseService {
         expenses.sumExpensesByCategoryForPeriod(String.valueOf(user.getId()), start, end)
                 .forEach(row -> categories.put((String) row[0], (BigDecimal) row[1]));
         BigDecimal total = categories.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new MonthlyExpenseResponse(month.toString(), user.getCurrency(), total, categories);
+        long transactionCount = expenses.countExpensesForPeriod(String.valueOf(user.getId()), start, end);
+        return new MonthlyExpenseResponse(month.toString(), user.getCurrency(), total, transactionCount, categories);
     }
 
-    public record MonthlyExpenseResponse(String month, String currency, BigDecimal total,
+    public record MonthlyExpenseResponse(String month, String currency, BigDecimal total, long transactionCount,
                                          Map<String, BigDecimal> categories) { }
 }

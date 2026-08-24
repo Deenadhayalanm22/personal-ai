@@ -29,6 +29,19 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
                                                      @Param("beforeId") Long beforeId,
                                                      Pageable pageable);
 
+    @Query("""
+            SELECT t FROM StateChangeEntity t
+            WHERE t.userId = :userId
+              AND t.transactionType = com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum.EXPENSE
+              AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
+              AND t.timestamp >= :start AND t.timestamp < :end
+              AND (:beforeId IS NULL OR t.id < :beforeId)
+            ORDER BY t.id DESC
+            """)
+    List<StateChangeEntity> findActiveExpensesForPeriodBefore(
+            @Param("userId") String userId, @Param("start") Instant start,
+            @Param("end") Instant end, @Param("beforeId") Long beforeId, Pageable pageable);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT t FROM StateChangeEntity t
@@ -103,6 +116,14 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
     List<Object[]> sumExpensesByCategoryForPeriod(@Param("userId") String userId,
                                                    @Param("start") Instant start,
                                                    @Param("end") Instant end);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM state_change t
+            WHERE t.user_id = :userId AND t.transaction_type = 'EXPENSE' AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+            """, nativeQuery = true)
+    long countExpensesForPeriod(@Param("userId") String userId,
+                                @Param("start") Instant start, @Param("end") Instant end);
 
     @Query(value = """
             SELECT t.subcategory, COALESCE(SUM(t.amount), 0) FROM state_change t

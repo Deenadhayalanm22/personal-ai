@@ -61,7 +61,7 @@ public class PersonalFinanceExtension implements BusinessExtension {
                 • Show spending totals and category breakdowns for today or this month
                 • Set monthly category budgets and check what remains
                 • Show upcoming credit-card payment reminders
-                • Find, edit, or delete an earlier expense safely
+                • Review, edit, or delete earlier expenses from your web dashboard
 
                 Describe what happened naturally. For example: “I spent ₹500 on groceries using UPI.”
                 """;

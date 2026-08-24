@@ -22,11 +22,13 @@ class MonthlyExpenseServiceTest {
         when(expenses.sumExpensesByCategoryForPeriod("42", start, end)).thenReturn(List.of(
                 new Object[]{"Groceries", new BigDecimal("1200.00")},
                 new Object[]{"Travel", new BigDecimal("300.00")}));
+        when(expenses.countExpensesForPeriod("42", start, end)).thenReturn(7L);
 
         var result = new MonthlyExpenseService(expenses).summarize(user, YearMonth.of(2026, 8));
 
         assertThat(result.month()).isEqualTo("2026-08");
         assertThat(result.total()).isEqualByComparingTo("1500.00");
+        assertThat(result.transactionCount()).isEqualTo(7);
         assertThat(result.categories()).containsEntry("Groceries", new BigDecimal("1200.00"));
     }
 }

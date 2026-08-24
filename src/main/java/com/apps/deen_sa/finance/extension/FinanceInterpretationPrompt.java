@@ -5,10 +5,9 @@ import com.apps.deen_sa.extension.api.InterpretationPromptContributor;
 final class FinanceInterpretationPrompt implements InterpretationPromptContributor {
     @Override public String instructions() { return """
             PERSONAL-FINANCE EXTENSION
-            Supported event types: EXPENSE, EXPENSE_CORRECTION, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
+            Supported event types: EXPENSE, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
             Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText, correctionAction,
-            correctionChoice.
+            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
             - A new financial movement amount must have exact evidence in the current message.
             - Existing accounts are reference candidates only. Populate an account only when stated now or when it
               directly answers a pending question.
@@ -34,16 +33,8 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
               Ordinary meat, fish, chicken, vegetables, and ingredients bought for cooking are Groceries. Use
               Celebration Meal/Home Cooked only when the message explicitly describes a celebration or special meal.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
-            - Requests to find, edit, correct, remove, void, or delete an earlier expense are EXPENSE_CORRECTION.
-              Never reinterpret them as a new EXPENSE. Set correctionAction to EDIT or DELETE. For the initial
-              request, extract only an explicitly stated category or subcategory scope; do not identify or filter by
-              merchant. If no category scope is stated, leave both null. During its pending flow, put the user's
-              literal answer in correctionChoice; the capability performs selection, validation, and confirmation.
-              EXPENSE_CORRECTION is an operational event workflow, not a read-only QUERY. An explicit request to
-              edit, correct, change, remove, void, or delete takes precedence over browsing language such as show,
-              find, last, latest, recent, expense, or transaction. This precedence is semantic and applies in every
-              language. For example, "Show my last transaction as I want to edit" must select EXPENSE_CORRECTION,
-              correctionAction=EDIT, with category and subcategory null.
+            - Editing or deleting earlier expenses is handled by the authenticated web dashboard, not conversation.
+              Never reinterpret an edit, correction, removal, void, or deletion request as a new EXPENSE.
             - Expense queries use QUERY with TODAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, LAST_MONTH, LAST_7_DAYS or LAST_3_MONTHS.
             - Questions asking for an account, bank, UPI, cash or card balance use QUERY with ACCOUNT_BALANCE.
             - Questions about budget remaining, budget status or overspending use QUERY with CURRENT_STATUS.

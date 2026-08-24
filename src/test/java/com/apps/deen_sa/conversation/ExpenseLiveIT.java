@@ -447,6 +447,7 @@ class ExpenseLiveIT extends AbstractIntegrationTestProperties {
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled("Natural-language expense correction moved to the authenticated web dashboard")
     void it_live_edit_delete_scenario() throws Exception {
         requireRealApiKey();
         int message = 1;

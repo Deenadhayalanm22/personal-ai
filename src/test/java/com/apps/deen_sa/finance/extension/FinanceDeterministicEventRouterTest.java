@@ -14,8 +14,8 @@ class FinanceDeterministicEventRouterTest {
             "delete my last expense",
             "Show me today's groceries transactions"
     })
-    void routesExpenseCorrectionAndBrowseRequestsWithoutTheModel(String text) {
-        assertThat(router.eventType(text)).contains("EXPENSE_CORRECTION");
+    void leavesDashboardManagedAndBrowseRequestsOutOfEventRouting(String text) {
+        assertThat(router.eventType(text)).isEmpty();
     }
 
     @ParameterizedTest

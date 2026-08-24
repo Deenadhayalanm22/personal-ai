@@ -88,10 +88,6 @@ final class FinanceDeterministicEventRouter implements DeterministicEventRouter 
             "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+(.+?)\\s+மூலம்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
     private static final Pattern TAMIL_WITHOUT_SOURCE = Pattern.compile(
             "^\\s*(?:இன்று|நேற்று)\\s+(.+?)\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+ரூபாய்\\s+செலவு\\s+செய்தேன்\\s*[.!]?\\s*$");
-    private static final Pattern EXPENSE_CORRECTION = Pattern.compile(
-            "(?i)^\\s*(?:(?:i\\s+)?(?:want|need|would\\s+like)\\s+to\\s+)?(?:edit|delete|remove|void|correct|update|change)\\b.*$");
-    private static final Pattern TRANSACTION_BROWSE = Pattern.compile(
-            "(?i)^\\s*(?:show|find|list)\\b.*\\b(?:expense|expenses|transaction|transactions)\\b.*$");
     private static final Pattern EXPENSE_SUMMARY_QUERY = Pattern.compile(
             "(?i)^.*\\b(?:summary|chart|breakdown|total|spent|spending)\\b.*"
                     + "\\b(?:today|this\\s+week|this\\s+month|this\\s+year|last\\s+month|last\\s+(?:3|three)\\s+months)\\b.*$|"

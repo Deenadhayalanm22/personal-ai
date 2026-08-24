@@ -13,14 +13,13 @@ import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
-class ExpenseCorrectionService {
+public class ExpenseCorrectionService {
     private final StateChangeRepository transactions;
     private final StateMutationRepository mutationRecords;
     private final StateMutationService mutations;
@@ -35,36 +34,33 @@ class ExpenseCorrectionService {
     }
 
     @Transactional
-    CorrectionOutcome voidExpense(Long userId, Long transactionId) {
-        StateChangeEntity original = activeOwnedExpense(userId, transactionId);
+    public void voidExpense(Long userId, Long transactionId, int expectedVersion) {
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
         reverseLegacyImpact(original);
         original.setRecordStatus(ExpenseRecordStatus.VOIDED);
         original.setCorrectedAt(Instant.now());
-        original.setCorrectionReason("USER_DELETED");
+        original.setCorrectionReason("USER_DELETED_FROM_WEB");
         transactions.save(original);
-        return new CorrectionOutcome(original, null, balanceImpact(original.getAmount(), BigDecimal.ZERO));
     }
 
     @Transactional
-    CorrectionOutcome editExpense(Long userId, Long transactionId, CorrectionField field, Object value) {
-        StateChangeEntity original = activeOwnedExpense(userId, transactionId);
+    public StateChangeEntity editClassification(Long userId, Long transactionId, int expectedVersion,
+                                                 String category, String subcategory) {
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
         StateChangeEntity replacement = copy(original);
-        apply(replacement, field, value);
+        if (category != null) replacement.setCategory(category);
+        if (subcategory != null) replacement.setSubcategory(subcategory);
         replacement = transactions.save(replacement);
 
         if (original.isFinanciallyApplied()) {
             reverseLegacyImpact(original);
             applyLegacyImpact(replacement, original);
         }
-
         original.setRecordStatus(ExpenseRecordStatus.SUPERSEDED);
         original.setCorrectedAt(Instant.now());
-        original.setCorrectionReason("USER_EDITED_" + field.name());
+        original.setCorrectionReason("USER_EDITED_CLASSIFICATION_FROM_WEB");
         transactions.save(original);
-        final StateChangeEntity savedReplacement = replacement;
-
-        return new CorrectionOutcome(original, savedReplacement,
-                balanceImpact(original.getAmount(), replacement.getAmount()));
+        return replacement;
     }
 
     private StateChangeEntity activeOwnedExpense(Long userId, Long transactionId) {
@@ -72,6 +68,13 @@ class ExpenseCorrectionService {
                 .orElseThrow(() -> new IllegalArgumentException("That expense no longer exists."));
         if (value.getRecordStatus() != ExpenseRecordStatus.ACTIVE)
             throw new IllegalStateException("That expense was already corrected. Please choose its latest version.");
+        return value;
+    }
+
+    private StateChangeEntity activeOwnedExpense(Long userId, Long transactionId, int expectedVersion) {
+        StateChangeEntity value = activeOwnedExpense(userId, transactionId);
+        if (value.getRecordVersion() != expectedVersion)
+            throw new org.springframework.dao.OptimisticLockingFailureException("The expense changed since it was loaded.");
         return value;
     }
 
@@ -122,21 +125,4 @@ class ExpenseCorrectionService {
         return value;
     }
 
-    private void apply(StateChangeEntity value, CorrectionField field, Object replacement) {
-        switch (field) {
-            case AMOUNT -> value.setAmount((BigDecimal) replacement);
-            case CATEGORY -> value.setCategory(replacement.toString());
-            case MERCHANT -> value.setMainEntity(replacement.toString());
-            case DATE -> value.setTimestamp((Instant) replacement);
-            case ACCOUNT -> value.setSourceContainerId((Long) replacement);
-        }
-    }
-
-    private String accountName(Long id) { return id == null ? "Unallocated" : containers.findById(id).map(StateContainerEntity::getName).orElse("Unknown"); }
-    private String balanceImpact(BigDecimal oldAmount, BigDecimal newAmount) {
-        BigDecimal restored = oldAmount.subtract(newAmount);
-        if (restored.signum() == 0) return null;
-        return (restored.signum() > 0 ? "₹" + restored.stripTrailingZeros().toPlainString() + " was restored"
-                : "₹" + restored.abs().stripTrailingZeros().toPlainString() + " was deducted");
-    }
 }
