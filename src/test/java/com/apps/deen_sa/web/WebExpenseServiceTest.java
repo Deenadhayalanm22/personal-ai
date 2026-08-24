@@ -35,10 +35,11 @@ class WebExpenseServiceTest {
     void listsOnlyTheAuthenticatedUsersMonthWithCursorPagination() {
         StateChangeEntity first = expense(12L, "Food", 1);
         StateChangeEntity second = expense(11L, "Travel", 2);
-        when(expenses.findFilteredActiveExpensesBefore(eq("42"), any(), any(), isNull(), isNull(), isNull(),
-                isNull(), any()))
+        when(expenses.findFilteredActiveExpensesBefore(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq(""), isNull(), any()))
                 .thenReturn(List.of(first, second));
-        when(expenses.summarizeFilteredActiveExpenses(eq("42"), any(), any(), isNull(), isNull(), isNull()))
+        when(expenses.summarizeFilteredActiveExpenses(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq("")))
                 .thenReturn(java.util.Collections.singletonList(new Object[]{2L, new BigDecimal("200")}));
 
         var page = service.list(user, YearMonth.of(2026, 8), 1, null, null);
@@ -49,7 +50,7 @@ class WebExpenseServiceTest {
         ArgumentCaptor<Instant> end = ArgumentCaptor.forClass(Instant.class);
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
         verify(expenses).findFilteredActiveExpensesBefore(eq("42"), start.capture(), end.capture(),
-                isNull(), isNull(), isNull(), isNull(), pageable.capture());
+                isNull(), eq(false), eq(""), eq(false), eq(""), isNull(), pageable.capture());
         assertThat(start.getValue()).isEqualTo(Instant.parse("2026-07-31T18:30:00Z"));
         assertThat(end.getValue()).isEqualTo(Instant.parse("2026-08-31T18:30:00Z"));
         assertThat(pageable.getValue().getPageSize()).isEqualTo(2);
@@ -61,10 +62,10 @@ class WebExpenseServiceTest {
     void appliesAccountCategoryAndSubcategoryAsOneFilter() {
         StateChangeEntity result = expense(12L, "Food", 1);
         result.setSubcategory("Restaurants");
-        when(expenses.findFilteredActiveExpensesBefore(eq("42"), any(), any(), eq(7L), eq("Food"),
-                eq("Restaurants"), isNull(), any())).thenReturn(List.of(result));
-        when(expenses.summarizeFilteredActiveExpenses(eq("42"), any(), any(), eq(7L), eq("Food"),
-                eq("Restaurants"))).thenReturn(
+        when(expenses.findFilteredActiveExpensesBefore(eq("42"), any(), any(), eq(7L), eq(true), eq("Food"),
+                eq(true), eq("Restaurants"), isNull(), any())).thenReturn(List.of(result));
+        when(expenses.summarizeFilteredActiveExpenses(eq("42"), any(), any(), eq(7L), eq(true), eq("Food"),
+                eq(true), eq("Restaurants"))).thenReturn(
                         java.util.Collections.singletonList(new Object[]{1L, new BigDecimal("100")}));
 
         var page = service.list(user, YearMonth.of(2026, 8), 20, null,

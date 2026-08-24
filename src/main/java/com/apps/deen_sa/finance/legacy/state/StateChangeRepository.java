@@ -49,15 +49,17 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
               AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
               AND t.timestamp >= :start AND t.timestamp < :end
               AND (:accountId IS NULL OR t.sourceContainerId = :accountId OR t.targetContainerId = :accountId)
-              AND (:category IS NULL OR LOWER(t.category) = LOWER(:category))
-              AND (:subcategory IS NULL OR LOWER(t.subcategory) = LOWER(:subcategory))
+              AND (:categoryFiltered = false OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategoryFiltered = false OR LOWER(t.subcategory) = LOWER(:subcategory))
               AND (:beforeId IS NULL OR t.id < :beforeId)
             ORDER BY t.id DESC
             """)
     List<StateChangeEntity> findFilteredActiveExpensesBefore(
             @Param("userId") String userId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("accountId") Long accountId,
-            @Param("category") String category, @Param("subcategory") String subcategory,
+            @Param("categoryFiltered") boolean categoryFiltered, @Param("category") String category,
+            @Param("subcategoryFiltered") boolean subcategoryFiltered,
+            @Param("subcategory") String subcategory,
             @Param("beforeId") Long beforeId, Pageable pageable);
 
     @Query("""
@@ -67,13 +69,15 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
               AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
               AND t.timestamp >= :start AND t.timestamp < :end
               AND (:accountId IS NULL OR t.sourceContainerId = :accountId OR t.targetContainerId = :accountId)
-              AND (:category IS NULL OR LOWER(t.category) = LOWER(:category))
-              AND (:subcategory IS NULL OR LOWER(t.subcategory) = LOWER(:subcategory))
+              AND (:categoryFiltered = false OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategoryFiltered = false OR LOWER(t.subcategory) = LOWER(:subcategory))
             """)
     List<Object[]> summarizeFilteredActiveExpenses(
             @Param("userId") String userId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("accountId") Long accountId,
-            @Param("category") String category, @Param("subcategory") String subcategory);
+            @Param("categoryFiltered") boolean categoryFiltered, @Param("category") String category,
+            @Param("subcategoryFiltered") boolean subcategoryFiltered,
+            @Param("subcategory") String subcategory);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

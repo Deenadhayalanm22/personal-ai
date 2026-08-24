@@ -34,16 +34,21 @@ public class WebExpenseService {
         Instant start = month.atDay(1).atStartOfDay(zone).toInstant();
         Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
         String userId = String.valueOf(user.getId());
+        boolean categoryFiltered = filter.category() != null;
+        boolean subcategoryFiltered = filter.subcategory() != null;
+        String categoryQuery = categoryFiltered ? filter.category() : "";
+        String subcategoryQuery = subcategoryFiltered ? filter.subcategory() : "";
         List<StateChangeEntity> found = expenses.findFilteredActiveExpensesBefore(
-                userId, start, end, filter.accountId(), filter.category(), filter.subcategory(), beforeId,
-                PageRequest.of(0, limit + 1));
+                userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
+                subcategoryFiltered, subcategoryQuery, beforeId, PageRequest.of(0, limit + 1));
         boolean hasMore = found.size() > limit;
         List<StateChangeEntity> visible = hasMore ? found.subList(0, limit) : found;
         Map<Long, String> accountNames = accountNames(visible);
         List<ExpenseItem> items = visible.stream().map(row -> item(row, user.getCurrency(), accountNames)).toList();
         Long next = hasMore && !visible.isEmpty() ? visible.getLast().getId() : null;
         List<Object[]> summaryRows = expenses.summarizeFilteredActiveExpenses(
-                userId, start, end, filter.accountId(), filter.category(), filter.subcategory());
+                userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
+                subcategoryFiltered, subcategoryQuery);
         Object[] summary = summaryRows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO} : summaryRows.getFirst();
         FilterSummary filterSummary = new FilterSummary(((Number) summary[0]).longValue(),
                 (BigDecimal) summary[1], user.getCurrency(), filter.accountId(), filter.category(), filter.subcategory());
