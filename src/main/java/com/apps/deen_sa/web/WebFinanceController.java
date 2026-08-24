@@ -15,15 +15,17 @@ public class WebFinanceController {
     private final WebAuthenticationService authentication;
     private final MonthlyExpenseService monthlyExpenses;
     private final WebExpenseService expenses;
+    private final DashboardAccountService accounts;
     private final boolean secureCookies;
     private final String cookieSameSite;
 
     public WebFinanceController(WebAuthenticationService authentication, MonthlyExpenseService monthlyExpenses,
-            WebExpenseService expenses,
+            WebExpenseService expenses, DashboardAccountService accounts,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.monthlyExpenses = monthlyExpenses;
         this.expenses = expenses;
+        this.accounts = accounts;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
     }
 
@@ -53,7 +55,7 @@ public class WebFinanceController {
             @RequestParam(required = false) YearMonth month) {
         AppUserEntity user = authentication.authenticate(token);
         YearMonth selected = selectedMonth(user, month);
-        return new DashboardResponse(monthlyExpenses.summarize(user, selected),
+        return new DashboardResponse(monthlyExpenses.summarize(user, selected), accounts.activeAccounts(user.getId()),
                 expenses.list(user, selected, 10, null));
     }
 
@@ -91,5 +93,6 @@ public class WebFinanceController {
     public record MagicLinkRequest(String token) { }
     public record AuthResponse(boolean authenticated, Instant expiresAt) { }
     public record DashboardResponse(MonthlyExpenseService.MonthlyExpenseResponse summary,
+                                    java.util.List<DashboardAccountService.DashboardAccount> accounts,
                                     WebExpenseService.ExpensePage recentExpenses) { }
 }
