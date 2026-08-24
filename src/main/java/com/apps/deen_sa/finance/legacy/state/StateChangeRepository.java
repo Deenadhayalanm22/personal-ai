@@ -42,6 +42,39 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             @Param("userId") String userId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("beforeId") Long beforeId, Pageable pageable);
 
+    @Query("""
+            SELECT t FROM StateChangeEntity t
+            WHERE t.userId = :userId
+              AND t.transactionType = com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum.EXPENSE
+              AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
+              AND t.timestamp >= :start AND t.timestamp < :end
+              AND (:accountId IS NULL OR t.sourceContainerId = :accountId OR t.targetContainerId = :accountId)
+              AND (:category IS NULL OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategory IS NULL OR LOWER(t.subcategory) = LOWER(:subcategory))
+              AND (:beforeId IS NULL OR t.id < :beforeId)
+            ORDER BY t.id DESC
+            """)
+    List<StateChangeEntity> findFilteredActiveExpensesBefore(
+            @Param("userId") String userId, @Param("start") Instant start,
+            @Param("end") Instant end, @Param("accountId") Long accountId,
+            @Param("category") String category, @Param("subcategory") String subcategory,
+            @Param("beforeId") Long beforeId, Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(t), COALESCE(SUM(t.amount), 0) FROM StateChangeEntity t
+            WHERE t.userId = :userId
+              AND t.transactionType = com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum.EXPENSE
+              AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
+              AND t.timestamp >= :start AND t.timestamp < :end
+              AND (:accountId IS NULL OR t.sourceContainerId = :accountId OR t.targetContainerId = :accountId)
+              AND (:category IS NULL OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategory IS NULL OR LOWER(t.subcategory) = LOWER(:subcategory))
+            """)
+    List<Object[]> summarizeFilteredActiveExpenses(
+            @Param("userId") String userId, @Param("start") Instant start,
+            @Param("end") Instant end, @Param("accountId") Long accountId,
+            @Param("category") String category, @Param("subcategory") String subcategory);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT t FROM StateChangeEntity t

@@ -26,19 +26,28 @@ public class WebExpenseService {
         this.taxonomy = taxonomy;
     }
 
-    public ExpensePage list(AppUserEntity user, YearMonth month, int requestedLimit, Long beforeId) {
+    public ExpensePage list(AppUserEntity user, YearMonth month, int requestedLimit, Long beforeId,
+                            ExpenseFilter requestedFilter) {
         int limit = Math.max(1, Math.min(requestedLimit, MAX_PAGE_SIZE));
+        ExpenseFilter filter = normalize(requestedFilter);
         ZoneId zone = ZoneId.of(user.getTimezone());
         Instant start = month.atDay(1).atStartOfDay(zone).toInstant();
         Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
-        List<StateChangeEntity> found = expenses.findActiveExpensesForPeriodBefore(
-                String.valueOf(user.getId()), start, end, beforeId, PageRequest.of(0, limit + 1));
+        String userId = String.valueOf(user.getId());
+        List<StateChangeEntity> found = expenses.findFilteredActiveExpensesBefore(
+                userId, start, end, filter.accountId(), filter.category(), filter.subcategory(), beforeId,
+                PageRequest.of(0, limit + 1));
         boolean hasMore = found.size() > limit;
         List<StateChangeEntity> visible = hasMore ? found.subList(0, limit) : found;
         Map<Long, String> accountNames = accountNames(visible);
         List<ExpenseItem> items = visible.stream().map(row -> item(row, user.getCurrency(), accountNames)).toList();
         Long next = hasMore && !visible.isEmpty() ? visible.getLast().getId() : null;
-        return new ExpensePage(items, next);
+        List<Object[]> summaryRows = expenses.summarizeFilteredActiveExpenses(
+                userId, start, end, filter.accountId(), filter.category(), filter.subcategory());
+        Object[] summary = summaryRows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO} : summaryRows.getFirst();
+        FilterSummary filterSummary = new FilterSummary(((Number) summary[0]).longValue(),
+                (BigDecimal) summary[1], user.getCurrency(), filter.accountId(), filter.category(), filter.subcategory());
+        return new ExpensePage(items, next, filterSummary);
     }
 
     public ExpenseItem editClassification(AppUserEntity user, Long id, ClassificationUpdate request) {
@@ -98,8 +107,17 @@ public class WebExpenseService {
         return cleaned;
     }
 
+    private ExpenseFilter normalize(ExpenseFilter filter) {
+        if (filter == null) return new ExpenseFilter(null, null, null);
+        return new ExpenseFilter(filter.accountId(), clean(filter.category(), "category"),
+                clean(filter.subcategory(), "subcategory"));
+    }
+
     public record ClassificationUpdate(String category, String subcategory, int version) { }
-    public record ExpensePage(List<ExpenseItem> items, Long nextBeforeId) { }
+    public record ExpenseFilter(Long accountId, String category, String subcategory) { }
+    public record FilterSummary(long transactionCount, BigDecimal totalAmount, String currency,
+                                Long accountId, String category, String subcategory) { }
+    public record ExpensePage(List<ExpenseItem> items, Long nextBeforeId, FilterSummary filterSummary) { }
     public record ExpenseItem(Long id, String originalMessage, BigDecimal amount, String currency,
                               Instant transactionTime, String category, String subcategory, String merchant,
                               String sourceAccount, boolean needsReview, int version) { }

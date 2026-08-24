@@ -59,7 +59,7 @@ public class WebFinanceController {
         YearMonth selected = selectedMonth(user, month);
         return new DashboardResponse(monthlyExpenses.summarize(user, selected),
                 accounts.activeAccounts(user.getId(), ZoneId.of(user.getTimezone())),
-                expenses.list(user, selected, 10, null));
+                expenses.list(user, selected, 10, null, new WebExpenseService.ExpenseFilter(null, null, null)));
     }
 
     @GetMapping("/expenses")
@@ -67,9 +67,13 @@ public class WebFinanceController {
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(required = false) Long beforeId) {
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String subcategory) {
         AppUserEntity user = authentication.authenticate(token);
-        return expenses.list(user, selectedMonth(user, month), limit, beforeId);
+        return expenses.list(user, selectedMonth(user, month), limit, beforeId,
+                new WebExpenseService.ExpenseFilter(accountId, category, subcategory));
     }
 
     @GetMapping("/expense-taxonomy")
