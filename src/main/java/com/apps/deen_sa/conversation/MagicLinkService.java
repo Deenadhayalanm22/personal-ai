@@ -1,6 +1,8 @@
 package com.apps.deen_sa.conversation;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -25,12 +27,14 @@ public class MagicLinkService {
     private final SecureRandom secureRandom;
     private final Clock clock;
 
+    @Autowired
     public MagicLinkService(
             AppUserService users,
             MagicLinkRepository links,
             @Value("${app.web.base-url}") String baseUrl,
-            @Value("${app.web.magic-link-expiry:15m}") Duration expiry) {
-        this(users, links, baseUrl, expiry, new SecureRandom(), Clock.systemUTC());
+            @Value("${app.web.magic-link-expiry:15m}") String expiry) {
+        this(users, links, baseUrl, DurationStyle.detectAndParse(expiry),
+                new SecureRandom(), Clock.systemUTC());
     }
 
     MagicLinkService(AppUserService users, MagicLinkRepository links, String baseUrl,

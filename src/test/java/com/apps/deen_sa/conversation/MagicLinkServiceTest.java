@@ -2,12 +2,15 @@ package com.apps.deen_sa.conversation;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.MapPropertySource;
 
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -40,5 +43,21 @@ class MagicLinkServiceTest {
         assertThat(saved.getValue().getTokenHash()).doesNotContain(token);
         assertThat(saved.getValue().getCreatedAt()).isEqualTo(now);
         assertThat(saved.getValue().getExpiresAt()).isEqualTo(now.plus(Duration.ofMinutes(15)));
+    }
+
+    @Test
+    void springUsesTheConfiguredRuntimeConstructor() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("test", Map.of(
+                    "app.web.base-url", "https://money.example.com",
+                    "app.web.magic-link-expiry", "15m")));
+            context.registerBean(AppUserService.class, () -> users);
+            context.registerBean(MagicLinkRepository.class, () -> links);
+            context.register(MagicLinkService.class);
+
+            context.refresh();
+
+            assertThat(context.getBean(MagicLinkService.class)).isNotNull();
+        }
     }
 }
