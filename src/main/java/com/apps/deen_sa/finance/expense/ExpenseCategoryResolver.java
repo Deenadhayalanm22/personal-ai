@@ -1,7 +1,7 @@
 package com.apps.deen_sa.finance.expense;
 
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.llm.impl.TagSemanticMatcher;
+import com.apps.deen_sa.llm.impl.TaxonomySemanticMatcher;
 import org.springframework.stereotype.Component;
 import java.util.*;
 
@@ -9,8 +9,8 @@ import java.util.*;
 @Component
 public class ExpenseCategoryResolver {
     private final ExpenseTaxonomyRegistry taxonomy;
-    private final TagSemanticMatcher semanticMatcher;
-    public ExpenseCategoryResolver(ExpenseTaxonomyRegistry taxonomy, TagSemanticMatcher semanticMatcher) {
+    private final TaxonomySemanticMatcher semanticMatcher;
+    public ExpenseCategoryResolver(ExpenseTaxonomyRegistry taxonomy, TaxonomySemanticMatcher semanticMatcher) {
         this.taxonomy = taxonomy; this.semanticMatcher = semanticMatcher;
     }
 

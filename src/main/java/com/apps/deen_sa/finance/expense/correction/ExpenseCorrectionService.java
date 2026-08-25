@@ -116,7 +116,6 @@ public class ExpenseCorrectionService {
         value.setSubcategory(source.getSubcategory()); value.setMainEntity(source.getMainEntity());
         value.setTimestamp(source.getTimestamp()); value.setRawText(source.getRawText());
         value.setDetails(source.getDetails() == null ? null : new HashMap<>(source.getDetails()));
-        value.setTags(source.getTags() == null ? null : List.copyOf(source.getTags()));
         value.setSourceContainerId(source.getSourceContainerId()); value.setTargetContainerId(source.getTargetContainerId());
         value.setCompletenessLevel(source.getCompletenessLevel()); value.setFinanciallyApplied(source.isFinanciallyApplied());
         value.setNeedsEnrichment(source.isNeedsEnrichment()); value.setRecordStatus(ExpenseRecordStatus.ACTIVE);

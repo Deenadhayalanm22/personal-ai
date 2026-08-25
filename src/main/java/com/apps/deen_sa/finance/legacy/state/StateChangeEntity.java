@@ -11,7 +11,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
 
@@ -72,13 +71,6 @@ public class StateChangeEntity {
 
     @Column(name = "target_container_id")
     private Long targetContainerId;
-
-    // -----------------------------
-    // Tags
-    // -----------------------------
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "tags", columnDefinition = "jsonb")
-    private List<String> tags;
 
     // Optional but useful
     @Column(name = "created_at", nullable = false, updatable = false)

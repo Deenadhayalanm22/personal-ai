@@ -104,7 +104,6 @@ class DailyReviewPositiveTest extends AbstractIntegrationTestProperties {
                     assertThat(expense.getRawText()).isEqualTo("Apartment maintenance charges paid by UPI, 3500");
                     assertThat(expense.getAmount()).isEqualByComparingTo("3500");
                     assertThat(expense.getSubcategory()).isEqualTo("Maintenance");
-                    assertThat(expense.getTags()).containsExactly("apartment");
                     assertThat(expense.getSourceContainerId()).isNotNull();
                     assertThat(expense.isFinanciallyApplied()).isTrue();
                 })
@@ -113,7 +112,6 @@ class DailyReviewPositiveTest extends AbstractIntegrationTestProperties {
                     assertThat(expense.getAmount()).isEqualByComparingTo("4200");
                     assertThat(expense.getSubcategory()).isEqualTo("Furniture");
                     assertThat(expense.getMainEntity()).isEqualTo("IKEA");
-                    assertThat(expense.getTags()).containsExactly("home", "table", "online");
                     assertThat(expense.getSourceContainerId()).isNotNull();
                     assertThat(expense.isFinanciallyApplied()).isTrue();
                     assertThat(expense.isNeedsEnrichment()).isFalse();

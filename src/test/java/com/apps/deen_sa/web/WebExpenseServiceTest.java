@@ -3,6 +3,7 @@ package com.apps.deen_sa.web;
 import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
 import com.apps.deen_sa.finance.expense.correction.ExpenseCorrectionService;
+import com.apps.deen_sa.finance.tag.*;
 import com.apps.deen_sa.finance.legacy.state.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,12 +24,17 @@ class WebExpenseServiceTest {
     private final StateContainerRepository accounts = mock(StateContainerRepository.class);
     private final ExpenseCorrectionService corrections = mock(ExpenseCorrectionService.class);
     private final WebExpenseTaxonomyService taxonomy = mock(WebExpenseTaxonomyService.class);
-    private final WebExpenseService service = new WebExpenseService(expenses, accounts, corrections, taxonomy);
+    private final TagRepository tags = mock(TagRepository.class);
+    private final TransactionTagRepository transactionTags = mock(TransactionTagRepository.class);
+    private final WebExpenseService service = new WebExpenseService(
+            expenses, accounts, corrections, taxonomy, tags, transactionTags);
     private final AppUserEntity user = new AppUserEntity();
 
     @BeforeEach
     void setUp() {
         user.setId(42L); user.setTimezone("Asia/Kolkata"); user.setCurrency("INR");
+        when(transactionTags.findAllByTransactionIdIn(anyCollection())).thenReturn(List.of());
+        when(tags.findAllById(anyCollection())).thenReturn(List.of());
     }
 
     @Test
@@ -86,7 +92,7 @@ class WebExpenseServiceTest {
                 .thenReturn(new WebExpenseTaxonomyService.Classification("Food", "Groceries"));
 
         var result = service.editClassification(user, 12L,
-                new WebExpenseService.ClassificationUpdate(" Food ", " Groceries ", 3));
+                new WebExpenseService.ClassificationUpdate(" Food ", " Groceries ", 3, null));
 
         assertThat(result.id()).isEqualTo(15L);
         assertThat(result.version()).isEqualTo(4);
@@ -96,9 +102,50 @@ class WebExpenseServiceTest {
     @Test
     void rejectsBlankClassification() {
         assertThatThrownBy(() -> service.editClassification(user, 12L,
-                new WebExpenseService.ClassificationUpdate(" ", null, 1)))
+                new WebExpenseService.ClassificationUpdate(" ", null, 1, null)))
                 .isInstanceOf(ResponseStatusException.class).hasMessageContaining("400 BAD_REQUEST");
         verifyNoInteractions(corrections);
+    }
+
+    @Test
+    void editCanReplaceExpenseTagsWithOwnedTagIds() {
+        StateChangeEntity replacement = expense(15L, "Food", 4);
+        TagEntity pondicherry = tag(8L, "Pondicherry");
+        TagEntity family = tag(9L, "Family");
+        when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection())).thenReturn(List.of(pondicherry, family));
+        when(corrections.editClassification(42L, 12L, 3, null, null)).thenReturn(replacement);
+        when(transactionTags.findAllByTransactionIdIn(anyCollection())).thenAnswer(invocation -> {
+            var link1 = new TransactionTagEntity(); link1.setTransactionId(15L); link1.setTagId(8L);
+            var link2 = new TransactionTagEntity(); link2.setTransactionId(15L); link2.setTagId(9L);
+            return List.of(link1, link2);
+        });
+        when(tags.findAllById(anyCollection())).thenReturn(List.of(pondicherry, family));
+
+        var result = service.editClassification(user, 12L,
+                new WebExpenseService.ClassificationUpdate(null, null, 3, List.of(8L, 9L)));
+
+        assertThat(result.tags()).extracting(WebExpenseService.TagItem::name)
+                .containsExactly("Family", "Pondicherry");
+        verify(transactionTags).saveAll(argThat(values -> {
+            List<TransactionTagEntity> links = new java.util.ArrayList<>();
+            values.forEach(links::add);
+            return links.size() == 2 && links.stream().allMatch(link -> link.getTransactionId().equals(15L));
+        }));
+    }
+
+    @Test
+    void rejectsTagsThatDoNotBelongToAuthenticatedUser() {
+        when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection())).thenReturn(List.of(tag(8L, "Mine")));
+
+        assertThatThrownBy(() -> service.editClassification(user, 12L,
+                new WebExpenseService.ClassificationUpdate(null, null, 3, List.of(8L, 99L))))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("400 BAD_REQUEST");
+        verifyNoInteractions(corrections);
+    }
+
+    private TagEntity tag(Long id, String name) {
+        TagEntity value = new TagEntity(); value.setId(id); value.setUserId(42L); value.setName(name);
+        return value;
     }
 
     private StateChangeEntity expense(Long id, String category, int version) {

@@ -10,24 +10,3 @@ TODAY'S DATE = %s and Default currency is Rs from India
   Use one of these if clear, else return null:
   %s
   
-  ### TIER 3 → CONTEXT TAGS (deep meaning)
-  Extract tags that reveal additional semantic meaning.
-  Examples:
-  - "restaurant"
-  - "home_cooked"
-  - "delivery"
-  - "takeaway"
-  - "coffee"
-  - "snacks"
-  - "monthly_ration"
-  - "commute"
-  - "long_drive"
-  - "car"
-  - "bike"
-  - "grocery"
-  - "celebration"
-  - "family_dinner"
-  - "travel_related"
-  - "healthcare"
-  - "bill_payment"
-  If unclear → empty array [].

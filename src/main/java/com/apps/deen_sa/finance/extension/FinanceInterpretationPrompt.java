@@ -7,7 +7,7 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             PERSONAL-FINANCE EXTENSION
             Supported event types: EXPENSE, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
             Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), tags, rawText.
+            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), rawText.
             - A new financial movement amount must have exact evidence in the current message.
             - Existing accounts are reference candidates only. Populate an account only when stated now or when it
               directly answers a pending question.

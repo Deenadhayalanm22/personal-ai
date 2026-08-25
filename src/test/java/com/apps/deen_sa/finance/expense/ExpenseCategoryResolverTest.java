@@ -1,7 +1,7 @@
 package com.apps.deen_sa.finance.expense;
 
 import com.apps.deen_sa.dto.ExpenseDto;
-import com.apps.deen_sa.llm.impl.TagSemanticMatcher;
+import com.apps.deen_sa.llm.impl.TaxonomySemanticMatcher;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
@@ -254,16 +254,16 @@ class ExpenseCategoryResolverTest {
         assertThat(wife.getSubcategory()).isEqualTo("Family Transfer");
     }
 
-    private TagSemanticMatcher matcherMustNotRun() {
-        return new TagSemanticMatcher(null, null) {
+    private TaxonomySemanticMatcher matcherMustNotRun() {
+        return new TaxonomySemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
                 throw new AssertionError("Configured aliases must resolve without a model call");
             }
         };
     }
 
-    private TagSemanticMatcher matcher(String raw, String resolved) {
-        return new TagSemanticMatcher(null, null) {
+    private TaxonomySemanticMatcher matcher(String raw, String resolved) {
+        return new TaxonomySemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
                 assertThat(canonical).contains("Groceries", "Fuel", "Medicines");
                 return Map.of(raw, resolved);
@@ -271,8 +271,8 @@ class ExpenseCategoryResolverTest {
         };
     }
 
-    private TagSemanticMatcher matcherWithin(String raw, String resolved) {
-        return new TagSemanticMatcher(null, null) {
+    private TaxonomySemanticMatcher matcherWithin(String raw, String resolved) {
+        return new TaxonomySemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
                 assertThat(canonical).containsExactlyInAnyOrder(
                         "Groceries", "Eating Out", "Snacks & Beverages", "Celebration Meal/Home Cooked");

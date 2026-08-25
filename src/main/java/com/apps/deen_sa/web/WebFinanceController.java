@@ -18,18 +18,20 @@ public class WebFinanceController {
     private final MonthlyExpenseService monthlyExpenses;
     private final WebExpenseService expenses;
     private final WebExpenseTaxonomyService taxonomy;
+    private final WebTagService tags;
     private final boolean secureCookies;
     private final String cookieSameSite;
 
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             MonthlyExpenseService monthlyExpenses,
-            WebExpenseService expenses, WebExpenseTaxonomyService taxonomy,
+            WebExpenseService expenses, WebExpenseTaxonomyService taxonomy, WebTagService tags,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.loginRequests = loginRequests;
         this.monthlyExpenses = monthlyExpenses;
         this.expenses = expenses;
         this.taxonomy = taxonomy;
+        this.tags = tags;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
     }
 
@@ -97,6 +99,20 @@ public class WebFinanceController {
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
         authentication.authenticate(token);
         return taxonomy.options();
+    }
+
+    @PostMapping("/tags")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebTagService.TagItem createTag(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebTagService.CreateTagRequest request) {
+        return tags.create(authentication.authenticate(token), request);
+    }
+
+    @GetMapping("/tags")
+    public java.util.List<WebTagService.TagItem> tags(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return tags.list(authentication.authenticate(token));
     }
 
     @PatchMapping("/expenses/{id}/classification")

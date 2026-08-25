@@ -58,10 +58,5 @@ public class ExpenseMerger {
             }
         }
 
-        // ---------- TAGS MERGE ----------
-        if (update.getTags() != null && !update.getTags().isEmpty()) {
-            base.setTags(update.getTags());
-        }
-
     }
 }

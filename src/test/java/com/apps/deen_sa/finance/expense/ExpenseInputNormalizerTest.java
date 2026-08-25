@@ -46,7 +46,7 @@ class ExpenseInputNormalizerTest {
     @Test
     void convertsSubcategoryReturnedAsCategoryIntoItsConfiguredParentPair() {
         ExpenseInputNormalizer taxonomyNormalizer = new ExpenseInputNormalizer(
-                new ExpenseCategoryResolver(new ExpenseTaxonomyRegistry(), new com.apps.deen_sa.llm.impl.TagSemanticMatcher(null, null) {
+                new ExpenseCategoryResolver(new ExpenseTaxonomyRegistry(), new com.apps.deen_sa.llm.impl.TaxonomySemanticMatcher(null, null) {
                     @Override
                     public java.util.Map<String, String> match(java.util.List<String> canonical,
                                                                java.util.List<String> values) {

@@ -10,6 +10,6 @@ USER ANSWER:
 "%s"
 
 RULE:
-- Extract only this field and its dependent fields (e.g., category→subcategory→tags).
+- Extract only this field and its dependent classification fields (e.g., category→subcategory).
 - Never invent values.
 - Return ONLY updated fields in JSON.

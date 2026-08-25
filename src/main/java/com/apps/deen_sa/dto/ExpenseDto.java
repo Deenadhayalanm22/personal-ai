@@ -35,11 +35,6 @@ public class ExpenseDto {
     // When it happened
     private LocalDate transactionDate; // renamed from spentAt
 
-    // ----------------------------
-    // CONTEXT & SEMANTICS
-    // ----------------------------
-    private List<String> tags;      // fuel, grocery, commute, celebration, etc.
-
     // Flexible extra info
     private Map<String, Object> details;
     /*

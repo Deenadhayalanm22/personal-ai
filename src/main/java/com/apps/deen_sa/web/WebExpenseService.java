@@ -2,10 +2,12 @@ package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.finance.expense.correction.ExpenseCorrectionService;
+import com.apps.deen_sa.finance.tag.*;
 import com.apps.deen_sa.finance.legacy.state.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -19,11 +21,15 @@ public class WebExpenseService {
     private final StateContainerRepository accounts;
     private final ExpenseCorrectionService corrections;
     private final WebExpenseTaxonomyService taxonomy;
+    private final TagRepository tags;
+    private final TransactionTagRepository transactionTags;
 
     public WebExpenseService(StateChangeRepository expenses, StateContainerRepository accounts,
-                             ExpenseCorrectionService corrections, WebExpenseTaxonomyService taxonomy) {
+                             ExpenseCorrectionService corrections, WebExpenseTaxonomyService taxonomy,
+                             TagRepository tags, TransactionTagRepository transactionTags) {
         this.expenses = expenses; this.accounts = accounts; this.corrections = corrections;
         this.taxonomy = taxonomy;
+        this.tags = tags; this.transactionTags = transactionTags;
     }
 
     public ExpensePage list(AppUserEntity user, YearMonth month, int requestedLimit, Long beforeId,
@@ -44,7 +50,9 @@ public class WebExpenseService {
         boolean hasMore = found.size() > limit;
         List<StateChangeEntity> visible = hasMore ? found.subList(0, limit) : found;
         Map<Long, String> accountNames = accountNames(visible);
-        List<ExpenseItem> items = visible.stream().map(row -> item(row, user.getCurrency(), accountNames)).toList();
+        Map<Long, List<TagItem>> tagItems = tagItems(visible);
+        List<ExpenseItem> items = visible.stream()
+                .map(row -> item(row, user.getCurrency(), accountNames, tagItems)).toList();
         Long next = hasMore && !visible.isEmpty() ? visible.getLast().getId() : null;
         List<Object[]> summaryRows = expenses.summarizeFilteredActiveExpenses(
                 userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
@@ -55,16 +63,27 @@ public class WebExpenseService {
         return new ExpensePage(items, next, filterSummary);
     }
 
+    @Transactional
     public ExpenseItem editClassification(AppUserEntity user, Long id, ClassificationUpdate request) {
         if (request == null || request.version() < 1)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
-        String category = clean(request.category(), "category");
-        String subcategory = clean(request.subcategory(), "subcategory");
-        WebExpenseTaxonomyService.Classification classification = taxonomy.validate(category, subcategory);
+        boolean editsClassification = request.category() != null || request.subcategory() != null;
+        if (!editsClassification && request.tagIds() == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide a classification or tag IDs to update");
+        WebExpenseTaxonomyService.Classification classification = null;
+        if (editsClassification) {
+            String category = clean(request.category(), "category");
+            String subcategory = clean(request.subcategory(), "subcategory");
+            classification = taxonomy.validate(category, subcategory);
+        }
+        List<TagEntity> selectedTags = request.tagIds() == null ? null : ownedTags(user.getId(), request.tagIds());
         try {
             StateChangeEntity updated = corrections.editClassification(
-                    user.getId(), id, request.version(), classification.category(), classification.subcategory());
-            return item(updated, user.getCurrency(), accountNames(List.of(updated)));
+                    user.getId(), id, request.version(),
+                    classification == null ? null : classification.category(),
+                    classification == null ? null : classification.subcategory());
+            applyTags(id, updated.getId(), selectedTags);
+            return item(updated, user.getCurrency(), accountNames(List.of(updated)), tagItems(List.of(updated)));
         } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
         } catch (IllegalArgumentException missing) {
@@ -98,10 +117,55 @@ public class WebExpenseService {
     }
 
     private ExpenseItem item(StateChangeEntity row, String currency, Map<Long, String> accountNames) {
+        return item(row, currency, accountNames, Map.of());
+    }
+
+    private ExpenseItem item(StateChangeEntity row, String currency, Map<Long, String> accountNames,
+                             Map<Long, List<TagItem>> tagsByTransaction) {
         return new ExpenseItem(row.getId(), row.getRawText(), row.getAmount(), currency, row.getTimestamp(),
                 row.getCategory(), row.getSubcategory(), row.getMainEntity(),
                 row.getSourceContainerId() == null ? null : accountNames.get(row.getSourceContainerId()),
-                row.isNeedsEnrichment(), row.getRecordVersion());
+                row.isNeedsEnrichment(), row.getRecordVersion(),
+                tagsByTransaction.getOrDefault(row.getId(), List.of()));
+    }
+
+    private List<TagEntity> ownedTags(Long userId, List<Long> requestedIds) {
+        if (requestedIds.stream().anyMatch(Objects::isNull))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tag IDs cannot contain null");
+        Set<Long> uniqueIds = new LinkedHashSet<>(requestedIds);
+        List<TagEntity> found = uniqueIds.isEmpty() ? List.of() : tags.findAllByUserIdAndIdIn(userId, uniqueIds);
+        if (found.size() != uniqueIds.size())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more tags do not exist");
+        return found;
+    }
+
+    private void applyTags(Long originalId, Long replacementId, List<TagEntity> selectedTags) {
+        Collection<Long> ids = selectedTags == null
+                ? transactionTags.findAllByTransactionId(originalId).stream().map(TransactionTagEntity::getTagId).toList()
+                : selectedTags.stream().map(TagEntity::getId).toList();
+        Instant now = Instant.now();
+        transactionTags.saveAll(ids.stream().map(tagId -> {
+            TransactionTagEntity link = new TransactionTagEntity();
+            link.setTransactionId(replacementId); link.setTagId(tagId); link.setCreatedAt(now);
+            return link;
+        }).toList());
+    }
+
+    private Map<Long, List<TagItem>> tagItems(List<StateChangeEntity> rows) {
+        Set<Long> transactionIds = rows.stream().map(StateChangeEntity::getId).collect(java.util.stream.Collectors.toSet());
+        if (transactionIds.isEmpty()) return Map.of();
+        List<TransactionTagEntity> links = transactionTags.findAllByTransactionIdIn(transactionIds);
+        Set<Long> tagIds = links.stream().map(TransactionTagEntity::getTagId).collect(java.util.stream.Collectors.toSet());
+        Map<Long, TagEntity> tagById = tags.findAllById(tagIds).stream()
+                .collect(java.util.stream.Collectors.toMap(TagEntity::getId, value -> value));
+        Map<Long, List<TagItem>> result = new HashMap<>();
+        for (TransactionTagEntity link : links) {
+            TagEntity tag = tagById.get(link.getTagId());
+            if (tag != null) result.computeIfAbsent(link.getTransactionId(), ignored -> new ArrayList<>())
+                    .add(new TagItem(tag.getId(), tag.getName()));
+        }
+        result.values().forEach(values -> values.sort(Comparator.comparing(TagItem::name, String.CASE_INSENSITIVE_ORDER)));
+        return result;
     }
 
     private String clean(String value, String field) {
@@ -118,12 +182,13 @@ public class WebExpenseService {
                 clean(filter.subcategory(), "subcategory"));
     }
 
-    public record ClassificationUpdate(String category, String subcategory, int version) { }
+    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) { }
     public record ExpenseFilter(Long accountId, String category, String subcategory) { }
     public record FilterSummary(long transactionCount, BigDecimal totalAmount, String currency,
                                 Long accountId, String category, String subcategory) { }
     public record ExpensePage(List<ExpenseItem> items, Long nextBeforeId, FilterSummary filterSummary) { }
     public record ExpenseItem(Long id, String originalMessage, BigDecimal amount, String currency,
                               Instant transactionTime, String category, String subcategory, String merchant,
-                              String sourceAccount, boolean needsReview, int version) { }
+                              String sourceAccount, boolean needsReview, int version, List<TagItem> tags) { }
+    public record TagItem(Long id, String name) { }
 }

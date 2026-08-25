@@ -58,11 +58,6 @@ public class ExpenseDtoToEntityMapper {
         entity.setRawText(dto.getRawText());
 
         // ----------------------------
-        // TAGS
-        // ----------------------------
-        entity.setTags(dto.getTags());
-
-        // ----------------------------
         // DETAILS (MERGE SAFELY)
         // ----------------------------
         Map<String, Object> details = new HashMap<>();
@@ -118,14 +113,6 @@ public class ExpenseDtoToEntityMapper {
 
         if (dto.getRawText() != null) {
             entity.setRawText(dto.getRawText());
-        }
-
-        // ----------------------------
-        // TAGS (replace only if present)
-        // ----------------------------
-
-        if (dto.getTags() != null && !dto.getTags().isEmpty()) {
-            entity.setTags(dto.getTags());
         }
 
         // ----------------------------
