@@ -11,12 +11,14 @@ import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
 import com.apps.deen_sa.finance.account.strategy.AdjustmentCommandFactory;
 import com.apps.deen_sa.finance.account.enrichment.AccountEnrichmentService;
+import com.apps.deen_sa.finance.expense.draft.ExpenseDraftService;
 import com.apps.deen_sa.finance.legacy.mutation.StateMutationService;
 import com.apps.deen_sa.finance.legacy.state.StateContainerService;
 import com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
@@ -53,6 +55,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final com.apps.deen_sa.finance.budget.BudgetInsightService budgetInsights;
     private final AccountEnrichmentService accountEnrichment;
     private final TaxonomyCandidateService taxonomyCandidates;
+    private final ExpenseDraftService expenseDrafts;
 
     @Override
     public String intentType() {
@@ -98,11 +101,13 @@ public class ExpenseHandler implements SpeechHandler {
             ctx.setWaitingForField("amount");
             ctx.setPartialObject(dto);
             ctx.setActiveTransactionId(null);
+            expenseDrafts.capture(dto, ctx, List.of("amount"));
             return SpeechResult.followup("How much did you spend?", List.of("amount"), dto, List.of());
         }
 
         // Always find missing fields (used for UI / follow-up)
         List<String> missing = ExpenseValidator.findMissingFields(dto);
+        expenseDrafts.capture(dto, ctx, missing);
 
         // Minimal expenses remain only in conversation state until confirmation.
         if (level == CompletenessLevelEnum.MINIMAL) {
@@ -718,6 +723,7 @@ public class ExpenseHandler implements SpeechHandler {
 
     private SpeechResult handleExpenseConfirmation(String answer, ConversationContext ctx) {
         if ("DISCARD_EXPENSE".equalsIgnoreCase(answer)) {
+            expenseDrafts.discardActive(ctx.getUserId(), ctx.getActiveDraftId());
             ctx.reset();
             return SpeechResult.info("Discarded. Nothing was saved.");
         }
@@ -727,6 +733,8 @@ public class ExpenseHandler implements SpeechHandler {
 
         ExpenseDto dto = (ExpenseDto) ctx.getPartialObject();
         StateChangeEntity saved = saveExpense(dto, ctx.getUserId());
+        if (ctx.getActiveDraftId() != null)
+            expenseDrafts.complete(ctx.getUserId(), ctx.getActiveDraftId(), saved.getId());
         if (canApplyFinancialImpact(saved)) {
             applyFinancialImpact(saved);
             saved.setFinanciallyApplied(true);
@@ -756,6 +764,24 @@ public class ExpenseHandler implements SpeechHandler {
 
         ctx.reset();
         return expenseConfirmation(saved, ctx.getTimezone());
+    }
+
+    @Transactional
+    public StateChangeEntity confirmPortalDraft(Long userId, Long draftId, int version) {
+        ExpenseDto dto = expenseDrafts.loadForConfirmation(userId, draftId, version);
+        inputNormalizer.normalize(dto, dto.getRawText(), new ConversationContext());
+        List<String> missing = ExpenseValidator.findMissingFields(dto);
+        if (!missing.isEmpty())
+            throw new IllegalStateException("Complete required fields before confirming: " + String.join(", ", missing));
+        completenessEvaluator.evaluate(dto);
+        StateChangeEntity saved = saveExpense(dto, userId);
+        if (canApplyFinancialImpact(saved)) {
+            applyFinancialImpact(saved); saved.setFinanciallyApplied(true);
+        }
+        saved.setNeedsEnrichment(!saved.isFinanciallyApplied());
+        repo.save(saved);
+        expenseDrafts.complete(userId, draftId, saved.getId());
+        return saved;
     }
 
     private SpeechResult handleOptionalSourceSetup(String answer, ConversationContext ctx) {

@@ -3,6 +3,8 @@ package com.apps.deen_sa.web;
 import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
 import com.apps.deen_sa.finance.legacy.state.*;
 import com.apps.deen_sa.finance.expense.correction.ExpenseCorrectionService;
+import com.apps.deen_sa.finance.expense.ExpenseHandler;
+import com.apps.deen_sa.finance.expense.draft.ExpenseDraftService;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 
@@ -27,7 +29,8 @@ class DashboardEnrichmentServiceTest {
         when(accounts.findActiveByOwnerId(42L)).thenReturn(List.of(account));
 
         var queue = new DashboardEnrichmentService(
-                transactions, accounts, mock(ExpenseCorrectionService.class)).queue(42L);
+                transactions, accounts, mock(ExpenseCorrectionService.class),
+                mock(ExpenseDraftService.class), mock(ExpenseHandler.class)).queue(42L);
 
         assertThat(queue.hasItems()).isTrue();
         assertThat(queue.items()).extracting(DashboardEnrichmentService.EnrichmentItem::type)
@@ -44,7 +47,8 @@ class DashboardEnrichmentServiceTest {
         StateChangeRepository transactions = mock(StateChangeRepository.class);
         StateContainerRepository accounts = mock(StateContainerRepository.class);
         ExpenseCorrectionService corrections = mock(ExpenseCorrectionService.class);
-        DashboardEnrichmentService service = new DashboardEnrichmentService(transactions, accounts, corrections);
+        DashboardEnrichmentService service = new DashboardEnrichmentService(transactions, accounts, corrections,
+                mock(ExpenseDraftService.class), mock(ExpenseHandler.class));
 
         service.discardTransaction(42L, 8L, 3);
 

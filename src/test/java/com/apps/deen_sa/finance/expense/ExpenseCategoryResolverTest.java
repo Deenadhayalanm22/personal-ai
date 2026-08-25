@@ -242,6 +242,33 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
+    void mapsOyoRoomBookingToTravelAccommodationWithoutModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+
+        resolver.canonicalize(expense,
+                "booked room in oyo for pondicherry room for 3654 paid using upi");
+
+        assertThat(expense.getCategory()).isEqualTo("Travel");
+        assertThat(expense.getSubcategory()).isEqualTo("Accommodation");
+    }
+
+    @Test
+    void separatesFlightsFromEverydayPublicTransport() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto flight = new ExpenseDto();
+        ExpenseDto auto = new ExpenseDto();
+
+        resolver.canonicalize(flight, "Booked flight tickets to Pondicherry for 4500");
+        resolver.canonicalize(auto, "Paid 250 for auto to office");
+
+        assertThat(flight.getCategory()).isEqualTo("Travel");
+        assertThat(flight.getSubcategory()).isEqualTo("Flights");
+        assertThat(auto.getCategory()).isEqualTo("Transportation");
+        assertThat(auto.getSubcategory()).isEqualTo("Public Transport");
+    }
+
+    @Test
     void mapsTransferToSpouseToFamilySupportWithoutCategoryFollowup() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
         ExpenseDto expense = new ExpenseDto();

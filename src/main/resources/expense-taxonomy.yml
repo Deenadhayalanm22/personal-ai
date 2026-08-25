@@ -11,6 +11,14 @@ Transportation:
   - Parking
   - Toll
 
+Travel:
+  - Accommodation
+  - Flights
+  - Intercity Transport
+  - Travel Activities
+  - Travel Documents & Fees
+  - Other Travel
+
 Shopping:
   - Electronics
   - Clothing

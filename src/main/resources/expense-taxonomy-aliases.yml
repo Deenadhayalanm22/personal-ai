@@ -1,7 +1,27 @@
 # Exact, locale-aware aliases for common terms whose meaning should not require a model call.
 tea: Snacks & Beverages
 auto: Public Transport
-flight tickets: Public Transport
+flight tickets: Flights
+flight: Flights
+flights: Flights
+airfare: Flights
+air ticket: Flights
+air tickets: Flights
+hotel: Accommodation
+hotel room: Accommodation
+room booking: Accommodation
+booked room: Accommodation
+oyo: Accommodation
+resort: Accommodation
+hostel: Accommodation
+homestay: Accommodation
+airbnb: Accommodation
+train ticket: Intercity Transport
+train tickets: Intercity Transport
+intercity bus: Intercity Transport
+travel visa: Travel Documents & Fees
+visa fee: Travel Documents & Fees
+passport fee: Travel Documents & Fees
 medicines: Medicines
 lunch: Eating Out
 dinner: Eating Out

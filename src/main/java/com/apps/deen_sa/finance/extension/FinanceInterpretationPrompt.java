@@ -38,6 +38,10 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
               Education or Medical when clearly applicable. Otherwise use Shopping / Other Shopping. An unfamiliar
               product name is not a reason to use Miscellaneous. Examples: beach mat, storage box, umbrella, suitcase,
               water bottle, and yoga mat are Shopping / Other Shopping.
+            - Travel is for out-of-town journeys: hotels/OYO/resorts/hostels/homestays are Accommodation; airfare is
+              Flights; long-distance train or bus travel is Intercity Transport; sightseeing and tour experiences are
+              Travel Activities; visa and passport charges are Travel Documents & Fees. Transportation remains for
+              everyday fuel, vehicle maintenance, parking, tolls, and local commuting.
             - Miscellaneous is a last resort for expenses that are not purchases of identifiable physical goods.
             - If the broad category is clear but no configured specific subcategory fits, taxonomyCandidate may
               propose a reusable category/subcategory for later human review. It never replaces the configured

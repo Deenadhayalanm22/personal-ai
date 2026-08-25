@@ -23,6 +23,7 @@ public class ConversationSessionService {
         if (session == null) return context;
         context.setSessionId(session.getId());
         context.setActiveTransactionId(session.getActiveTransactionId());
+        context.setActiveDraftId(session.getActiveDraftId());
         context.setActiveIntent(session.getActiveIntent());
         context.setWaitingForField(session.getWaitingForField());
         context.setPendingEvents(session.getPendingEvents() == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(session.getPendingEvents()));
@@ -49,6 +50,7 @@ public class ConversationSessionService {
         session.setUserId(context.getUserId());
         session.setChannel(context.getChannel());
         session.setActiveTransactionId(context.getActiveTransactionId());
+        session.setActiveDraftId(context.getActiveDraftId());
         session.setActiveIntent(context.getActiveIntent());
         session.setWaitingForField(context.getWaitingForField());
         session.setPendingEvents(context.getPendingEvents());

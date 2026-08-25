@@ -47,6 +47,15 @@
        description unique to this purchase.
      - Do not propose a candidate when an existing configured subcategory is reasonably accurate.
 
+  8. travel versus transportation
+     - Travel is for out-of-town journeys and their trip-specific costs.
+     - Hotels, OYO rooms, resorts, hostels, homestays, and Airbnb → Travel / Accommodation.
+     - Airfare and airline tickets → Travel / Flights.
+     - Long-distance train and bus tickets → Travel / Intercity Transport.
+     - Sightseeing, tours, and destination activities → Travel / Travel Activities.
+     - Visa and passport charges → Travel / Travel Documents & Fees.
+     - Everyday fuel, vehicle maintenance, parking, tolls, autos, and local commuting remain Transportation.
+
   ---------------------------------------------------
   ### NON-NEGOTIABLE RULES
 

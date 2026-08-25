@@ -18,6 +18,7 @@ public class ConversationContext implements com.apps.deen_sa.extension.api.Capab
     private String currency = "INR";
 
     private Long activeTransactionId;
+    private Long activeDraftId;
 
     // Namespaced capability currently owning the conversation.
     private String activeIntent;
@@ -44,6 +45,7 @@ public class ConversationContext implements com.apps.deen_sa.extension.api.Capab
     // Reset context fully
     public void reset() {
         this.activeTransactionId = null;
+        this.activeDraftId = null;
         this.activeIntent = null;
         this.waitingForField = null;
         this.partialObject = null;
