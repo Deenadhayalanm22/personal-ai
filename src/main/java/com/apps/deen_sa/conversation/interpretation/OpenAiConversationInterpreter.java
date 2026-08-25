@@ -190,7 +190,8 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
 
     private Map<String, Object> responseSchema(Collection<EventCapability> capabilities) {
         Map<String, Object> fields = new TreeMap<>();
-        capabilities.forEach(capability -> capability.fieldTypes().forEach((name, type) -> fields.put(name, nullable(type))));
+        capabilities.forEach(capability -> capability.fieldTypes()
+                .forEach((name, type) -> fields.put(name, fieldSchema(name, type))));
         List<String> fieldNames = new ArrayList<>(fields.keySet());
         Map<String, Object> evidence = object(Map.of("field", string(), "value", string(), "evidence", string(),
                 "confidence", nullable("number")), List.of("field", "value", "evidence", "confidence"));
@@ -223,7 +224,22 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
     }
     private Map<String, Object> nullable(String type) {
         Map<String, Object> typed = "array".equals(type) ? array(string()) : Map.of("type", type);
-        return Map.of("anyOf", List.of(typed, Map.of("type", "null")));
+        return nullableSchema(typed);
+    }
+    private Map<String, Object> fieldSchema(String name, String type) {
+        if ("taxonomyCandidate".equals(name) && "object".equals(type)) {
+            Map<String, Object> candidate = object(Map.of(
+                    "category", nullable("string"),
+                    "subcategory", nullable("string"),
+                    "itemConcept", nullable("string"),
+                    "confidence", nullable("number")),
+                    List.of("category", "subcategory", "itemConcept", "confidence"));
+            return nullableSchema(candidate);
+        }
+        return nullable(type);
+    }
+    private Map<String, Object> nullableSchema(Map<String, Object> schema) {
+        return Map.of("anyOf", List.of(schema, Map.of("type", "null")));
     }
     private Map<String, Object> nullableEnum(List<String> values) {
         return Map.of("anyOf", List.of(enumSchema(values), Map.of("type", "null")));
