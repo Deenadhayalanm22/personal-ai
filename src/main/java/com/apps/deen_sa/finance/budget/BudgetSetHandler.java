@@ -24,12 +24,24 @@ public class BudgetSetHandler implements StructuredEventHandler {
         return SpeechResult.invalid("Budgets must be supplied through structured interpretation.");
     }
     @Override public SpeechResult handleFollowup(String answer, ConversationContext context) {
+        if ("WHATSAPP".equalsIgnoreCase(context.getChannel())) {
+            context.reset();
+            return SpeechResult.builder().status(SpeechStatus.INFO)
+                    .message("Create and manage budgets in the portal. Budget alerts will still appear here when you record expenses.")
+                    .actions(List.of(new ResponseAction("portal:budgets", "Open portal"))).build();
+        }
         return CONFIRM_BUDGET.equals(context.getWaitingForField())
                 ? confirm(answer, context)
                 : SpeechResult.invalid("Please state the category and monthly budget together.");
     }
     @Override @Transactional
     public SpeechResult handleInterpreted(EventPatch event, String rawText, ConversationContext context) {
+        if ("WHATSAPP".equalsIgnoreCase(context.getChannel())) {
+            context.reset();
+            return SpeechResult.builder().status(SpeechStatus.INFO)
+                    .message("Create and manage budgets in the portal. Budget alerts will still appear here when you record expenses.")
+                    .actions(List.of(new ResponseAction("portal:budgets", "Open portal"))).build();
+        }
         if (CONFIRM_BUDGET.equals(context.getWaitingForField())) return confirm(rawText, context);
         Object rawAmount = event.fields().asMap().get("amount");
         String proposed = categories.resolveBudgetScope(text(event.fields().asMap().get("category")), rawText).orElse(null);

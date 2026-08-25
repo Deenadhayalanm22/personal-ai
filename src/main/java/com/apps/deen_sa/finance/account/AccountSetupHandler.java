@@ -44,7 +44,13 @@ public class AccountSetupHandler implements SpeechHandler {
 
     @Override
     public SpeechResult handleSpeech(String text, ConversationContext ctx) {
-
+        if ("WHATSAPP".equalsIgnoreCase(ctx.getChannel())) {
+            ctx.reset();
+            return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                    .message("Set up and enrich accounts in the portal when you have time.")
+                    .actions(List.of(new com.apps.deen_sa.conversation.ResponseAction(
+                            "portal:accounts", "Open portal"))).build();
+        }
         AccountSetupDto dto = deterministicParser.parse(text).orElseGet(() -> llm.extractAccount(text));
         dto.setRawText(text);
         StateContainerEntity existing = findActiveDuplicate(dto, ctx.getUserId());
@@ -81,6 +87,7 @@ public class AccountSetupHandler implements SpeechHandler {
 
     @Override
     public SpeechResult handleFollowup(String answer, ConversationContext ctx) {
+        if ("WHATSAPP".equalsIgnoreCase(ctx.getChannel())) return handleSpeech(answer, ctx);
 
         AccountSetupDto dto = (AccountSetupDto) ctx.getPartialObject();
         String missingField = ctx.getWaitingForField();

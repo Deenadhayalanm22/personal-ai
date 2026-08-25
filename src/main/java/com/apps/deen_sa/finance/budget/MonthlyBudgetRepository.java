@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface MonthlyBudgetRepository extends JpaRepository<MonthlyBudgetEntity, Long> {
     Optional<MonthlyBudgetEntity> findByUserIdAndCategoryIgnoreCase(Long userId, String category);
+    Optional<MonthlyBudgetEntity> findByIdAndUserId(Long id, Long userId);
     List<MonthlyBudgetEntity> findByUserIdAndActiveTrueOrderByCategoryAsc(Long userId);
 }

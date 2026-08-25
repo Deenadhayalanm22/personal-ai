@@ -35,9 +35,9 @@ app:
   web:
     base-url: ${APP_WEB_BASE_URL}
     magic-link-expiry: ${APP_MAGIC_LINK_EXPIRY}
-    session-expiry: ${APP_WEB_SESSION_EXPIRY:10d}
-    secure-cookies: ${APP_WEB_SECURE_COOKIES:false}
-    cookie-same-site: ${APP_WEB_COOKIE_SAME_SITE:Lax}
+    session-expiry: ${APP_WEB_SESSION_EXPIRY}
+    secure-cookies: ${APP_WEB_SECURE_COOKIES}
+    cookie-same-site: ${APP_WEB_COOKIE_SAME_SITE}
 
 whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN:}

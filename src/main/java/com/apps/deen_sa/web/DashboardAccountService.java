@@ -74,6 +74,8 @@ public class DashboardAccountService {
                 container.getOverLimitAmount(), container.getLastActivityAt(), transactionCount);
     }
 
+    DashboardAccount single(StateContainerEntity container) { return map(container, 0); }
+
     private BigDecimal first(BigDecimal preferred, BigDecimal fallback) {
         return preferred == null ? fallback : preferred;
     }

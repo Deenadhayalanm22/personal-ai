@@ -338,6 +338,7 @@ public class ExpenseHandler implements SpeechHandler {
 
     private SpeechResult accountInitializationFollowup(StateChangeEntity tx, ExpenseDto dto,
                                                        ConversationContext ctx) {
+        if ("WHATSAPP".equalsIgnoreCase(ctx.getChannel())) return null;
         if (tx.getSourceContainerId() == null) return null;
         StateContainerEntity source = stateContainerService.findValueContainerById(tx.getSourceContainerId());
         ctx.setActiveIntent("EXPENSE");
@@ -690,7 +691,7 @@ public class ExpenseHandler implements SpeechHandler {
         ctx.setActiveIntent("EXPENSE");
         ctx.setPartialObject(dto);
         ctx.setActiveTransactionId(null);
-        if (linked != null) {
+        if (!"WHATSAPP".equalsIgnoreCase(ctx.getChannel()) && linked != null) {
             var next = accountEnrichment.nextPromptableField(linked);
             if (next.isPresent()) return askForEnrichment(linked, next.get(), ctx, "");
         }
@@ -733,7 +734,8 @@ public class ExpenseHandler implements SpeechHandler {
         SpeechResult existingAccountSetup = accountInitializationFollowup(saved, dto, ctx);
         if (existingAccountSetup != null) return existingAccountSetup;
 
-        if (saved.getSourceContainerId() == null && dto.getSourceAccount() != null
+        if (!"WHATSAPP".equalsIgnoreCase(ctx.getChannel())
+                && saved.getSourceContainerId() == null && dto.getSourceAccount() != null
                 && isSupportedSource(normalizeSourceType(dto.getSourceAccount()))) {
             ctx.setActiveIntent("EXPENSE");
             ctx.setWaitingForField(SETUP_SOURCE_ACCOUNT);
@@ -744,14 +746,9 @@ public class ExpenseHandler implements SpeechHandler {
                     .message("Added ₹" + saved.getAmount().stripTrailingZeros().toPlainString()
                             + ". " + dto.getSourceAccount()
                             + " is not set up. Set it up for balance and spending insights?")
-                    .needFollowup(true)
-                    .missingFields(List.of(SETUP_SOURCE_ACCOUNT))
-                    .partial(dto)
-                    .savedEntity(saved)
-                    .actions(List.of(
-                            new ResponseAction("answer:SETUP_SOURCE_ACCOUNT", "Set up account"),
-                            new ResponseAction("answer:SKIP_SOURCE_SETUP", "Not now")))
-                    .build();
+                    .needFollowup(true).missingFields(List.of(SETUP_SOURCE_ACCOUNT)).partial(dto).savedEntity(saved)
+                    .actions(List.of(new ResponseAction("answer:SETUP_SOURCE_ACCOUNT", "Set up account"),
+                            new ResponseAction("answer:SKIP_SOURCE_SETUP", "Not now"))).build();
         }
 
         ctx.reset();

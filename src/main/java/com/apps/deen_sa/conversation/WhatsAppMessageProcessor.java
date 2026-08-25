@@ -186,6 +186,11 @@ public class WhatsAppMessageProcessor {
             replySender.sendPortalLink(to, PORTAL_MESSAGE, magicLinks.portalUrl());
             return;
         }
+        if (result.getActions() != null && result.getActions().stream()
+                .anyMatch(action -> action.id() != null && action.id().startsWith("portal:"))) {
+            replySender.sendPortalLink(to, result.getMessage(), magicLinks.portalUrl());
+            return;
+        }
         if (result.getMedia() != null) {
             if (!replySender.sendImageReply(to, result.getMedia(), result.getMessage()) && result.getMessage() != null)
                 replySender.sendTextReply(to, result.getMessage());

@@ -17,20 +17,18 @@ public class WebFinanceController {
     private final WebLoginRequestService loginRequests;
     private final MonthlyExpenseService monthlyExpenses;
     private final WebExpenseService expenses;
-    private final DashboardAccountService accounts;
     private final WebExpenseTaxonomyService taxonomy;
     private final boolean secureCookies;
     private final String cookieSameSite;
 
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             MonthlyExpenseService monthlyExpenses,
-            WebExpenseService expenses, DashboardAccountService accounts, WebExpenseTaxonomyService taxonomy,
+            WebExpenseService expenses, WebExpenseTaxonomyService taxonomy,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.loginRequests = loginRequests;
         this.monthlyExpenses = monthlyExpenses;
         this.expenses = expenses;
-        this.accounts = accounts;
         this.taxonomy = taxonomy;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
     }
@@ -78,17 +76,6 @@ public class WebFinanceController {
         AppUserEntity user = authentication.authenticate(token);
         YearMonth selected = selectedMonth(user, month);
         return monthlyExpenses.summarize(user, selected);
-    }
-
-    @GetMapping("/dashboard")
-    public DashboardResponse dashboard(
-            @CookieValue(name = SESSION_COOKIE, required = false) String token,
-            @RequestParam(required = false) YearMonth month) {
-        AppUserEntity user = authentication.authenticate(token);
-        YearMonth selected = selectedMonth(user, month);
-        return new DashboardResponse(monthlyExpenses.summarize(user, selected),
-                accounts.activeAccounts(user.getId(), ZoneId.of(user.getTimezone())),
-                expenses.list(user, selected, 10, null, new WebExpenseService.ExpenseFilter(null, null, null)));
     }
 
     @GetMapping("/expenses")
@@ -141,7 +128,4 @@ public class WebFinanceController {
     public record LoginLinkResponse(String message) { }
     public record MagicLinkRequest(String token) { }
     public record AuthResponse(boolean authenticated, Instant expiresAt) { }
-    public record DashboardResponse(MonthlyExpenseService.MonthlyExpenseResponse summary,
-                                    java.util.List<DashboardAccountService.DashboardAccount> accounts,
-                                    WebExpenseService.ExpensePage recentExpenses) { }
 }

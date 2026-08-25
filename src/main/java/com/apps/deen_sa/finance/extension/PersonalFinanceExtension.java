@@ -56,12 +56,10 @@ public class PersonalFinanceExtension implements BusinessExtension {
 
                 I can help with your personal expenses:
                 • Record expenses and income
-                • Set up bank, UPI, cash, and credit-card accounts
                 • Record card-bill payments and transfers
-                • Show spending totals and category breakdowns for today or this month
-                • Set monthly category budgets and check what remains
+                • Show a high-level spending total and link you to detailed portal insights
                 • Show upcoming credit-card payment reminders
-                • Review, edit, or delete earlier expenses from your web dashboard
+                • Use the portal to set up accounts, manage budgets, enrich, edit, or delete records
 
                 Describe what happened naturally. For example: “I spent ₹500 on groceries using UPI.”
                 """;

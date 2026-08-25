@@ -20,6 +20,15 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
         JpaSpecificationExecutor<StateChangeEntity> {
     @Query("""
             SELECT t FROM StateChangeEntity t
+            WHERE t.userId = :userId
+              AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
+              AND t.needsEnrichment = true
+            ORDER BY t.id DESC
+            """)
+    List<StateChangeEntity> findNeedsEnrichment(@Param("userId") String userId, Pageable pageable);
+
+    @Query("""
+            SELECT t FROM StateChangeEntity t
             WHERE t.userId = :userId AND t.transactionType = com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum.EXPENSE
               AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
               AND (:beforeId IS NULL OR t.id < :beforeId)
@@ -78,6 +87,17 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             @Param("categoryFiltered") boolean categoryFiltered, @Param("category") String category,
             @Param("subcategoryFiltered") boolean subcategoryFiltered,
             @Param("subcategory") String subcategory);
+
+    @Query("""
+            SELECT COUNT(t), COALESCE(SUM(t.amount), 0) FROM StateChangeEntity t
+            WHERE t.userId = :userId
+              AND t.transactionType = com.apps.deen_sa.finance.legacy.state.StateChangeTypeEnum.EXPENSE
+              AND t.recordStatus = com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE
+              AND t.timestamp >= :start AND t.timestamp < :end
+            """)
+    List<Object[]> summarizeActiveExpensesForPeriod(@Param("userId") String userId,
+                                                     @Param("start") Instant start,
+                                                     @Param("end") Instant end);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

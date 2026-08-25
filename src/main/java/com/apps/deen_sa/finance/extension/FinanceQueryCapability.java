@@ -4,6 +4,7 @@ import com.apps.deen_sa.conversation.ConversationContext;
 import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.extension.api.*;
 import com.apps.deen_sa.finance.query.QueryHandler;
+import com.apps.deen_sa.finance.query.RollingQueryPeriodResolver;
 
 import java.util.Set;
 
@@ -23,8 +24,11 @@ final class FinanceQueryCapability implements QueryCapability {
                                              String presentationMood, CapabilityContext capabilityContext) {
         if (!(capabilityContext instanceof ConversationContext context))
             throw new IllegalArgumentException("Finance compatibility adapter requires the host conversation bridge");
-        SpeechResult result = handler.handleInterpreted(period, analysisIntent, presentationMood, context);
+        String resolvedPeriod = RollingQueryPeriodResolver.resolve(period, rawText);
+        SpeechResult result = handler.handleInterpreted(resolvedPeriod, analysisIntent, presentationMood, context);
         return new CapabilityResult(result.getStatus().name(), result.getMessage(), Boolean.TRUE.equals(result.getNeedFollowup()),
-                result.getMissingFields(), result.getPartial(), result.getSavedEntity(), java.util.List.of(), result.getMedia());
+                result.getMissingFields(), result.getPartial(), result.getSavedEntity(),
+                result.getActions() == null ? java.util.List.of() : result.getActions().stream()
+                        .map(action -> new CapabilityAction(action.id(), action.title())).toList(), result.getMedia());
     }
 }

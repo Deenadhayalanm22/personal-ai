@@ -71,9 +71,11 @@ public class QueryHandler implements SpeechHandler {
 
     public SpeechResult handleInterpreted(String period, String analysisIntent, String presentationMood,
                                           ConversationContext context) {
+        boolean whatsapp = "WHATSAPP".equalsIgnoreCase(context.getChannel());
         VisualizationPlan plan = visualizationPlanner.plan(
                 FinancialPresentationRequest.fromAi(analysisIntent, presentationMood));
         if ("ACCOUNT_BALANCE".equals(period)) {
+            if (whatsapp) return portalInsight(accountBalances(context.getUserId()));
             Map<String, BigDecimal> balances = accountBalanceValues(context.getUserId());
             return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
                     .message(accountBalances(context.getUserId()))
@@ -82,12 +84,11 @@ public class QueryHandler implements SpeechHandler {
         }
         if ("CURRENT_STATUS".equals(period)) {
             String message = budgetInsights.status(context.getUserId(), context.getTimezone());
+            if (whatsapp) return portalInsight(message);
             return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                    .message(message)
-                    .media(chartRenderer.budgetProgress("Monthly budget progress",
+                    .message(message).media(chartRenderer.budgetProgress("Monthly budget progress",
                             budgetInsights.progress(context.getUserId(), context.getTimezone()),
-                            plan.mood(), context.getLocale()))
-                    .build();
+                            plan.mood(), context.getLocale())).build();
         }
         if ("UPCOMING_DUE".equals(period)) return SpeechResult.info(cardReminders.reminders(context.getUserId(), context.getTimezone()));
         QueryResult result = new QueryResult();
@@ -101,9 +102,9 @@ public class QueryHandler implements SpeechHandler {
         PresentationDataset presentation = presentationAnalytics.load(context.getUserId(), query.getTimeRange(),
                 plan, context.getTimezone());
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
-        String message = summary(context.getLocale(), period, summary);
+        if (whatsapp) return portalInsight(highLevelSummary(context.getLocale(), period, summary));
         return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                .message(message)
+                .message(summary(context.getLocale(), period, summary))
                 .media(chartRenderer.render(plan, chartTitle(period), summary, presentation, context.getLocale()))
                 .build();
     }
@@ -203,6 +204,22 @@ public class QueryHandler implements SpeechHandler {
             }
         }
         return result.toString();
+    }
+
+    private String highLevelSummary(String locale, String period, ExpenseSummary summary) {
+        BigDecimal total = summary.getTotalSpend() == null ? BigDecimal.ZERO : summary.getTotalSpend();
+        String amount = "₹" + total.stripTrailingZeros().toPlainString();
+        boolean tamil = locale != null && Set.of("ta", "ta-in").contains(locale.toLowerCase(Locale.ROOT));
+        String periodLabel = QueryPeriodLabelFormatter.describe(period);
+        return tamil ? "மொத்த செலவு: " + amount : "Total spent: " + amount + " " + periodLabel + ".";
+    }
+
+    private SpeechResult portalInsight(String message) {
+        return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
+                .message(message + "\n\nFor detailed breakdowns and more insights, open the portal.")
+                .actions(List.of(new com.apps.deen_sa.conversation.ResponseAction(
+                        "portal:insights", "Open portal")))
+                .build();
     }
 
     private String categoryEmoji(String category) {
