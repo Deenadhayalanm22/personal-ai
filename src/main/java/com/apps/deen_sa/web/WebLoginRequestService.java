@@ -3,6 +3,7 @@ package com.apps.deen_sa.web;
 import com.apps.deen_sa.conversation.MagicLinkService;
 import com.apps.deen_sa.conversation.UserFeatureFlagService;
 import com.apps.deen_sa.conversation.WhatsAppReplySender;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -27,6 +28,7 @@ public class WebLoginRequestService {
     private final Clock clock;
     private final Map<String, Deque<Instant>> attempts = new ConcurrentHashMap<>();
 
+    @Autowired
     public WebLoginRequestService(UserFeatureFlagService featureFlags, MagicLinkService magicLinks,
                                   WhatsAppReplySender replies) {
         this(featureFlags, magicLinks, replies, Clock.systemUTC());
