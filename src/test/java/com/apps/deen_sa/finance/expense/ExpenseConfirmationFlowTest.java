@@ -54,7 +54,8 @@ class ExpenseConfirmationFlowTest {
                 mock(AdjustmentCommandFactory.class), mock(StateMutationService.class), normalizer,
                 new ObjectMapper().findAndRegisterModules(), budgets, enrichment,
                 mock(TaxonomyCandidateService.class),
-                mock(com.apps.deen_sa.finance.expense.draft.ExpenseDraftService.class));
+                mock(com.apps.deen_sa.finance.expense.draft.ExpenseDraftService.class),
+                new ExpenseSourceAccountResolver(containers, repository));
         context = new ConversationContext();
         context.setUserId(7L);
         when(normalizer.normalize(any(ExpenseDto.class), anyString(), any(ConversationContext.class)))

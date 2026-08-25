@@ -6,6 +6,7 @@ import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
 import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
 import com.apps.deen_sa.finance.expense.correction.ExpenseCorrectionService;
 import com.apps.deen_sa.finance.expense.ExpenseHandler;
+import com.apps.deen_sa.finance.expense.ExpenseSourceAccountResolver;
 import com.apps.deen_sa.finance.expense.draft.*;
 import com.apps.deen_sa.dto.ExpenseDto;
 import org.springframework.data.domain.PageRequest;
@@ -27,14 +28,15 @@ public class DashboardEnrichmentService {
     private final ExpenseCorrectionService corrections;
     private final ExpenseDraftService drafts;
     private final ExpenseHandler expenseHandler;
+    private final ExpenseSourceAccountResolver sourceAccounts;
 
     public DashboardEnrichmentService(StateChangeRepository transactions, StateContainerRepository accounts,
                                       ExpenseCorrectionService corrections, ExpenseDraftService drafts,
-                                      ExpenseHandler expenseHandler) {
+                                      ExpenseHandler expenseHandler, ExpenseSourceAccountResolver sourceAccounts) {
         this.transactions = transactions;
         this.accounts = accounts;
         this.corrections = corrections;
-        this.drafts = drafts; this.expenseHandler = expenseHandler;
+        this.drafts = drafts; this.expenseHandler = expenseHandler; this.sourceAccounts = sourceAccounts;
     }
 
     public EnrichmentQueue queue(Long userId) {
@@ -58,7 +60,8 @@ public class DashboardEnrichmentService {
         return new EnrichmentItem("TRANSACTION", value.getId(), "⚠ Transaction needs details",
                 value.getRawText(), missing, "/portal/expenses/" + value.getId(), value.getRecordVersion(),
                 null, value.getAmount(), value.getCategory(), value.getSubcategory(), value.getMainEntity(),
-                null, value.getTimestamp() == null ? null : value.getTimestamp().atZone(java.time.ZoneOffset.UTC).toLocalDate());
+                null, value.getTimestamp() == null ? null : value.getTimestamp().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
+                value.getSourceContainerId(), null);
     }
 
     private EnrichmentItem account(StateContainerEntity value) {
@@ -72,15 +75,17 @@ public class DashboardEnrichmentService {
         }
         return new EnrichmentItem("ACCOUNT", value.getId(), "⚠ Account needs details",
                 value.getName(), missing, "/portal/accounts/" + value.getId(), null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
     }
 
     private EnrichmentItem draft(ExpenseDraftEntity value) {
         ExpenseDto dto = drafts.toDto(value);
+        StateContainerEntity resolved = sourceAccounts.resolve(dto, value.getUserId());
         return new EnrichmentItem("EXPENSE_DRAFT", value.getId(), "Transaction waiting for your response",
                 value.getRawText(), value.getMissingFields(), "/portal/enrichment/drafts/" + value.getId(),
                 value.getVersion(), value.getSourceChannel(), dto.getAmount(), dto.getCategory(), dto.getSubcategory(),
-                dto.getMerchantName(), dto.getSourceAccount(), dto.getTransactionDate());
+                dto.getMerchantName(), dto.getSourceAccount(), dto.getTransactionDate(),
+                resolved == null ? null : resolved.getId(), resolved == null ? null : resolved.getName());
     }
 
     public void discardTransaction(Long userId, Long transactionId, int version) {
@@ -150,7 +155,8 @@ public class DashboardEnrichmentService {
     public record EnrichmentItem(String type, Long id, String alertLabel, String description,
                                  List<String> missingFields, String portalPath, Integer version,
                                  String sourceChannel, BigDecimal amount, String category, String subcategory,
-                                 String merchantName, String sourceAccount, LocalDate transactionDate) { }
+                                 String merchantName, String sourceAccount, LocalDate transactionDate,
+                                 Long resolvedSourceAccountId, String resolvedSourceAccountName) { }
     public record DraftUpdate(int version, String category, String subcategory, String sourceAccount,
                               String merchantName, LocalDate transactionDate) { }
     public record ConfirmedDraft(Long draftId, Long transactionId, int transactionVersion, BigDecimal amount,

@@ -56,6 +56,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final AccountEnrichmentService accountEnrichment;
     private final TaxonomyCandidateService taxonomyCandidates;
     private final ExpenseDraftService expenseDrafts;
+    private final ExpenseSourceAccountResolver sourceAccountResolver;
 
     @Override
     public String intentType() {
@@ -385,42 +386,7 @@ public class ExpenseHandler implements SpeechHandler {
     }
 
     private StateContainerEntity resolveSourceContainer(ExpenseDto dto, Long userId) {
-
-        if (dto.getSourceAccount() == null) return null;
-
-        List<StateContainerEntity> containers =
-                stateContainerService.getActiveContainers(userId);
-
-        String requested = normalizeSourceType(dto.getSourceAccount());
-        String requestedName = normalizeAccountName(dto.getSourceAccount());
-        List<StateContainerEntity> namedMatches =
-                containers.stream()
-                        .filter(c -> c.getName().equalsIgnoreCase(dto.getSourceAccount())
-                                || normalizeAccountName(c.getName()).equals(requestedName)
-                                || !requestedName.isBlank() && (
-                                        normalizeAccountName(c.getName()).contains(requestedName)
-                                                || requestedName.contains(normalizeAccountName(c.getName()))))
-                        .toList();
-        if (namedMatches.size() == 1) return namedMatches.getFirst();
-
-        String compactSource = normalizeAccountName(dto.getSourceAccount()).toUpperCase(Locale.ROOT);
-        boolean genericSource = Set.of("UPI", "BANK", "BANKUPI", "BANKACCOUNT", "CARD", "CREDIT",
-                "CREDITCARD", "CASH", "WALLET").contains(compactSource);
-        if (!genericSource) return null;
-        List<StateContainerEntity> typeMatches = containers.stream()
-                .filter(c -> c.getContainerType().equals(requested))
-                .toList();
-        if (typeMatches.size() == 1) return typeMatches.getFirst();
-        if (typeMatches.size() > 1) {
-            // Generic channels such as UPI do not identify a bank by name. Reuse
-            // the user's last confirmed account of that type instead of offering
-            // to create a duplicate account on every expense.
-            Long recentId = repo.findMostRecentlyUsedActiveSourceId(userId.toString(), requested).orElse(null);
-            return typeMatches.stream()
-                    .filter(active -> java.util.Objects.equals(active.getId(), recentId))
-                    .findFirst().orElse(null);
-        }
-        return null;
+        return sourceAccountResolver.resolve(dto, userId);
     }
 
     private String normalizeAccountName(String value) {
