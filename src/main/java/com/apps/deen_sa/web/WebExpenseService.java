@@ -82,8 +82,9 @@ public class WebExpenseService {
         if (request == null || request.version() < 1)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
         boolean editsClassification = request.category() != null || request.subcategory() != null;
-        if (!editsClassification && request.tagIds() == null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide a classification or tag IDs to update");
+        if (!editsClassification && request.tagIds() == null && request.sourceAccountId() == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provide a classification, source account, or tag IDs to update");
         WebExpenseTaxonomyService.Classification classification = null;
         if (editsClassification) {
             String category = clean(request.category(), "category");
@@ -92,10 +93,10 @@ public class WebExpenseService {
         }
         List<TagEntity> selectedTags = request.tagIds() == null ? null : ownedTags(user.getId(), request.tagIds());
         try {
-            StateChangeEntity updated = corrections.editClassification(
+            StateChangeEntity updated = corrections.editDetails(
                     user.getId(), id, request.version(),
                     classification == null ? null : classification.category(),
-                    classification == null ? null : classification.subcategory());
+                    classification == null ? null : classification.subcategory(), request.sourceAccountId());
             applyTags(id, updated.getId(), selectedTags);
             return item(updated, user.getCurrency(), accountNames(List.of(updated)), tagItems(List.of(updated)));
         } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
@@ -202,7 +203,12 @@ public class WebExpenseService {
                 filter.tagMatch() == null ? TagMatch.ANY : filter.tagMatch());
     }
 
-    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) { }
+    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds,
+                                       Long sourceAccountId) {
+        public ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) {
+            this(category, subcategory, version, tagIds, null);
+        }
+    }
     public record ExpenseFilter(Long accountId, String category, String subcategory,
                                 List<Long> tagIds, TagMatch tagMatch) {
         public ExpenseFilter(Long accountId, String category, String subcategory) {

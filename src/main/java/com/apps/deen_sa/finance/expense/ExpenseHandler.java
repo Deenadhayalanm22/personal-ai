@@ -795,6 +795,9 @@ public class ExpenseHandler implements SpeechHandler {
         Matcher matcher = pattern.matcher(dto.getRawText());
         if (!matcher.find()) return source;
         String detected = matcher.group(1).trim();
+        if (Pattern.compile("(?i)\\b(?:paid|using|via|from|on|with)\\b").matcher(detected).find()) {
+            return source;
+        }
         String cleaned;
         do {
             cleaned = detected;

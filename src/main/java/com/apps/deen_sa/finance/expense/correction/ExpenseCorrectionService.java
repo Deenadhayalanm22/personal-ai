@@ -58,21 +58,51 @@ public class ExpenseCorrectionService {
     @Transactional
     public StateChangeEntity editClassification(Long userId, Long transactionId, int expectedVersion,
                                                  String category, String subcategory) {
+        return editDetails(userId, transactionId, expectedVersion, category, subcategory, null);
+    }
+
+    @Transactional
+    public StateChangeEntity editDetails(Long userId, Long transactionId, int expectedVersion,
+                                         String category, String subcategory, Long sourceAccountId) {
         StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
         StateChangeEntity replacement = copy(original);
         if (category != null) replacement.setCategory(category);
         if (subcategory != null) replacement.setSubcategory(subcategory);
+        StateContainerEntity selectedAccount = sourceAccountId == null ? null : ownedExpenseAccount(userId, sourceAccountId);
+        if (selectedAccount != null) replacement.setSourceContainerId(selectedAccount.getId());
         replacement = transactions.save(replacement);
 
         if (original.isFinanciallyApplied()) {
             reverseLegacyImpact(original);
             applyLegacyImpact(replacement, original);
+        } else if (selectedAccount != null && selectedAccount.getCurrentValue() != null) {
+            mutations.apply(selectedAccount, new StateMutationCommand(replacement.getAmount(), MutationTypeEnum.DEBIT,
+                    "EXPENSE_ENRICHMENT", replacement.getId(), Instant.now()));
+            replacement.setFinanciallyApplied(true);
         }
+        replacement.setNeedsEnrichment(replacement.getSourceContainerId() == null
+                || replacement.getCategory() == null || replacement.getCategory().isBlank()
+                || replacement.getSubcategory() == null || replacement.getSubcategory().isBlank()
+                || !replacement.isFinanciallyApplied());
+        replacement.setCompletenessLevel(replacement.isFinanciallyApplied()
+                ? com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum.FINANCIAL
+                : com.apps.deen_sa.finance.legacy.state.CompletenessLevelEnum.OPERATIONAL);
+        transactions.save(replacement);
         original.setRecordStatus(ExpenseRecordStatus.SUPERSEDED);
         original.setCorrectedAt(Instant.now());
         original.setCorrectionReason("USER_EDITED_CLASSIFICATION_FROM_WEB");
         transactions.save(original);
         return replacement;
+    }
+
+    private StateContainerEntity ownedExpenseAccount(Long userId, Long accountId) {
+        StateContainerEntity account = containers.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("The selected account does not exist."));
+        if (!userId.equals(account.getOwnerId()) || !"ACTIVE".equals(account.getStatus()))
+            throw new IllegalArgumentException("The selected account is unavailable.");
+        if (!List.of("BANK_ACCOUNT", "CASH", "WALLET", "CREDIT_CARD").contains(account.getContainerType()))
+            throw new IllegalArgumentException("The selected account cannot be used to pay an expense.");
+        return account;
     }
 
     private StateChangeEntity activeOwnedExpense(Long userId, Long transactionId) {

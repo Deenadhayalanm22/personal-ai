@@ -18,6 +18,15 @@ class ExpenseHandlerPaymentSourceTest {
         assertThat(ExpenseHandler.specificSourceAccount(expense)).isEqualTo("HDFC Credit Card");
     }
 
+    @Test
+    void doesNotTreatMerchantAndPaymentPhraseAsNamedCreditCard() {
+        ExpenseDto expense = new ExpenseDto();
+        expense.setSourceAccount("CREDIT_CARD");
+        expense.setRawText("Ordered beach mat for 996 from amazon paid using credit card");
+
+        assertThat(ExpenseHandler.specificSourceAccount(expense)).isEqualTo("CREDIT_CARD");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"UPI", "my upi", "Bank", "Bank / UPI", "BANK/UPI", "bank account", "BANK_ACCOUNT",
             "HDFC bank account", "my HDFC salary bank account"})

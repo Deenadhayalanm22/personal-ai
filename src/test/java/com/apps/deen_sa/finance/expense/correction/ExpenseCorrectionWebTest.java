@@ -14,8 +14,10 @@ import static org.mockito.Mockito.*;
 
 class ExpenseCorrectionWebTest {
     private final StateChangeRepository transactions = mock(StateChangeRepository.class);
+    private final StateMutationService mutations = mock(StateMutationService.class);
+    private final StateContainerRepository containers = mock(StateContainerRepository.class);
     private final ExpenseCorrectionService service = new ExpenseCorrectionService(transactions,
-            mock(StateMutationRepository.class), mock(StateMutationService.class), mock(StateContainerRepository.class));
+            mock(StateMutationRepository.class), mutations, containers);
 
     @Test
     void classificationEditCreatesANewVersionAndSupersedesOriginal() {
@@ -31,6 +33,32 @@ class ExpenseCorrectionWebTest {
         assertThat(replacement.getSubcategory()).isEqualTo("Groceries");
         assertThat(replacement.getRecordVersion()).isEqualTo(3);
         assertThat(replacement.getReplacesTransactionId()).isEqualTo(10L);
+    }
+
+    @Test
+    void assigningFundedOwnedAccountAppliesImpactAndCompletesEnrichment() {
+        StateChangeEntity original = expense();
+        original.setNeedsEnrichment(true);
+        original.setSubcategory("Other Shopping");
+        StateContainerEntity card = new StateContainerEntity();
+        card.setId(5L); card.setOwnerId(42L); card.setStatus("ACTIVE"); card.setContainerType("CREDIT_CARD");
+        card.setCurrentValue(BigDecimal.ZERO);
+        when(transactions.findExpenseForUpdate(10L, "42")).thenReturn(Optional.of(original));
+        when(containers.findById(5L)).thenReturn(Optional.of(card));
+        when(transactions.save(any())).thenAnswer(invocation -> {
+            StateChangeEntity value = invocation.getArgument(0);
+            if (value.getId() == null) value.setId(11L);
+            return value;
+        });
+
+        StateChangeEntity replacement = service.editDetails(42L, 10L, 2, null, null, 5L);
+
+        assertThat(replacement.getSourceContainerId()).isEqualTo(5L);
+        assertThat(replacement.isFinanciallyApplied()).isTrue();
+        assertThat(replacement.isNeedsEnrichment()).isFalse();
+        assertThat(replacement.getCompletenessLevel()).isEqualTo(CompletenessLevelEnum.FINANCIAL);
+        verify(mutations).apply(eq(card), argThat(command -> command.getReferenceTxId().equals(11L)
+                && command.getAmount().compareTo(new BigDecimal("850")) == 0));
     }
 
     @Test

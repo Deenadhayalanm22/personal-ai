@@ -57,11 +57,14 @@ public class DashboardEnrichmentService {
         if (value.getCategory() == null || value.getCategory().isBlank()) missing.add("category");
         if (value.getSubcategory() == null || value.getSubcategory().isBlank()) missing.add("subcategory");
         if (!value.isFinanciallyApplied()) missing.add("accountBalanceImpact");
+        String accountName = value.getSourceContainerId() == null ? null : accounts.findById(value.getSourceContainerId())
+                .filter(account -> account.getOwnerId().toString().equals(value.getUserId()))
+                .map(StateContainerEntity::getName).orElse(null);
         return new EnrichmentItem("TRANSACTION", value.getId(), "⚠ Transaction needs details",
                 value.getRawText(), missing, "/portal/expenses/" + value.getId(), value.getRecordVersion(),
                 null, value.getAmount(), value.getCategory(), value.getSubcategory(), value.getMainEntity(),
                 null, value.getTimestamp() == null ? null : value.getTimestamp().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
-                value.getSourceContainerId(), null);
+                value.getSourceContainerId(), accountName);
     }
 
     private EnrichmentItem account(StateContainerEntity value) {

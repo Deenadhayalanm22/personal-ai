@@ -143,7 +143,7 @@ class WebExpenseServiceTest {
     void classificationEditUsesAuthenticatedUserAndExpectedVersion() {
         StateChangeEntity replacement = expense(15L, "Food", 4);
         replacement.setSubcategory("Groceries");
-        when(corrections.editClassification(42L, 12L, 3, "Food", "Groceries"))
+        when(corrections.editDetails(42L, 12L, 3, "Food", "Groceries", null))
                 .thenReturn(replacement);
         when(taxonomy.validate("Food", "Groceries"))
                 .thenReturn(new WebExpenseTaxonomyService.Classification("Food", "Groceries"));
@@ -153,7 +153,24 @@ class WebExpenseServiceTest {
 
         assertThat(result.id()).isEqualTo(15L);
         assertThat(result.version()).isEqualTo(4);
-        verify(corrections).editClassification(42L, 12L, 3, "Food", "Groceries");
+        verify(corrections).editDetails(42L, 12L, 3, "Food", "Groceries", null);
+    }
+
+    @Test
+    void expenseEditCanAssignAnExistingSourceAccount() {
+        StateChangeEntity replacement = expense(15L, "Shopping", 4);
+        replacement.setSubcategory("Other Shopping");
+        replacement.setSourceContainerId(5L);
+        when(corrections.editDetails(42L, 12L, 3, null, null, 5L)).thenReturn(replacement);
+        StateContainerEntity account = new StateContainerEntity();
+        account.setId(5L); account.setName("Hdfc credit card");
+        when(accounts.findAllById(anyCollection())).thenReturn(List.of(account));
+
+        var result = service.editClassification(user, 12L,
+                new WebExpenseService.ClassificationUpdate(null, null, 3, null, 5L));
+
+        assertThat(result.sourceAccount()).isEqualTo("Hdfc credit card");
+        verify(corrections).editDetails(42L, 12L, 3, null, null, 5L);
     }
 
     @Test
@@ -170,7 +187,7 @@ class WebExpenseServiceTest {
         TagEntity pondicherry = tag(8L, "Pondicherry");
         TagEntity family = tag(9L, "Family");
         when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection())).thenReturn(List.of(pondicherry, family));
-        when(corrections.editClassification(42L, 12L, 3, null, null)).thenReturn(replacement);
+        when(corrections.editDetails(42L, 12L, 3, null, null, null)).thenReturn(replacement);
         when(transactionTags.findAllByTransactionIdIn(anyCollection())).thenAnswer(invocation -> {
             var link1 = new TransactionTagEntity(); link1.setTransactionId(15L); link1.setTagId(8L);
             var link2 = new TransactionTagEntity(); link2.setTransactionId(15L); link2.setTagId(9L);
