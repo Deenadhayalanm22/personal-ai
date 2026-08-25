@@ -36,10 +36,22 @@ public class ExpenseCorrectionService {
     @Transactional
     public void voidExpense(Long userId, Long transactionId, int expectedVersion) {
         StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
+        voidRecord(original, "USER_DELETED_FROM_WEB");
+    }
+
+    @Transactional
+    public void voidEnrichmentExpense(Long userId, Long transactionId, int expectedVersion) {
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
+        if (!original.isNeedsEnrichment())
+            throw new IllegalArgumentException("That transaction is not awaiting enrichment.");
+        voidRecord(original, "USER_DISCARDED_ENRICHMENT_FROM_WEB");
+    }
+
+    private void voidRecord(StateChangeEntity original, String reason) {
         reverseLegacyImpact(original);
         original.setRecordStatus(ExpenseRecordStatus.VOIDED);
         original.setCorrectedAt(Instant.now());
-        original.setCorrectionReason("USER_DELETED_FROM_WEB");
+        original.setCorrectionReason(reason);
         transactions.save(original);
     }
 
