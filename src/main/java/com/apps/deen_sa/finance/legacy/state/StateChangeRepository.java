@@ -88,6 +88,67 @@ public interface StateChangeRepository extends JpaRepository<StateChangeEntity, 
             @Param("subcategoryFiltered") boolean subcategoryFiltered,
             @Param("subcategory") String subcategory);
 
+    @Query(value = """
+            SELECT t.* FROM state_change t
+            WHERE t.user_id = :userId
+              AND t.transaction_type = 'EXPENSE'
+              AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+              AND (:accountId IS NULL OR t.source_container_id = :accountId OR t.target_container_id = :accountId)
+              AND (:categoryFiltered = false OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategoryFiltered = false OR LOWER(t.subcategory) = LOWER(:subcategory))
+              AND (
+                (:matchAll = false AND EXISTS (
+                    SELECT 1 FROM transaction_tag tt
+                    WHERE tt.transaction_id = t.id AND tt.tag_id IN (:tagIds)
+                ))
+                OR
+                (:matchAll = true AND (
+                    SELECT COUNT(DISTINCT tt.tag_id) FROM transaction_tag tt
+                    WHERE tt.transaction_id = t.id AND tt.tag_id IN (:tagIds)
+                ) = :tagCount)
+              )
+              AND (:beforeId IS NULL OR t.id < :beforeId)
+            ORDER BY t.id DESC
+            """, nativeQuery = true)
+    List<StateChangeEntity> findTagFilteredActiveExpensesBefore(
+            @Param("userId") String userId, @Param("start") Instant start,
+            @Param("end") Instant end, @Param("accountId") Long accountId,
+            @Param("categoryFiltered") boolean categoryFiltered, @Param("category") String category,
+            @Param("subcategoryFiltered") boolean subcategoryFiltered,
+            @Param("subcategory") String subcategory, @Param("tagIds") List<Long> tagIds,
+            @Param("matchAll") boolean matchAll, @Param("tagCount") long tagCount,
+            @Param("beforeId") Long beforeId, Pageable pageable);
+
+    @Query(value = """
+            SELECT COUNT(t.id), COALESCE(SUM(t.amount), 0) FROM state_change t
+            WHERE t.user_id = :userId
+              AND t.transaction_type = 'EXPENSE'
+              AND t.record_status = 'ACTIVE'
+              AND t.tx_time >= :start AND t.tx_time < :end
+              AND (:accountId IS NULL OR t.source_container_id = :accountId OR t.target_container_id = :accountId)
+              AND (:categoryFiltered = false OR LOWER(t.category) = LOWER(:category))
+              AND (:subcategoryFiltered = false OR LOWER(t.subcategory) = LOWER(:subcategory))
+              AND (
+                (:matchAll = false AND EXISTS (
+                    SELECT 1 FROM transaction_tag tt
+                    WHERE tt.transaction_id = t.id AND tt.tag_id IN (:tagIds)
+                ))
+                OR
+                (:matchAll = true AND (
+                    SELECT COUNT(DISTINCT tt.tag_id) FROM transaction_tag tt
+                    WHERE tt.transaction_id = t.id AND tt.tag_id IN (:tagIds)
+                ) = :tagCount)
+              )
+            """, nativeQuery = true)
+    List<Object[]> summarizeTagFilteredActiveExpenses(
+            @Param("userId") String userId, @Param("start") Instant start,
+            @Param("end") Instant end, @Param("accountId") Long accountId,
+            @Param("categoryFiltered") boolean categoryFiltered, @Param("category") String category,
+            @Param("subcategoryFiltered") boolean subcategoryFiltered,
+            @Param("subcategory") String subcategory, @Param("tagIds") List<Long> tagIds,
+            @Param("matchAll") boolean matchAll, @Param("tagCount") long tagCount);
+
     @Query("""
             SELECT COUNT(t), COALESCE(SUM(t.amount), 0) FROM StateChangeEntity t
             WHERE t.userId = :userId

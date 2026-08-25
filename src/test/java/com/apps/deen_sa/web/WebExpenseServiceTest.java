@@ -83,6 +83,63 @@ class WebExpenseServiceTest {
     }
 
     @Test
+    void filtersByAnySelectedTagWithoutChangingPageSummarySemantics() {
+        StateChangeEntity result = expense(12L, "Travel", 1);
+        when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection()))
+                .thenReturn(List.of(tag(4L, "Travel"), tag(7L, "Work")));
+        when(expenses.findTagFilteredActiveExpensesBefore(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq(""), eq(List.of(4L, 7L)), eq(false), eq(2L), isNull(), any()))
+                .thenReturn(List.of(result));
+        when(expenses.summarizeTagFilteredActiveExpenses(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq(""), eq(List.of(4L, 7L)), eq(false), eq(2L)))
+                .thenReturn(java.util.Collections.singletonList(new Object[]{1L, new BigDecimal("2400")}));
+
+        var page = service.list(user, YearMonth.of(2026, 8), 20, null,
+                new WebExpenseService.ExpenseFilter(null, null, null, List.of(4L, 7L),
+                        WebExpenseService.TagMatch.ANY));
+
+        assertThat(page.items()).extracting(WebExpenseService.ExpenseItem::id).containsExactly(12L);
+        assertThat(page.filterSummary().transactionCount()).isEqualTo(1);
+        assertThat(page.filterSummary().totalAmount()).isEqualByComparingTo("2400");
+        assertThat(page.filterSummary().tagIds()).containsExactly(4L, 7L);
+        assertThat(page.filterSummary().tagMatch()).isEqualTo("any");
+        verify(expenses, never()).findFilteredActiveExpensesBefore(any(), any(), any(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), any(), any());
+    }
+
+    @Test
+    void supportsAllTagIntersectionAndDeduplicatesRequestedIds() {
+        when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection()))
+                .thenReturn(List.of(tag(4L, "Travel"), tag(7L, "Work")));
+        when(expenses.findTagFilteredActiveExpensesBefore(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq(""), eq(List.of(4L, 7L)), eq(true), eq(2L), isNull(), any()))
+                .thenReturn(List.of());
+        when(expenses.summarizeTagFilteredActiveExpenses(eq("42"), any(), any(), isNull(), eq(false), eq(""),
+                eq(false), eq(""), eq(List.of(4L, 7L)), eq(true), eq(2L)))
+                .thenReturn(java.util.Collections.singletonList(new Object[]{0L, BigDecimal.ZERO}));
+
+        var page = service.list(user, YearMonth.of(2026, 8), 20, null,
+                new WebExpenseService.ExpenseFilter(null, null, null, List.of(4L, 4L, 7L),
+                        WebExpenseService.TagMatch.ALL));
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.filterSummary().transactionCount()).isZero();
+        assertThat(page.filterSummary().tagIds()).containsExactly(4L, 7L);
+        assertThat(page.filterSummary().tagMatch()).isEqualTo("all");
+    }
+
+    @Test
+    void rejectsTagFilterWhenAnySelectedTagIsUnavailableToUser() {
+        when(tags.findAllByUserIdAndIdIn(eq(42L), anyCollection())).thenReturn(List.of(tag(4L, "Travel")));
+
+        assertThatThrownBy(() -> service.list(user, YearMonth.of(2026, 8), 20, null,
+                new WebExpenseService.ExpenseFilter(null, null, null, List.of(4L, 99L),
+                        WebExpenseService.TagMatch.ANY)))
+                .isInstanceOf(WebApiException.class).hasMessage("One or more selected tags are unavailable");
+        verifyNoInteractions(expenses);
+    }
+
+    @Test
     void classificationEditUsesAuthenticatedUserAndExpectedVersion() {
         StateChangeEntity replacement = expense(15L, "Food", 4);
         replacement.setSubcategory("Groceries");
@@ -139,7 +196,7 @@ class WebExpenseServiceTest {
 
         assertThatThrownBy(() -> service.editClassification(user, 12L,
                 new WebExpenseService.ClassificationUpdate(null, null, 3, List.of(8L, 99L))))
-                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("400 BAD_REQUEST");
+                .isInstanceOf(WebApiException.class).hasMessage("One or more selected tags are unavailable");
         verifyNoInteractions(corrections);
     }
 

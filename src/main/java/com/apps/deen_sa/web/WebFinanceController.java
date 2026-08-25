@@ -8,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.*;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/web")
@@ -88,10 +89,13 @@ public class WebFinanceController {
             @RequestParam(required = false) Long beforeId,
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String subcategory) {
+            @RequestParam(required = false) String subcategory,
+            @RequestParam(required = false) String tagIds,
+            @RequestParam(defaultValue = "any") String tagMatch) {
         AppUserEntity user = authentication.authenticate(token);
         return expenses.list(user, selectedMonth(user, month), limit, beforeId,
-                new WebExpenseService.ExpenseFilter(accountId, category, subcategory));
+                new WebExpenseService.ExpenseFilter(accountId, category, subcategory,
+                        parseTagIds(tagIds), parseTagMatch(tagMatch)));
     }
 
     @GetMapping("/expense-taxonomy")
@@ -138,6 +142,28 @@ public class WebFinanceController {
 
     private String clientAddress(HttpServletRequest request) {
         return request.getRemoteAddr();
+    }
+
+    private List<Long> parseTagIds(String value) {
+        if (value == null || value.isBlank()) return List.of();
+        try {
+            List<Long> parsed = Arrays.stream(value.split(",", -1)).map(String::trim)
+                    .map(Long::parseLong).toList();
+            if (parsed.stream().anyMatch(id -> id < 1)) throw new NumberFormatException();
+            return parsed;
+        } catch (NumberFormatException invalid) {
+            throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_TAG_IDS",
+                    "tagIds must contain positive integer IDs");
+        }
+    }
+
+    private WebExpenseService.TagMatch parseTagMatch(String value) {
+        try {
+            return WebExpenseService.TagMatch.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (RuntimeException invalid) {
+            throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_TAG_MATCH",
+                    "tagMatch must be either any or all");
+        }
     }
 
     public record LoginLinkRequest(String phoneNumber) { }

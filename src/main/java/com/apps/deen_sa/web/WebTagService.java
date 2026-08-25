@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Comparator;
 
 @Service
 public class WebTagService {
@@ -42,7 +43,9 @@ public class WebTagService {
 
     @Transactional(readOnly = true)
     public List<TagItem> list(AppUserEntity user) {
-        return tags.findAllByUserIdOrderByNameAsc(user.getId()).stream().map(this::item).toList();
+        return tags.findAllByUserIdOrderByNameAsc(user.getId()).stream().map(this::item)
+                .sorted(Comparator.comparing(TagItem::name, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     private String cleanName(String value) {

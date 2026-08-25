@@ -43,10 +43,12 @@ class WebTagServiceTest {
 
     @Test
     void listsOnlyAuthenticatedUsersTags() {
-        TagEntity value = new TagEntity(); value.setId(3L); value.setName("Family"); value.setUserId(42L);
-        when(tags.findAllByUserIdOrderByNameAsc(42L)).thenReturn(List.of(value));
+        TagEntity work = new TagEntity(); work.setId(4L); work.setName("work"); work.setUserId(42L);
+        TagEntity family = new TagEntity(); family.setId(3L); family.setName("Family"); family.setUserId(42L);
+        when(tags.findAllByUserIdOrderByNameAsc(42L)).thenReturn(List.of(work, family));
 
-        assertThat(service.list(user)).containsExactly(new WebTagService.TagItem(3L, "Family"));
+        assertThat(service.list(user)).containsExactly(
+                new WebTagService.TagItem(3L, "Family"), new WebTagService.TagItem(4L, "work"));
     }
 
     private AppUserEntity user() {
