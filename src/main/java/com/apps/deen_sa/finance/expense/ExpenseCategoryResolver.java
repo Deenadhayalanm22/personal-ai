@@ -28,6 +28,14 @@ public class ExpenseCategoryResolver {
                 return;
             }
         }
+        // An unfamiliar but identifiable physical product is still Shopping, but it must not
+        // be forced into an inaccurate specific bucket. Its proposed reusable classification
+        // is captured separately for taxonomy review.
+        if ("Miscellaneous".equals(category) && isPhysicalPurchase(originalText)) {
+            expense.setCategory("Shopping");
+            expense.setSubcategory("Other Shopping");
+            return;
+        }
         if (subcategory != null && taxonomy.parentCategory(subcategory).isPresent()) {
             String parent = taxonomy.parentCategory(subcategory).orElseThrow();
             String raw = evidence;
@@ -86,6 +94,12 @@ public class ExpenseCategoryResolver {
         if (raw == null) return Optional.empty();
         Map<String, String> matches = semanticMatcher.match(taxonomy.allLabels().stream().sorted().toList(), List.of(raw));
         return taxonomy.canonicalLabel(matches == null ? null : matches.get(raw));
+    }
+
+    private boolean isPhysicalPurchase(String text) {
+        if (text == null || text.isBlank()) return false;
+        return java.util.regex.Pattern.compile(
+                "(?iu)\\b(?:bought|purchased|ordered|buying)\\b").matcher(text).find();
     }
 
     private String explicitBudgetScope(String text) {

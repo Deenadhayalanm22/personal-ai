@@ -194,6 +194,32 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
+    void mapsAnUnknownPurchasedPhysicalItemToOtherShoppingInsteadOfMiscellaneous() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Miscellaneous");
+        expense.setSubcategory("Others");
+
+        resolver.canonicalize(expense,
+                "I bought a beach mat for 996 rupees, paid using credit card");
+
+        assertThat(expense.getCategory()).isEqualTo("Shopping");
+        assertThat(expense.getSubcategory()).isEqualTo("Other Shopping");
+    }
+
+    @Test
+    void knownPurchasedItemsKeepTheirMoreSpecificTaxonomyClassification() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Miscellaneous");
+
+        resolver.canonicalize(expense, "I bought medicines for 996 rupees");
+
+        assertThat(expense.getCategory()).isEqualTo("Medical");
+        assertThat(expense.getSubcategory()).isEqualTo("Medicines");
+    }
+
+    @Test
     void identifiesHaircutAsPersonalCareWithoutSemanticModelCall() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
         ExpenseDto expense = new ExpenseDto();

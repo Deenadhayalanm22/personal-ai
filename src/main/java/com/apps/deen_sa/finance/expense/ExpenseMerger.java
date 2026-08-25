@@ -29,6 +29,10 @@ public class ExpenseMerger {
             base.setSubcategory(update.getSubcategory());
         }
 
+        if (update.getTaxonomyCandidate() != null) {
+            base.setTaxonomyCandidate(update.getTaxonomyCandidate());
+        }
+
         if (update.getMerchantName() != null) {
             base.setMerchantName(update.getMerchantName());
         }

@@ -7,7 +7,8 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             PERSONAL-FINANCE EXTENSION
             Supported event types: EXPENSE, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
             Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD), rawText.
+            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD),
+            taxonomyCandidate, rawText.
             - A new financial movement amount must have exact evidence in the current message.
             - Existing accounts are reference candidates only. Populate an account only when stated now or when it
               directly answers a pending question.
@@ -32,6 +33,15 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             - School bags, books, stationery, and classroom materials are School Supplies, not School Fees.
               Ordinary meat, fish, chicken, vegetables, and ingredients bought for cooking are Groceries. Use
               Celebration Meal/Home Cooked only when the message explicitly describes a celebration or special meal.
+            - When the user bought or purchased an identifiable physical item: use Electronics for electronics,
+              Clothing for clothing/footwear/wearable accessories, Gifts only when explicitly bought as a gift, and
+              Education or Medical when clearly applicable. Otherwise use Shopping / Other Shopping. An unfamiliar
+              product name is not a reason to use Miscellaneous. Examples: beach mat, storage box, umbrella, suitcase,
+              water bottle, and yoga mat are Shopping / Other Shopping.
+            - Miscellaneous is a last resort for expenses that are not purchases of identifiable physical goods.
+            - If the broad category is clear but no configured specific subcategory fits, taxonomyCandidate may
+              propose a reusable category/subcategory for later human review. It never replaces the configured
+              category/subcategory. Do not propose merchants, brands, people, locations, or one-off descriptions.
             - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
             - Editing or deleting earlier expenses is handled by the authenticated web dashboard, not conversation.
               Never reinterpret an edit, correction, removal, void, or deletion request as a new EXPENSE.

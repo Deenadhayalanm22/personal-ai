@@ -52,6 +52,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final ObjectMapper objectMapper;
     private final com.apps.deen_sa.finance.budget.BudgetInsightService budgetInsights;
     private final AccountEnrichmentService accountEnrichment;
+    private final TaxonomyCandidateService taxonomyCandidates;
 
     @Override
     public String intentType() {
@@ -373,7 +374,9 @@ public class ExpenseHandler implements SpeechHandler {
             transaction.setSourceContainerId(source.getId());
         }
 
-        return repo.save(transaction);
+        StateChangeEntity saved = repo.save(transaction);
+        taxonomyCandidates.recordIfUseful(dto, saved.getId());
+        return saved;
     }
 
     private StateContainerEntity resolveSourceContainer(ExpenseDto dto, Long userId) {

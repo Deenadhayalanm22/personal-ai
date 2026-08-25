@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
             "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardBillingDay", "creditCardDueDay",
-            "transactionDate", "rawText", "confirmBudget");
+            "transactionDate", "taxonomyCandidate", "rawText", "confirmBudget");
     private final String eventType;
     private final SpeechHandler delegate;
     private final TransactionTemplate transactions;
@@ -31,6 +31,7 @@ final class FinanceEventCapability implements EventCapability {
         fields().forEach(field -> values.put(field, "string"));
         java.util.Set.of("amount", "sourceBalance", "creditLimit").forEach(field -> values.put(field, "number"));
         values.put("creditCardBillingDay", "integer"); values.put("creditCardDueDay", "integer");
+        values.put("taxonomyCandidate", "object");
         return java.util.Map.copyOf(values);
     }
     @Override public String extractionInstructions() { return "Extract only explicitly evidenced personal-finance facts."; }

@@ -29,6 +29,24 @@
      - UPI always implies sourceAccount = BANK_ACCOUNT
      - If unclear → null.
 
+  7. purchased physical items and taxonomy candidates
+     - An unfamiliar product name is not a reason to classify a purchase as Miscellaneous.
+     - For an identifiable physical item that was bought, purchased, or ordered:
+       - Electronics → Shopping / Electronics.
+       - Clothing, footwear, or wearable accessories → Shopping / Clothing.
+       - Explicit gifts → Shopping / Gifts.
+       - Clearly educational or medical items → their applicable Education or Medical subcategory.
+       - Otherwise → Shopping / Other Shopping.
+     - Examples of the fallback: beach mat, storage box, umbrella, suitcase, water bottle, yoga mat.
+     - Miscellaneous is a last resort for expenses that are not purchases of identifiable physical goods.
+     - When a broad category is clear but no configured specific subcategory genuinely fits, optionally return
+       taxonomyCandidate with a reusable proposed category/subcategory, a short generic itemConcept, and confidence.
+     - A taxonomy candidate is a review suggestion only. The regular category and subcategory must still use the
+       configured taxonomy and its category-specific Other fallback.
+     - Candidate names must be reusable spending concepts. Never use a merchant, brand, person, location, or a
+       description unique to this purchase.
+     - Do not propose a candidate when an existing configured subcategory is reasonably accurate.
+
   ---------------------------------------------------
   ### NON-NEGOTIABLE RULES
 

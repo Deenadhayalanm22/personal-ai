@@ -26,6 +26,9 @@ public class ExpenseDto {
     private String category;        // Food & Dining, Transportation, etc.
     private String subcategory;     // Fuel, Groceries, Eating Out, etc.
 
+    // Optional noncanonical proposal retained for taxonomy review only.
+    private TaxonomyCandidateDto taxonomyCandidate;
+
     // Who was paid
     private String merchantName;    // Amazon, Swiggy, Indian Oil, etc.
 
