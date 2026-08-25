@@ -47,4 +47,15 @@ class WebAuthenticationServiceTest {
                 .hasMessageContaining("401 UNAUTHORIZED");
         verifyNoInteractions(sessions);
     }
+
+    @Test
+    void revokesTheCurrentDeviceSessionOnLogout() {
+        WebSessionEntity session = new WebSessionEntity();
+        when(sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
+                MagicLinkService.hash("session"), now)).thenReturn(Optional.of(session));
+
+        service.logout("session");
+
+        assertThat(session.getRevokedAt()).isEqualTo(now);
+    }
 }

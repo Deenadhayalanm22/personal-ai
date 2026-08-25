@@ -122,6 +122,25 @@ public class WhatsAppReplySender {
         sendPayload(to, "interactive follow-up", payload);
     }
 
+    public void sendPortalLink(String to, String message, String url) {
+        Map<String, Object> payload = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "cta_url",
+                        "body", Map.of("text", limit(message, 1024)),
+                        "action", Map.of(
+                                "name", "cta_url",
+                                "parameters", Map.of(
+                                        "display_text", "Open portal",
+                                        "url", url)
+                        )
+                )
+        );
+        sendPayload(to, "portal link", payload);
+    }
+
     private void sendListReply(String to, String message, List<ResponseAction> actions) {
         List<Map<String, Object>> rows = actions.stream().limit(10)
                 .map(action -> Map.<String, Object>of(

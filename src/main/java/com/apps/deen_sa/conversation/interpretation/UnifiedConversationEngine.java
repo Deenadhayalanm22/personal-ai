@@ -325,7 +325,7 @@ public class UnifiedConversationEngine {
 
     private SpeechResult unresolved(String text, String reason, ConversationContext context) {
         unprocessed.record(text, reason, context);
-        return SpeechResult.info(messages.unprocessed(context.getLocale()));
+        return SpeechResult.unknown(messages.unprocessed(context.getLocale()));
     }
 
     private void applyTurnLanguage(TurnInterpretation turn, ConversationContext context) {

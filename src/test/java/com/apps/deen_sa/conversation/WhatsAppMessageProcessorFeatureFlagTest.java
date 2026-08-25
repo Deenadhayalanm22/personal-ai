@@ -61,18 +61,34 @@ class WhatsAppMessageProcessorFeatureFlagTest {
     }
 
     @Test
-    void generatesAndRepliesWithLinkForAnEnabledMobile() {
+    void sendsPortalEntryPointForAnEnabledMobile() {
         when(inboundMessages.claim("WHATSAPP", "message-3", MOBILE)).thenReturn(44L);
         when(featureFlags.hasAnyEnabledFeature("WHATSAPP", MOBILE)).thenReturn(true);
-        when(magicLinks.generateForWhatsAppUser(MOBILE))
-                .thenReturn("https://money.example.com/access?token=secret");
+        when(magicLinks.portalUrl()).thenReturn("https://money.example.com/portal");
 
         processor.processIncomingMessage(MOBILE, "show me my link", "message-3");
 
-        verify(magicLinks).generateForWhatsAppUser(MOBILE);
-        verify(replies).sendTextReply(MOBILE,
-                "Open your page: https://money.example.com/access?token=secret");
+        verify(replies).sendPortalLink(MOBILE, "Use the portal to sign in and manage your account.",
+                "https://money.example.com/portal");
+        verify(magicLinks, never()).generateForWhatsAppUser(MOBILE);
         verify(conversation, never()).process(anyString(), anyString(), anyString(), anyString());
         verify(inboundMessages).complete(44L);
+    }
+
+    @Test
+    void redirectsUnsupportedRequestsToThePortal() {
+        when(inboundMessages.claim("WHATSAPP", "message-4", MOBILE)).thenReturn(45L);
+        when(featureFlags.hasAnyEnabledFeature("WHATSAPP", MOBILE)).thenReturn(true);
+        when(conversation.process("WHATSAPP", MOBILE, "message-4", "unsupported request"))
+                .thenReturn(SpeechResult.unknown("I couldn't understand that request."));
+        when(magicLinks.portalUrl()).thenReturn("https://money.example.com/portal");
+
+        processor.processIncomingMessage(MOBILE, "unsupported request", "message-4");
+
+        verify(replies).sendPortalLink(MOBILE,
+                "We can't support this request in chat right now. Please use the portal to continue.",
+                "https://money.example.com/portal");
+        verify(magicLinks, never()).generateForWhatsAppUser(MOBILE);
+        verify(inboundMessages).complete(45L);
     }
 }

@@ -35,7 +35,7 @@ app:
   web:
     base-url: ${APP_WEB_BASE_URL}
     magic-link-expiry: ${APP_MAGIC_LINK_EXPIRY}
-    session-expiry: ${APP_WEB_SESSION_EXPIRY:12h}
+    session-expiry: ${APP_WEB_SESSION_EXPIRY:10d}
     secure-cookies: ${APP_WEB_SECURE_COOKIES:false}
     cookie-same-site: ${APP_WEB_COOKIE_SAME_SITE:Lax}
 

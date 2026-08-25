@@ -32,6 +32,8 @@ public class WhatsAppMessageProcessor {
 
     private static final String ACCESS_DENIED_MESSAGE =
             "Access is not enabled for this mobile number. Please contact the administrator.";
+    private static final String PORTAL_MESSAGE =
+            "We can't support this request in chat right now. Please use the portal to continue.";
 
     @Async("whatsappExecutor")
     public void processIncomingMessage(String from, String text, String messageId) {
@@ -156,8 +158,8 @@ public class WhatsAppMessageProcessor {
 
     private void processText(String from, String text, String messageId) {
         if (text != null && MAGIC_LINK_REQUEST.matcher(text).matches()) {
-            String link = magicLinks.generateForWhatsAppUser(from);
-            replySender.sendTextReply(from, "Open your page: " + link);
+            replySender.sendPortalLink(from, "Use the portal to sign in and manage your account.",
+                    magicLinks.portalUrl());
             return;
         }
 
@@ -180,6 +182,10 @@ public class WhatsAppMessageProcessor {
     }
 
     private void deliver(String to, SpeechResult result) {
+        if (result.getStatus() == SpeechStatus.UNKNOWN) {
+            replySender.sendPortalLink(to, PORTAL_MESSAGE, magicLinks.portalUrl());
+            return;
+        }
         if (result.getMedia() != null) {
             if (!replySender.sendImageReply(to, result.getMedia(), result.getMessage()) && result.getMessage() != null)
                 replySender.sendTextReply(to, result.getMessage());

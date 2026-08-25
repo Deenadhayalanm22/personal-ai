@@ -60,4 +60,10 @@ class MagicLinkServiceTest {
             assertThat(context.getBean(MagicLinkService.class)).isNotNull();
         }
     }
+
+    @Test
+    void exposesTheGeneralPortalUrlWithoutAUserToken() {
+        assertThat(service.portalUrl()).isEqualTo("https://money.example.com/portal");
+        verifyNoInteractions(users, links);
+    }
 }

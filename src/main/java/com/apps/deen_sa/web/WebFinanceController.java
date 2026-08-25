@@ -1,6 +1,7 @@
 package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -13,6 +14,7 @@ import java.time.*;
 public class WebFinanceController {
     static final String SESSION_COOKIE = "WEB_SESSION";
     private final WebAuthenticationService authentication;
+    private final WebLoginRequestService loginRequests;
     private final MonthlyExpenseService monthlyExpenses;
     private final WebExpenseService expenses;
     private final DashboardAccountService accounts;
@@ -20,15 +22,25 @@ public class WebFinanceController {
     private final boolean secureCookies;
     private final String cookieSameSite;
 
-    public WebFinanceController(WebAuthenticationService authentication, MonthlyExpenseService monthlyExpenses,
+    public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
+            MonthlyExpenseService monthlyExpenses,
             WebExpenseService expenses, DashboardAccountService accounts, WebExpenseTaxonomyService taxonomy,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
-        this.authentication = authentication; this.monthlyExpenses = monthlyExpenses;
+        this.authentication = authentication; this.loginRequests = loginRequests;
+        this.monthlyExpenses = monthlyExpenses;
         this.expenses = expenses;
         this.accounts = accounts;
         this.taxonomy = taxonomy;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
+    }
+
+    @PostMapping("/auth/login-link")
+    public ResponseEntity<LoginLinkResponse> requestLoginLink(@RequestBody LoginLinkRequest request,
+                                                               HttpServletRequest httpRequest) {
+        loginRequests.request(request.phoneNumber(), clientAddress(httpRequest));
+        return ResponseEntity.accepted().body(new LoginLinkResponse(
+                "If this number is registered, we sent a login link to its WhatsApp account."));
     }
 
     @PostMapping("/auth/magic-link")
@@ -40,6 +52,23 @@ public class WebFinanceController {
                 .maxAge(Duration.between(Instant.now(), grant.expiresAt())).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok(new AuthResponse(true, grant.expiresAt()));
+    }
+
+    @GetMapping("/auth/session")
+    public AuthResponse session(@CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        authentication.authenticate(token);
+        return new AuthResponse(true, null);
+    }
+
+    @PostMapping("/auth/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+                       HttpServletResponse response) {
+        authentication.logout(token);
+        ResponseCookie cookie = ResponseCookie.from(SESSION_COOKIE, "")
+                .httpOnly(true).secure(secureCookies).sameSite(cookieSameSite).path("/api/web")
+                .maxAge(Duration.ZERO).build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     @GetMapping("/expenses/monthly")
@@ -104,6 +133,12 @@ public class WebFinanceController {
         return requested == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : requested;
     }
 
+    private String clientAddress(HttpServletRequest request) {
+        return request.getRemoteAddr();
+    }
+
+    public record LoginLinkRequest(String phoneNumber) { }
+    public record LoginLinkResponse(String message) { }
     public record MagicLinkRequest(String token) { }
     public record AuthResponse(boolean authenticated, Instant expiresAt) { }
     public record DashboardResponse(MonthlyExpenseService.MonthlyExpenseResponse summary,

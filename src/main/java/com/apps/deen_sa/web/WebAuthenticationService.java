@@ -24,7 +24,7 @@ public class WebAuthenticationService {
 
     @Autowired
     public WebAuthenticationService(MagicLinkRepository magicLinks, WebSessionRepository sessions,
-            AppUserRepository users, @Value("${app.web.session-expiry:12h}") String sessionExpiry) {
+            AppUserRepository users, @Value("${app.web.session-expiry:10d}") String sessionExpiry) {
         this(magicLinks, sessions, users, DurationStyle.detectAndParse(sessionExpiry),
                 new SecureRandom(), Clock.systemUTC());
     }
@@ -63,6 +63,14 @@ public class WebAuthenticationService {
         WebSessionEntity session = sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
                 MagicLinkService.hash(token), clock.instant()).orElseThrow(WebAuthenticationService::unauthorized);
         return users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+    }
+
+    @Transactional
+    public void logout(String token) {
+        if (token == null || token.isBlank()) return;
+        sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
+                        MagicLinkService.hash(token), clock.instant())
+                .ifPresent(session -> session.setRevokedAt(clock.instant()));
     }
 
     private static ResponseStatusException unauthorized() {

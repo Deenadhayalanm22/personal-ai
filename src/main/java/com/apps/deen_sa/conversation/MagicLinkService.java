@@ -79,6 +79,10 @@ public class MagicLinkService {
                 .toUriString();
     }
 
+    public String portalUrl() {
+        return UriComponentsBuilder.fromUriString(baseUrl).path("/portal").build().toUriString();
+    }
+
     public static String hash(String token) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
