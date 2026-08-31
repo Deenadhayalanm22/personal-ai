@@ -2,7 +2,7 @@
 
 This repository contains one Spring Boot application for conversational personal-expense tracking.
 It accepts text or WhatsApp messages, records expenses, maintains payment-account balances, supports
-safe corrections, monthly budgets, and expense summaries.
+safe corrections, and provides expense summaries.
 
 WhatsApp access is stored once per number in `user_feature_flag`. The seeded `SUPER_ADMIN` can
 manage normal users from WhatsApp with `add user <country-code-number>` and
@@ -15,7 +15,7 @@ The application uses a feature-oriented MVC layout under `src/`:
 
 - `controller` and `conversation`: inbound HTTP/WhatsApp adapters and conversation orchestration
 - `finance/expense`: expense capture, validation, categorization, and correction use cases
-- `finance/account`, `finance/payment`, `finance/budget`, `finance/credit`: supporting expense features
+- `finance/account`, `finance/payment`, `finance/credit`: supporting expense features
 - `finance/query`: expense reporting
 - `finance/legacy`: expense transactions, payment accounts, and their balance adjustments
 - `dto`: transport objects

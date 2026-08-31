@@ -1,6 +1,0 @@
-{
-  "priority": 5,
-  "request": {"method": "POST", "urlPath": "/v19.0/test-phone-id/media"},
-  "response": {"status": 200, "headers": {"Content-Type": "application/json"},
-    "jsonBody": {"id": "usage-regression-chart-media-id"}}
-}

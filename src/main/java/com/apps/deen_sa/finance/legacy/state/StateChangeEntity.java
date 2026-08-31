@@ -66,12 +66,6 @@ public class StateChangeEntity {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> details;
 
-    @Column(name = "source_container_id")
-    private Long sourceContainerId;
-
-    @Column(name = "target_container_id")
-    private Long targetContainerId;
-
     // Optional but useful
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate
@@ -86,12 +80,6 @@ public class StateChangeEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "completeness_level", nullable = false)
     private CompletenessLevelEnum completenessLevel;
-
-    @Column(name = "financially_applied", nullable = false)
-    private boolean financiallyApplied = false;
-
-    @Column(name = "needs_enrichment", nullable = false)
-    private boolean needsEnrichment = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "record_status", nullable = false, length = 20)

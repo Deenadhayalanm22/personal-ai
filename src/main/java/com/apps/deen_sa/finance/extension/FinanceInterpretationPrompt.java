@@ -5,24 +5,14 @@ import com.apps.deen_sa.extension.api.InterpretationPromptContributor;
 final class FinanceInterpretationPrompt implements InterpretationPromptContributor {
     @Override public String instructions() { return """
             PERSONAL-FINANCE EXTENSION
-            Supported event types: EXPENSE, INCOME, TRANSFER, LIABILITY_PAYMENT, ACCOUNT_SETUP, BUDGET_SET.
-            Fields: amount, category, subcategory, merchantName, sourceAccount, destinationAccount, sourceBalance,
-            creditLimit, creditCardBillingDay (1-31), creditCardDueDay (1-31), transactionDate (YYYY-MM-DD),
+            Supported event type: EXPENSE.
+            Fields: amount, category, subcategory, merchantName, sourceAccount, transactionDate (YYYY-MM-DD),
             taxonomyCandidate, rawText.
             - A new financial movement amount must have exact evidence in the current message.
-            - Existing accounts are reference candidates only. Populate an account only when stated now or when it
-              directly answers a pending question.
-            - UPI, bank transfer, debit card, FASTag, and bank auto-debit map to BANK_ACCOUNT; cash maps to CASH;
-              credit card/card EMI maps to CREDIT_CARD; wallet maps to WALLET.
-            - ACCOUNT_SETUP attributes such as balance, outstanding, limit, billing day and due day are not transaction amounts.
-              Preserve the complete current message in rawText for deterministic extraction by the capability.
-            - Incoming salary, receipts, refunds, interest and gifts are INCOME; a receiving account is destinationAccount.
-            - Paying a credit-card bill is LIABILITY_PAYMENT. Buying goods using a card remains EXPENSE.
+            - Preserve a stated payment source as sourceAccount text. It is transaction metadata, not an account reference.
             - Money sent or paid to another person (for example mom, wife, friend, employee, or vendor) is EXPENSE
               unless both source and destination are explicitly the user's own accounts. The person is merchantName
               and the paying account is sourceAccount.
-            - TRANSFER is only movement between two explicitly owned accounts. Do not use TRANSFER for gifts,
-              family support, purchases, bills, or payments to another person.
             - Within Food & Dining, restaurant, cafe, bar, office/team lunch, dining out, and prepared-meal delivery
               are Eating Out. Snacks & Beverages is for a snack, tea, coffee, or beverage purchase that is not a meal.
               Celebration Meal/Home Cooked requires evidence of a celebration meal or food cooked at home; a family
@@ -46,12 +36,8 @@ final class FinanceInterpretationPrompt implements InterpretationPromptContribut
             - If the broad category is clear but no configured specific subcategory fits, taxonomyCandidate may
               propose a reusable category/subcategory for later human review. It never replaces the configured
               category/subcategory. Do not propose merchants, brands, people, locations, or one-off descriptions.
-            - "Set my monthly X budget to Y" is BUDGET_SET: amount=Y and category=X.
             - Editing or deleting earlier expenses is handled by the authenticated web dashboard, not conversation.
               Never reinterpret an edit, correction, removal, void, or deletion request as a new EXPENSE.
             - Expense queries use QUERY with TODAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, LAST_MONTH, LAST_7_DAYS or LAST_3_MONTHS.
-            - Questions asking for an account, bank, UPI, cash or card balance use QUERY with ACCOUNT_BALANCE.
-            - Questions about budget remaining, budget status or overspending use QUERY with CURRENT_STATUS.
-            - Questions about card bills due, card reminders or upcoming card payments use QUERY with UPCOMING_DUE.
             """; }
 }

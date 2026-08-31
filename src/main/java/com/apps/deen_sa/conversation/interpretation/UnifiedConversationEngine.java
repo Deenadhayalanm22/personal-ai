@@ -148,13 +148,11 @@ public class UnifiedConversationEngine {
         if (turn.turnType() == TurnType.QUERY) {
             if (turn.query() != null && turn.query() != QueryPeriod.NONE) {
                 return extensions.query(tenantId(context), "QUERY")
-                        .map(query -> toSpeechResult(query.handle(turn.query().name(), text,
-                                turn.analysisIntent(), turn.presentationMood(), context)))
+                        .map(query -> toSpeechResult(query.handle(turn.query().name(), text, context)))
                         .orElseGet(() -> SpeechResult.unknown("That query capability is not enabled for this business."));
             }
             SpeechResult result = extensions.query(tenantId(context), "QUERY")
-                    .map(query -> toSpeechResult(query.handle(QueryPeriod.LAST_7_DAYS.name(), text,
-                            turn.analysisIntent(), turn.presentationMood(), context)))
+                    .map(query -> toSpeechResult(query.handle(QueryPeriod.LAST_7_DAYS.name(), text, context)))
                     .orElseGet(() -> SpeechResult.unknown("That query capability is not enabled for this business."));
             if (result.getMessage() != null && !result.getMessage().isBlank()) {
                 result.setMessage(result.getMessage() + "\n\n" + messages.defaultQueryPeriodGuidance(context.getLocale()));
@@ -213,8 +211,7 @@ public class UnifiedConversationEngine {
                 .toList();
         if (events.isEmpty()) return turn;
         return new TurnInterpretation(TurnType.ANSWER_TO_PENDING_EVENT, context.getActiveIntent(), turn.language(),
-                turn.targetEventId(), events, turn.command(), turn.query(), turn.analysisIntent(),
-                turn.presentationMood(), turn.ambiguities(), turn.confidence());
+                turn.targetEventId(), events, turn.command(), turn.query(), turn.ambiguities(), turn.confidence());
     }
 
     private static boolean hasCurrentMessageAmountEvidence(EventPatch event) {
@@ -361,7 +358,7 @@ public class UnifiedConversationEngine {
         return SpeechResult.builder().status(status).message(result.message()).needFollowup(result.followup())
                 .missingFields(result.missingFields()).partial(result.partial()).savedEntity(result.savedEntity())
                 .actions(result.actions().stream().map(value -> new ResponseAction(value.id(), value.title())).toList())
-                .media(result.media()).build();
+                .build();
     }
 
     private void appendTurn(ConversationContext context, String role, String text) {

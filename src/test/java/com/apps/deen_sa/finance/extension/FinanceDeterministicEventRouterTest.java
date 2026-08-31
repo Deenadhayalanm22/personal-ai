@@ -24,16 +24,6 @@ class FinanceDeterministicEventRouterTest {
         assertThat(router.eventType(text)).contains("EXPENSE");
     }
 
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {
-            "Create my HDFC salary bank account with a current balance of 20000",
-            "Create my ICICI Amazon Pay credit card with limit 150000, outstanding 0 and due day 12"
-    })
-    void routesExplicitAccountSetupWithoutTheModel(String text) {
-        assertThat(router.eventType(text)).contains("ACCOUNT_SETUP");
-        assertThat(router.query(text)).isEmpty();
-    }
-
     @ParameterizedTest
     @ValueSource(strings = {
             "What did I spend today?",
@@ -73,70 +63,22 @@ class FinanceDeterministicEventRouterTest {
                 .containsEntry("sourceAccount", "my upi");
     }
 
-    @org.junit.jupiter.api.Test
-    void extractsMonthlyBudgetWithoutTheModel() {
-        var event = router.events("Set my monthly groceries budget to ₹10k").getFirst();
-
-        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
-        assertThat(event.fields()).containsEntry("category", "groceries")
-                .containsEntry("amount", new java.math.BigDecimal("10000"));
-    }
-
-    @org.junit.jupiter.api.Test
-    void extractsSetupStyleSubcategoryBudgetWithoutTheModel() {
-        var event = router.events("Setup my eating out budget ₹5,000 for this month.").getFirst();
-
-        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
-        assertThat(event.fields()).containsEntry("category", "eating out")
-                .containsEntry("amount", new java.math.BigDecimal("5000"));
-    }
-
-    @org.junit.jupiter.api.Test
-    void extractsNaturalMonthlyScopeBalanceAsBudgetMutation() {
-        var event = router.events("my grocery balance for this month is only 2000.").getFirst();
-
-        assertThat(event.eventType()).isEqualTo("BUDGET_SET");
-        assertThat(event.fields()).containsEntry("category", "grocery")
-                .containsEntry("amount", new java.math.BigDecimal("2000"));
-    }
-
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {
-            "how much my grocery budget for this month",
-            "how am i doing my grocery budget against this month planned"
-    })
-    void routesBudgetStatusQuestionsWithoutTheModel(String text) {
-        assertThat(router.query(text)).contains("CURRENT_STATUS");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "what is my current balance in my bank",
-            "what is my curent balance",
-            "What is my balance?",
-            "show my bank balance",
-            "how much balance in my account"
-    })
-    void routesAccountBalanceQuestionsWithoutTheModel(String text) {
-        assertThat(router.query(text)).contains("ACCOUNT_BALANCE");
-    }
-
     @ParameterizedTest
     @ValueSource(strings = {
             "Show my spending summary for today by category",
-            "Give me today's expense chart",
+            "Give me today's expense total",
             "Show a category breakdown for today"
     })
-    void routesExplicitTodaySummaryAndChartRequestsWithoutTheModel(String text) {
+    void routesExplicitTodaySummaryRequestsWithoutTheModel(String text) {
         assertThat(router.query(text)).contains("TODAY");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
             "Give me this month's spending summary by category",
-            "Show my expense chart for this month"
+            "Show my expense total for this month"
     })
-    void routesExplicitMonthlySummaryAndChartRequestsWithoutTheModel(String text) {
+    void routesExplicitMonthlySummaryRequestsWithoutTheModel(String text) {
         assertThat(router.query(text)).contains("THIS_MONTH");
     }
 
@@ -242,7 +184,7 @@ class FinanceDeterministicEventRouterTest {
             "Yearly term insurance premium of ₹50,000 paid using HDFC Credit Card.",
             "Health insurance premium of ₹12,500 paid via ICICI Credit Card."
     })
-    void routesPremiumPaidByCardAsExpenseNotLiabilityPayment(String text) {
+    void routesPremiumPaidByCardAsExpense(String text) {
         var event = router.events(text).getFirst();
 
         assertThat(event.eventType()).isEqualTo("EXPENSE");

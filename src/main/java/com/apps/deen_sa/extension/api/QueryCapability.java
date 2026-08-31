@@ -15,8 +15,4 @@ public interface QueryCapability {
         return handle(period, context);
     }
 
-    default CapabilityResult handle(String period, String rawText, String analysisIntent,
-                                    String presentationMood, CapabilityContext context) {
-        return handle(period, rawText, context);
-    }
 }

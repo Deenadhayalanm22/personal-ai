@@ -31,25 +31,17 @@ public class ExpenseAnalyticsService {
                             query.getUserId(),
                             range.start(),
                             range.end(),
-                            query.getCategory(),
-                            query.getSourceAccount()
+                            query.getCategory()
                     )
             );
         }
 
         if (query.isGroupByCategory()) {
             summary.setSpendByCategory(
-                    rows(repo.sumByCategory(query.getUserId(), range.start(), range.end(), query.getSourceAccount()))
+                    rows(repo.sumByCategory(query.getUserId(), range.start(), range.end()))
             );
             summary.setSpendBySubcategory(
-                    rows(repo.sumBySubcategory(query.getUserId(), range.start(), range.end(),
-                            query.getCategory(), query.getSourceAccount()))
-            );
-        }
-
-        if (query.isGroupBySourceAccount()) {
-            summary.setSpendBySourceAccount(
-                    rows(repo.sumBySourceAccount(query.getUserId(), range.start(), range.end(), query.getCategory()))
+                    rows(repo.sumBySubcategory(query.getUserId(), range.start(), range.end(), query.getCategory()))
             );
         }
 

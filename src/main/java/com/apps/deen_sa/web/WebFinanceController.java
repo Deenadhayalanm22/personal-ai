@@ -17,6 +17,7 @@ public class WebFinanceController {
     private final WebAuthenticationService authentication;
     private final WebLoginRequestService loginRequests;
     private final MonthlyExpenseService monthlyExpenses;
+    private final ExpenseCalendarService expenseCalendar;
     private final WebExpenseService expenses;
     private final WebExpenseTaxonomyService taxonomy;
     private final WebTagService tags;
@@ -25,11 +26,13 @@ public class WebFinanceController {
 
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             MonthlyExpenseService monthlyExpenses,
-            WebExpenseService expenses, WebExpenseTaxonomyService taxonomy, WebTagService tags,
+            ExpenseCalendarService expenseCalendar, WebExpenseService expenses,
+            WebExpenseTaxonomyService taxonomy, WebTagService tags,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.loginRequests = loginRequests;
         this.monthlyExpenses = monthlyExpenses;
+        this.expenseCalendar = expenseCalendar;
         this.expenses = expenses;
         this.taxonomy = taxonomy;
         this.tags = tags;
@@ -87,15 +90,28 @@ public class WebFinanceController {
             @RequestParam(required = false) YearMonth month,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) Long beforeId,
-            @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String subcategory,
             @RequestParam(required = false) String tagIds,
             @RequestParam(defaultValue = "any") String tagMatch) {
         AppUserEntity user = authentication.authenticate(token);
         return expenses.list(user, selectedMonth(user, month), limit, beforeId,
-                new WebExpenseService.ExpenseFilter(accountId, category, subcategory,
+                new WebExpenseService.ExpenseFilter(category, subcategory,
                         parseTagIds(tagIds), parseTagMatch(tagMatch)));
+    }
+
+    @GetMapping("/expenses/calendar")
+    public ExpenseCalendarService.CalendarResponse expenseCalendar(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestParam String month) {
+        AppUserEntity user = authentication.authenticate(token);
+        YearMonth selected = parseCalendarMonth(month);
+        try {
+            return expenseCalendar.calendar(user, selected);
+        } catch (RuntimeException failure) {
+            throw new WebApiException(HttpStatus.INTERNAL_SERVER_ERROR, "CALENDAR_FETCH_FAILED",
+                    "Unable to load the expense calendar.");
+        }
     }
 
     @GetMapping("/expense-taxonomy")
@@ -138,6 +154,16 @@ public class WebFinanceController {
 
     private YearMonth selectedMonth(AppUserEntity user, YearMonth requested) {
         return requested == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : requested;
+    }
+
+    private YearMonth parseCalendarMonth(String value) {
+        if (value == null || !value.matches("\\d{4}-(0[1-9]|1[0-2])"))
+            throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_MONTH", "month must use YYYY-MM format");
+        try {
+            return YearMonth.parse(value);
+        } catch (DateTimeException invalid) {
+            throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_MONTH", "month must use YYYY-MM format");
+        }
     }
 
     private String clientAddress(HttpServletRequest request) {

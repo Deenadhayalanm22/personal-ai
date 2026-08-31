@@ -4,8 +4,7 @@ ExpenseLiveIT.it_live_complete_unique_finance_contract — MASTER CONTRACT
 Purpose
 -------
 One literal live-model test method executes all unique personal-finance acceptance behavior through
-four isolated WhatsApp personas. The detailed phase contracts remain in it_live_001.txt through
-it_live_005.txt and are incorporated here by reference.
+four isolated WhatsApp personas. The detailed phase contracts are incorporated here by reference.
 
 Expense authorization (applies to every persona)
 ------------------------------------------------
@@ -14,12 +13,6 @@ verified source (or null plus the detected unconfigured account). No expense or 
 exist at preview time. The conversation then sends the Confirm button before applying the existing
 accounting oracle. An unconfigured source is set up only after confirmation; skipping setup preserves
 the confirmed expense without a balance mutation. Discarded previews contribute no ledger entries.
-
-Budget authorization (applies wherever budgets are configured)
-----------------------------------------------------------------
-A budget scope must already occur in that persona's confirmed expense history. The app previews the
-monthly amount and category/subcategory relationship, writes nothing before Confirm, and saves only
-after the Confirm button. Unknown user scopes instruct the user to record relevant expense data first.
 
 Persona A — two-month ledger
 ----------------------------
@@ -38,16 +31,15 @@ Executes the financial behavior from it_live_003 without repeating Persona B's g
 It must create a provisional bank account directly from explicit UPI wording, collect its opening
 balance, apply the pending expense, answer a read-only total, and finish with a clean session.
 
-Persona D — planning, alerts, and recovery
-------------------------------------------
-Executes it_live_004, then starts from a clean accounting state under the same fourth phone identity
-and executes it_live_005. The reset is part of the contract: prior planning accounts and grocery
-spend must not invalidate the real-user provisional-account and budget journey.
+Persona D — insights, reminders, and recovery
+---------------------------------------------
+Exercises monthly/category summaries, card reminders, taxonomy resolution, unsupported-demand
+recovery, and clean-session reconciliation under the fourth phone identity.
 
 Isolation oracle
 ----------------
 - Exactly four phone identities are used.
 - Repository and conversation state are reset between personas.
 - Persona D is reset between its two incompatible clean-start phases.
-- Every detailed persisted accounting, budget, routing, reminder, unsupported-message, and session
-  assertion in the five referenced phase contracts remains enforced.
+- Every detailed persisted accounting, routing, reminder, unsupported-message, and session
+  assertion in the referenced phase contracts remains enforced.

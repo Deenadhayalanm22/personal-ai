@@ -8,8 +8,7 @@ Daily review query:
 
 ```sql
 SELECT id, created_at, external_user_id, input_kind, input_text,
-       response_status, response_text, response_media_type, response_media_filename,
-       response_media_size, active_intent, waiting_for_field,
+       response_status, response_text, active_intent, waiting_for_field,
        partial_json, saved_entity_type, saved_entity_json, review_notes
 FROM conversation_diagnostic_turn
 WHERE reviewed = FALSE

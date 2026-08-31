@@ -13,19 +13,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import com.apps.deen_sa.finance.budget.BudgetInsightService;
-import com.apps.deen_sa.finance.credit.CardDueReminderService;
-import com.apps.deen_sa.finance.legacy.state.StateContainerEntity;
-import com.apps.deen_sa.finance.legacy.state.StateContainerRepository;
-import com.apps.deen_sa.finance.presentation.FinancialPresentationRequest;
-import com.apps.deen_sa.finance.presentation.VisualizationPlan;
-import com.apps.deen_sa.finance.presentation.VisualizationPlanner;
-import com.apps.deen_sa.finance.presentation.PresentationAnalyticsService;
-import com.apps.deen_sa.finance.presentation.PresentationDataset;
 
 @Service
 public class QueryHandler implements SpeechHandler {
@@ -35,62 +24,27 @@ public class QueryHandler implements SpeechHandler {
     private final ExpenseSummaryExplainer expenseSummaryExplainer;
     private final QueryClassifier queryClassifier;
     private final QueryContextFormatter queryContextFormatter;
-    private final BudgetInsightService budgetInsights;
-    private final CardDueReminderService cardReminders;
-    private final StateContainerRepository stateContainers;
-    private final ExpenseChartRenderer chartRenderer;
-    private final VisualizationPlanner visualizationPlanner;
-    private final PresentationAnalyticsService presentationAnalytics;
 
     public QueryHandler(
             ExpenseQueryBuilder expenseQueryBuilder,
             ExpenseAnalyticsService expenseAnalyticsService,
             ExpenseSummaryExplainer expenseSummaryExplainer, QueryClassifier queryClassifier,
-            QueryContextFormatter queryContextFormatter, BudgetInsightService budgetInsights,
-            CardDueReminderService cardReminders, StateContainerRepository stateContainers,
-            ExpenseChartRenderer chartRenderer, VisualizationPlanner visualizationPlanner,
-            PresentationAnalyticsService presentationAnalytics
+            QueryContextFormatter queryContextFormatter
     ) {
         this.expenseQueryBuilder = expenseQueryBuilder;
         this.expenseAnalyticsService = expenseAnalyticsService;
         this.expenseSummaryExplainer = expenseSummaryExplainer;
         this.queryClassifier = queryClassifier;
         this.queryContextFormatter = queryContextFormatter;
-        this.budgetInsights = budgetInsights;
-        this.cardReminders = cardReminders;
-        this.stateContainers = stateContainers;
-        this.chartRenderer = chartRenderer;
-        this.visualizationPlanner = visualizationPlanner;
-        this.presentationAnalytics = presentationAnalytics;
     }
 
     /** Executes the query plan already produced by the unified interpreter with no additional model calls. */
     public SpeechResult handleInterpreted(String period, ConversationContext context) {
-        return handleInterpreted(period, null, null, context);
+        return interpretedSummary(period, context);
     }
 
-    public SpeechResult handleInterpreted(String period, String analysisIntent, String presentationMood,
-                                          ConversationContext context) {
+    private SpeechResult interpretedSummary(String period, ConversationContext context) {
         boolean whatsapp = "WHATSAPP".equalsIgnoreCase(context.getChannel());
-        VisualizationPlan plan = visualizationPlanner.plan(
-                FinancialPresentationRequest.fromAi(analysisIntent, presentationMood));
-        if ("ACCOUNT_BALANCE".equals(period)) {
-            if (whatsapp) return portalInsight(accountBalances(context.getUserId()));
-            Map<String, BigDecimal> balances = accountBalanceValues(context.getUserId());
-            return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                    .message(accountBalances(context.getUserId()))
-                    .media(chartRenderer.accountStack("Balances across accounts", balances, plan.mood(), context.getLocale()))
-                    .build();
-        }
-        if ("CURRENT_STATUS".equals(period)) {
-            String message = budgetInsights.status(context.getUserId(), context.getTimezone());
-            if (whatsapp) return portalInsight(message);
-            return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                    .message(message).media(chartRenderer.budgetProgress("Monthly budget progress",
-                            budgetInsights.progress(context.getUserId(), context.getTimezone()),
-                            plan.mood(), context.getLocale())).build();
-        }
-        if ("UPCOMING_DUE".equals(period)) return SpeechResult.info(cardReminders.reminders(context.getUserId(), context.getTimezone()));
         QueryResult result = new QueryResult();
         result.setIntent("QUERY");
         result.setQueryType("EXPENSE_TOTAL");
@@ -99,41 +53,9 @@ public class QueryHandler implements SpeechHandler {
         result.setGroupByCategory(true);
         ExpenseQuery query = expenseQueryBuilder.from(result, context.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
-        PresentationDataset presentation = presentationAnalytics.load(context.getUserId(), query.getTimeRange(),
-                plan, context.getTimezone());
         com.apps.deen_sa.llm.AiCallTelemetry.avoided("query_classification_and_explanation");
         if (whatsapp) return portalInsight(highLevelSummary(context.getLocale(), period, summary));
-        return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                .message(summary(context.getLocale(), period, summary))
-                .media(chartRenderer.render(plan, chartTitle(period), summary, presentation, context.getLocale()))
-                .build();
-    }
-
-    private String accountBalances(Long userId) {
-        var accounts = stateContainers.findActiveByOwnerId(userId).stream()
-                .filter(account -> Set.of("BANK_ACCOUNT", "CASH", "WALLET", "CREDIT_CARD")
-                        .contains(account.getContainerType()))
-                .toList();
-        if (accounts.isEmpty()) return "You have no active financial accounts yet.";
-        return accounts.stream().map(this::balanceLine).collect(Collectors.joining("\n"));
-    }
-
-    private Map<String, BigDecimal> accountBalanceValues(Long userId) {
-        Map<String, BigDecimal> values = new LinkedHashMap<>();
-        stateContainers.findActiveByOwnerId(userId).stream()
-                .filter(account -> Set.of("BANK_ACCOUNT", "CASH", "WALLET", "CREDIT_CARD")
-                        .contains(account.getContainerType()))
-                .filter(account -> account.getCurrentValue() != null)
-                .forEach(account -> values.put(account.getName(), account.getCurrentValue()));
-        return values;
-    }
-
-    private String balanceLine(StateContainerEntity account) {
-        if (account.getCurrentValue() == null) return account.getName() + " balance is unknown.";
-        String amount = account.getCurrentValue().stripTrailingZeros().toPlainString();
-        if ("CREDIT_CARD".equals(account.getContainerType()))
-            return account.getName() + " outstanding balance is ₹" + amount + ".";
-        return account.getName() + " balance is ₹" + amount + ".";
+        return SpeechResult.info(summary(context.getLocale(), period, summary));
     }
 
     @Override
@@ -142,7 +64,6 @@ public class QueryHandler implements SpeechHandler {
 
         ExpenseQuery query = expenseQueryBuilder.from(result, ctx.getUserId());
         ExpenseSummary summary = expenseAnalyticsService.analyze(query);
-        VisualizationPlan plan = visualizationPlanner.plan(FinancialPresentationRequest.fromAi(null, null));
 
         String context =
                 queryContextFormatter.describe(result);
@@ -150,11 +71,7 @@ public class QueryHandler implements SpeechHandler {
         String response =
                 expenseSummaryExplainer.explain(summary, userText, context);
 
-        return SpeechResult.builder().status(com.apps.deen_sa.conversation.SpeechStatus.INFO)
-                .message(response)
-                .media(chartRenderer.render(plan, "Spending by category", summary,
-                        PresentationDataset.empty(), ctx.getLocale()))
-                .build();
+        return SpeechResult.info(response);
     }
 
     @Override
@@ -237,16 +154,4 @@ public class QueryHandler implements SpeechHandler {
         return "📌";
     }
 
-    private String chartTitle(String period) {
-        return switch (period) {
-            case "TODAY" -> "Today's spending by category";
-            case "THIS_WEEK" -> "This week's spending by category";
-            case "THIS_MONTH" -> "This month's spending by category";
-            case "THIS_YEAR" -> "This year's spending by category";
-            case "LAST_MONTH" -> "Last month's spending by category";
-            case "LAST_7_DAYS" -> "Last 7 days' spending by category";
-            case "LAST_3_MONTHS" -> "Last 3 months' spending by category";
-            default -> "Spending by category";
-        };
-    }
 }

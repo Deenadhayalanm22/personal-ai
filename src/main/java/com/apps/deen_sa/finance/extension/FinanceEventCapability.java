@@ -11,8 +11,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 final class FinanceEventCapability implements EventCapability {
     private static final Set<String> FINANCE_FIELDS = Set.of("amount", "category", "subcategory", "merchantName",
-            "sourceAccount", "destinationAccount", "sourceBalance", "creditLimit", "creditCardBillingDay", "creditCardDueDay",
-            "transactionDate", "taxonomyCandidate", "rawText", "confirmBudget");
+            "sourceAccount",
+            "transactionDate", "taxonomyCandidate", "rawText");
     private final String eventType;
     private final SpeechHandler delegate;
     private final TransactionTemplate transactions;
@@ -29,8 +29,7 @@ final class FinanceEventCapability implements EventCapability {
     @Override public java.util.Map<String, String> fieldTypes() {
         java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
         fields().forEach(field -> values.put(field, "string"));
-        java.util.Set.of("amount", "sourceBalance", "creditLimit").forEach(field -> values.put(field, "number"));
-        values.put("creditCardBillingDay", "integer"); values.put("creditCardDueDay", "integer");
+        values.put("amount", "number");
         values.put("taxonomyCandidate", "object");
         return java.util.Map.copyOf(values);
     }
@@ -63,6 +62,6 @@ final class FinanceEventCapability implements EventCapability {
         return new CapabilityResult(result.getStatus().name(), result.getMessage(), Boolean.TRUE.equals(result.getNeedFollowup()),
                 result.getMissingFields(), result.getPartial(), result.getSavedEntity(),
                 result.getActions() == null ? java.util.List.of() : result.getActions().stream()
-                        .map(value -> new CapabilityAction(value.id(), value.title())).toList(), result.getMedia());
+                        .map(value -> new CapabilityAction(value.id(), value.title())).toList());
     }
 }

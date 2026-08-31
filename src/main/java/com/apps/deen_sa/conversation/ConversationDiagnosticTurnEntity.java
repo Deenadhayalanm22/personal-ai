@@ -33,12 +33,6 @@ public class ConversationDiagnosticTurnEntity {
     private String responseStatus;
     @Column(name = "response_text", columnDefinition = "TEXT")
     private String responseText;
-    @Column(name = "response_media_type", length = 100)
-    private String responseMediaType;
-    @Column(name = "response_media_filename")
-    private String responseMediaFilename;
-    @Column(name = "response_media_size")
-    private Integer responseMediaSize;
     @Column(name = "need_followup")
     private Boolean needFollowup;
     @Column(name = "active_intent", length = 50)

@@ -191,11 +191,6 @@ public class WhatsAppMessageProcessor {
             replySender.sendPortalLink(to, result.getMessage(), magicLinks.portalUrl());
             return;
         }
-        if (result.getMedia() != null) {
-            if (!replySender.sendImageReply(to, result.getMedia(), result.getMessage()) && result.getMessage() != null)
-                replySender.sendTextReply(to, result.getMessage());
-            return;
-        }
         if (result.getMessage() == null) return;
         if (result.getActions() != null && !result.getActions().isEmpty())
             replySender.sendInteractiveReply(to, result.getMessage(), result.getActions());

@@ -13,7 +13,6 @@ public class ExpenseValidator {
         if (dto.getAmount() == null) missing.add("amount");
         if (dto.getCategory() == null || dto.getCategory().isBlank()) missing.add("category");
         if (dto.getSubcategory() == null || dto.getSubcategory().isBlank()) missing.add("subcategory");
-        if (dto.getSourceAccount() == null) missing.add("sourceAccount");
         if (dto.getTransactionDate() == null) missing.add("spentAt");
 
         return missing;

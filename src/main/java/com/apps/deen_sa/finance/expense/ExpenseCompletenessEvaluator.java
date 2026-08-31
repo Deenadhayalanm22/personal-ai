@@ -18,13 +18,8 @@ public class ExpenseCompletenessEvaluator {
             return CompletenessLevelEnum.MINIMAL;
         }
 
-        if (!hasFinancial(dto)) {
-            dto.setCompletenessLevelEnum(CompletenessLevelEnum.OPERATIONAL);
-            return CompletenessLevelEnum.OPERATIONAL;
-        }
-
-        dto.setCompletenessLevelEnum(CompletenessLevelEnum.FINANCIAL);
-        return CompletenessLevelEnum.FINANCIAL;
+        dto.setCompletenessLevelEnum(CompletenessLevelEnum.OPERATIONAL);
+        return CompletenessLevelEnum.OPERATIONAL;
     }
 
     private boolean hasMinimal(ExpenseDto dto) {
@@ -36,13 +31,6 @@ public class ExpenseCompletenessEvaluator {
         return dto.getCategory() != null
                 && !dto.getCategory().isBlank()
                 && dto.getSubcategory() != null
-                && !dto.getSubcategory().isBlank()
-                && dto.getSourceAccount() != null
-                && !dto.getSourceAccount().isBlank();
-    }
-
-    private boolean hasFinancial(ExpenseDto dto) {
-        return dto.getSourceAccount() != null
-                && dto.isSourceResolved(); // container resolved
+                && !dto.getSubcategory().isBlank();
     }
 }

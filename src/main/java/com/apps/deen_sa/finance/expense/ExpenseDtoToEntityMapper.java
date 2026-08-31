@@ -65,6 +65,9 @@ public class ExpenseDtoToEntityMapper {
         if (dto.getDetails() != null) {
             details.putAll(dto.getDetails());
         }
+        if (dto.getSourceAccount() != null && !dto.getSourceAccount().isBlank()) {
+            details.put("paymentSource", dto.getSourceAccount());
+        }
 
 
         entity.setDetails(details);
@@ -136,7 +139,5 @@ public class ExpenseDtoToEntityMapper {
         // entity.setUserId(...)
         // entity.setTransactionType(...)
         // entity.setCompletenessLevel(...)
-        // entity.setFinanciallyApplied(...)
-        // entity.setSourceContainerId(...)
     }
 }

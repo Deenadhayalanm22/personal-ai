@@ -66,7 +66,7 @@ class ExpenseCategoryResolverTest {
     }
 
     @Test
-    void refinesBroadCategoryWithinItsConfiguredSubcategoriesForBudgetAccounting() {
+    void refinesBroadCategoryWithinItsConfiguredSubcategories() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy,
                 matcherWithin("BBQ Nation family dinner", "Eating Out"));
         ExpenseDto expense = new ExpenseDto();
@@ -104,15 +104,6 @@ class ExpenseCategoryResolverTest {
 
         assertThat(expense.getCategory()).isEqualTo("Food & Dining");
         assertThat(expense.getSubcategory()).isEqualTo("Eating Out");
-    }
-
-    @Test
-    void explicitBudgetSubcategoryOverridesBroaderModelProposal() {
-        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
-
-        assertThat(resolver.resolveBudgetScope("Food & Dining",
-                "Setup my eating out budget ₹5,000 for this month."))
-                .contains("Eating Out");
     }
 
     @Test

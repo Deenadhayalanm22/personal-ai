@@ -27,10 +27,6 @@ public class ConversationDiagnosticService {
             turn.setInputText(inputText);
             turn.setResponseStatus(result.getStatus() == null ? null : result.getStatus().name());
             turn.setResponseText(result.getMessage());
-            ResponseMedia media = result.getMedia();
-            turn.setResponseMediaType(media == null ? null : media.contentType());
-            turn.setResponseMediaFilename(media == null ? null : media.filename());
-            turn.setResponseMediaSize(media == null ? null : media.content().length);
             turn.setNeedFollowup(result.getNeedFollowup());
             turn.setActiveIntent(context.getActiveIntent());
             turn.setWaitingForField(context.getWaitingForField());

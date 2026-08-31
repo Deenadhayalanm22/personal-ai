@@ -18,16 +18,14 @@ import java.util.*;
 public class WebExpenseService {
     private static final int MAX_PAGE_SIZE = 100;
     private final StateChangeRepository expenses;
-    private final StateContainerRepository accounts;
     private final ExpenseCorrectionService corrections;
     private final WebExpenseTaxonomyService taxonomy;
     private final TagRepository tags;
     private final TransactionTagRepository transactionTags;
 
-    public WebExpenseService(StateChangeRepository expenses, StateContainerRepository accounts,
-                             ExpenseCorrectionService corrections, WebExpenseTaxonomyService taxonomy,
+    public WebExpenseService(StateChangeRepository expenses, ExpenseCorrectionService corrections, WebExpenseTaxonomyService taxonomy,
                              TagRepository tags, TransactionTagRepository transactionTags) {
-        this.expenses = expenses; this.accounts = accounts; this.corrections = corrections;
+        this.expenses = expenses; this.corrections = corrections;
         this.taxonomy = taxonomy;
         this.tags = tags; this.transactionTags = transactionTags;
     }
@@ -48,31 +46,28 @@ public class WebExpenseService {
         if (tagFiltered) ownedTags(user.getId(), filter.tagIds());
         List<StateChangeEntity> found = tagFiltered
                 ? expenses.findTagFilteredActiveExpensesBefore(
-                        userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
-                        subcategoryFiltered, subcategoryQuery, filter.tagIds(),
-                        filter.tagMatch() == TagMatch.ALL, filter.tagIds().size(), beforeId,
+                        userId, start, end, categoryFiltered, categoryQuery,
+                        subcategoryFiltered, subcategoryQuery, filter.tagIds(), beforeId,
                         PageRequest.of(0, limit + 1))
                 : expenses.findFilteredActiveExpensesBefore(
-                        userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
+                        userId, start, end, categoryFiltered, categoryQuery,
                         subcategoryFiltered, subcategoryQuery, beforeId, PageRequest.of(0, limit + 1));
         boolean hasMore = found.size() > limit;
         List<StateChangeEntity> visible = hasMore ? found.subList(0, limit) : found;
-        Map<Long, String> accountNames = accountNames(visible);
         Map<Long, List<TagItem>> tagItems = tagItems(visible);
         List<ExpenseItem> items = visible.stream()
-                .map(row -> item(row, user.getCurrency(), accountNames, tagItems)).toList();
+                .map(row -> item(row, user.getCurrency(), tagItems)).toList();
         Long next = hasMore && !visible.isEmpty() ? visible.getLast().getId() : null;
         List<Object[]> summaryRows = tagFiltered
                 ? expenses.summarizeTagFilteredActiveExpenses(
-                        userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
-                        subcategoryFiltered, subcategoryQuery, filter.tagIds(),
-                        filter.tagMatch() == TagMatch.ALL, filter.tagIds().size())
+                        userId, start, end, categoryFiltered, categoryQuery,
+                        subcategoryFiltered, subcategoryQuery, filter.tagIds())
                 : expenses.summarizeFilteredActiveExpenses(
-                        userId, start, end, filter.accountId(), categoryFiltered, categoryQuery,
+                        userId, start, end, categoryFiltered, categoryQuery,
                         subcategoryFiltered, subcategoryQuery);
         Object[] summary = summaryRows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO} : summaryRows.getFirst();
         FilterSummary filterSummary = new FilterSummary(((Number) summary[0]).longValue(),
-                (BigDecimal) summary[1], user.getCurrency(), filter.accountId(), filter.category(), filter.subcategory(),
+                (BigDecimal) summary[1], user.getCurrency(), filter.category(), filter.subcategory(),
                 filter.tagIds(), filter.tagMatch().name().toLowerCase(Locale.ROOT));
         return new ExpensePage(items, next, filterSummary);
     }
@@ -82,9 +77,9 @@ public class WebExpenseService {
         if (request == null || request.version() < 1)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
         boolean editsClassification = request.category() != null || request.subcategory() != null;
-        if (!editsClassification && request.tagIds() == null && request.sourceAccountId() == null)
+        if (!editsClassification && request.tagIds() == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Provide a classification, source account, or tag IDs to update");
+                    "Provide a classification or tag IDs to update");
         WebExpenseTaxonomyService.Classification classification = null;
         if (editsClassification) {
             String category = clean(request.category(), "category");
@@ -93,12 +88,12 @@ public class WebExpenseService {
         }
         List<TagEntity> selectedTags = request.tagIds() == null ? null : ownedTags(user.getId(), request.tagIds());
         try {
-            StateChangeEntity updated = corrections.editDetails(
+            StateChangeEntity updated = corrections.editClassification(
                     user.getId(), id, request.version(),
                     classification == null ? null : classification.category(),
-                    classification == null ? null : classification.subcategory(), request.sourceAccountId());
+                    classification == null ? null : classification.subcategory());
             applyTags(id, updated.getId(), selectedTags);
-            return item(updated, user.getCurrency(), accountNames(List.of(updated)), tagItems(List.of(updated)));
+            return item(updated, user.getCurrency(), tagItems(List.of(updated)));
         } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
         } catch (IllegalArgumentException missing) {
@@ -122,25 +117,11 @@ public class WebExpenseService {
         }
     }
 
-    private Map<Long, String> accountNames(List<StateChangeEntity> rows) {
-        Set<Long> ids = new HashSet<>();
-        rows.stream().map(StateChangeEntity::getSourceContainerId).filter(Objects::nonNull).forEach(ids::add);
-        if (ids.isEmpty()) return Map.of();
-        Map<Long, String> names = new HashMap<>();
-        accounts.findAllById(ids).forEach(account -> names.put(account.getId(), account.getName()));
-        return names;
-    }
-
-    private ExpenseItem item(StateChangeEntity row, String currency, Map<Long, String> accountNames) {
-        return item(row, currency, accountNames, Map.of());
-    }
-
-    private ExpenseItem item(StateChangeEntity row, String currency, Map<Long, String> accountNames,
-                             Map<Long, List<TagItem>> tagsByTransaction) {
+    private ExpenseItem item(StateChangeEntity row, String currency, Map<Long, List<TagItem>> tagsByTransaction) {
+        Object paymentSource = row.getDetails() == null ? null : row.getDetails().get("paymentSource");
         return new ExpenseItem(row.getId(), row.getRawText(), row.getAmount(), currency, row.getTimestamp(),
                 row.getCategory(), row.getSubcategory(), row.getMainEntity(),
-                row.getSourceContainerId() == null ? null : accountNames.get(row.getSourceContainerId()),
-                row.isNeedsEnrichment(), row.getRecordVersion(),
+                paymentSource == null ? null : paymentSource.toString(), false, row.getRecordVersion(),
                 tagsByTransaction.getOrDefault(row.getId(), List.of()));
     }
 
@@ -193,35 +174,30 @@ public class WebExpenseService {
     }
 
     private ExpenseFilter normalize(ExpenseFilter filter) {
-        if (filter == null) return new ExpenseFilter(null, null, null, List.of(), TagMatch.ANY);
+        if (filter == null) return new ExpenseFilter(null, null, List.of(), TagMatch.ANY);
         List<Long> tagIds = filter.tagIds() == null ? List.of() : new ArrayList<>(new LinkedHashSet<>(filter.tagIds()));
         if (tagIds.stream().anyMatch(value -> value == null || value < 1))
             throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_TAG_IDS",
                     "tagIds must contain positive integer IDs");
-        return new ExpenseFilter(filter.accountId(), clean(filter.category(), "category"),
+        return new ExpenseFilter(clean(filter.category(), "category"),
                 clean(filter.subcategory(), "subcategory"), List.copyOf(tagIds),
                 filter.tagMatch() == null ? TagMatch.ANY : filter.tagMatch());
     }
 
-    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds,
-                                       Long sourceAccountId) {
-        public ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) {
-            this(category, subcategory, version, tagIds, null);
-        }
-    }
-    public record ExpenseFilter(Long accountId, String category, String subcategory,
+    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) { }
+    public record ExpenseFilter(String category, String subcategory,
                                 List<Long> tagIds, TagMatch tagMatch) {
-        public ExpenseFilter(Long accountId, String category, String subcategory) {
-            this(accountId, category, subcategory, List.of(), TagMatch.ANY);
+        public ExpenseFilter(String category, String subcategory) {
+            this(category, subcategory, List.of(), TagMatch.ANY);
         }
     }
     public enum TagMatch { ANY, ALL }
     public record FilterSummary(long transactionCount, BigDecimal totalAmount, String currency,
-                                Long accountId, String category, String subcategory,
+                                String category, String subcategory,
                                 List<Long> tagIds, String tagMatch) {
         public FilterSummary(long transactionCount, BigDecimal totalAmount, String currency,
-                             Long accountId, String category, String subcategory) {
-            this(transactionCount, totalAmount, currency, accountId, category, subcategory, List.of(), "any");
+                             String category, String subcategory) {
+            this(transactionCount, totalAmount, currency, category, subcategory, List.of(), "any");
         }
     }
     public record ExpensePage(List<ExpenseItem> items, Long nextBeforeId, FilterSummary filterSummary) { }

@@ -15,11 +15,6 @@ import java.util.*;
 /** OpenAI adapter with a tenant-specific schema assembled only from enabled extensions. */
 @Service
 public class OpenAiConversationInterpreter implements ConversationInterpreter {
-    private static final List<String> ANALYSIS_INTENTS = List.of("SPENDING_OVERVIEW", "CATEGORY_RANKING",
-            "DAILY_PATTERN", "PERIOD_COMPARISON", "MONEY_FLOW", "ACCOUNT_OVERVIEW",
-            "BUDGET_PROGRESS", "CATEGORY_HIERARCHY");
-    private static final List<String> PRESENTATION_MOODS = List.of("NEUTRAL", "CURIOUS", "CONCERNED",
-            "FRUSTRATED", "CELEBRATORY");
     private static final String CORE_PROMPT = """
             Interpret one multilingual operational turn into the response schema. Never invent facts, authorize a
             mutation, or apply a business rule. Every non-null fact needs exact evidence copied from the current
@@ -29,18 +24,7 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
             plausibly match or evidence is insufficient. Commands are HELP, SKIP_PENDING, CANCEL_PENDING and
             UNDO_LAST. NEW_EVENT means a distinct occurrence stated now. Query period is NONE for non-query turns.
 
-            For QUERY turns, classify the user's analytical goal semantically in any language:
-            SPENDING_OVERVIEW = general spending summary;
-            CATEGORY_RANKING = where the most money was spent;
-            DAILY_PATTERN = spending across days;
-            PERIOD_COMPARISON = comparison between time periods;
-            MONEY_FLOW = where income or salary flowed;
-            ACCOUNT_OVERVIEW = balances across accounts;
-            BUDGET_PROGRESS = actual spending against budgets;
-            CATEGORY_HIERARCHY = category/subcategory/merchant hierarchy.
-            Also classify presentation mood as NEUTRAL, CURIOUS, CONCERNED, FRUSTRATED, or CELEBRATORY.
-            Mood describes communication style only and must never alter facts, calculations, filters, or query scope.
-            For non-query turns, use null for analysisIntent and presentationMood.
+            For QUERY turns, select only the supported deterministic period.
 
             ENABLED EXTENSION CONTRACTS:
             """;
@@ -130,26 +114,23 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                         : Map.of("anyOf", List.of(enumSchema(eventTypes), Map.of("type", "null"))),
                 "language", nullable("string"), "command", nullable("string"),
                 "query", enumSchema(Arrays.stream(QueryPeriod.values()).map(Enum::name).toList()),
-                "analysisIntent", nullableEnum(ANALYSIS_INTENTS),
-                "presentationMood", nullableEnum(PRESENTATION_MOODS),
                 "ambiguities", array(string()), "confidence", nullable("number")),
-                List.of("turnType", "selectedEventType", "language", "command", "query", "analysisIntent",
-                        "presentationMood", "ambiguities", "confidence"));
+                List.of("turnType", "selectedEventType", "language", "command", "query",
+                        "ambiguities", "confidence"));
     }
 
     private TurnInterpretation routeOnly(RouteWire route) {
         TurnType type = TurnType.valueOf(route.turnType());
         QueryPeriod query = route.query() == null ? QueryPeriod.NONE : QueryPeriod.valueOf(route.query());
         return new TurnInterpretation(type, route.selectedEventType(), route.language(), null, List.of(),
-                route.command(), query, route.analysisIntent(), route.presentationMood(),
-                route.ambiguities(), route.confidence());
+                route.command(), query, route.ambiguities(), route.confidence());
     }
 
     private TurnInterpretation ambiguous(RouteWire route, String reason) {
         List<String> ambiguities = new ArrayList<>(route.ambiguities() == null ? List.of() : route.ambiguities());
         ambiguities.add(reason);
         return new TurnInterpretation(TurnType.AMBIGUOUS, null, route.language(), null, List.of(), null,
-                QueryPeriod.NONE, null, null, ambiguities, route.confidence());
+                QueryPeriod.NONE, ambiguities, route.confidence());
     }
 
     private TurnInterpretation callModel(String input, String instructions, String model, String purpose,
@@ -185,7 +166,7 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
         TurnType type = TurnType.valueOf(wire.turnType());
         QueryPeriod query = wire.query() == null ? QueryPeriod.NONE : QueryPeriod.valueOf(wire.query());
         return new TurnInterpretation(type, wire.intent(), wire.language(), wire.targetEventId(), events, wire.command(),
-                query, wire.analysisIntent(), wire.presentationMood(), wire.ambiguities(), wire.confidence());
+                query, wire.ambiguities(), wire.confidence());
     }
 
     private Map<String, Object> responseSchema(Collection<EventCapability> capabilities) {
@@ -207,11 +188,9 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                 Map.entry("targetEventId", nullable("string")), Map.entry("events", array(event)),
                 Map.entry("command", nullable("string")),
                 Map.entry("query", enumSchema(Arrays.stream(QueryPeriod.values()).map(Enum::name).toList())),
-                Map.entry("analysisIntent", nullableEnum(ANALYSIS_INTENTS)),
-                Map.entry("presentationMood", nullableEnum(PRESENTATION_MOODS)),
                 Map.entry("ambiguities", array(string())), Map.entry("confidence", nullable("number"))),
                 List.of("turnType", "intent", "language", "targetEventId", "events", "command", "query",
-                        "analysisIntent", "presentationMood", "ambiguities", "confidence"));
+                        "ambiguities", "confidence"));
     }
 
     private Map<String, Object> object(Map<String, Object> properties, List<String> required) {
@@ -241,10 +220,6 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
     private Map<String, Object> nullableSchema(Map<String, Object> schema) {
         return Map.of("anyOf", List.of(schema, Map.of("type", "null")));
     }
-    private Map<String, Object> nullableEnum(List<String> values) {
-        return Map.of("anyOf", List.of(enumSchema(values), Map.of("type", "null")));
-    }
-
     private String pendingInstruction(InterpretationContext context) {
         if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return "";
         PendingEvent pending = context.pendingEvents().getLast();
@@ -264,11 +239,10 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
     }
 
     private record TurnWire(String turnType, String intent, String language, String targetEventId,
-                            List<EventWire> events, String command, String query, String analysisIntent,
-                            String presentationMood, List<String> ambiguities, Double confidence) { }
+                            List<EventWire> events, String command, String query,
+                            List<String> ambiguities, Double confidence) { }
     private record EventWire(String eventId, String eventType, Map<String, Object> fields,
                              List<String> unresolvedFields, List<String> ambiguities, List<FieldEvidence> evidence) { }
     private record RouteWire(String turnType, String selectedEventType, String language, String command,
-                             String query, String analysisIntent, String presentationMood,
-                             List<String> ambiguities, Double confidence) { }
+                             String query, List<String> ambiguities, Double confidence) { }
 }

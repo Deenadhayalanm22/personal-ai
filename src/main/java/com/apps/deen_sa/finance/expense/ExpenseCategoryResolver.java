@@ -82,36 +82,10 @@ public class ExpenseCategoryResolver {
         else { expense.setCategory(resolved); expense.setSubcategory(null); }
     }
 
-    public Optional<String> resolveBudgetScope(String proposed, String originalText) {
-        String explicit = explicitBudgetScope(originalText);
-        String explicitCanonical = taxonomy.canonicalLabel(explicit)
-                .or(() -> taxonomy.canonicalAlias(explicit))
-                .or(() -> taxonomy.canonicalAliasInText(explicit)).orElse(null);
-        if (explicitCanonical != null) return Optional.of(explicitCanonical);
-        String exact = taxonomy.canonicalLabel(proposed).orElse(null);
-        if (exact != null) return Optional.of(exact);
-        String raw = firstMeaningful(proposed, originalText);
-        if (raw == null) return Optional.empty();
-        Map<String, String> matches = semanticMatcher.match(taxonomy.allLabels().stream().sorted().toList(), List.of(raw));
-        return taxonomy.canonicalLabel(matches == null ? null : matches.get(raw));
-    }
-
     private boolean isPhysicalPurchase(String text) {
         if (text == null || text.isBlank()) return false;
         return java.util.regex.Pattern.compile(
                 "(?iu)\\b(?:bought|purchased|ordered|buying)\\b").matcher(text).find();
-    }
-
-    private String explicitBudgetScope(String text) {
-        if (text == null) return null;
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
-                "(?i)^(?:set|keep|setup|set\\s+up)\\s+(?:my\\s+)?(?:monthly\\s+)?(.+?)\\s+budget\\b")
-                .matcher(text.trim());
-        if (matcher.find()) return matcher.group(1).trim();
-        matcher = java.util.regex.Pattern.compile(
-                "(?i)^(?:my\\s+)?(.+?)\\s+(?:balance|budget|limit)\\s+for\\s+(?:this|the)\\s+month\\b")
-                .matcher(text.trim());
-        return matcher.find() ? matcher.group(1).trim() : null;
     }
 
     private Optional<String> resolveWithinCategory(String category, String raw) {

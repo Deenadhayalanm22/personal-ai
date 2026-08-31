@@ -13,13 +13,6 @@ For every purchase below, the app must first show amount, category, subcategory,
 The expense and its balance mutation must not exist until the user presses Confirm. The confirmation
 reply then satisfies the existing recorded-expense and account-balance assertions.
 
-Budget authorization
---------------------
-Groceries and Eating Out budgets are previewed and confirmed after the first matching expense. The
-Shopping budget is previewed and confirmed after the first Clothing expense establishes that user's
-Shopping category. The first Clothing expense therefore has no budget warning; later final totals and
-over-budget assertions remain unchanged.
-
 Account setup
 -------------
 User: Create my HDFC salary bank account with a current balance of 20000

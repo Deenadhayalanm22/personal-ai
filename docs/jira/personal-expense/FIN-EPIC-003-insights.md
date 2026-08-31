@@ -35,13 +35,10 @@
 2. Missing schedules, prices, currencies, or stale valuations are disclosed; unsupported precision is not presented as fact.
 3. Model explanations cannot alter calculated numbers.
 
-## FIN-012 — Track monthly budgets and upcoming card payments
+## FIN-012 — Track upcoming card payments
 
 **Status:** Done · **Priority:** P1
 
 ### Acceptance criteria
 
-1. A user can set or replace one active monthly limit per spending category through conversation.
-2. Expense confirmation warns at 80% usage and reports the deterministic over-budget amount after the limit is crossed.
-3. Monthly and budget summaries are calculated from persisted activity and never authorize a financial movement.
-4. Card reminders use the recorded outstanding balance, due day, and user timezone; missing due days and zero balances are disclosed accurately.
+1. Card reminders use the recorded outstanding balance, due day, and user timezone; missing due days and zero balances are disclosed accurately.
