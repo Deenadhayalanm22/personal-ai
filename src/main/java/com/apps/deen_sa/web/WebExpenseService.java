@@ -35,8 +35,13 @@ public class WebExpenseService {
         int limit = Math.max(1, Math.min(requestedLimit, MAX_PAGE_SIZE));
         ExpenseFilter filter = normalize(requestedFilter);
         ZoneId zone = ZoneId.of(user.getTimezone());
-        Instant start = month.atDay(1).atStartOfDay(zone).toInstant();
-        Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+        if (filter.date() != null && !YearMonth.from(filter.date()).equals(month))
+            throw new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_FILTER_DATE",
+                    "date must be within the selected month");
+        LocalDate startDate = filter.date() == null ? month.atDay(1) : filter.date();
+        LocalDate endDate = filter.date() == null ? month.plusMonths(1).atDay(1) : filter.date().plusDays(1);
+        Instant start = startDate.atStartOfDay(zone).toInstant();
+        Instant end = endDate.atStartOfDay(zone).toInstant();
         String userId = String.valueOf(user.getId());
         boolean categoryFiltered = filter.category() != null;
         boolean subcategoryFiltered = filter.subcategory() != null;
@@ -181,14 +186,17 @@ public class WebExpenseService {
                     "tagIds must contain positive integer IDs");
         return new ExpenseFilter(clean(filter.category(), "category"),
                 clean(filter.subcategory(), "subcategory"), List.copyOf(tagIds),
-                filter.tagMatch() == null ? TagMatch.ANY : filter.tagMatch());
+                filter.tagMatch() == null ? TagMatch.ANY : filter.tagMatch(), filter.date());
     }
 
     public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) { }
     public record ExpenseFilter(String category, String subcategory,
-                                List<Long> tagIds, TagMatch tagMatch) {
+                                List<Long> tagIds, TagMatch tagMatch, LocalDate date) {
         public ExpenseFilter(String category, String subcategory) {
-            this(category, subcategory, List.of(), TagMatch.ANY);
+            this(category, subcategory, List.of(), TagMatch.ANY, null);
+        }
+        public ExpenseFilter(String category, String subcategory, List<Long> tagIds, TagMatch tagMatch) {
+            this(category, subcategory, tagIds, tagMatch, null);
         }
     }
     public enum TagMatch { ANY, ALL }

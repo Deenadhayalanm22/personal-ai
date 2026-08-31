@@ -38,10 +38,12 @@ app:
     session-expiry: ${APP_WEB_SESSION_EXPIRY}
     secure-cookies: ${APP_WEB_SECURE_COOKIES}
     cookie-same-site: ${APP_WEB_COOKIE_SAME_SITE}
+    action-context-expiry: ${APP_ACTION_CONTEXT_EXPIRY:30m}
 
 whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN:}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+  destination-number: ${WHATSAPP_DESTINATION_NUMBER:}
   api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
 
 logging:

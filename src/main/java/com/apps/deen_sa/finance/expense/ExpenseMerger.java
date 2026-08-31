@@ -43,6 +43,7 @@ public class ExpenseMerger {
 
         if (update.getTransactionDate() != null) {
             base.setTransactionDate(update.getTransactionDate());
+            base.setContextDateApplied(false);
         }
 
         if (update.getRawText() != null) {

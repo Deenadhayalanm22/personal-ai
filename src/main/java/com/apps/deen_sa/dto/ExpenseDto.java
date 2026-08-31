@@ -67,4 +67,8 @@ public class ExpenseDto {
     private String spentAt;
 
     private CompletenessLevelEnum completenessLevelEnum;
+
+    // Backend-only calendar-to-WhatsApp handoff markers. Never persisted as transaction details.
+    private String pendingActionContextId;
+    private boolean contextDateApplied;
 }

@@ -1,11 +1,13 @@
 package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.conversation.context.PendingActionContextService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.*;
 import java.util.*;
@@ -18,6 +20,7 @@ public class WebFinanceController {
     private final WebLoginRequestService loginRequests;
     private final MonthlyExpenseService monthlyExpenses;
     private final ExpenseCalendarService expenseCalendar;
+    private final PendingActionContextService actionContexts;
     private final WebExpenseService expenses;
     private final WebExpenseTaxonomyService taxonomy;
     private final WebTagService tags;
@@ -26,13 +29,15 @@ public class WebFinanceController {
 
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             MonthlyExpenseService monthlyExpenses,
-            ExpenseCalendarService expenseCalendar, WebExpenseService expenses,
+            ExpenseCalendarService expenseCalendar, PendingActionContextService actionContexts,
+            WebExpenseService expenses,
             WebExpenseTaxonomyService taxonomy, WebTagService tags,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.loginRequests = loginRequests;
         this.monthlyExpenses = monthlyExpenses;
         this.expenseCalendar = expenseCalendar;
+        this.actionContexts = actionContexts;
         this.expenses = expenses;
         this.taxonomy = taxonomy;
         this.tags = tags;
@@ -88,6 +93,7 @@ public class WebFinanceController {
     public WebExpenseService.ExpensePage expenses(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) Long beforeId,
             @RequestParam(required = false) String category,
@@ -97,7 +103,7 @@ public class WebFinanceController {
         AppUserEntity user = authentication.authenticate(token);
         return expenses.list(user, selectedMonth(user, month), limit, beforeId,
                 new WebExpenseService.ExpenseFilter(category, subcategory,
-                        parseTagIds(tagIds), parseTagMatch(tagMatch)));
+                        parseTagIds(tagIds), parseTagMatch(tagMatch), date));
     }
 
     @GetMapping("/expenses/calendar")
@@ -111,6 +117,22 @@ public class WebFinanceController {
         } catch (RuntimeException failure) {
             throw new WebApiException(HttpStatus.INTERNAL_SERVER_ERROR, "CALENDAR_FETCH_FAILED",
                     "Unable to load the expense calendar.");
+        }
+    }
+
+    @PostMapping("/expenses/calendar/context")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PendingActionContextService.ContextResponse createPendingActionContext(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody PendingActionContextService.ContextRequest request) {
+        AppUserEntity user = authentication.authenticate(token);
+        try {
+            return actionContexts.create(user.getId(), request);
+        } catch (WebApiException validation) {
+            throw validation;
+        } catch (RuntimeException failure) {
+            throw new WebApiException(HttpStatus.INTERNAL_SERVER_ERROR, "CONTEXT_CREATE_FAILED",
+                    "Unable to prepare WhatsApp recording.");
         }
     }
 

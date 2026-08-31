@@ -1,6 +1,7 @@
 package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.conversation.context.PendingActionContextService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -9,21 +10,28 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ExpenseCalendarControllerTest {
     private WebAuthenticationService authentication;
     private ExpenseCalendarService calendar;
+    private PendingActionContextService actionContexts;
+    private WebExpenseService expenses;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         authentication = mock(WebAuthenticationService.class);
         calendar = mock(ExpenseCalendarService.class);
+        actionContexts = mock(PendingActionContextService.class);
+        expenses = mock(WebExpenseService.class);
         WebFinanceController controller = new WebFinanceController(authentication,
                 mock(WebLoginRequestService.class), mock(MonthlyExpenseService.class), calendar,
-                mock(WebExpenseService.class), mock(WebExpenseTaxonomyService.class), mock(WebTagService.class),
+                actionContexts,
+                expenses, mock(WebExpenseTaxonomyService.class), mock(WebTagService.class),
                 false, "Lax");
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new WebApiExceptionHandler()).build();
@@ -65,6 +73,49 @@ class ExpenseCalendarControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("CALENDAR_FETCH_FAILED"))
                 .andExpect(jsonPath("$.message").value("Unable to load the expense calendar."));
+    }
+
+    @Test
+    void createsMissingTransactionContext() throws Exception {
+        AppUserEntity user = user();
+        when(authentication.authenticate("token")).thenReturn(user);
+        var request = new PendingActionContextService.ContextRequest(
+                PendingActionContextService.TYPE, "2026-08-14", "Asia/Kolkata");
+        when(actionContexts.create(eq(42L), any())).thenReturn(
+                new PendingActionContextService.ContextResponse("ctx_123", "ACTIVE",
+                        "2026-08-14", java.time.Instant.parse("2026-08-31T14:45:00Z"),
+                        "https://wa.me/919999999999"));
+        mvc.perform(post("/api/web/expenses/calendar/context")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token"))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type":"MISSING_TRANSACTION_DATE","date":"2026-08-14","timezone":"Asia/Kolkata"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.contextId").value("ctx_123"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.date").value("2026-08-14"))
+                .andExpect(jsonPath("$.whatsappUrl").value("https://wa.me/919999999999"));
+        verify(actionContexts).create(eq(42L), eq(request));
+    }
+
+    @Test
+    void forwardsSelectedDateToExpenseFilter() throws Exception {
+        AppUserEntity user = user();
+        when(authentication.authenticate("token")).thenReturn(user);
+
+        mvc.perform(get("/api/web/expenses")
+                        .param("month", "2026-08")
+                        .param("date", "2026-08-27")
+                        .param("limit", "50")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<WebExpenseService.ExpenseFilter> filter =
+                ArgumentCaptor.forClass(WebExpenseService.ExpenseFilter.class);
+        verify(expenses).list(eq(user), eq(java.time.YearMonth.of(2026, 8)), eq(50), isNull(), filter.capture());
+        org.assertj.core.api.Assertions.assertThat(filter.getValue().date())
+                .isEqualTo(java.time.LocalDate.of(2026, 8, 27));
     }
 
     private AppUserEntity user() {

@@ -4,6 +4,7 @@ import com.apps.deen_sa.conversation.*;
 import com.apps.deen_sa.conversation.interpretation.EventPatch;
 import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.finance.expense.draft.ExpenseDraftService;
+import com.apps.deen_sa.conversation.context.PendingActionContextService;
 import com.apps.deen_sa.finance.legacy.state.*;
 import com.apps.deen_sa.llm.impl.ExpenseClassifier;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -23,21 +28,26 @@ public class ExpenseHandler implements SpeechHandler {
     private final ObjectMapper objectMapper;
     private final TaxonomyCandidateService taxonomyCandidates;
     private final ExpenseDraftService drafts;
+    private final PendingActionContextService actionContexts;
 
     @Override public String intentType() { return "EXPENSE"; }
     @Override public SpeechResult handleSpeech(String text, ConversationContext context) {
-        return prepare(normalizer.normalize(llm.extractExpense(text), text, context), context);
+        ExpenseDto dto = llm.extractExpense(text);
+        actionContexts.attachToNextExpense(dto, text, context.getUserId(), context.getChannel());
+        return prepare(normalizer.normalize(dto, text, context), context);
     }
     public SpeechResult handleInterpreted(EventPatch patch, String rawText, ConversationContext context) {
         ExpenseDto dto = objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class);
         dto.setValid(dto.getAmount() != null);
+        actionContexts.attachToNextExpense(dto, rawText, context.getUserId(), context.getChannel());
         return prepare(normalizer.normalize(dto, rawText, context), context);
     }
+    @Transactional
     public SpeechResult handleInterpretedFollowup(EventPatch patch, String answer, ConversationContext context) {
         if (CONFIRM_EXPENSE.equals(context.getWaitingForField())) return confirm(answer, context);
         return mergeFollowup(objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class), answer, context);
     }
-    @Override public SpeechResult handleFollowup(String answer, ConversationContext context) {
+    @Override @Transactional public SpeechResult handleFollowup(String answer, ConversationContext context) {
         if (CONFIRM_EXPENSE.equals(context.getWaitingForField())) return confirm(answer, context);
         ExpenseDto current = (ExpenseDto) context.getPartialObject();
         return mergeFollowup(llm.extractFieldFromFollowup(current, context.getWaitingForField(), answer), answer, context);
@@ -73,14 +83,27 @@ public class ExpenseHandler implements SpeechHandler {
                             new ResponseAction("answer:DISCARD_EXPENSE", "Discard")));
         }
         ExpenseDto dto = (ExpenseDto) context.getPartialObject();
+        boolean contextConsumed = actionContexts.consumeIfActive(context.getUserId(), dto.getPendingActionContextId());
+        if (dto.isContextDateApplied() && !contextConsumed) {
+            dto.setTransactionDate(LocalDate.now(ZoneId.of(context.getTimezone())));
+            dto.setContextDateApplied(false);
+        }
         StateChangeEntity saved = repository.save(ExpenseDtoToEntityMapper.toEntity(dto, context.getUserId()));
         taxonomyCandidates.recordIfUseful(dto, saved.getId());
         if (context.getActiveDraftId() != null)
             drafts.complete(context.getUserId(), context.getActiveDraftId(), saved.getId());
         context.reset();
         return SpeechResult.builder().status(SpeechStatus.SAVED)
-                .message("Recorded expense of ₹" + dto.getAmount().stripTrailingZeros().toPlainString() + ".")
+                .message(confirmation(dto))
                 .savedEntity(saved).needFollowup(false).build();
+    }
+    private String confirmation(ExpenseDto dto) {
+        String description = dto.getSubcategory() != null ? dto.getSubcategory()
+                : dto.getCategory() != null ? dto.getCategory()
+                : dto.getMerchantName() != null ? dto.getMerchantName() : "expense";
+        String date = dto.getTransactionDate().format(DateTimeFormatter.ofPattern("d MMMM", Locale.ENGLISH));
+        return "Added ₹" + dto.getAmount().stripTrailingZeros().toPlainString()
+                + " for " + description + " on " + date + ".";
     }
     private String preview(ExpenseDto dto) {
         return "Amount: ₹" + dto.getAmount().stripTrailingZeros().toPlainString()
