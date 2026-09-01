@@ -21,6 +21,9 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class ExpenseHandler implements SpeechHandler {
     private static final String CONFIRM_EXPENSE = "confirmExpense";
+    public static final String EXPENSE_DETAILS = "expenseDetails";
+    public static final String EXPENSE_COMPLETION = "expenseCompletion";
+    public static final String EXPENSE_CORRECTION = "expenseCorrection";
     private final ExpenseClassifier llm;
     private final StateChangeRepository repository;
     private final ExpenseCompletenessEvaluator completeness;
@@ -29,6 +32,7 @@ public class ExpenseHandler implements SpeechHandler {
     private final TaxonomyCandidateService taxonomyCandidates;
     private final ExpenseDraftService drafts;
     private final PendingActionContextService actionContexts;
+    private final TransactionEnrichmentService enrichment;
 
     @Override public String intentType() { return "EXPENSE"; }
     @Override public SpeechResult handleSpeech(String text, ConversationContext context) {
@@ -45,12 +49,22 @@ public class ExpenseHandler implements SpeechHandler {
     @Transactional
     public SpeechResult handleInterpretedFollowup(EventPatch patch, String answer, ConversationContext context) {
         if (CONFIRM_EXPENSE.equals(context.getWaitingForField())) return confirm(answer, context);
-        return mergeFollowup(objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class), answer, context);
+        ExpenseDto proposal = objectMapper.convertValue(patch.fields().asMap(), ExpenseDto.class);
+        return EXPENSE_DETAILS.equals(context.getWaitingForField())
+                ? mergeEnrichment(proposal, answer, context) : mergeFollowup(proposal, answer, context);
     }
     @Override @Transactional public SpeechResult handleFollowup(String answer, ConversationContext context) {
         if (CONFIRM_EXPENSE.equals(context.getWaitingForField())) return confirm(answer, context);
         ExpenseDto current = (ExpenseDto) context.getPartialObject();
-        return mergeFollowup(llm.extractFieldFromFollowup(current, context.getWaitingForField(), answer), answer, context);
+        ExpenseDto proposal = llm.extractFieldFromFollowup(current, context.getWaitingForField(), answer);
+        return EXPENSE_DETAILS.equals(context.getWaitingForField())
+                ? mergeEnrichment(proposal, answer, context) : mergeFollowup(proposal, answer, context);
+    }
+    private SpeechResult mergeEnrichment(ExpenseDto proposal, String answer, ConversationContext context) {
+        ExpenseDto current = (ExpenseDto) context.getPartialObject();
+        enrichment.merge(current, new TransactionEnrichment(proposal, EnrichmentSource.EXPLICIT));
+        String raw = (current.getRawText() == null ? "" : current.getRawText() + " ") + answer;
+        return prepare(normalizer.normalize(current, raw, context), context);
     }
     private SpeechResult mergeFollowup(ExpenseDto refined, String answer, ConversationContext context) {
         ExpenseDto current = (ExpenseDto) context.getPartialObject();
@@ -63,24 +77,39 @@ public class ExpenseHandler implements SpeechHandler {
         List<String> missing = ExpenseValidator.findMissingFields(dto);
         drafts.capture(dto, context, missing);
         if (level == null || !missing.isEmpty()) {
-            String field = missing.isEmpty() ? "amount" : missing.getFirst();
-            context.setActiveIntent("EXPENSE"); context.setWaitingForField(field); context.setPartialObject(dto);
-            return SpeechResult.followup(question(field), List.of(field), dto);
+            List<String> needed = missing.isEmpty() ? List.of("amount") : missing;
+            context.setActiveIntent("EXPENSE"); context.setWaitingForField(EXPENSE_COMPLETION); context.setPartialObject(dto);
+            return SpeechResult.followup(detailsPrompt(needed, false), needed, dto);
         }
         context.setActiveIntent("EXPENSE"); context.setWaitingForField(CONFIRM_EXPENSE); context.setPartialObject(dto);
         return SpeechResult.followup(preview(dto), List.of(CONFIRM_EXPENSE), dto, List.of(
                 new ResponseAction("answer:CONFIRM_EXPENSE", "Confirm"),
-                new ResponseAction("answer:DISCARD_EXPENSE", "Discard")));
+                new ResponseAction("answer:ADD_EXPENSE_DETAILS", "Add details"),
+                new ResponseAction("answer:TRY_AGAIN_EXPENSE", "Try again")));
     }
     @Transactional
     protected SpeechResult confirm(String answer, ConversationContext context) {
         if ("DISCARD_EXPENSE".equalsIgnoreCase(answer) || "cancel".equalsIgnoreCase(answer)) {
+            drafts.discardActive(context.getUserId(), context.getActiveDraftId());
             context.reset(); return SpeechResult.info("Discarded. No expense was saved.");
         }
+        if ("ADD_EXPENSE_DETAILS".equalsIgnoreCase(answer)) {
+            ExpenseDto dto = (ExpenseDto) context.getPartialObject();
+            List<String> fields = optionalDetails(dto);
+            context.setWaitingForField(EXPENSE_DETAILS);
+            return SpeechResult.followup(detailsPrompt(fields, true), fields, dto);
+        }
+        if ("TRY_AGAIN_EXPENSE".equalsIgnoreCase(answer)) {
+            ExpenseDto dto = (ExpenseDto) context.getPartialObject();
+            context.setWaitingForField(EXPENSE_CORRECTION);
+            return SpeechResult.followup("Tell me the correction in one message—for example: “₹850 at Star Bazaar yesterday for groceries, paid using HDFC.”",
+                    List.of(EXPENSE_CORRECTION), dto);
+        }
         if (!"CONFIRM_EXPENSE".equalsIgnoreCase(answer) && !"confirm".equalsIgnoreCase(answer)) {
-            return SpeechResult.followup("Please confirm or discard this expense.", List.of(CONFIRM_EXPENSE),
+            return SpeechResult.followup("Please confirm, add details, or try again.", List.of(CONFIRM_EXPENSE),
                     context.getPartialObject(), List.of(new ResponseAction("answer:CONFIRM_EXPENSE", "Confirm"),
-                            new ResponseAction("answer:DISCARD_EXPENSE", "Discard")));
+                            new ResponseAction("answer:ADD_EXPENSE_DETAILS", "Add details"),
+                            new ResponseAction("answer:TRY_AGAIN_EXPENSE", "Try again")));
         }
         ExpenseDto dto = (ExpenseDto) context.getPartialObject();
         boolean contextConsumed = actionContexts.consumeIfActive(context.getUserId(), dto.getPendingActionContextId());
@@ -113,12 +142,28 @@ public class ExpenseHandler implements SpeechHandler {
                 + "\nPayment source: " + (dto.getSourceAccount() == null ? "Not provided" : dto.getSourceAccount())
                 + "\n\nConfirm this expense?";
     }
-    private String question(String field) {
-        return switch (field) {
-            case "amount" -> "How much did you spend?";
-            case "category" -> "What category was this expense?";
-            case "subcategory" -> "What subcategory best describes it?";
-            default -> "Please provide " + field + ".";
-        };
+    private List<String> optionalDetails(ExpenseDto dto) {
+        if (dto.getMissingEnrichmentFields() != null) return List.copyOf(dto.getMissingEnrichmentFields());
+        ExpenseCompleteness assessment = completeness.assess(dto);
+        if (assessment != null) return assessment.missingEnrichmentFields();
+        return List.of("beneficiary", "purpose", "occasion", "plannedStatus", "reimbursable", "tripContext", "sourceAccount");
+    }
+    private String detailsPrompt(List<String> fields, boolean optional) {
+        String example;
+        if (!optional) {
+            example = "₹850 at Star Bazaar yesterday for groceries, paid using HDFC";
+        } else {
+            java.util.ArrayList<String> parts = new java.util.ArrayList<>();
+            if (fields.contains("beneficiary")) parts.add("For Sachin");
+            if (fields.contains("purpose") || fields.contains("occasion")) parts.add("birthday shopping");
+            if (fields.contains("tripContext")) parts.add("Pondicherry trip");
+            if (fields.contains("plannedStatus")) parts.add("planned");
+            if (fields.contains("reimbursable")) parts.add("reimbursable");
+            if (fields.contains("sourceAccount")) parts.add("HDFC card");
+            example = parts.isEmpty() ? "For family, regular purchase, paid using cash" : String.join(", ", parts);
+        }
+        String lead = optional ? "Add whatever context you remember in one message."
+                : "I need a little more to save this safely. Add it in one message.";
+        return lead + " For example: “" + example + ".”";
     }
 }

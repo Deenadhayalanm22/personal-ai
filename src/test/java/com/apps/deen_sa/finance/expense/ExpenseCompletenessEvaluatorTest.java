@@ -21,4 +21,20 @@ class ExpenseCompletenessEvaluatorTest {
 
         assertThat(evaluator.evaluate(expense)).isEqualTo(CompletenessLevelEnum.MINIMAL);
     }
+
+    @Test
+    void separatesRequiredFactsFromOptionalMoneyStoryContext() {
+        ExpenseDto expense = new ExpenseDto();
+        expense.setAmount(new BigDecimal("2500"));
+        expense.setTransactionDate(LocalDate.of(2026, 8, 31));
+        expense.setCategory("Shopping");
+        expense.setSubcategory("Clothing");
+
+        ExpenseCompleteness result = evaluator.assess(expense);
+
+        assertThat(result.confirmable()).isTrue();
+        assertThat(result.missingRequiredFields()).isEmpty();
+        assertThat(result.missingEnrichmentFields()).contains("beneficiary", "purpose", "plannedStatus", "sourceAccount");
+        assertThat(expense.getMissingRequiredFields()).isEmpty();
+    }
 }

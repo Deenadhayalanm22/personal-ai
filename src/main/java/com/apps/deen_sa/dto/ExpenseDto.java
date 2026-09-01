@@ -60,6 +60,10 @@ public class ExpenseDto {
     // ----------------------------
     private List<String> missingFields;
 
+    // Application-computed metadata. Models may propose facts; they never decide acceptance or UX.
+    private List<String> missingRequiredFields;
+    private List<String> missingEnrichmentFields;
+
     private boolean sourceResolved;
 
     private String paymentMethod;

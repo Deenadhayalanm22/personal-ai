@@ -9,7 +9,7 @@ import java.util.*;
 @Component
 public class ExpenseTaxonomyRegistry {
 
-    private final Map<String, Set<String>> taxonomy = new HashMap<>();
+    private final Map<String, Set<String>> taxonomy = new LinkedHashMap<>();
     private final Map<String, String> aliases = new HashMap<>();
 
     public ExpenseTaxonomyRegistry() {
@@ -41,7 +41,7 @@ public class ExpenseTaxonomyRegistry {
         raw.forEach((category, subcats) -> {
             taxonomy.put(
                     category,
-                    new HashSet<>((List<String>) subcats)
+                    new LinkedHashSet<>((List<String>) subcats)
             );
         });
     }

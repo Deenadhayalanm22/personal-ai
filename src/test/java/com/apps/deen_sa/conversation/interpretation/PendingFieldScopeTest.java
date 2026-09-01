@@ -1,6 +1,7 @@
 package com.apps.deen_sa.conversation.interpretation;
 
 import com.apps.deen_sa.conversation.ConversationContext;
+import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -9,6 +10,20 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PendingFieldScopeTest {
+
+    @Test
+    void expenseDetailsFollowupPreservesEveryExplicitFieldFromOneMessage() {
+        EventPatch modelPatch = new EventPatch(null, "EXPENSE", Map.of(
+                "category", "Shopping",
+                "subcategory", "Clothing",
+                "sourceAccount", "HDFC"
+        ), List.of(), List.of(), List.of());
+
+        EventPatch scoped = UnifiedConversationEngine.scopeToPendingField(
+                modelPatch, ExpenseHandler.EXPENSE_DETAILS);
+
+        assertThat(scoped.fields().asMap()).containsExactlyEntriesOf(modelPatch.fields().asMap());
+    }
 
     @Test
     void categoryAnswerCannotAlsoInferPaymentSourceFromConversationHistory() {

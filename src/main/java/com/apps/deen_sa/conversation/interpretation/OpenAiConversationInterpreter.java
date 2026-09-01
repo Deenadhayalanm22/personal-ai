@@ -215,6 +215,13 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
                     List.of("category", "subcategory", "itemConcept", "confidence"));
             return nullableSchema(candidate);
         }
+        if ("details".equals(name) && "object".equals(type)) {
+            Map<String, Object> detailFields = new LinkedHashMap<>();
+            List.of("beneficiary", "purpose", "occasion", "plannedStatus", "tripContext")
+                    .forEach(field -> detailFields.put(field, nullable("string")));
+            detailFields.put("reimbursable", nullable("boolean"));
+            return nullableSchema(object(detailFields, new ArrayList<>(detailFields.keySet())));
+        }
         return nullable(type);
     }
     private Map<String, Object> nullableSchema(Map<String, Object> schema) {
@@ -224,8 +231,21 @@ public class OpenAiConversationInterpreter implements ConversationInterpreter {
         if (context.pendingEvents() == null || context.pendingEvents().isEmpty()) return "";
         PendingEvent pending = context.pendingEvents().getLast();
         if (pending.unresolvedFields() == null || pending.unresolvedFields().isEmpty()) return "";
+        String field = pending.unresolvedFields().getFirst();
+        if (com.apps.deen_sa.finance.expense.ExpenseHandler.EXPENSE_DETAILS.equals(field)) {
+            return "\nAn active EXPENSE is awaiting optional enrichment. Treat this as ANSWER_TO_PENDING_EVENT, "
+                    + "extract only explicitly stated sourceAccount and supported details, and never create a new event.\n";
+        }
+        if (com.apps.deen_sa.finance.expense.ExpenseHandler.EXPENSE_COMPLETION.equals(field)) {
+            return "\nAn active EXPENSE needs required facts before confirmation. Treat this as ANSWER_TO_PENDING_EVENT, "
+                    + "extract every explicitly stated expense fact from this single reply, and never create a new event.\n";
+        }
+        if (com.apps.deen_sa.finance.expense.ExpenseHandler.EXPENSE_CORRECTION.equals(field)) {
+            return "\nAn active EXPENSE is awaiting a correction. Treat this as ANSWER_TO_PENDING_EVENT and extract "
+                    + "only fields explicitly corrected in the current message; never create a new event.\n";
+        }
         return "\nAn active " + pending.eventType() + " event is waiting for field "
-                + pending.unresolvedFields().getFirst() + ". Treat a plausible direct reply as ANSWER_TO_PENDING_EVENT, "
+                + field + ". Treat a plausible direct reply as ANSWER_TO_PENDING_EVENT, "
                 + "extract that field from the current message, and do not start a new event.\n";
     }
 

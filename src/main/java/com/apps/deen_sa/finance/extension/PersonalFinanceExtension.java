@@ -3,6 +3,7 @@ package com.apps.deen_sa.finance.extension;
 import com.apps.deen_sa.conversation.SpeechHandler;
 import com.apps.deen_sa.extension.api.*;
 import com.apps.deen_sa.finance.query.QueryHandler;
+import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -12,14 +13,16 @@ import java.util.*;
 public class PersonalFinanceExtension implements BusinessExtension {
     private final List<EventCapability> events;
     private final List<QueryCapability> queries;
+    private final ExpenseTaxonomyRegistry taxonomy;
 
     public PersonalFinanceExtension(List<SpeechHandler> handlers, QueryHandler queryHandler,
-                                    TransactionTemplate transactions) {
+                                    TransactionTemplate transactions, ExpenseTaxonomyRegistry taxonomy) {
         List<EventCapability> discovered = new ArrayList<>(handlers.stream()
                 .filter(handler -> !"QUERY".equalsIgnoreCase(handler.intentType()))
                 .map(handler -> (EventCapability) new FinanceEventCapability(handler.intentType(), handler, transactions)).toList());
         this.events = List.copyOf(discovered);
         this.queries = List.of(new FinanceQueryCapability(queryHandler));
+        this.taxonomy = taxonomy;
     }
 
     @Override public ExtensionDescriptor descriptor() {
@@ -32,7 +35,8 @@ public class PersonalFinanceExtension implements BusinessExtension {
         return List.of(new FinanceDeterministicEventRouter());
     }
     @Override public Collection<InterpretationPromptContributor> promptContributors() {
-        return List.of(new FinanceInterpretationPrompt());
+        return List.of(new FinanceInterpretationPrompt(), new FinanceClassificationPrompt(taxonomy),
+                new FinanceEnrichmentPrompt(), new FinanceQueryPrompt());
     }
     @Override public String help(String locale) {
         if (locale != null && locale.toLowerCase(Locale.ROOT).startsWith("ta")) return """

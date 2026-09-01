@@ -7,13 +7,31 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExpenseCompletenessEvaluator {
 
-    public CompletenessLevelEnum evaluate(ExpenseDto dto) {
+    private static final java.util.List<String> ENRICHMENT_FIELDS = java.util.List.of(
+            "beneficiary", "purpose", "occasion", "plannedStatus", "reimbursable", "tripContext", "sourceAccount");
 
+    public ExpenseCompleteness assess(ExpenseDto dto) {
+        java.util.List<String> required = ExpenseValidator.findMissingFields(dto);
+        java.util.Map<String, Object> details = dto.getDetails() == null ? java.util.Map.of() : dto.getDetails();
+        java.util.List<String> enrichment = ENRICHMENT_FIELDS.stream()
+                .filter(field -> "sourceAccount".equals(field)
+                        ? dto.getSourceAccount() == null || dto.getSourceAccount().isBlank()
+                        : !details.containsKey(field) || details.get(field) == null)
+                .toList();
+        ExpenseCompleteness result = new ExpenseCompleteness(required, enrichment);
+        dto.setMissingFields(required); // legacy compatibility
+        dto.setMissingRequiredFields(required);
+        dto.setMissingEnrichmentFields(enrichment);
+        return result;
+    }
+
+    public CompletenessLevelEnum evaluate(ExpenseDto dto) {
+        ExpenseCompleteness assessment = assess(dto);
         if (!hasMinimal(dto)) {
             return null; // invalid
         }
 
-        if (!hasOperational(dto)) {
+        if (!assessment.confirmable() || !hasOperational(dto)) {
             dto.setCompletenessLevelEnum(CompletenessLevelEnum.MINIMAL);
             return CompletenessLevelEnum.MINIMAL;
         }
