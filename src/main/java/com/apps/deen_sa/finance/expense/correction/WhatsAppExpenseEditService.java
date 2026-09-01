@@ -59,7 +59,7 @@ public class WhatsAppExpenseEditService {
         if (context == null) return Optional.empty();
 
         if (PendingActionContextService.CONFIRM_EDIT_TRANSACTION.equals(context.getContextType()))
-            return Optional.of(confirmOrCancel(text, conversation, context));
+            return Optional.of(confirmOrTryAgain(text, conversation, context));
 
         String textLabel = taxonomy.canonicalAliasInText(text).orElse(null);
         String category = textLabel != null && taxonomy.isCategory(textLabel) ? textLabel : null;
@@ -95,17 +95,22 @@ public class WhatsAppExpenseEditService {
         return Optional.of(review(original, text, category, subcategory));
     }
 
-    private SpeechResult confirmOrCancel(String text, ConversationContext conversation,
-                                         PendingActionContextEntity context) {
+    private SpeechResult confirmOrTryAgain(String text, ConversationContext conversation,
+                                           PendingActionContextEntity context) {
         String answer = text == null ? "" : text.trim().toUpperCase(Locale.ROOT);
-        if (Set.of("CANCEL", "DISCARD", "CANCEL_EXPENSE_EDIT").contains(answer)) {
-            context.setStatus(PendingActionContextStatus.CONSUMED);
-            context.setConsumedAt(Instant.now());
-            conversation.reset();
-            return SpeechResult.info("Cancelled. The expense was not changed.");
+        if (Set.of("TRY AGAIN", "RETRY", "TRY_AGAIN_EXPENSE_EDIT").contains(answer)) {
+            String[] proposal = context.getContextValue().split("\n", -1);
+            if (proposal.length != 3) {
+                context.setStatus(PendingActionContextStatus.REPLACED);
+                context.setReplacedAt(Instant.now());
+                return SpeechResult.invalid("This edit request is no longer valid.");
+            }
+            context.setContextType(PendingActionContextService.EDIT_TRANSACTION);
+            context.setContextValue(proposal[0]);
+            return SpeechResult.info("Okay, the expense is unchanged. Describe the category and subcategory again.");
         }
         if (!Set.of("CONFIRM", "YES", "CONFIRM_EXPENSE_EDIT").contains(answer))
-            return confirmationPrompt("Please confirm or cancel this expense update.");
+            return confirmationPrompt("Please confirm this update or choose Try again.");
 
         String[] proposal = context.getContextValue().split("\n", -1);
         if (proposal.length != 3) {
@@ -148,7 +153,7 @@ public class WhatsAppExpenseEditService {
     private SpeechResult confirmationPrompt(String message) {
         return SpeechResult.followup(message, List.of("confirmation"), null, List.of(
                 new ResponseAction("answer:CONFIRM_EXPENSE_EDIT", "Confirm"),
-                new ResponseAction("answer:CANCEL_EXPENSE_EDIT", "Cancel")));
+                new ResponseAction("answer:TRY_AGAIN_EXPENSE_EDIT", "Try again")));
     }
 
     private String details(StateChangeEntity value, String category, String subcategory) {

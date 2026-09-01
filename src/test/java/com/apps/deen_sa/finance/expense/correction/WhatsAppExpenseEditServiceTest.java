@@ -102,6 +102,32 @@ class WhatsAppExpenseEditServiceTest {
         verify(corrections).editClassification(42L, 95L, "Food & Dining", "Eating Out");
     }
 
+    @Test
+    void tryAgainKeepsContextActiveAndRestoresOriginalTarget() {
+        PendingActionContextRepository contexts = mock(PendingActionContextRepository.class);
+        PendingActionContextEntity context = new PendingActionContextEntity();
+        context.setContextType(PendingActionContextService.CONFIRM_EDIT_TRANSACTION);
+        context.setContextValue("95\nMedical\nDoctor Consultation");
+        context.setStatus(PendingActionContextStatus.ACTIVE);
+        context.setExpiresAt(Instant.now().plusSeconds(600));
+        when(contexts.findActiveForUpdate(42L)).thenReturn(List.of(context));
+        ExpenseCorrectionService corrections = mock(ExpenseCorrectionService.class);
+        WhatsAppExpenseEditService service = new WhatsAppExpenseEditService(contexts,
+                mock(PendingActionContextService.class), mock(StateChangeRepository.class), corrections,
+                mock(ExpenseClassifier.class), mock(ExpenseTaxonomyRegistry.class),
+                mock(TransactionTagRepository.class));
+        ConversationContext conversation = new ConversationContext(); conversation.setUserId(42L);
+
+        SpeechResult result = service.processIfPending("WHATSAPP", "TRY_AGAIN_EXPENSE_EDIT", conversation)
+                .orElseThrow();
+
+        assertThat(result.getMessage()).contains("Describe the category and subcategory again");
+        assertThat(context.getStatus()).isEqualTo(PendingActionContextStatus.ACTIVE);
+        assertThat(context.getContextType()).isEqualTo(PendingActionContextService.EDIT_TRANSACTION);
+        assertThat(context.getContextValue()).isEqualTo("95");
+        verifyNoInteractions(corrections);
+    }
+
     private StateChangeEntity original() {
         StateChangeEntity value = new StateChangeEntity();
         value.setId(95L); value.setUserId("42"); value.setAmount(new java.math.BigDecimal("250"));
