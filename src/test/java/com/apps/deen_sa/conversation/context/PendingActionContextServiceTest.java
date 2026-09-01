@@ -3,6 +3,7 @@ package com.apps.deen_sa.conversation.context;
 import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.web.WebApiException;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.time.*;
 import java.util.List;
@@ -31,7 +32,26 @@ class PendingActionContextServiceTest {
         assertThat(response.expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(30)));
         assertThat(response.whatsappUrl()).isEqualTo("https://wa.me/919999999999");
         assertThat(previous.getStatus()).isEqualTo(PendingActionContextStatus.REPLACED);
-        verify(repository).save(any(PendingActionContextEntity.class));
+        InOrder writes = inOrder(repository);
+        writes.verify(repository).flush();
+        writes.verify(repository).save(any(PendingActionContextEntity.class));
+    }
+
+    @Test
+    void replacesAndFlushesExistingContextBeforeCreatingExpenseEditContext() {
+        PendingActionContextRepository repository = mock(PendingActionContextRepository.class);
+        PendingActionContextEntity previous = active("ctx_old", LocalDate.of(2026, 8, 10));
+        when(repository.findActiveForUpdate(42L)).thenReturn(List.of(previous));
+
+        var response = service(repository).createExpenseEdit(42L, 95L);
+
+        assertThat(response.status()).isEqualTo("ACTIVE");
+        assertThat(previous.getStatus()).isEqualTo(PendingActionContextStatus.REPLACED);
+        InOrder writes = inOrder(repository);
+        writes.verify(repository).flush();
+        writes.verify(repository).save(argThat((PendingActionContextEntity context) ->
+                PendingActionContextService.EDIT_TRANSACTION.equals(context.getContextType())
+                        && "95".equals(context.getContextValue())));
     }
 
     @Test

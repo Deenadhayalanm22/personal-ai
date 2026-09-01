@@ -56,10 +56,7 @@ public class PendingActionContextService {
             throw invalidDate();
 
         Instant now = clock.instant();
-        contexts.findActiveForUpdate(userId).forEach(existing -> {
-            existing.setStatus(PendingActionContextStatus.REPLACED);
-            existing.setReplacedAt(now);
-        });
+        replaceActiveContexts(userId, now);
         PendingActionContextEntity context = new PendingActionContextEntity();
         context.setId("ctx_" + UUID.randomUUID().toString().replace("-", ""));
         context.setUserId(userId);
@@ -76,10 +73,7 @@ public class PendingActionContextService {
     @Transactional
     public ContextResponse createExpenseEdit(Long userId, Long expenseId) {
         Instant now = clock.instant();
-        contexts.findActiveForUpdate(userId).forEach(existing -> {
-            existing.setStatus(PendingActionContextStatus.REPLACED);
-            existing.setReplacedAt(now);
-        });
+        replaceActiveContexts(userId, now);
         PendingActionContextEntity context = new PendingActionContextEntity();
         context.setId("ctx_" + UUID.randomUUID().toString().replace("-", ""));
         context.setUserId(userId);
@@ -90,6 +84,17 @@ public class PendingActionContextService {
         context.setExpiresAt(now.plus(expiry));
         contexts.save(context);
         return new ContextResponse(context.getId(), "ACTIVE", null, context.getExpiresAt(), whatsappUrl());
+    }
+
+    private void replaceActiveContexts(Long userId, Instant now) {
+        var active = contexts.findActiveForUpdate(userId);
+        active.forEach(existing -> {
+            existing.setStatus(PendingActionContextStatus.REPLACED);
+            existing.setReplacedAt(now);
+        });
+        // PostgreSQL's partial unique index permits only one ACTIVE context per user.
+        // Flush the replacements before Hibernate queues the new ACTIVE insert.
+        if (!active.isEmpty()) contexts.flush();
     }
 
     @Transactional(readOnly = true)
