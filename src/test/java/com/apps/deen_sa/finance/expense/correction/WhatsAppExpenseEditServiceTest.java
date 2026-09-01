@@ -17,6 +17,36 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppExpenseEditServiceTest {
     @Test
+    void understandsNaturalDoctorFeesPhraseWithoutModelClassification() {
+        PendingActionContextRepository contexts = mock(PendingActionContextRepository.class);
+        PendingActionContextEntity context = new PendingActionContextEntity();
+        context.setContextType(PendingActionContextService.EDIT_TRANSACTION);
+        context.setContextValue("95"); context.setStatus(PendingActionContextStatus.ACTIVE);
+        context.setExpiresAt(Instant.now().plusSeconds(600));
+        when(contexts.findActiveForUpdate(42L)).thenReturn(List.of(context));
+
+        ExpenseClassifier classifier = mock(ExpenseClassifier.class);
+        ExpenseCorrectionService corrections = mock(ExpenseCorrectionService.class);
+        StateChangeEntity replacement = new StateChangeEntity(); replacement.setId(101L);
+        when(corrections.editClassification(42L, 95L, "Medical", "Doctor Consultation"))
+                .thenReturn(replacement);
+        TransactionTagRepository tags = mock(TransactionTagRepository.class);
+        when(tags.findAllByTransactionId(95L)).thenReturn(List.of());
+        WhatsAppExpenseEditService service = new WhatsAppExpenseEditService(contexts,
+                mock(PendingActionContextService.class), mock(StateChangeRepository.class), corrections,
+                classifier, new ExpenseTaxonomyRegistry(), tags);
+        ConversationContext conversation = new ConversationContext(); conversation.setUserId(42L);
+
+        SpeechResult result = service.processIfPending("WHATSAPP",
+                "it is for medical expense and doctor fees", conversation).orElseThrow();
+
+        assertThat(result.getStatus()).isEqualTo(SpeechStatus.SAVED);
+        assertThat(result.getMessage()).contains("Medical / Doctor Consultation");
+        verifyNoInteractions(classifier);
+        verify(corrections).editClassification(42L, 95L, "Medical", "Doctor Consultation");
+    }
+
+    @Test
     void appliesClassificationToTargetExpenseAndConsumesContext() {
         PendingActionContextRepository contexts = mock(PendingActionContextRepository.class);
         PendingActionContextEntity context = new PendingActionContextEntity();

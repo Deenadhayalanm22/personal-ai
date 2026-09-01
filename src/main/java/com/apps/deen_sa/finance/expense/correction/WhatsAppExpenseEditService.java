@@ -57,9 +57,15 @@ public class WhatsAppExpenseEditService {
                 .findFirst().orElse(null);
         if (context == null) return Optional.empty();
 
-        ExpenseDto extracted = classifier.extractExpense(text);
-        String category = canonical(extracted.getCategory());
-        String subcategory = canonical(extracted.getSubcategory());
+        String textLabel = taxonomy.canonicalAliasInText(text).orElse(null);
+        String category = textLabel != null && taxonomy.isCategory(textLabel) ? textLabel : null;
+        String subcategory = textLabel != null && taxonomy.isSubcategory(textLabel) ? textLabel : null;
+        if (category == null && subcategory != null) category = taxonomy.parentCategory(subcategory).orElse(null);
+        if (category == null || subcategory == null) {
+            ExpenseDto extracted = classifier.extractExpense(text);
+            if (category == null) category = canonical(extracted.getCategory());
+            if (subcategory == null) subcategory = canonical(extracted.getSubcategory());
+        }
         if (category == null && subcategory != null) category = taxonomy.parentCategory(subcategory).orElse(null);
         if (category == null || subcategory == null || !taxonomy.subcategoriesFor(category).contains(subcategory))
             return Optional.of(SpeechResult.invalid(
