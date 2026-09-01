@@ -165,6 +165,14 @@ public class WebFinanceController {
         return expenses.editClassification(authentication.authenticate(token), id, request);
     }
 
+    @PatchMapping("/expenses/{id}")
+    public WebExpenseService.ExpenseItem editExpense(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id,
+            @RequestBody WebExpenseService.ExpenseUpdate request) {
+        return expenses.edit(authentication.authenticate(token), id, request);
+    }
+
     @DeleteMapping("/expenses/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteExpense(

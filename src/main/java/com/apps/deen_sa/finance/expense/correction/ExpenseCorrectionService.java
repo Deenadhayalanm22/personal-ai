@@ -4,7 +4,10 @@ import com.apps.deen_sa.finance.expense.ExpenseRecordStatus;
 import com.apps.deen_sa.finance.legacy.state.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 
 @Service
@@ -19,9 +22,9 @@ public class ExpenseCorrectionService {
         transactions.save(original);
     }
 
-    @Transactional public StateChangeEntity editClassification(Long userId, Long transactionId, int expectedVersion,
+    @Transactional public StateChangeEntity editClassification(Long userId, Long transactionId,
                                                                  String category, String subcategory) {
-        StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId);
         StateChangeEntity replacement = copy(original);
         if (category != null) replacement.setCategory(category);
         if (subcategory != null) replacement.setSubcategory(subcategory);
@@ -32,11 +35,20 @@ public class ExpenseCorrectionService {
         return replacement;
     }
 
-    private StateChangeEntity activeOwnedExpense(Long userId, Long id, int version) {
-        StateChangeEntity value = activeOwnedExpense(userId, id);
-        if (value.getRecordVersion() != version)
-            throw new org.springframework.dao.OptimisticLockingFailureException("The expense changed since it was loaded.");
-        return value;
+    @Transactional public StateChangeEntity editExpense(Long userId, Long transactionId, BigDecimal amount,
+                                                          LocalDate transactionDate, ZoneId timezone) {
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId);
+        StateChangeEntity replacement = copy(original);
+        if (amount != null) replacement.setAmount(amount);
+        if (transactionDate != null) {
+            var originalLocalTime = original.getTimestamp().atZone(timezone).toLocalTime();
+            replacement.setTimestamp(transactionDate.atTime(originalLocalTime).atZone(timezone).toInstant());
+        }
+        replacement = transactions.save(replacement);
+        original.setRecordStatus(ExpenseRecordStatus.SUPERSEDED);
+        original.setCorrectedAt(Instant.now()); original.setCorrectionReason("USER_EDITED_EXPENSE_FROM_WEB");
+        transactions.save(original);
+        return replacement;
     }
 
     private StateChangeEntity activeOwnedExpense(Long userId, Long id) {

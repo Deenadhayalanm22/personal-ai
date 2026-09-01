@@ -79,8 +79,8 @@ public class WebExpenseService {
 
     @Transactional
     public ExpenseItem editClassification(AppUserEntity user, Long id, ClassificationUpdate request) {
-        if (request == null || request.version() < 1)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
+        if (request == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An update is required");
         boolean editsClassification = request.category() != null || request.subcategory() != null;
         if (!editsClassification && request.tagIds() == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -94,13 +94,30 @@ public class WebExpenseService {
         List<TagEntity> selectedTags = request.tagIds() == null ? null : ownedTags(user.getId(), request.tagIds());
         try {
             StateChangeEntity updated = corrections.editClassification(
-                    user.getId(), id, request.version(),
+                    user.getId(), id,
                     classification == null ? null : classification.category(),
                     classification == null ? null : classification.subcategory());
             applyTags(id, updated.getId(), selectedTags);
             return item(updated, user.getCurrency(), tagItems(List.of(updated)));
-        } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
+        } catch (IllegalArgumentException missing) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found or no longer active");
+        } catch (IllegalStateException unsafe) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, unsafe.getMessage());
+        }
+    }
+
+    @Transactional
+    public ExpenseItem edit(AppUserEntity user, Long id, ExpenseUpdate request) {
+        if (request == null || (request.amount() == null && request.transactionDate() == null))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provide an amount or transaction date to update");
+        if (request.amount() != null && request.amount().signum() <= 0)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than zero");
+        try {
+            StateChangeEntity updated = corrections.editExpense(
+                    user.getId(), id, request.amount(), request.transactionDate(), ZoneId.of(user.getTimezone()));
+            applyTags(id, updated.getId(), null);
+            return item(updated, user.getCurrency(), tagItems(List.of(updated)));
         } catch (IllegalArgumentException missing) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found or no longer active");
         } catch (IllegalStateException unsafe) {
@@ -185,7 +202,8 @@ public class WebExpenseService {
                 filter.tagMatch() == null ? TagMatch.ANY : filter.tagMatch(), filter.date());
     }
 
-    public record ClassificationUpdate(String category, String subcategory, int version, List<Long> tagIds) { }
+    public record ClassificationUpdate(String category, String subcategory, List<Long> tagIds) { }
+    public record ExpenseUpdate(BigDecimal amount, LocalDate transactionDate) { }
     public record ExpenseFilter(String category, String subcategory,
                                 List<Long> tagIds, TagMatch tagMatch, LocalDate date) {
         public ExpenseFilter(String category, String subcategory) {

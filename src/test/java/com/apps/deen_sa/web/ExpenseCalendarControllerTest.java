@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ExpenseCalendarControllerTest {
@@ -129,6 +130,24 @@ class ExpenseCalendarControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(expenses).delete(user, 88L);
+    }
+
+    @Test
+    void updatesExpenseAmountAndDate() throws Exception {
+        AppUserEntity user = user();
+        when(authentication.authenticate("token")).thenReturn(user);
+
+        mvc.perform(patch("/api/web/expenses/87")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token"))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"amount":171,"transactionDate":"2026-08-27","version":1}
+                                """))
+                .andExpect(status().isOk());
+
+        verify(expenses).edit(user, 87L,
+                new WebExpenseService.ExpenseUpdate(new java.math.BigDecimal("171"),
+                        java.time.LocalDate.of(2026, 8, 27)));
     }
 
     private AppUserEntity user() {
