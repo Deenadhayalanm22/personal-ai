@@ -27,7 +27,8 @@ public class DefaultConversationChannelGateway implements ConversationChannelGat
 
     @Override public SpeechResult processTrustedAnswer(String channel, String externalUserId, String messageId, String answer) {
         Context context = context(channel, externalUserId, messageId);
-        SpeechResult result = engine.processTrustedAnswer(answer, context.value());
+        SpeechResult result = whatsappExpenseEdits.processIfPending(channel, answer, context.value())
+                .orElseGet(() -> engine.processTrustedAnswer(answer, context.value()));
         sessions.save(context.value());
         diagnostics.record("TRUSTED_ANSWER", externalUserId, messageId, answer, context.value(), result);
         return result;

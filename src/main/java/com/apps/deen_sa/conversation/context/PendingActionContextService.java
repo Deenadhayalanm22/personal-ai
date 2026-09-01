@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 public class PendingActionContextService {
     public static final String TYPE = "MISSING_TRANSACTION_DATE";
     public static final String EDIT_TRANSACTION = "EDIT_TRANSACTION";
+    public static final String CONFIRM_EDIT_TRANSACTION = "CONFIRM_EDIT_TRANSACTION";
     private static final Pattern EXPLICIT_TEMPORAL_TEXT = Pattern.compile(
             "(?i)(?:^|[^\\p{L}])(?:today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
                     + "\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?|"

@@ -32,16 +32,25 @@ class WhatsAppExpenseEditServiceTest {
                 .thenReturn(replacement);
         TransactionTagRepository tags = mock(TransactionTagRepository.class);
         when(tags.findAllByTransactionId(95L)).thenReturn(List.of());
+        StateChangeRepository expenses = mock(StateChangeRepository.class);
+        when(expenses.findExpenseForUpdate(95L, "42")).thenReturn(Optional.of(original()));
         WhatsAppExpenseEditService service = new WhatsAppExpenseEditService(contexts,
-                mock(PendingActionContextService.class), mock(StateChangeRepository.class), corrections,
+                mock(PendingActionContextService.class), expenses, corrections,
                 classifier, new ExpenseTaxonomyRegistry(), tags);
         ConversationContext conversation = new ConversationContext(); conversation.setUserId(42L);
 
-        SpeechResult result = service.processIfPending("WHATSAPP",
+        SpeechResult review = service.processIfPending("WHATSAPP",
                 "it is for medical expense and doctor fees", conversation).orElseThrow();
 
-        assertThat(result.getStatus()).isEqualTo(SpeechStatus.SAVED);
-        assertThat(result.getMessage()).contains("Medical / Doctor Consultation");
+        assertThat(review.getStatus()).isEqualTo(SpeechStatus.FOLLOWUP);
+        assertThat(review.getMessage()).contains("*Old message*", "*New message*", "~Food & Dining~", "*Medical*",
+                "~Eating Out~", "*Doctor Consultation*", "Confirm this change?");
+        verifyNoInteractions(corrections);
+
+        SpeechResult confirmed = service.processIfPending("WHATSAPP", "CONFIRM_EXPENSE_EDIT", conversation)
+                .orElseThrow();
+        assertThat(confirmed.getStatus()).isEqualTo(SpeechStatus.SAVED);
+        assertThat(context.getStatus()).isEqualTo(PendingActionContextStatus.CONSUMED);
         verifyNoInteractions(classifier);
         verify(corrections).editClassification(42L, 95L, "Medical", "Doctor Consultation");
     }
@@ -72,17 +81,34 @@ class WhatsAppExpenseEditServiceTest {
                 .thenReturn(replacement);
         TransactionTagRepository tags = mock(TransactionTagRepository.class);
         when(tags.findAllByTransactionId(95L)).thenReturn(List.of());
+        StateChangeRepository expenses = mock(StateChangeRepository.class);
+        when(expenses.findExpenseForUpdate(95L, "42")).thenReturn(Optional.of(original()));
 
         WhatsAppExpenseEditService service = new WhatsAppExpenseEditService(contexts,
-                mock(PendingActionContextService.class), mock(StateChangeRepository.class), corrections,
+                mock(PendingActionContextService.class), expenses, corrections,
                 classifier, taxonomy, tags);
         ConversationContext conversation = new ConversationContext(); conversation.setUserId(42L);
 
-        SpeechResult result = service.processIfPending("WHATSAPP", "change it to eating out", conversation)
+        SpeechResult review = service.processIfPending("WHATSAPP", "change it to eating out", conversation)
                 .orElseThrow();
 
+        assertThat(review.getStatus()).isEqualTo(SpeechStatus.FOLLOWUP);
+        assertThat(context.getStatus()).isEqualTo(PendingActionContextStatus.ACTIVE);
+        verifyNoInteractions(corrections);
+
+        SpeechResult result = service.processIfPending("WHATSAPP", "confirm", conversation).orElseThrow();
         assertThat(result.getStatus()).isEqualTo(SpeechStatus.SAVED);
         assertThat(context.getStatus()).isEqualTo(PendingActionContextStatus.CONSUMED);
         verify(corrections).editClassification(42L, 95L, "Food & Dining", "Eating Out");
+    }
+
+    private StateChangeEntity original() {
+        StateChangeEntity value = new StateChangeEntity();
+        value.setId(95L); value.setUserId("42"); value.setAmount(new java.math.BigDecimal("250"));
+        value.setTimestamp(Instant.parse("2026-08-27T08:30:00Z"));
+        value.setCategory("Food & Dining"); value.setSubcategory("Eating Out");
+        value.setMainEntity("Clinic"); value.setRawText("paid 250 at clinic");
+        value.setRecordStatus(com.apps.deen_sa.finance.expense.ExpenseRecordStatus.ACTIVE);
+        return value;
     }
 }
