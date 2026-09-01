@@ -56,6 +56,30 @@ class WhatsAppExpenseEditServiceTest {
     }
 
     @Test
+    void understandsNaturalCinemaPhraseWithoutModelClassification() {
+        PendingActionContextRepository contexts = mock(PendingActionContextRepository.class);
+        PendingActionContextEntity context = new PendingActionContextEntity();
+        context.setContextType(PendingActionContextService.EDIT_TRANSACTION);
+        context.setContextValue("95"); context.setStatus(PendingActionContextStatus.ACTIVE);
+        context.setExpiresAt(Instant.now().plusSeconds(600));
+        when(contexts.findActiveForUpdate(42L)).thenReturn(List.of(context));
+        StateChangeRepository expenses = mock(StateChangeRepository.class);
+        when(expenses.findExpenseForUpdate(95L, "42")).thenReturn(Optional.of(original()));
+        ExpenseClassifier classifier = mock(ExpenseClassifier.class);
+        WhatsAppExpenseEditService service = new WhatsAppExpenseEditService(contexts,
+                mock(PendingActionContextService.class), expenses, mock(ExpenseCorrectionService.class),
+                classifier, new ExpenseTaxonomyRegistry(), mock(TransactionTagRepository.class));
+        ConversationContext conversation = new ConversationContext(); conversation.setUserId(42L);
+
+        SpeechResult review = service.processIfPending("WHATSAPP", "went for cinema actually", conversation)
+                .orElseThrow();
+
+        assertThat(review.getStatus()).isEqualTo(SpeechStatus.FOLLOWUP);
+        assertThat(review.getMessage()).contains("*Entertainment*", "*Movies*");
+        verifyNoInteractions(classifier);
+    }
+
+    @Test
     void appliesClassificationToTargetExpenseAndConsumesContext() {
         PendingActionContextRepository contexts = mock(PendingActionContextRepository.class);
         PendingActionContextEntity context = new PendingActionContextEntity();
