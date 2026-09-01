@@ -2,6 +2,7 @@ package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.conversation.context.PendingActionContextService;
+import com.apps.deen_sa.finance.expense.correction.WhatsAppExpenseEditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ class ExpenseCalendarControllerTest {
     private ExpenseCalendarService calendar;
     private PendingActionContextService actionContexts;
     private WebExpenseService expenses;
+    private WhatsAppExpenseEditService whatsappExpenseEdits;
     private MockMvc mvc;
 
     @BeforeEach
@@ -30,9 +32,11 @@ class ExpenseCalendarControllerTest {
         calendar = mock(ExpenseCalendarService.class);
         actionContexts = mock(PendingActionContextService.class);
         expenses = mock(WebExpenseService.class);
+        whatsappExpenseEdits = mock(WhatsAppExpenseEditService.class);
         WebFinanceController controller = new WebFinanceController(authentication,
                 mock(WebLoginRequestService.class), mock(MonthlyExpenseService.class), calendar,
                 actionContexts,
+                whatsappExpenseEdits,
                 expenses, mock(WebExpenseTaxonomyService.class), mock(WebTagService.class),
                 false, "Lax");
         mvc = MockMvcBuilders.standaloneSetup(controller)
@@ -148,6 +152,24 @@ class ExpenseCalendarControllerTest {
         verify(expenses).edit(user, 87L,
                 new WebExpenseService.ExpenseUpdate(new java.math.BigDecimal("171"),
                         java.time.LocalDate.of(2026, 8, 27)));
+    }
+
+    @Test
+    void createsWhatsAppExpenseEditContextWithoutVersion() throws Exception {
+        AppUserEntity user = user();
+        when(authentication.authenticate("token")).thenReturn(user);
+        when(whatsappExpenseEdits.create(42L, 95L, "EDIT_TRANSACTION")).thenReturn(
+                new PendingActionContextService.ContextResponse("ctx_edit", "ACTIVE", null,
+                        java.time.Instant.parse("2026-09-01T06:00:00Z"), "https://wa.me/919999999999"));
+
+        mvc.perform(post("/api/web/expenses/95/whatsapp-context")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token"))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"EDIT_TRANSACTION\",\"version\":3}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.contextId").value("ctx_edit"));
+
+        verify(whatsappExpenseEdits).create(42L, 95L, "EDIT_TRANSACTION");
     }
 
     private AppUserEntity user() {

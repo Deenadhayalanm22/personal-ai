@@ -2,6 +2,7 @@ package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.conversation.context.PendingActionContextService;
+import com.apps.deen_sa.finance.expense.correction.WhatsAppExpenseEditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ public class WebFinanceController {
     private final MonthlyExpenseService monthlyExpenses;
     private final ExpenseCalendarService expenseCalendar;
     private final PendingActionContextService actionContexts;
+    private final WhatsAppExpenseEditService whatsappExpenseEdits;
     private final WebExpenseService expenses;
     private final WebExpenseTaxonomyService taxonomy;
     private final WebTagService tags;
@@ -30,6 +32,7 @@ public class WebFinanceController {
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             MonthlyExpenseService monthlyExpenses,
             ExpenseCalendarService expenseCalendar, PendingActionContextService actionContexts,
+            WhatsAppExpenseEditService whatsappExpenseEdits,
             WebExpenseService expenses,
             WebExpenseTaxonomyService taxonomy, WebTagService tags,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
@@ -38,6 +41,7 @@ public class WebFinanceController {
         this.monthlyExpenses = monthlyExpenses;
         this.expenseCalendar = expenseCalendar;
         this.actionContexts = actionContexts;
+        this.whatsappExpenseEdits = whatsappExpenseEdits;
         this.expenses = expenses;
         this.taxonomy = taxonomy;
         this.tags = tags;
@@ -136,6 +140,16 @@ public class WebFinanceController {
         }
     }
 
+    @PostMapping("/expenses/{id}/whatsapp-context")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PendingActionContextService.ContextResponse createExpenseEditContext(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id,
+            @RequestBody ExpenseEditContextRequest request) {
+        AppUserEntity user = authentication.authenticate(token);
+        return whatsappExpenseEdits.create(user.getId(), id, request == null ? null : request.type());
+    }
+
     @GetMapping("/expense-taxonomy")
     public WebExpenseTaxonomyService.TaxonomyResponse expenseTaxonomy(
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
@@ -225,4 +239,5 @@ public class WebFinanceController {
     public record LoginLinkResponse(String message) { }
     public record MagicLinkRequest(String token) { }
     public record AuthResponse(boolean authenticated, Instant expiresAt) { }
+    public record ExpenseEditContextRequest(String type) { }
 }

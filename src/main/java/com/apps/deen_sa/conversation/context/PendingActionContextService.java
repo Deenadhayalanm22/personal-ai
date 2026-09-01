@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 @Service
 public class PendingActionContextService {
     public static final String TYPE = "MISSING_TRANSACTION_DATE";
+    public static final String EDIT_TRANSACTION = "EDIT_TRANSACTION";
     private static final Pattern EXPLICIT_TEMPORAL_TEXT = Pattern.compile(
             "(?i)(?:^|[^\\p{L}])(?:today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
                     + "\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?|"
@@ -70,6 +71,25 @@ public class PendingActionContextService {
         context.setExpiresAt(now.plus(expiry));
         contexts.save(context);
         return new ContextResponse(context.getId(), "ACTIVE", date.toString(), context.getExpiresAt(), whatsappUrl());
+    }
+
+    @Transactional
+    public ContextResponse createExpenseEdit(Long userId, Long expenseId) {
+        Instant now = clock.instant();
+        contexts.findActiveForUpdate(userId).forEach(existing -> {
+            existing.setStatus(PendingActionContextStatus.REPLACED);
+            existing.setReplacedAt(now);
+        });
+        PendingActionContextEntity context = new PendingActionContextEntity();
+        context.setId("ctx_" + UUID.randomUUID().toString().replace("-", ""));
+        context.setUserId(userId);
+        context.setContextType(EDIT_TRANSACTION);
+        context.setContextValue(expenseId.toString());
+        context.setStatus(PendingActionContextStatus.ACTIVE);
+        context.setCreatedAt(now);
+        context.setExpiresAt(now.plus(expiry));
+        contexts.save(context);
+        return new ContextResponse(context.getId(), "ACTIVE", null, context.getExpiresAt(), whatsappUrl());
     }
 
     @Transactional(readOnly = true)
