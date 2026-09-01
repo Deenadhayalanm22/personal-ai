@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 import org.mockito.ArgumentCaptor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ExpenseCalendarControllerTest {
@@ -116,6 +117,18 @@ class ExpenseCalendarControllerTest {
         verify(expenses).list(eq(user), eq(java.time.YearMonth.of(2026, 8)), eq(50), isNull(), filter.capture());
         org.assertj.core.api.Assertions.assertThat(filter.getValue().date())
                 .isEqualTo(java.time.LocalDate.of(2026, 8, 27));
+    }
+
+    @Test
+    void deletesExpenseWithoutVersionParameter() throws Exception {
+        AppUserEntity user = user();
+        when(authentication.authenticate("token")).thenReturn(user);
+
+        mvc.perform(delete("/api/web/expenses/88")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
+                .andExpect(status().isNoContent());
+
+        verify(expenses).delete(user, 88L);
     }
 
     private AppUserEntity user() {

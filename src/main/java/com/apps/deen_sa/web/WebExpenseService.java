@@ -108,13 +108,9 @@ public class WebExpenseService {
         }
     }
 
-    public void delete(AppUserEntity user, Long id, int version) {
-        if (version < 1)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid record version is required");
+    public void delete(AppUserEntity user, Long id) {
         try {
-            corrections.voidExpense(user.getId(), id, version);
-        } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
+            corrections.voidExpense(user.getId(), id);
         } catch (IllegalArgumentException missing) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found or no longer active");
         } catch (IllegalStateException unsafe) {

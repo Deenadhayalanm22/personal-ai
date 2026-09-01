@@ -169,9 +169,8 @@ public class WebFinanceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteExpense(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
-            @PathVariable Long id,
-            @RequestParam int version) {
-        expenses.delete(authentication.authenticate(token), id, version);
+            @PathVariable Long id) {
+        expenses.delete(authentication.authenticate(token), id);
     }
 
     private YearMonth selectedMonth(AppUserEntity user, YearMonth requested) {

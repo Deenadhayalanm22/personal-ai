@@ -12,8 +12,8 @@ public class ExpenseCorrectionService {
     private final StateChangeRepository transactions;
     ExpenseCorrectionService(StateChangeRepository transactions) { this.transactions = transactions; }
 
-    @Transactional public void voidExpense(Long userId, Long transactionId, int expectedVersion) {
-        StateChangeEntity original = activeOwnedExpense(userId, transactionId, expectedVersion);
+    @Transactional public void voidExpense(Long userId, Long transactionId) {
+        StateChangeEntity original = activeOwnedExpense(userId, transactionId);
         original.setRecordStatus(ExpenseRecordStatus.VOIDED);
         original.setCorrectedAt(Instant.now()); original.setCorrectionReason("USER_DELETED_FROM_WEB");
         transactions.save(original);
@@ -33,12 +33,17 @@ public class ExpenseCorrectionService {
     }
 
     private StateChangeEntity activeOwnedExpense(Long userId, Long id, int version) {
+        StateChangeEntity value = activeOwnedExpense(userId, id);
+        if (value.getRecordVersion() != version)
+            throw new org.springframework.dao.OptimisticLockingFailureException("The expense changed since it was loaded.");
+        return value;
+    }
+
+    private StateChangeEntity activeOwnedExpense(Long userId, Long id) {
         StateChangeEntity value = transactions.findExpenseForUpdate(id, userId.toString())
                 .orElseThrow(() -> new IllegalArgumentException("That expense no longer exists."));
         if (value.getRecordStatus() != ExpenseRecordStatus.ACTIVE)
             throw new IllegalStateException("That expense was already corrected.");
-        if (value.getRecordVersion() != version)
-            throw new org.springframework.dao.OptimisticLockingFailureException("The expense changed since it was loaded.");
         return value;
     }
 
