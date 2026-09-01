@@ -11,6 +11,18 @@ class ExpenseCategoryResolverTest {
     private final ExpenseTaxonomyRegistry taxonomy = new ExpenseTaxonomyRegistry();
 
     @Test
+    void resolvesMoviePhraseToEntertainmentMoviesWithoutModelCall() {
+        ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcherMustNotRun());
+        ExpenseDto expense = new ExpenseDto();
+        expense.setCategory("Entertainment");
+
+        resolver.canonicalize(expense, "went for movie paid some 100 using upi");
+
+        assertThat(expense.getCategory()).isEqualTo("Entertainment");
+        assertThat(expense.getSubcategory()).isEqualTo("Movies");
+    }
+
+    @Test
     void acceptsOnlyModelSelectionsThatExistInConfiguredTaxonomy() {
         ExpenseCategoryResolver resolver = new ExpenseCategoryResolver(taxonomy, matcher("weekly sabzi", "Groceries"));
         ExpenseDto expense = new ExpenseDto();

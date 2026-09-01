@@ -278,7 +278,7 @@ public class UnifiedConversationEngine {
             context.reset();
             return SpeechResult.info(messages.skipped(context.getLocale()));
         }
-        if (context.isInFollowup() && Set.of("cancel", "stop", "ரத்து").contains(normalized)) {
+        if (context.isInFollowup() && Set.of("cancel", "discard", "stop", "ரத்து").contains(normalized)) {
             context.reset();
             return SpeechResult.info(messages.cancelled(context.getLocale()));
         }
