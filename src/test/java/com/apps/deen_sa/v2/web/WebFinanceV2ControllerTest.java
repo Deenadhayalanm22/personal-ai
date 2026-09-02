@@ -5,6 +5,7 @@ import com.apps.deen_sa.v2.controller.WebFinanceV2Controller;
 import com.apps.deen_sa.v2.service.MonthlyFinancialTransactionService;
 import com.apps.deen_sa.v2.service.FinancialTransactionListService;
 import com.apps.deen_sa.v2.service.FinancialTransactionCalendarService;
+import com.apps.deen_sa.v2.service.ExpenseEditOptionsService;
 import com.apps.deen_sa.web.WebAuthenticationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,6 +30,7 @@ class WebFinanceV2ControllerTest {
         FinancialTransactionListService listService = mock(FinancialTransactionListService.class);
         FinancialTransactionCalendarService calendar =
                 mock(FinancialTransactionCalendarService.class);
+        ExpenseEditOptionsService options = mock(ExpenseEditOptionsService.class);
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
@@ -38,7 +40,7 @@ class WebFinanceV2ControllerTest {
                         Map.of("Food & Dining", new BigDecimal("450"))));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new WebFinanceV2Controller(
-                        authentication, service, listService, calendar)).build();
+                        authentication, service, listService, calendar, options)).build();
 
         mvc.perform(get("/api/web/expenses/monthly")
                         .param("month", "2026-09")
@@ -60,6 +62,7 @@ class WebFinanceV2ControllerTest {
         FinancialTransactionListService listService = mock(FinancialTransactionListService.class);
         FinancialTransactionCalendarService calendar =
                 mock(FinancialTransactionCalendarService.class);
+        ExpenseEditOptionsService options = mock(ExpenseEditOptionsService.class);
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
@@ -76,7 +79,7 @@ class WebFinanceV2ControllerTest {
                                 null, null, java.util.List.of(), "any")));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new WebFinanceV2Controller(
-                        authentication, monthly, listService, calendar)).build();
+                        authentication, monthly, listService, calendar, options)).build();
 
         mvc.perform(get("/api/web/expenses")
                         .param("month", "2026-09")

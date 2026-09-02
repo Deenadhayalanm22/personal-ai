@@ -4,6 +4,7 @@ import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.v2.service.MonthlyFinancialTransactionService;
 import com.apps.deen_sa.v2.service.FinancialTransactionListService;
 import com.apps.deen_sa.v2.service.FinancialTransactionCalendarService;
+import com.apps.deen_sa.v2.service.ExpenseEditOptionsService;
 import com.apps.deen_sa.web.WebApiException;
 import org.springframework.http.HttpStatus;
 import com.apps.deen_sa.web.WebAuthenticationService;
@@ -30,6 +31,7 @@ public class WebFinanceV2Controller {
     private final MonthlyFinancialTransactionService monthlyTransactions;
     private final FinancialTransactionListService transactionList;
     private final FinancialTransactionCalendarService transactionCalendar;
+    private final ExpenseEditOptionsService editOptions;
 
     @GetMapping("/expenses/monthly")
     public MonthlyFinancialTransactionService.MonthlyExpenseResponse monthlyExpenses(
@@ -79,6 +81,14 @@ public class WebFinanceV2Controller {
                     "CALENDAR_FETCH_FAILED",
                     "Unable to load the expense calendar.");
         }
+    }
+
+    @GetMapping("/expenses/options")
+    public ExpenseEditOptionsService.ExpenseEditOptions expenseEditOptions(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token
+    ) {
+        AppUserEntity user = authentication.authenticate(token);
+        return editOptions.options(user);
     }
 
     private YearMonth parseCalendarMonth(String value) {
