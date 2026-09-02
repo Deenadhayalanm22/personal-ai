@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -100,5 +101,29 @@ class WebFinanceV2ControllerTest {
                 org.mockito.ArgumentMatchers.isNull(),
                 org.mockito.ArgumentMatchers.eq(
                         new FinancialTransactionListService.ExpenseFilter(null, null, null)));
+    }
+
+    @Test
+    void authenticatesSessionAndSoftDeletesV2Expense() throws Exception {
+        WebAuthenticationService authentication = mock(WebAuthenticationService.class);
+        MonthlyFinancialTransactionService monthly = mock(MonthlyFinancialTransactionService.class);
+        FinancialTransactionListService listService = mock(FinancialTransactionListService.class);
+        FinancialTransactionCalendarService calendar =
+                mock(FinancialTransactionCalendarService.class);
+        ExpenseEditOptionsService options = mock(ExpenseEditOptionsService.class);
+        FinancialTransactionEditService editor = mock(FinancialTransactionEditService.class);
+        AppUserEntity user = new AppUserEntity();
+        user.setId(42L);
+        when(authentication.authenticate("session-token")).thenReturn(user);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(
+                new WebFinanceV2Controller(
+                        authentication, monthly, listService, calendar, options, editor)).build();
+
+        mvc.perform(delete("/api/web/expenses/1")
+                        .cookie(new jakarta.servlet.http.Cookie(
+                                "WEB_SESSION", "session-token")))
+                .andExpect(status().isNoContent());
+
+        verify(editor).delete(user, 1L);
     }
 }

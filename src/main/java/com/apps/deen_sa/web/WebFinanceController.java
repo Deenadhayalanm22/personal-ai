@@ -187,7 +187,7 @@ public class WebFinanceController {
         return expenses.edit(authentication.authenticate(token), id, request);
     }
 
-    @DeleteMapping("/expenses/{id}")
+    @DeleteMapping("/old/expenses/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteExpense(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,

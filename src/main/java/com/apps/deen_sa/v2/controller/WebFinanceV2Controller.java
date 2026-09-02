@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -104,6 +106,16 @@ public class WebFinanceV2Controller {
     ) {
         AppUserEntity user = authentication.authenticate(token);
         return transactionEditor.edit(user, id, request);
+    }
+
+    @DeleteMapping("/expenses/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteExpense(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id
+    ) {
+        AppUserEntity user = authentication.authenticate(token);
+        transactionEditor.delete(user, id);
     }
 
     private YearMonth parseCalendarMonth(String value) {

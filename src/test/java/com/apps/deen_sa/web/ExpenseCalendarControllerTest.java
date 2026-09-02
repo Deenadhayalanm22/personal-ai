@@ -129,7 +129,7 @@ class ExpenseCalendarControllerTest {
         AppUserEntity user = user();
         when(authentication.authenticate("token")).thenReturn(user);
 
-        mvc.perform(delete("/api/web/expenses/88")
+        mvc.perform(delete("/api/web/old/expenses/88")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
                 .andExpect(status().isNoContent());
 

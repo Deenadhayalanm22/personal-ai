@@ -66,6 +66,19 @@ public class FinancialTransactionEditService {
         return item(saved, user);
     }
 
+    @Transactional
+    public void delete(AppUserEntity user, Long transactionId) {
+        FinancialTransactionEntity transaction = transactions
+                .findOwnedVisibleById(transactionId, user.getId())
+                .orElseThrow(() -> new WebApiException(
+                        HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND",
+                        "Expense not found or no longer active"));
+        Instant now = Instant.now();
+        transaction.setDeletedAt(now);
+        transaction.setUpdatedAt(now);
+        transactions.saveAndFlush(transaction);
+    }
+
     private void updateClassification(
             FinancialTransactionEntity transaction,
             String requestedCategory,
