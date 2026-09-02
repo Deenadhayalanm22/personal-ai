@@ -93,7 +93,7 @@ public class WebFinanceController {
         return monthlyExpenses.summarize(user, selected);
     }
 
-    @GetMapping("/expenses")
+    @GetMapping("/old/expenses")
     public WebExpenseService.ExpensePage expenses(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month,
@@ -110,7 +110,7 @@ public class WebFinanceController {
                         parseTagIds(tagIds), parseTagMatch(tagMatch), date));
     }
 
-    @GetMapping("/expenses/calendar")
+    @GetMapping("/old/expenses/calendar")
     public ExpenseCalendarService.CalendarResponse expenseCalendar(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam String month) {

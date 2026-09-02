@@ -45,7 +45,7 @@ class ExpenseCalendarControllerTest {
 
     @Test
     void rejectsMissingMonthWithContractError() throws Exception {
-        mvc.perform(get("/api/web/expenses/calendar").cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
+        mvc.perform(get("/api/web/old/expenses/calendar").cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_MONTH"))
                 .andExpect(jsonPath("$.message").value("month must use YYYY-MM format"));
@@ -54,7 +54,7 @@ class ExpenseCalendarControllerTest {
     @Test
     void rejectsMalformedMonthWithContractError() throws Exception {
         when(authentication.authenticate("token")).thenReturn(user());
-        mvc.perform(get("/api/web/expenses/calendar").param("month", "2026-8")
+        mvc.perform(get("/api/web/old/expenses/calendar").param("month", "2026-8")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_MONTH"));
@@ -63,7 +63,7 @@ class ExpenseCalendarControllerTest {
     @Test
     void returnsContractUnauthorizedResponse() throws Exception {
         when(authentication.authenticate(any())).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        mvc.perform(get("/api/web/expenses/calendar").param("month", "2026-08"))
+        mvc.perform(get("/api/web/old/expenses/calendar").param("month", "2026-08"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("Your session has expired."));
@@ -74,7 +74,7 @@ class ExpenseCalendarControllerTest {
         AppUserEntity user = user();
         when(authentication.authenticate("token")).thenReturn(user);
         when(calendar.calendar(user, java.time.YearMonth.of(2026, 8))).thenThrow(new IllegalStateException());
-        mvc.perform(get("/api/web/expenses/calendar").param("month", "2026-08")
+        mvc.perform(get("/api/web/old/expenses/calendar").param("month", "2026-08")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token")))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("CALENDAR_FETCH_FAILED"))
@@ -110,7 +110,7 @@ class ExpenseCalendarControllerTest {
         AppUserEntity user = user();
         when(authentication.authenticate("token")).thenReturn(user);
 
-        mvc.perform(get("/api/web/expenses")
+        mvc.perform(get("/api/web/old/expenses")
                         .param("month", "2026-08")
                         .param("date", "2026-08-27")
                         .param("limit", "50")
