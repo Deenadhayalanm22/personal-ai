@@ -1,93 +1,158 @@
 Food & Dining:
   - Groceries
-  - Eating Out
-  - Snacks & Beverages
-  - Celebration Meal/Home Cooked
+  - Vegetables & Fruits
+  - Milk & Dairy
+  - Meat, Fish & Eggs
+  - Rice, Grains & Provisions
+  - Breakfast & Tiffin
+  - Home-Cooked Meals
+  - Special & Celebration Meals
+  - Office Canteen
+  - Office Team Meals
+  - Restaurant & Cafe
+  - Street Food
+  - Takeaway
+  - Snacks
+  - Tea, Coffee & Juice
+  - Sweets & Bakery
+  - Food Delivery
 
 Transportation:
   - Fuel
+  - Auto & Taxi
+  - Bus
+  - Metro & Local Train
   - Vehicle Maintenance
-  - Public Transport
+  - Two-Wheeler Maintenance
   - Parking
   - Toll
+  - Other Local Transport
 
 Travel:
   - Accommodation
   - Flights
   - Intercity Transport
+  - Family Visit Travel
+  - Pilgrimage Travel
   - Travel Activities
   - Travel Documents & Fees
   - Other Travel
 
 Shopping:
-  - Electronics
   - Clothing
+  - Traditional & Festival Wear
+  - Footwear
+  - Electronics
+  - Jewellery & Accessories
   - Gifts
   - Household Items
+  - Kitchenware
+  - Home Appliances
   - Other Shopping
 
 Personal Care:
   - Haircut & Grooming
   - Salon & Beauty
   - Toiletries
+  - Laundry & Ironing
+  - Fitness & Sports
 
 Housing:
   - Rent
   - Maintenance
+  - Repairs & Renovation
   - Furniture
-  - Home Utilities
+  - Domestic Help
+  - Association & Security Fees
 
 Utilities:
   - Electricity
   - Water
-  - Gas
+  - LPG & Cooking Fuel
   - Internet
-  - Mobile Recharge
+  - Mobile
+  - Cable & DTH
+  - Waste Collection
 
 Medical:
   - Doctor Consultation
   - Medicines
   - Lab Tests
   - Hospital Charges
+  - Dental Care
+  - Eye Care
+  - Therapy & Rehabilitation
+  - Traditional Medicine
 
 Insurance:
   - Life Insurance
   - Health Insurance
   - Vehicle Insurance
+  - Home Insurance
+  - Other Insurance
 
 Entertainment:
   - Movies
   - OTT Subscription
   - Games
   - Events
+  - Music & Cultural Programs
+  - Sports & Recreation
 
 Education:
   - School Fees
+  - College Fees
   - School Supplies
-  - Tuition
-  - Courses
   - Books
+  - Exam & Application Fees
+  - School Transport
+  - Tuition
+  - Courses & Training
+  - Hostel & Accommodation
 
-Family Support:
+Family:
   - Child Expenses
+  - Childcare
   - Parents Support
-  - Family Transfer
-  - Household Help
+  - Elder Care
+  - Family Transfers
+  - Family Functions
 
-Repayment:
-  - Loan EMI
-  - Credit Card Bill
-  - Advance Repayment
-  - Tax Payment
+Religious & Community:
+  - Worship & Offerings
+  - Festivals & Pooja Supplies
+  - Weddings & Ceremonies
+  - Community Contributions
+  - Charity & Annadanam
 
-Investment:
-  - Mutual Fund
-  - Stocks
-  - Fixed Deposit
-  - Gold
+Agriculture & Livestock:
+  - Seeds & Saplings
+  - Fertilizer & Pesticides
+  - Farm Labour
+  - Irrigation & Electricity
+  - Equipment & Repairs
+  - Animal Feed
+  - Veterinary Care
+  - Land Lease
+
+Government & Civic:
+  - Property Tax
+  - Government Documents
+  - Licences & Renewals
+  - Municipal Charges
+  - Legal & Registration Fees
+
+Pets:
+  - Pet Food
+  - Veterinary Care
+  - Grooming & Supplies
+
+Fees & Charges:
+  - Service Charges
+  - Penalties & Fines
+  - Interest & Late Fees
+  - Other Charges
 
 Miscellaneous:
-  - Donation
-  - Service Charges
-  - Penalty
-  - Others
+  - Cash Adjustment
+  - Other

@@ -1,6 +1,7 @@
 package com.apps.deen_sa.integration;
 
 import lombok.extern.slf4j.Slf4j;
+import org.flywaydb.core.Flyway;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -19,6 +20,7 @@ public class PostgresTestContainerInitializer implements ApplicationContextIniti
     public void initialize(@NonNull ConfigurableApplicationContext applicationContext) {
         ConfigurableEnvironment environment = applicationContext.getEnvironment();
         Properties testProperties = loadTestProperties();
+        rebuildDatabase(testProperties);
 
         TestPropertyValues.of(
                         "spring.datasource.url=" + testProperties.getProperty("spring.datasource.url"),
@@ -32,6 +34,23 @@ public class PostgresTestContainerInitializer implements ApplicationContextIniti
                 .applyTo(environment);
 
         log.info("[TEST CONFIG] Using Postgres at {} with user {}", testProperties.getProperty("spring.datasource.url"), testProperties.getProperty("spring.datasource.username"));
+    }
+
+    private void rebuildDatabase(Properties properties) {
+        Flyway flyway = Flyway.configure()
+                .dataSource(
+                        properties.getProperty("spring.datasource.url"),
+                        properties.getProperty("spring.datasource.username"),
+                        properties.getProperty("spring.datasource.password"))
+                .locations(properties.getProperty("spring.flyway.locations", "classpath:db/migration"))
+                .baselineOnMigrate(Boolean.parseBoolean(
+                        properties.getProperty("spring.flyway.baseline-on-migrate", "false")))
+                .cleanDisabled(false)
+                .load();
+
+        log.info("[TEST DATABASE] Dropping and recreating the PostgreSQL schema");
+        flyway.clean();
+        flyway.migrate();
     }
 
     private Properties loadTestProperties() {

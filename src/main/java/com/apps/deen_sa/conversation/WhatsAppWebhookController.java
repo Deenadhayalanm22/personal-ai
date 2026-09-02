@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/webhook/whatsapp")
+@RequestMapping("/old/webhook/whatsapp")
 @RequiredArgsConstructor
 @Log4j2
 public class WhatsAppWebhookController {
@@ -18,11 +18,9 @@ public class WhatsAppWebhookController {
 
     // 🔹 1. Verification endpoint (GET)
     @GetMapping
-    public ResponseEntity<String> verifyWebhook(
-            @RequestParam("hub.mode") String mode,
-            @RequestParam("hub.verify_token") String token,
-            @RequestParam("hub.challenge") String challenge
-    ) {
+    public ResponseEntity<String> verifyWebhook(@RequestParam("hub.mode") String mode,
+                                                @RequestParam("hub.verify_token") String token,
+                                                @RequestParam("hub.challenge") String challenge) {
 
         // keep this token in config, not hardcoded
         if ("subscribe".equals(mode) && "my-tellme-app-token".equals(token)) {

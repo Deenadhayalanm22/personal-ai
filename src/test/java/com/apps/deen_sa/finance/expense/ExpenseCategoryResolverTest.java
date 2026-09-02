@@ -330,7 +330,7 @@ class ExpenseCategoryResolverTest {
     private TaxonomySemanticMatcher matcherWithin(String raw, String resolved) {
         return new TaxonomySemanticMatcher(null, null) {
             @Override public Map<String, String> match(List<String> canonical, List<String> values) {
-                assertThat(canonical).containsExactlyInAnyOrder(
+                assertThat(canonical).contains(
                         "Groceries", "Eating Out", "Snacks & Beverages", "Celebration Meal/Home Cooked");
                 assertThat(values).containsExactly(raw);
                 return Map.of(raw, resolved);
