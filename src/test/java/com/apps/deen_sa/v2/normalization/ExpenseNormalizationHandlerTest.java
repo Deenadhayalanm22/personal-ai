@@ -7,6 +7,7 @@ import com.apps.deen_sa.v2.domain.MessageSource;
 import com.apps.deen_sa.v2.dto.NormalizedExpense;
 import com.apps.deen_sa.v2.dto.StoredDraftExtraction;
 import com.apps.deen_sa.v2.service.TransactionDraftExtractionWriter;
+import com.apps.deen_sa.v2.service.V2MissingTransactionDateContextService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -28,8 +29,11 @@ class ExpenseNormalizationHandlerTest {
             mock(TransactionDraftExtractionWriter.class);
     private final ExpenseConfirmationPort confirmation = mock(ExpenseConfirmationPort.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-02T10:00:00Z"), ZoneOffset.UTC);
+    private final V2MissingTransactionDateContextService dateContexts =
+            mock(V2MissingTransactionDateContextService.class);
     private final ExpenseNormalizationHandler handler =
-            new ExpenseNormalizationHandler(normalizer, extractionWriter, confirmation, clock);
+            new ExpenseNormalizationHandler(
+                    normalizer, extractionWriter, confirmation, clock, dateContexts);
 
     @Test
     void normalizesCommittedTextAndRequestsConfirmationWithoutPersistingIt() {
@@ -44,6 +48,9 @@ class ExpenseNormalizationHandlerTest {
                         "Swiggy",
                         LocalDate.of(2026, 9, 2),
                         new BigDecimal("0.94")));
+        when(dateContexts.applyToDraft(
+                42L, "Paid ₹250 at Swiggy", LocalDate.of(2026, 9, 2)))
+                .thenReturn(LocalDate.of(2026, 9, 2));
         StoredDraftExtraction stored = new StoredDraftExtraction(
                 5001L, 42L, "9198", new BigDecimal("250"), "Swiggy",
                 "Food & Dining", "Eating Out", LocalDate.of(2026, 9, 2),

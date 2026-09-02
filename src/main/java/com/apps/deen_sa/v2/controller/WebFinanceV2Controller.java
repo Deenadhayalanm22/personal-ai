@@ -6,6 +6,7 @@ import com.apps.deen_sa.v2.service.FinancialTransactionListService;
 import com.apps.deen_sa.v2.service.FinancialTransactionCalendarService;
 import com.apps.deen_sa.v2.service.ExpenseEditOptionsService;
 import com.apps.deen_sa.v2.service.FinancialTransactionEditService;
+import com.apps.deen_sa.conversation.context.PendingActionContextService;
 import com.apps.deen_sa.web.WebApiException;
 import org.springframework.http.HttpStatus;
 import com.apps.deen_sa.web.WebAuthenticationService;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -39,6 +41,7 @@ public class WebFinanceV2Controller {
     private final FinancialTransactionCalendarService transactionCalendar;
     private final ExpenseEditOptionsService editOptions;
     private final FinancialTransactionEditService transactionEditor;
+    private final PendingActionContextService actionContexts;
 
     @GetMapping("/expenses/monthly")
     public MonthlyFinancialTransactionService.MonthlyExpenseResponse monthlyExpenses(
@@ -116,6 +119,16 @@ public class WebFinanceV2Controller {
     ) {
         AppUserEntity user = authentication.authenticate(token);
         transactionEditor.delete(user, id);
+    }
+
+    @PostMapping("/expenses/calendar/context")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PendingActionContextService.ContextResponse createPendingActionContext(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody PendingActionContextService.ContextRequest request
+    ) {
+        AppUserEntity user = authentication.authenticate(token);
+        return actionContexts.create(user.getId(), request);
     }
 
     private YearMonth parseCalendarMonth(String value) {

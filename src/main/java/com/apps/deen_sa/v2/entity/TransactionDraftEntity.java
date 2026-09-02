@@ -53,6 +53,9 @@ public class TransactionDraftEntity {
     @Column(name = "normalized_text", columnDefinition = "TEXT")
     private String normalizedText;
 
+    @Column(name = "pending_action_context_id", length = 40)
+    private String pendingActionContextId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionDraftStatus status = TransactionDraftStatus.PENDING;

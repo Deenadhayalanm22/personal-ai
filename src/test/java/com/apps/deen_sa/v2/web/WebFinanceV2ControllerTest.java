@@ -7,6 +7,7 @@ import com.apps.deen_sa.v2.service.FinancialTransactionListService;
 import com.apps.deen_sa.v2.service.FinancialTransactionCalendarService;
 import com.apps.deen_sa.v2.service.ExpenseEditOptionsService;
 import com.apps.deen_sa.v2.service.FinancialTransactionEditService;
+import com.apps.deen_sa.conversation.context.PendingActionContextService;
 import com.apps.deen_sa.web.WebAuthenticationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -43,7 +44,8 @@ class WebFinanceV2ControllerTest {
                         Map.of("Food & Dining", new BigDecimal("450"))));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new WebFinanceV2Controller(
-                        authentication, service, listService, calendar, options, editor)).build();
+                        authentication, service, listService, calendar, options, editor,
+                        mock(PendingActionContextService.class))).build();
 
         mvc.perform(get("/api/web/expenses/monthly")
                         .param("month", "2026-09")
@@ -83,7 +85,8 @@ class WebFinanceV2ControllerTest {
                                 null, null, java.util.List.of(), "any")));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new WebFinanceV2Controller(
-                        authentication, monthly, listService, calendar, options, editor)).build();
+                        authentication, monthly, listService, calendar, options, editor,
+                        mock(PendingActionContextService.class))).build();
 
         mvc.perform(get("/api/web/expenses")
                         .param("month", "2026-09")
@@ -117,7 +120,8 @@ class WebFinanceV2ControllerTest {
         when(authentication.authenticate("session-token")).thenReturn(user);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new WebFinanceV2Controller(
-                        authentication, monthly, listService, calendar, options, editor)).build();
+                        authentication, monthly, listService, calendar, options, editor,
+                        mock(PendingActionContextService.class))).build();
 
         mvc.perform(delete("/api/web/expenses/1")
                         .cookie(new jakarta.servlet.http.Cookie(

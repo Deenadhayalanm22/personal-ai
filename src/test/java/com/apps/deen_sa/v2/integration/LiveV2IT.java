@@ -1,6 +1,10 @@
 package com.apps.deen_sa.v2.integration;
 
 import com.apps.deen_sa.integration.PostgresTestContainerInitializer;
+import com.apps.deen_sa.conversation.AppUserRepository;
+import com.apps.deen_sa.conversation.MagicLinkService;
+import com.apps.deen_sa.web.WebSessionEntity;
+import com.apps.deen_sa.web.WebSessionRepository;
 import com.apps.deen_sa.v2.domain.MessageSource;
 import com.apps.deen_sa.v2.domain.TransactionDraftExtractionStatus;
 import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
@@ -21,6 +25,11 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,6 +57,12 @@ class LiveV2IT {
 
     @Autowired
     private FinancialTransactionRepository financialTransactionRepository;
+
+    @Autowired
+    private AppUserRepository appUserRepository;
+
+    @Autowired
+    private WebSessionRepository webSessionRepository;
 
     @DynamicPropertySource
     static void liveProviderProperties(DynamicPropertyRegistry properties) {
@@ -146,8 +161,39 @@ class LiveV2IT {
         assertThat(financialTransactionRepository.count()).isEqualTo(2);
         printExtraction("APPLICATION: Expense confirmed", thirdExtraction);
 
-        assertThat(draftRepository.count()).isEqualTo(3);
-        assertThat(extractionRepository.count()).isEqualTo(3);
+        // 9. User selects yesterday in the calendar and opens WhatsApp.
+        String sessionToken = createWebSession(user);
+        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1);
+        createMissingDateContext(sessionToken, yesterday);
+        System.out.printf("%nUSER → WEB CALENDAR%nRecord next transaction for %s%n", yesterday);
+
+        // 10. The next message has no date, so the calendar context supplies yesterday.
+        printUserMessage("Paid ₹100 for dinner at A2B");
+        userSendsText(user, "wamid.text-4", "Paid ₹100 for dinner at A2B");
+        TransactionDraftEntity fourthDraft = draft("wamid.text-4");
+        TransactionDraftExtractionEntity fourthExtraction = activeExtraction(fourthDraft);
+        assertThat(fourthExtraction.getOccurredAt()).isEqualTo(yesterday);
+        printExtraction("WHATSAPP → USER: Confirm or Discard", fourthExtraction);
+
+        printUserMessage("Confirm");
+        userSelectsButton(
+                user,
+                "wamid.confirm-4",
+                "v2:expense:confirm:" + fourthExtraction.getId(),
+                "Confirm");
+
+        fourthDraft = draft("wamid.text-4");
+        fourthExtraction = extraction(fourthExtraction.getId());
+        assertThat(fourthDraft.getStatus()).isEqualTo(TransactionDraftStatus.CONSUMED);
+        assertThat(fourthExtraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.USED);
+        assertThat(financialTransactionRepository
+                .findBySourceDraftId(fourthDraft.getId()).orElseThrow().getOccurredAt())
+                .isEqualTo(yesterday);
+        printExtraction("APPLICATION: Yesterday's expense confirmed", fourthExtraction);
+
+        assertThat(draftRepository.count()).isEqualTo(4);
+        assertThat(extractionRepository.count()).isEqualTo(4);
+        assertThat(financialTransactionRepository.count()).isEqualTo(3);
     }
 
     private void postWebhook(String webhook) throws Exception {
@@ -166,6 +212,35 @@ class LiveV2IT {
                   "text":{"body":"%s"}
                 }]}}]}]}
                 """.formatted(messageId, user, message));
+    }
+
+    private String createWebSession(String externalUserId) {
+        long userId = appUserRepository
+                .findByChannelAndExternalUserId("WHATSAPP", externalUserId)
+                .orElseThrow()
+                .getId();
+        String token = "live-v2-calendar-session";
+        WebSessionEntity session = new WebSessionEntity();
+        session.setTokenHash(MagicLinkService.hash(token));
+        session.setUserId(userId);
+        session.setCreatedAt(Instant.now());
+        session.setExpiresAt(Instant.now().plus(1, ChronoUnit.HOURS));
+        webSessionRepository.saveAndFlush(session);
+        return token;
+    }
+
+    private void createMissingDateContext(String sessionToken, LocalDate date) throws Exception {
+        mockMvc.perform(post("/api/web/expenses/calendar/context")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", sessionToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type":"MISSING_TRANSACTION_DATE",
+                                  "date":"%s",
+                                  "timezone":"Asia/Kolkata"
+                                }
+                                """.formatted(date)))
+                .andExpect(status().isCreated());
     }
 
     private void userSelectsButton(

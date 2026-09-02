@@ -91,7 +91,7 @@ class ExpenseCalendarControllerTest {
                 new PendingActionContextService.ContextResponse("ctx_123", "ACTIVE",
                         "2026-08-14", java.time.Instant.parse("2026-08-31T14:45:00Z"),
                         "https://wa.me/919999999999"));
-        mvc.perform(post("/api/web/expenses/calendar/context")
+        mvc.perform(post("/api/web/old/expenses/calendar/context")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token"))
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("""

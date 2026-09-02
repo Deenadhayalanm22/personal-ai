@@ -124,7 +124,7 @@ public class WebFinanceController {
         }
     }
 
-    @PostMapping("/expenses/calendar/context")
+    @PostMapping("/old/expenses/calendar/context")
     @ResponseStatus(HttpStatus.CREATED)
     public PendingActionContextService.ContextResponse createPendingActionContext(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,

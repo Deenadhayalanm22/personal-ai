@@ -20,6 +20,7 @@ public class ExpenseConfirmationCommandHandler {
     private final TransactionDraftExtractionRepository extractionRepository;
     private final ConfirmedMerchantReferenceWriter merchantReferenceWriter;
     private final FinancialTransactionWriter transactionWriter;
+    private final V2MissingTransactionDateContextService dateContexts;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public RecordedExpense handle(ExpenseConfirmationCommand command) {
@@ -39,6 +40,7 @@ public class ExpenseConfirmationCommandHandler {
             draft.setStatus(TransactionDraftStatus.CONSUMED);
             var merchant = merchantReferenceWriter.save(extraction);
             transactionWriter.save(extraction, merchant);
+            dateContexts.consumeForConfirmedDraft(draft);
             draft.setUpdatedAt(Instant.now());
             return new RecordedExpense(
                     command.externalUserId(),
