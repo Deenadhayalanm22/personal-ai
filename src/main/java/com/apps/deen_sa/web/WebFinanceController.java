@@ -14,7 +14,7 @@ import java.time.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/web/old/")
+@RequestMapping("/api/web")
 public class WebFinanceController {
     static final String SESSION_COOKIE = "WEB_SESSION";
     private final WebAuthenticationService authentication;
@@ -84,7 +84,7 @@ public class WebFinanceController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    @GetMapping("/expenses/monthly")
+    @GetMapping("/old/expenses/monthly")
     public MonthlyExpenseService.MonthlyExpenseResponse monthlyExpenses(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month) {
