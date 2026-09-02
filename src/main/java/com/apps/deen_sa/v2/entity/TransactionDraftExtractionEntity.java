@@ -32,7 +32,7 @@ public class TransactionDraftExtractionEntity {
     @JoinColumn(name = "draft_id", nullable = false)
     private TransactionDraftEntity draft;
 
-    @Column(precision = 19, scale = 4)
+    @Column(precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "merchant_name")

@@ -31,7 +31,7 @@ public class FinancialTransactionEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private AppUserEntity user;
 
-    @Column(nullable = false, precision = 19, scale = 4)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "occurred_at", nullable = false)

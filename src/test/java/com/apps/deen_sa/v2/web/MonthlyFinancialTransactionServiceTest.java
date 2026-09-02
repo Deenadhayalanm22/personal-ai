@@ -37,9 +37,12 @@ class MonthlyFinancialTransactionServiceTest {
         assertThat(response.month()).isEqualTo("2026-09");
         assertThat(response.currency()).isEqualTo("INR");
         assertThat(response.total()).isEqualByComparingTo("750.00");
+        assertThat(response.total().scale()).isEqualTo(2);
         assertThat(response.transactionCount()).isEqualTo(3);
         assertThat(response.categories())
                 .containsEntry("Food & Dining", new BigDecimal("450.00"))
                 .containsEntry("Travel", new BigDecimal("300.00"));
+        assertThat(response.categories().values())
+                .allSatisfy(amount -> assertThat(amount.scale()).isEqualTo(2));
     }
 }

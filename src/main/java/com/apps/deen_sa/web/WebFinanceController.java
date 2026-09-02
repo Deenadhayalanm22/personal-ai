@@ -14,7 +14,7 @@ import java.time.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/web")
+@RequestMapping("/api/web/old/")
 public class WebFinanceController {
     static final String SESSION_COOKIE = "WEB_SESSION";
     private final WebAuthenticationService authentication;

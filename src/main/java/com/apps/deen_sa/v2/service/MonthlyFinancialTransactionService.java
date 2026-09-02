@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.LinkedHashMap;
@@ -23,16 +24,22 @@ public class MonthlyFinancialTransactionService {
         LocalDate end = month.plusMonths(1).atDay(1);
         Map<String, BigDecimal> categories = new LinkedHashMap<>();
         transactions.sumByCategoryForPeriod(user.getId(), start, end)
-                .forEach(row -> categories.put((String) row[0], (BigDecimal) row[1]));
+                .forEach(row -> categories.put(
+                        (String) row[0], money((BigDecimal) row[1])));
 
         BigDecimal total = categories.values().stream()
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(new BigDecimal("0.00"), BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
         long transactionCount = transactions
                 .countByUserIdAndOccurredAtGreaterThanEqualAndOccurredAtLessThanAndDeletedAtIsNull(
                         user.getId(), start, end);
 
         return new MonthlyExpenseResponse(
                 month.toString(), user.getCurrency(), total, transactionCount, categories);
+    }
+
+    private BigDecimal money(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
     public record MonthlyExpenseResponse(

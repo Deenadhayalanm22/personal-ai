@@ -14,7 +14,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 
 @RestController
-@RequestMapping("/api/v2/web")
+@RequestMapping("/api/web")
 @RequiredArgsConstructor
 public class WebFinanceV2Controller {
     private static final String SESSION_COOKIE = "WEB_SESSION";
