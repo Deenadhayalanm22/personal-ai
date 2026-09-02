@@ -19,4 +19,7 @@ public interface UserReferenceEntityRepository extends JpaRepository<UserReferen
 
     List<UserReferenceEntity> findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
             String externalUserId, String channel, UserReferenceEntityType entityType);
+
+    Optional<UserReferenceEntity> findByIdAndUserIdAndEntityTypeAndActiveTrue(
+            Long id, Long userId, UserReferenceEntityType entityType);
 }

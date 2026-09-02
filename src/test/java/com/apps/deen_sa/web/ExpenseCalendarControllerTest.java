@@ -141,7 +141,7 @@ class ExpenseCalendarControllerTest {
         AppUserEntity user = user();
         when(authentication.authenticate("token")).thenReturn(user);
 
-        mvc.perform(patch("/api/web/expenses/87")
+        mvc.perform(patch("/api/web/old/expenses/87")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "token"))
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("""

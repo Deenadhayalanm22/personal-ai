@@ -6,7 +6,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestControllerAdvice(basePackages = "com.apps.deen_sa.web")
+@RestControllerAdvice(basePackages = {
+        "com.apps.deen_sa.web",
+        "com.apps.deen_sa.v2.controller"
+})
 public class WebApiExceptionHandler {
     @ExceptionHandler(WebApiException.class)
     public ResponseEntity<ApiError> apiError(WebApiException error) {

@@ -5,6 +5,7 @@ import com.apps.deen_sa.v2.service.MonthlyFinancialTransactionService;
 import com.apps.deen_sa.v2.service.FinancialTransactionListService;
 import com.apps.deen_sa.v2.service.FinancialTransactionCalendarService;
 import com.apps.deen_sa.v2.service.ExpenseEditOptionsService;
+import com.apps.deen_sa.v2.service.FinancialTransactionEditService;
 import com.apps.deen_sa.web.WebApiException;
 import org.springframework.http.HttpStatus;
 import com.apps.deen_sa.web.WebAuthenticationService;
@@ -14,6 +15,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -32,6 +36,7 @@ public class WebFinanceV2Controller {
     private final FinancialTransactionListService transactionList;
     private final FinancialTransactionCalendarService transactionCalendar;
     private final ExpenseEditOptionsService editOptions;
+    private final FinancialTransactionEditService transactionEditor;
 
     @GetMapping("/expenses/monthly")
     public MonthlyFinancialTransactionService.MonthlyExpenseResponse monthlyExpenses(
@@ -89,6 +94,16 @@ public class WebFinanceV2Controller {
     ) {
         AppUserEntity user = authentication.authenticate(token);
         return editOptions.options(user);
+    }
+
+    @PatchMapping("/expenses/{id}")
+    public FinancialTransactionListService.ExpenseItem editExpense(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id,
+            @RequestBody FinancialTransactionEditService.ExpenseUpdate request
+    ) {
+        AppUserEntity user = authentication.authenticate(token);
+        return transactionEditor.edit(user, id, request);
     }
 
     private YearMonth parseCalendarMonth(String value) {

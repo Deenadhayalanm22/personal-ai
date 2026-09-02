@@ -179,7 +179,7 @@ public class WebFinanceController {
         return expenses.editClassification(authentication.authenticate(token), id, request);
     }
 
-    @PatchMapping("/expenses/{id}")
+    @PatchMapping("/old/expenses/{id}")
     public WebExpenseService.ExpenseItem editExpense(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @PathVariable Long id,

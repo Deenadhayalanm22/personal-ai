@@ -15,6 +15,19 @@ public interface FinancialTransactionRepository
     Optional<FinancialTransactionEntity> findBySourceDraftId(Long sourceDraftId);
 
     @Query("""
+            SELECT transaction
+            FROM FinancialTransactionEntity transaction
+            JOIN FETCH transaction.sourceDraft draft
+            LEFT JOIN FETCH transaction.merchant merchant
+            WHERE transaction.id = :id
+              AND transaction.user.id = :userId
+              AND transaction.deletedAt IS NULL
+            """)
+    Optional<FinancialTransactionEntity> findOwnedVisibleById(
+            @Param("id") Long id,
+            @Param("userId") Long userId);
+
+    @Query("""
             SELECT COALESCE(transaction.category, 'Uncategorized'), SUM(transaction.amount)
             FROM FinancialTransactionEntity transaction
             WHERE transaction.user.id = :userId
