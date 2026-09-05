@@ -1,6 +1,5 @@
 package com.apps.deen_sa.conversation.context;
 
-import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.web.WebApiException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +17,6 @@ import java.util.regex.Pattern;
 @Service
 public class PendingActionContextService {
     public static final String TYPE = "MISSING_TRANSACTION_DATE";
-    public static final String EDIT_TRANSACTION = "EDIT_TRANSACTION";
-    public static final String CONFIRM_EDIT_TRANSACTION = "CONFIRM_EDIT_TRANSACTION";
     private static final Pattern EXPLICIT_TEMPORAL_TEXT = Pattern.compile(
             "(?i)(?:^|[^\\p{L}])(?:today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
                     + "\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?|"
@@ -71,22 +68,6 @@ public class PendingActionContextService {
         return new ContextResponse(context.getId(), "ACTIVE", date.toString(), context.getExpiresAt(), whatsappUrl());
     }
 
-    @Transactional
-    public ContextResponse createExpenseEdit(Long userId, Long expenseId) {
-        Instant now = clock.instant();
-        replaceActiveContexts(userId, now);
-        PendingActionContextEntity context = new PendingActionContextEntity();
-        context.setId("ctx_" + UUID.randomUUID().toString().replace("-", ""));
-        context.setUserId(userId);
-        context.setContextType(EDIT_TRANSACTION);
-        context.setContextValue(expenseId.toString());
-        context.setStatus(PendingActionContextStatus.ACTIVE);
-        context.setCreatedAt(now);
-        context.setExpiresAt(now.plus(expiry));
-        contexts.save(context);
-        return new ContextResponse(context.getId(), "ACTIVE", null, context.getExpiresAt(), whatsappUrl());
-    }
-
     private void replaceActiveContexts(Long userId, Instant now) {
         var active = contexts.findActiveForUpdate(userId);
         active.forEach(existing -> {
@@ -96,22 +77,6 @@ public class PendingActionContextService {
         // PostgreSQL's partial unique index permits only one ACTIVE context per user.
         // Flush the replacements before Hibernate queues the new ACTIVE insert.
         if (!active.isEmpty()) contexts.flush();
-    }
-
-    @Transactional(readOnly = true)
-    public void attachToNextExpense(ExpenseDto expense, String rawText, Long userId, String channel) {
-        if (expense == null || !"WHATSAPP".equalsIgnoreCase(channel)
-                || expense.getPendingActionContextId() != null) return;
-        contexts.findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
-                        userId, PendingActionContextStatus.ACTIVE, clock.instant())
-                .ifPresent(context -> {
-                    expense.setPendingActionContextId(context.getId());
-                    boolean explicitDate = expense.getTransactionDate() != null || hasExplicitTemporalText(rawText);
-                    if (!explicitDate) {
-                        expense.setTransactionDate(LocalDate.parse(context.getContextValue()));
-                        expense.setContextDateApplied(true);
-                    }
-                });
     }
 
     @Transactional

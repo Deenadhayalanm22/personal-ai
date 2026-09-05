@@ -26,7 +26,6 @@ public class ConversationSessionEntity {
     @Column(nullable = false, length = 30)
     private String channel;
     private Long activeTransactionId;
-    private Long activeDraftId;
     private String activeIntent;
     private String waitingForField;
     private String partialType;

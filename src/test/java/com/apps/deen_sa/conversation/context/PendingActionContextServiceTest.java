@@ -1,6 +1,5 @@
 package com.apps.deen_sa.conversation.context;
 
-import com.apps.deen_sa.dto.ExpenseDto;
 import com.apps.deen_sa.web.WebApiException;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -38,23 +37,6 @@ class PendingActionContextServiceTest {
     }
 
     @Test
-    void replacesAndFlushesExistingContextBeforeCreatingExpenseEditContext() {
-        PendingActionContextRepository repository = mock(PendingActionContextRepository.class);
-        PendingActionContextEntity previous = active("ctx_old", LocalDate.of(2026, 8, 10));
-        when(repository.findActiveForUpdate(42L)).thenReturn(List.of(previous));
-
-        var response = service(repository).createExpenseEdit(42L, 95L);
-
-        assertThat(response.status()).isEqualTo("ACTIVE");
-        assertThat(previous.getStatus()).isEqualTo(PendingActionContextStatus.REPLACED);
-        InOrder writes = inOrder(repository);
-        writes.verify(repository).flush();
-        writes.verify(repository).save(argThat((PendingActionContextEntity context) ->
-                PendingActionContextService.EDIT_TRANSACTION.equals(context.getContextType())
-                        && "95".equals(context.getContextValue())));
-    }
-
-    @Test
     void rejectsFutureDateAndInvalidTimezone() {
         PendingActionContextService service = service(mock(PendingActionContextRepository.class));
         assertThatThrownBy(() -> service.create(42L, new PendingActionContextService.ContextRequest(
@@ -65,27 +47,6 @@ class PendingActionContextServiceTest {
                 PendingActionContextService.TYPE, "2026-08-14", "Not/AZone")))
                 .isInstanceOfSatisfying(WebApiException.class,
                         error -> assertThat(error.code()).isEqualTo("INVALID_TIMEZONE"));
-    }
-
-    @Test
-    void attachesFallbackDateButLetsExplicitDateWin() {
-        PendingActionContextRepository repository = mock(PendingActionContextRepository.class);
-        when(repository.findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
-                eq(42L), eq(PendingActionContextStatus.ACTIVE), any())).thenReturn(
-                Optional.of(active("ctx_one", LocalDate.of(2026, 8, 14))));
-        PendingActionContextService service = service(repository);
-
-        ExpenseDto fallback = new ExpenseDto();
-        service.attachToNextExpense(fallback, "spent 500 on fuel", 42L, "WHATSAPP");
-        assertThat(fallback.getTransactionDate()).isEqualTo(LocalDate.of(2026, 8, 14));
-        assertThat(fallback.isContextDateApplied()).isTrue();
-
-        ExpenseDto explicit = new ExpenseDto();
-        explicit.setTransactionDate(LocalDate.of(2026, 8, 20));
-        service.attachToNextExpense(explicit, "on 20 August spent 500 on fuel", 42L, "WHATSAPP");
-        assertThat(explicit.getTransactionDate()).isEqualTo(LocalDate.of(2026, 8, 20));
-        assertThat(explicit.isContextDateApplied()).isFalse();
-        assertThat(explicit.getPendingActionContextId()).isEqualTo("ctx_one");
     }
 
     @Test

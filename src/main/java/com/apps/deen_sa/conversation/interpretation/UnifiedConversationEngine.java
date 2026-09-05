@@ -7,7 +7,6 @@ import com.apps.deen_sa.conversation.SpeechResult;
 import com.apps.deen_sa.conversation.SpeechStatus;
 import com.apps.deen_sa.conversation.ConversationMessages;
 import com.apps.deen_sa.conversation.UnprocessedConversationService;
-import com.apps.deen_sa.finance.expense.ExpenseHandler;
 import com.apps.deen_sa.extension.api.EventCapability;
 import com.apps.deen_sa.extension.runtime.ExtensionCatalog;
 import org.springframework.stereotype.Service;
@@ -188,11 +187,6 @@ public class UnifiedConversationEngine {
 
     static EventPatch scopeToPendingField(EventPatch event, String waitingForField) {
         if (event == null || waitingForField == null) return event;
-        // This marker accepts one natural sentence containing several expense facts.
-        // Preserve the complete patch so the existing draft can be enriched in one turn.
-        if (ExpenseHandler.EXPENSE_DETAILS.equals(waitingForField)
-                || ExpenseHandler.EXPENSE_COMPLETION.equals(waitingForField)
-                || ExpenseHandler.EXPENSE_CORRECTION.equals(waitingForField)) return event;
         String field = "spentAt".equals(waitingForField) ? "transactionDate" : waitingForField;
         Object value = event.fields().asMap().get(field);
         Map<String, Object> fields = value == null ? Map.of() : Map.of(field, value);

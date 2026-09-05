@@ -1,7 +1,6 @@
 package com.apps.deen_sa.conversation;
 
 import com.apps.deen_sa.conversation.interpretation.UnifiedConversationEngine;
-import com.apps.deen_sa.finance.expense.correction.WhatsAppExpenseEditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,12 +13,10 @@ public class DefaultConversationChannelGateway implements ConversationChannelGat
     private final ConversationSessionService sessions;
     private final UnifiedConversationEngine engine;
     private final ConversationDiagnosticService diagnostics;
-    private final WhatsAppExpenseEditService whatsappExpenseEdits;
 
     @Override public SpeechResult process(String channel, String externalUserId, String messageId, String text) {
         Context context = context(channel, externalUserId, messageId);
-        SpeechResult result = whatsappExpenseEdits.processIfPending(channel, text, context.value())
-                .orElseGet(() -> engine.process(text, context.value()));
+        SpeechResult result = engine.process(text, context.value());
         sessions.save(context.value());
         diagnostics.record("MESSAGE", externalUserId, messageId, text, context.value(), result);
         return result;
@@ -27,8 +24,7 @@ public class DefaultConversationChannelGateway implements ConversationChannelGat
 
     @Override public SpeechResult processTrustedAnswer(String channel, String externalUserId, String messageId, String answer) {
         Context context = context(channel, externalUserId, messageId);
-        SpeechResult result = whatsappExpenseEdits.processIfPending(channel, answer, context.value())
-                .orElseGet(() -> engine.processTrustedAnswer(answer, context.value()));
+        SpeechResult result = engine.processTrustedAnswer(answer, context.value());
         sessions.save(context.value());
         diagnostics.record("TRUSTED_ANSWER", externalUserId, messageId, answer, context.value(), result);
         return result;

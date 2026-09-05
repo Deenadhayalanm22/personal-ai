@@ -23,7 +23,7 @@ The application uses a feature-oriented MVC layout under `src/`:
 
 Assets, investments, lending, loans, and unrelated business domains are intentionally not part of
 this baseline. Add each future domain as a feature package with its own controller/service/repository
-boundary; do not create another Maven module or duplicate the `state_change` expense transaction table.
+boundary; the active expense transaction store is `financial_transaction`.
 
 ### Run
 

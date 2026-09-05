@@ -1,7 +1,6 @@
 package com.apps.deen_sa.integration;
 
 import com.apps.deen_sa.conversation.ConversationContext;
-import com.apps.deen_sa.finance.legacy.state.StateChangeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.flywaydb.core.Flyway;
@@ -23,9 +22,6 @@ public abstract class AbstractIntegrationTestProperties {
 
 	@Autowired
 	private Flyway flyway;
-
-	@Autowired
-	protected StateChangeRepository stateChangeRepository;
 
 	@Autowired
 	private ConversationContext conversationContext;
