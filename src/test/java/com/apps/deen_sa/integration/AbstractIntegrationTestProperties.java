@@ -1,6 +1,5 @@
 package com.apps.deen_sa.integration;
 
-import com.apps.deen_sa.conversation.ConversationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.flywaydb.core.Flyway;
@@ -23,9 +22,6 @@ public abstract class AbstractIntegrationTestProperties {
 	@Autowired
 	private Flyway flyway;
 
-	@Autowired
-	private ConversationContext conversationContext;
-
 	@Value("${wiremock.admin-url:http://localhost:9091/__admin}")
 	private String wireMockAdminUrl;
 
@@ -33,7 +29,6 @@ public abstract class AbstractIntegrationTestProperties {
 	protected void resetTestState(TestInfo testInfo) {
 		flyway.clean();
 		flyway.migrate();
-		conversationContext.reset();
 		resetAndLoadWireMockMappings(testInfo);
 	}
 
