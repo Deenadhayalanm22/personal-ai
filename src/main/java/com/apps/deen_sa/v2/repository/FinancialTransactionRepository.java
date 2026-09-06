@@ -19,6 +19,7 @@ public interface FinancialTransactionRepository
             FROM FinancialTransactionEntity transaction
             JOIN FETCH transaction.sourceDraft draft
             LEFT JOIN FETCH transaction.merchant merchant
+            LEFT JOIN FETCH transaction.sourceAccount sourceAccount
             WHERE transaction.id = :id
               AND transaction.user.id = :userId
               AND transaction.deletedAt IS NULL
@@ -50,6 +51,7 @@ public interface FinancialTransactionRepository
             FROM FinancialTransactionEntity transaction
             JOIN FETCH transaction.sourceDraft draft
             LEFT JOIN FETCH transaction.merchant merchant
+            LEFT JOIN FETCH transaction.sourceAccount sourceAccount
             WHERE transaction.user.id = :userId
               AND transaction.occurredAt >= :start
               AND transaction.occurredAt < :end

@@ -47,6 +47,7 @@ class ExpenseNormalizationHandlerTest {
                         "Food & Dining",
                         "Eating Out",
                         "Swiggy",
+                        "HDFC Salary Account",
                         LocalDate.of(2026, 9, 2),
                         new BigDecimal("0.94")));
         when(dateContexts.applyToDraft(
@@ -54,6 +55,7 @@ class ExpenseNormalizationHandlerTest {
                 .thenReturn(LocalDate.of(2026, 9, 2));
         StoredDraftExtraction stored = new StoredDraftExtraction(
                 5001L, 42L, "9198", new BigDecimal("250"), "Swiggy",
+                "HDFC Salary Account",
                 "Food & Dining", "Eating Out", LocalDate.of(2026, 9, 2),
                 new BigDecimal("0.94"));
         when(extractionWriter.saveActive(org.mockito.ArgumentMatchers.any()))
@@ -71,6 +73,7 @@ class ExpenseNormalizationHandlerTest {
                 "Food & Dining",
                 "Eating Out",
                 "Swiggy",
+                "HDFC Salary Account",
                 LocalDate.of(2026, 9, 2),
                 new BigDecimal("0.94")));
         verify(confirmation).requestConfirmation(stored);
@@ -105,7 +108,7 @@ class ExpenseNormalizationHandlerTest {
                 "9198", "wamid.greeting", InputType.TEXT, MessageSource.WHATSAPP, "HI");
         when(normalizer.normalize("9198", "HI", LocalDate.of(2026, 9, 2)))
                 .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(
-                        null, null, null, null, LocalDate.of(2026, 9, 2),
+                        null, null, null, null, null, LocalDate.of(2026, 9, 2),
                         new BigDecimal("0.10")));
 
         handler.handle(new DraftWriteResult(42L, true), greeting);

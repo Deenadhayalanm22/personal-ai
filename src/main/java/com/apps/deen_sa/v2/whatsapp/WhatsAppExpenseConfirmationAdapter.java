@@ -23,12 +23,14 @@ public class WhatsAppExpenseConfirmationAdapter implements ExpenseConfirmationPo
                 Category: %s
                 Subcategory: %s
                 Merchant: %s
+                Source account: %s
                 Date: %s
                 """.formatted(
                 displayAmount(extraction),
                 display(extraction.categoryId()),
                 display(extraction.subcategoryId()),
                 display(extraction.merchantName()),
+                display(extraction.sourceAccountName()),
                 extraction.occurredAt());
 
         replySender.sendInteractiveReply(

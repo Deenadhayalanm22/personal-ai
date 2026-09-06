@@ -6,6 +6,7 @@ import com.apps.deen_sa.finance.expense.SpendingNature;
 import com.apps.deen_sa.v2.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.entity.TransactionDraftExtractionEntity;
+import com.apps.deen_sa.v2.entity.UserReferenceEntity;
 import com.apps.deen_sa.v2.repository.FinancialTransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -34,11 +35,15 @@ class FinancialTransactionWriterTest {
         extraction.setCategoryId("Food & Dining");
         extraction.setSubcategoryId("Groceries");
 
-        writer.save(extraction, null);
+        UserReferenceEntity sourceAccount = new UserReferenceEntity();
+        sourceAccount.setCanonicalName("HDFC Salary Account");
+
+        writer.save(extraction, null, sourceAccount);
 
         ArgumentCaptor<FinancialTransactionEntity> saved =
                 ArgumentCaptor.forClass(FinancialTransactionEntity.class);
         verify(repository).saveAndFlush(saved.capture());
         assertThat(saved.getValue().getSpendingNature()).isEqualTo(SpendingNature.ESSENTIAL);
+        assertThat(saved.getValue().getSourceAccount()).isSameAs(sourceAccount);
     }
 }

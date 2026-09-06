@@ -114,6 +114,9 @@ public class FinancialTransactionEditService {
         String merchant = transaction.getMerchant() == null
                 ? null
                 : transaction.getMerchant().getCanonicalName();
+        String sourceAccount = transaction.getSourceAccount() == null
+                ? null
+                : transaction.getSourceAccount().getCanonicalName();
         return new FinancialTransactionListService.ExpenseItem(
                 transaction.getId(),
                 transaction.getSourceDraft().getRawText(),
@@ -123,7 +126,8 @@ public class FinancialTransactionEditService {
                         .atStartOfDay(ZoneId.of(user.getTimezone())).toInstant(),
                 transaction.getCategory(),
                 transaction.getSubcategory(),
-                merchant);
+                merchant,
+                sourceAccount);
     }
 
     private WebApiException badRequest(String message) {

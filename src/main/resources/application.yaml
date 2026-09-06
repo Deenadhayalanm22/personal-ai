@@ -30,6 +30,10 @@ management:
           - metrics
 
 app:
+  aggregation:
+    scheduling-enabled: ${APP_AGGREGATION_SCHEDULING_ENABLED:false}
+    daily-cron: ${APP_AGGREGATION_DAILY_CRON:0 0 1 * * *}
+    time-zone: ${APP_AGGREGATION_TIME_ZONE:Asia/Kolkata}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
   web:

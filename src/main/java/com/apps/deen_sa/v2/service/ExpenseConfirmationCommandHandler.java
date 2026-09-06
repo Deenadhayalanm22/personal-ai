@@ -19,6 +19,7 @@ import java.time.Instant;
 public class ExpenseConfirmationCommandHandler {
     private final TransactionDraftExtractionRepository extractionRepository;
     private final ConfirmedMerchantReferenceWriter merchantReferenceWriter;
+    private final ConfirmedAccountReferenceWriter accountReferenceWriter;
     private final FinancialTransactionWriter transactionWriter;
     private final V2MissingTransactionDateContextService dateContexts;
 
@@ -39,7 +40,8 @@ public class ExpenseConfirmationCommandHandler {
             extraction.setStatus(TransactionDraftExtractionStatus.USED);
             draft.setStatus(TransactionDraftStatus.CONSUMED);
             var merchant = merchantReferenceWriter.save(extraction);
-            transactionWriter.save(extraction, merchant);
+            var sourceAccount = accountReferenceWriter.save(extraction);
+            transactionWriter.save(extraction, merchant, sourceAccount);
             dateContexts.consumeForConfirmedDraft(draft);
             draft.setUpdatedAt(Instant.now());
             return new RecordedExpense(

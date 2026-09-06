@@ -38,6 +38,9 @@ public class TransactionDraftExtractionEntity {
     @Column(name = "merchant_name")
     private String merchantName;
 
+    @Column(name = "source_account_name")
+    private String sourceAccountName;
+
     @Column(name = "category_id", length = 100)
     private String categoryId;
 

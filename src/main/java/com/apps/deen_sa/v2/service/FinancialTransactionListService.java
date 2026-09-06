@@ -69,10 +69,13 @@ public class FinancialTransactionListService {
 
     private ExpenseItem item(FinancialTransactionEntity row, String currency, ZoneId zone) {
         String merchant = row.getMerchant() == null ? null : row.getMerchant().getCanonicalName();
+        String sourceAccount = row.getSourceAccount() == null
+                ? null
+                : row.getSourceAccount().getCanonicalName();
         Instant transactionTime = row.getOccurredAt().atStartOfDay(zone).toInstant();
         return new ExpenseItem(
                 row.getId(), row.getSourceDraft().getRawText(), money(row.getAmount()), currency,
-                transactionTime, row.getCategory(), row.getSubcategory(), merchant);
+                transactionTime, row.getCategory(), row.getSubcategory(), merchant, sourceAccount);
     }
 
     private ExpenseFilter normalize(ExpenseFilter filter) {
@@ -123,7 +126,8 @@ public class FinancialTransactionListService {
             Instant transactionTime,
             String category,
             String subcategory,
-            String merchant
+            String merchant,
+            String sourceAccount
     ) {
     }
 }

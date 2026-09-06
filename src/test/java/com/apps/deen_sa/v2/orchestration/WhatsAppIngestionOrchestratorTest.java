@@ -10,6 +10,7 @@ import com.apps.deen_sa.v2.normalization.ExpenseNormalizationHandler;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppInboundMessageMapper;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppExpenseConfirmationCommandMapper;
 import com.apps.deen_sa.v2.service.ExpenseConfirmationCommandHandler;
+import com.apps.deen_sa.v2.service.WhatsAppAggregateBackfillCommandHandler;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppExpenseRecordedNotifier;
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +32,8 @@ class WhatsAppIngestionOrchestratorTest {
                 mock(ExpenseConfirmationCommandHandler.class);
         WhatsAppExpenseRecordedNotifier recordedNotifier =
                 mock(WhatsAppExpenseRecordedNotifier.class);
+        WhatsAppAggregateBackfillCommandHandler aggregateBackfillCommandHandler =
+                mock(WhatsAppAggregateBackfillCommandHandler.class);
         WhatsAppWebhookPayload payload = new WhatsAppWebhookPayload(List.of());
         InboundMessage first = message("wamid.1");
         InboundMessage second = message("wamid.2");
@@ -41,7 +44,7 @@ class WhatsAppIngestionOrchestratorTest {
 
         new WhatsAppIngestionOrchestrator(
                 mapper, writer, normalizer, commandMapper, commandHandler,
-                recordedNotifier).ingest(payload);
+                recordedNotifier, aggregateBackfillCommandHandler).ingest(payload);
 
         var ordered = inOrder(writer, normalizer);
         ordered.verify(writer).routeAndCommit(first);

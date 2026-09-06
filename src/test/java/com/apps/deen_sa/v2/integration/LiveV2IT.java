@@ -8,8 +8,11 @@ import com.apps.deen_sa.web.WebSessionRepository;
 import com.apps.deen_sa.v2.domain.MessageSource;
 import com.apps.deen_sa.v2.domain.TransactionDraftExtractionStatus;
 import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
+import com.apps.deen_sa.v2.domain.UserReferenceEntityType;
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.entity.TransactionDraftExtractionEntity;
+import com.apps.deen_sa.v2.entity.FinancialTransactionEntity;
+import com.apps.deen_sa.finance.expense.SpendingNature;
 import com.apps.deen_sa.v2.repository.TransactionDraftExtractionRepository;
 import com.apps.deen_sa.v2.repository.TransactionDraftRepository;
 import com.apps.deen_sa.v2.repository.FinancialTransactionRepository;
@@ -20,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -30,6 +34,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -63,6 +70,9 @@ class LiveV2IT {
 
     @Autowired
     private WebSessionRepository webSessionRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @DynamicPropertySource
     static void liveProviderProperties(DynamicPropertyRegistry properties) {
@@ -102,14 +112,17 @@ class LiveV2IT {
         printExtraction("APPLICATION: Expense rejected", firstExtraction);
 
         // 4. User sends a new expense after rejecting the first one.
-        printUserMessage("Paid ₹250 for lunch at Rahmaniya Briyani");
-        userSendsText(user, "wamid.text-2", "Paid ₹250 for lunch at Rahmaniya Briyani");
+        printUserMessage("Paid ₹250 for lunch at Rahmaniya Briyani from HDFC Salary Account via UPI");
+        userSendsText(user, "wamid.text-2",
+                "Paid ₹250 for lunch at Rahmaniya Briyani from HDFC Salary Account via UPI");
 
         // 5. Application creates a new draft and asks for confirmation again.
         TransactionDraftEntity secondDraft = draft("wamid.text-2");
         TransactionDraftExtractionEntity secondExtraction = activeExtraction(secondDraft);
         assertThat(secondDraft.getStatus()).isEqualTo(TransactionDraftStatus.PENDING);
         assertThat(secondExtraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.ACTIVE);
+        assertThat(secondExtraction.getSourceAccountName())
+                .isEqualToIgnoringCase("HDFC Salary Account");
         printExtraction("WHATSAPP → USER: Confirm or Discard", secondExtraction);
 
         // 6. User selects Confirm through the WhatsApp webhook.
@@ -124,17 +137,25 @@ class LiveV2IT {
         secondExtraction = extraction(secondExtraction.getId());
         assertThat(secondDraft.getStatus()).isEqualTo(TransactionDraftStatus.CONSUMED);
         assertThat(secondExtraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.USED);
-        assertThat(referenceEntityRepository.count()).isEqualTo(1);
-        assertThat(referenceAliasRepository.count()).isEqualTo(1);
+        assertThat(referenceEntityRepository.count()).isEqualTo(2);
+        assertThat(referenceAliasRepository.count()).isEqualTo(2);
         assertThat(financialTransactionRepository.count()).isEqualTo(1);
+        var sourceAccount = referenceEntityRepository
+                .findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(
+                        secondDraft.getUser().getId(), UserReferenceEntityType.ACCOUNT,
+                        "HDFC Salary Account")
+                .orElseThrow();
+        FinancialTransactionEntity secondTransaction = financialTransactionRepository
+                .findBySourceDraftId(secondDraft.getId()).orElseThrow();
+        assertThat(secondTransaction.getSourceAccount().getId()).isEqualTo(sourceAccount.getId());
         printExtraction("APPLICATION: Expense confirmed", secondExtraction);
 
-        // 7. User sends another expense. The AI can now use previously confirmed merchants.
-        printUserMessage("bought lunch from nandana palace for 200");
+        // 7. The AI can now use previously confirmed merchants and source accounts.
+        printUserMessage("bought lunch from nandana palace for 200 using HDFC Salary Account");
         userSendsText(
                 user,
                 "wamid.text-3",
-                "bought lunch from nandana palace for 200");
+                "bought lunch from nandana palace for 200 using HDFC Salary Account");
 
         TransactionDraftEntity thirdDraft = draft("wamid.text-3");
         TransactionDraftExtractionEntity thirdExtraction = activeExtraction(thirdDraft);
@@ -142,6 +163,8 @@ class LiveV2IT {
         assertThat(thirdExtraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.ACTIVE);
         assertThat(thirdExtraction.getAmount()).isEqualByComparingTo("200");
         assertThat(thirdExtraction.getMerchantName()).containsIgnoringCase("Nandana Palace");
+        assertThat(thirdExtraction.getSourceAccountName())
+                .isEqualToIgnoringCase("HDFC Salary Account");
         printExtraction("WHATSAPP → USER: Confirm or Discard", thirdExtraction);
 
         // 8. User confirms the Nandana Palace expense through WhatsApp.
@@ -156,9 +179,12 @@ class LiveV2IT {
         thirdExtraction = extraction(thirdExtraction.getId());
         assertThat(thirdDraft.getStatus()).isEqualTo(TransactionDraftStatus.CONSUMED);
         assertThat(thirdExtraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.USED);
-        assertThat(referenceEntityRepository.count()).isEqualTo(2);
-        assertThat(referenceAliasRepository.count()).isEqualTo(2);
+        assertThat(referenceEntityRepository.count()).isEqualTo(3);
+        assertThat(referenceAliasRepository.count()).isEqualTo(3);
         assertThat(financialTransactionRepository.count()).isEqualTo(2);
+        FinancialTransactionEntity thirdTransaction = financialTransactionRepository
+                .findBySourceDraftId(thirdDraft.getId()).orElseThrow();
+        assertThat(thirdTransaction.getSourceAccount().getId()).isEqualTo(sourceAccount.getId());
         printExtraction("APPLICATION: Expense confirmed", thirdExtraction);
 
         // 9. User selects yesterday in the calendar and opens WhatsApp.
@@ -191,9 +217,184 @@ class LiveV2IT {
                 .isEqualTo(yesterday);
         printExtraction("APPLICATION: Yesterday's expense confirmed", fourthExtraction);
 
-        assertThat(draftRepository.count()).isEqualTo(4);
-        assertThat(extractionRepository.count()).isEqualTo(4);
-        assertThat(financialTransactionRepository.count()).isEqualTo(3);
+        // 11. Add yesterday expenses across five categories and all three spending natures.
+        FinancialTransactionEntity rent = recordYesterdayExpense(
+                user, sessionToken, yesterday, "5", "Paid house rent of 16000");
+        FinancialTransactionEntity electricity = recordYesterdayExpense(
+                user, sessionToken, yesterday, "6", "Paid electricity bill of 1800");
+        FinancialTransactionEntity petrol = recordYesterdayExpense(
+                user, sessionToken, yesterday, "7", "Filled petrol for 1200");
+        FinancialTransactionEntity eatingOut = recordYesterdayExpense(
+                user, sessionToken, yesterday, "8", "Paid 400 for dinner at Saravana Bhavan");
+        FinancialTransactionEntity clothing = recordYesterdayExpense(
+                user, sessionToken, yesterday, "9", "Bought clothing for 2500");
+        FinancialTransactionEntity groceries = recordYesterdayExpense(
+                user, sessionToken, yesterday, "10", "Bought groceries for 3000");
+        FinancialTransactionEntity medicines = recordYesterdayExpense(
+                user, sessionToken, yesterday, "11", "Bought medicines for 600");
+        FinancialTransactionEntity taxi = recordYesterdayExpense(
+                user, sessionToken, yesterday, "12", "Paid 350 for a taxi ride");
+        FinancialTransactionEntity haircut = recordYesterdayExpense(
+                user, sessionToken, yesterday, "13", "Paid 500 for a haircut");
+        FinancialTransactionEntity furniture = recordYesterdayExpense(
+                user, sessionToken, yesterday, "14", "Bought furniture for 4200");
+        FinancialTransactionEntity books = recordYesterdayExpense(
+                user, sessionToken, yesterday, "15", "Bought books for 900");
+        FinancialTransactionEntity movies = recordYesterdayExpense(
+                user, sessionToken, yesterday, "16", "Paid 700 for movie tickets");
+        FinancialTransactionEntity foodDelivery = recordYesterdayExpense(
+                user, sessionToken, yesterday, "17", "Paid 650 for food delivery");
+        FinancialTransactionEntity gifts = recordYesterdayExpense(
+                user, sessionToken, yesterday, "18", "Bought a gift for 1500");
+
+        assertClassification(rent, "Housing", "Rent", SpendingNature.ESSENTIAL);
+        assertClassification(electricity, "Utilities", "Electricity", SpendingNature.ESSENTIAL);
+        assertClassification(petrol, "Transportation", "Fuel", SpendingNature.ESSENTIAL);
+        assertClassification(eatingOut, "Food & Dining", "Restaurant & Cafe",
+                SpendingNature.DISCRETIONARY);
+        assertClassification(clothing, "Shopping", "Clothing", SpendingNature.FLEXIBLE);
+        assertClassification(groceries, "Food & Dining", "Groceries", SpendingNature.ESSENTIAL);
+        assertClassification(medicines, "Medical", "Medicines", SpendingNature.ESSENTIAL);
+        assertClassification(taxi, "Transportation", "Auto & Taxi", SpendingNature.FLEXIBLE);
+        assertClassification(haircut, "Personal Care", "Haircut & Grooming", SpendingNature.FLEXIBLE);
+        assertClassification(furniture, "Housing", "Furniture", SpendingNature.FLEXIBLE);
+        assertClassification(books, "Education", "Books", SpendingNature.FLEXIBLE);
+        assertClassification(movies, "Entertainment", "Movies", SpendingNature.DISCRETIONARY);
+        assertClassification(foodDelivery, "Food & Dining", "Food Delivery",
+                SpendingNature.DISCRETIONARY);
+        assertClassification(gifts, "Shopping", "Gifts", SpendingNature.DISCRETIONARY);
+
+        // 12. The super admin manually triggers catch-up after a skipped scheduled run.
+        printUserMessage("/aggregate");
+        userSendsText(user, "wamid.aggregate-1", "/aggregate");
+
+        var yesterdayTransaction = financialTransactionRepository
+                .findBySourceDraftId(fourthDraft.getId()).orElseThrow();
+        List<Map<String, Object>> aggregates = jdbcTemplate.queryForList("""
+                SELECT user_id, aggregate_date, category, subcategory, spending_nature,
+                       total_amount, transaction_count, min_amount, max_amount
+                FROM expense_daily_aggregate
+                WHERE aggregate_date = ?
+                ORDER BY category, subcategory
+                """, yesterday);
+        assertThat(aggregates).hasSize(14);
+        assertThat(aggregates).allSatisfy(aggregate -> {
+            assertThat(aggregate.get("user_id").toString())
+                    .isEqualTo(yesterdayTransaction.getUser().getId().toString());
+            assertThat(((java.sql.Date) aggregate.get("aggregate_date")).toLocalDate())
+                    .isEqualTo(yesterday);
+        });
+        assertAggregate(aggregates, "Food & Dining", "Restaurant & Cafe",
+                "DISCRETIONARY", "500.00", 2, "100.00", "400.00");
+        assertAggregate(aggregates, "Housing", "Rent",
+                "ESSENTIAL", "16000.00", 1, "16000.00", "16000.00");
+        assertAggregate(aggregates, "Utilities", "Electricity",
+                "ESSENTIAL", "1800.00", 1, "1800.00", "1800.00");
+        assertAggregate(aggregates, "Transportation", "Fuel",
+                "ESSENTIAL", "1200.00", 1, "1200.00", "1200.00");
+        assertAggregate(aggregates, "Shopping", "Clothing",
+                "FLEXIBLE", "2500.00", 1, "2500.00", "2500.00");
+
+        List<Map<String, Object>> natureTotals = jdbcTemplate.queryForList("""
+                SELECT spending_nature,
+                       SUM(total_amount) AS total_amount,
+                       SUM(transaction_count) AS transaction_count
+                FROM expense_daily_aggregate
+                WHERE aggregate_date = ?
+                GROUP BY spending_nature
+                ORDER BY spending_nature
+                """, yesterday);
+        assertNatureAggregate(natureTotals, "ESSENTIAL", "22600.00", 5);
+        assertNatureAggregate(natureTotals, "FLEXIBLE", "8450.00", 5);
+        assertNatureAggregate(natureTotals, "DISCRETIONARY", "3350.00", 5);
+        System.out.printf("%nAPPLICATION: Aggregate backfill completed%n%s%n", aggregates);
+
+        // 13. Repeating the command finds no missing dates and creates no duplicates.
+        printUserMessage("/aggregate");
+        userSendsText(user, "wamid.aggregate-2", "/aggregate");
+        Integer aggregateCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM expense_daily_aggregate WHERE aggregate_date = ?",
+                Integer.class, yesterday);
+        assertThat(aggregateCount).isEqualTo(14);
+
+        // Admin commands bypass draft creation and OpenAI extraction.
+        assertThat(draftRepository.count()).isEqualTo(18);
+        assertThat(extractionRepository.count()).isEqualTo(18);
+        assertThat(financialTransactionRepository.count()).isEqualTo(17);
+    }
+
+    private FinancialTransactionEntity recordYesterdayExpense(
+            String user,
+            String sessionToken,
+            LocalDate yesterday,
+            String sequence,
+            String message
+    ) throws Exception {
+        createMissingDateContext(sessionToken, yesterday);
+        printUserMessage(message);
+        String textMessageId = "wamid.text-" + sequence;
+        userSendsText(user, textMessageId, message);
+        TransactionDraftEntity draft = draft(textMessageId);
+        TransactionDraftExtractionEntity extraction = activeExtraction(draft);
+        assertThat(extraction.getOccurredAt()).isEqualTo(yesterday);
+        printExtraction("WHATSAPP → USER: Confirm or Discard", extraction);
+
+        printUserMessage("Confirm");
+        userSelectsButton(user, "wamid.confirm-" + sequence,
+                "v2:expense:confirm:" + extraction.getId(), "Confirm");
+        assertThat(extraction(extraction.getId()).getStatus())
+                .isEqualTo(TransactionDraftExtractionStatus.USED);
+        return financialTransactionRepository.findBySourceDraftId(draft.getId()).orElseThrow();
+    }
+
+    private void assertClassification(
+            FinancialTransactionEntity transaction,
+            String category,
+            String subcategory,
+            SpendingNature spendingNature
+    ) {
+        assertThat(transaction.getCategory()).isEqualTo(category);
+        assertThat(transaction.getSubcategory()).isEqualTo(subcategory);
+        assertThat(transaction.getSpendingNature()).isEqualTo(spendingNature);
+    }
+
+    private void assertAggregate(
+            List<Map<String, Object>> aggregates,
+            String category,
+            String subcategory,
+            String spendingNature,
+            String total,
+            int count,
+            String minimum,
+            String maximum
+    ) {
+        Map<String, Object> aggregate = aggregates.stream()
+                .filter(row -> category.equals(row.get("category"))
+                        && subcategory.equals(row.get("subcategory")))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "Missing aggregate for " + category + " / " + subcategory));
+        assertThat(aggregate.get("spending_nature")).isEqualTo(spendingNature);
+        assertThat((BigDecimal) aggregate.get("total_amount")).isEqualByComparingTo(total);
+        assertThat(((Number) aggregate.get("transaction_count")).intValue()).isEqualTo(count);
+        assertThat((BigDecimal) aggregate.get("min_amount")).isEqualByComparingTo(minimum);
+        assertThat((BigDecimal) aggregate.get("max_amount")).isEqualByComparingTo(maximum);
+    }
+
+    private void assertNatureAggregate(
+            List<Map<String, Object>> natureTotals,
+            String spendingNature,
+            String total,
+            int transactionCount
+    ) {
+        Map<String, Object> aggregate = natureTotals.stream()
+                .filter(row -> spendingNature.equals(row.get("spending_nature")))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "Missing spending nature aggregate for " + spendingNature));
+        assertThat((BigDecimal) aggregate.get("total_amount")).isEqualByComparingTo(total);
+        assertThat(((Number) aggregate.get("transaction_count")).intValue())
+                .isEqualTo(transactionCount);
     }
 
     private void postWebhook(String webhook) throws Exception {
@@ -288,6 +489,7 @@ class LiveV2IT {
                 status       : %s
                 amount       : %s
                 merchant     : %s
+                sourceAccount: %s
                 category     : %s
                 subcategory  : %s
                 occurredAt   : %s
@@ -300,6 +502,7 @@ class LiveV2IT {
                 extraction.getStatus(),
                 extraction.getAmount(),
                 extraction.getMerchantName(),
+                extraction.getSourceAccountName(),
                 extraction.getCategoryId(),
                 extraction.getSubcategoryId(),
                 extraction.getOccurredAt(),

@@ -44,6 +44,7 @@ class TransactionDraftExtractionWriterTest {
         assertThat(saved.extractionId()).isEqualTo(5002L);
         assertThat(saved.categoryId()).isEqualTo("Food & Dining");
         assertThat(saved.subcategoryId()).isEqualTo("Groceries");
+        assertThat(saved.sourceAccountName()).isEqualTo("HDFC Salary Account");
         assertThat(saved.confidence()).isEqualByComparingTo("0.94");
     }
 
@@ -69,6 +70,7 @@ class TransactionDraftExtractionWriterTest {
     private NormalizedExpense normalized() {
         return new NormalizedExpense(
                 1001L, "9198", new BigDecimal("850"), "Food & Dining", "Groceries",
-                "Star Bazaar", LocalDate.of(2026, 9, 1), new BigDecimal("0.94"));
+                "Star Bazaar", "HDFC Salary Account", LocalDate.of(2026, 9, 1),
+                new BigDecimal("0.94"));
     }
 }

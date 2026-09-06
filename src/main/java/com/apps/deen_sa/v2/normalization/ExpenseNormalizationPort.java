@@ -11,6 +11,7 @@ public interface ExpenseNormalizationPort {
             String category,
             String subcategory,
             String merchant,
+            String sourceAccount,
             LocalDate transactionDate,
             BigDecimal confidence
     ) {

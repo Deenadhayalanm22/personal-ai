@@ -54,6 +54,10 @@ public class FinancialTransactionEntity {
     @JoinColumn(name = "merchant_id")
     private UserReferenceEntity merchant;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_account_id")
+    private UserReferenceEntity sourceAccount;
+
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "source_draft_id", nullable = false, unique = true)
     private TransactionDraftEntity sourceDraft;

@@ -20,13 +20,16 @@ class ExpenseConfirmationCommandHandlerTest {
             mock(TransactionDraftExtractionRepository.class);
     private final ConfirmedMerchantReferenceWriter merchantReferenceWriter =
             mock(ConfirmedMerchantReferenceWriter.class);
+    private final ConfirmedAccountReferenceWriter accountReferenceWriter =
+            mock(ConfirmedAccountReferenceWriter.class);
     private final FinancialTransactionWriter transactionWriter =
             mock(FinancialTransactionWriter.class);
     private final V2MissingTransactionDateContextService dateContexts =
             mock(V2MissingTransactionDateContextService.class);
     private final ExpenseConfirmationCommandHandler handler =
             new ExpenseConfirmationCommandHandler(
-                    repository, merchantReferenceWriter, transactionWriter, dateContexts);
+                    repository, merchantReferenceWriter, accountReferenceWriter,
+                    transactionWriter, dateContexts);
 
     @Test
     void confirmMarksExtractionUsedAndDraftConsumed() {
@@ -40,7 +43,8 @@ class ExpenseConfirmationCommandHandlerTest {
         assertThat(extraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.USED);
         assertThat(extraction.getDraft().getStatus()).isEqualTo(TransactionDraftStatus.CONSUMED);
         verify(merchantReferenceWriter).save(extraction);
-        verify(transactionWriter).save(extraction, null);
+        verify(accountReferenceWriter).save(extraction);
+        verify(transactionWriter).save(extraction, null, null);
         verify(dateContexts).consumeForConfirmedDraft(extraction.getDraft());
     }
 

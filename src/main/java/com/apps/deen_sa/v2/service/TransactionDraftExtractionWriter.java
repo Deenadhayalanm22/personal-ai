@@ -39,6 +39,7 @@ public class TransactionDraftExtractionWriter {
         extraction.setDraft(draft);
         extraction.setAmount(normalized.amount());
         extraction.setMerchantName(normalized.merchant());
+        extraction.setSourceAccountName(normalized.sourceAccount());
         extraction.setCategoryId(normalized.category());
         extraction.setSubcategoryId(normalized.subcategory());
         extraction.setOccurredAt(normalized.transactionDate());
@@ -66,6 +67,7 @@ public class TransactionDraftExtractionWriter {
                 extraction.getDraft().getUser().getExternalUserId(),
                 extraction.getAmount(),
                 extraction.getMerchantName(),
+                extraction.getSourceAccountName(),
                 extraction.getCategoryId(),
                 extraction.getSubcategoryId(),
                 extraction.getOccurredAt(),

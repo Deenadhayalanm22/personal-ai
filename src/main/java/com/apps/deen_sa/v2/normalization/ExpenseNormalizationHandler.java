@@ -68,6 +68,7 @@ public class ExpenseNormalizationHandler {
                 facts.category(),
                 facts.subcategory(),
                 facts.merchant(),
+                facts.sourceAccount(),
                 transactionDate,
                 facts.confidence());
 
@@ -79,7 +80,8 @@ public class ExpenseNormalizationHandler {
         boolean hasExpenseDetails = facts.amount() != null
                 || facts.category() != null
                 || facts.subcategory() != null
-                || facts.merchant() != null;
+                || facts.merchant() != null
+                || facts.sourceAccount() != null;
         boolean isLowConfidence = facts.confidence() == null
                 || facts.confidence().compareTo(minimumExpenseConfidence) < 0;
         return !hasExpenseDetails && isLowConfidence;

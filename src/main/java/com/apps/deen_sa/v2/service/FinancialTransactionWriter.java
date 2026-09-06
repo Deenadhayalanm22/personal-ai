@@ -18,7 +18,8 @@ public class FinancialTransactionWriter {
 
     public FinancialTransactionEntity save(
             TransactionDraftExtractionEntity extraction,
-            UserReferenceEntity merchant
+            UserReferenceEntity merchant,
+            UserReferenceEntity sourceAccount
     ) {
         if (extraction.getAmount() == null) {
             throw new IllegalStateException("Cannot confirm an expense without an amount");
@@ -35,6 +36,7 @@ public class FinancialTransactionWriter {
                 .orElseThrow(() -> new IllegalStateException(
                         "Cannot confirm an expense without a taxonomy spending nature")));
         transaction.setMerchant(merchant);
+        transaction.setSourceAccount(sourceAccount);
         transaction.setSourceDraft(extraction.getDraft());
         transaction.setCreatedAt(Instant.now());
         transaction.setUpdatedAt(Instant.now());

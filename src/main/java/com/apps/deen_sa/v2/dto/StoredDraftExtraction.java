@@ -9,6 +9,7 @@ public record StoredDraftExtraction(
         String externalUserId,
         BigDecimal amount,
         String merchantName,
+        String sourceAccountName,
         String categoryId,
         String subcategoryId,
         LocalDate occurredAt,

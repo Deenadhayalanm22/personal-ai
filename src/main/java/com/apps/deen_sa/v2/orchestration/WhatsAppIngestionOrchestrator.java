@@ -6,6 +6,7 @@ import com.apps.deen_sa.v2.service.TransactionDraftWriter;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppInboundMessageMapper;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppExpenseConfirmationCommandMapper;
 import com.apps.deen_sa.v2.service.ExpenseConfirmationCommandHandler;
+import com.apps.deen_sa.v2.service.WhatsAppAggregateBackfillCommandHandler;
 import com.apps.deen_sa.v2.whatsapp.WhatsAppExpenseRecordedNotifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -22,6 +23,7 @@ public class WhatsAppIngestionOrchestrator {
     private final WhatsAppExpenseConfirmationCommandMapper confirmationCommandMapper;
     private final ExpenseConfirmationCommandHandler confirmationCommandHandler;
     private final WhatsAppExpenseRecordedNotifier recordedNotifier;
+    private final WhatsAppAggregateBackfillCommandHandler aggregateBackfillCommandHandler;
 
     public void ingest(WhatsAppWebhookPayload payload) {
         var confirmationCommands = confirmationCommandMapper.map(payload);
@@ -34,6 +36,11 @@ public class WhatsAppIngestionOrchestrator {
                 .filter(java.util.Objects::nonNull)
                 .forEach(recordedNotifier::notify);
         messages.forEach(message -> {
+            if (aggregateBackfillCommandHandler.handleIfSupported(message)) {
+                log.info("Handled WhatsApp administration command: messageId={}",
+                        message.sourceMessageId());
+                return;
+            }
             log.info("Processing WhatsApp message: messageId={}, inputType={}",
                     message.sourceMessageId(), message.inputType());
             var committedDraft = draftWriter.routeAndCommit(message);

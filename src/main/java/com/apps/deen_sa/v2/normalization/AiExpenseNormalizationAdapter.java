@@ -59,6 +59,7 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 category,
                 subcategory,
                 blankToNull(extracted.merchant()),
+                blankToNull(extracted.sourceAccount()),
                 extracted.transactionDate() == null ? today : extracted.transactionDate(),
                 validConfidence(extracted.confidence()));
     }
@@ -89,6 +90,24 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                     preferredMerchants.append("\n");
                 });
 
+        StringBuilder preferredAccounts = new StringBuilder();
+        referenceRepository
+                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
+                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
+                .forEach(reference -> {
+                    preferredAccounts.append("- ").append(reference.getCanonicalName());
+                    var aliases = aliasRepository.findByReferenceEntityId(reference.getId());
+                    if (!aliases.isEmpty()) {
+                        preferredAccounts.append(" (aliases: ")
+                                .append(aliases.stream()
+                                        .map(alias -> alias.getAliasText())
+                                        .distinct()
+                                        .toList())
+                                .append(")");
+                    }
+                    preferredAccounts.append("\n");
+                });
+
         return """
                 You normalize personal expense messages into JSON.
                 Today's date is %s.
@@ -99,6 +118,7 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                   "category": string or null,
                   "subcategory": string or null,
                   "merchant": string or null,
+                  "sourceAccount": string or null,
                   "transactionDate": "YYYY-MM-DD" or null,
                   "confidence": number between 0 and 1
                 }
@@ -111,6 +131,11 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 - Never create a new category or subcategory.
                 - If the merchant resembles a preferred merchant or one of its aliases,
                   return its exact canonical name.
+                - sourceAccount identifies the user's account or funding source named in the message,
+                  such as "HDFC Salary Account", "Amazon ICICI Card", or "Cash".
+                - Do not use a payment method such as UPI or bank transfer as sourceAccount.
+                - If the source account resembles a preferred account or one of its aliases,
+                  return its exact canonical name.
                 - Return JSON only, without markdown or explanation.
 
                 Configured taxonomy:
@@ -118,8 +143,12 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
 
                 User's preferred merchants:
                 %s
+
+                User's preferred accounts:
+                %s
                 """.formatted(today, configuredTaxonomy,
-                preferredMerchants.isEmpty() ? "- None recorded" : preferredMerchants);
+                preferredMerchants.isEmpty() ? "- None recorded" : preferredMerchants,
+                preferredAccounts.isEmpty() ? "- None recorded" : preferredAccounts);
     }
 
     private java.math.BigDecimal validConfidence(java.math.BigDecimal confidence) {
