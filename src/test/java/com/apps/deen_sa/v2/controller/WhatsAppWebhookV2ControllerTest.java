@@ -22,7 +22,7 @@ class WhatsAppWebhookV2ControllerTest {
     void setUp() {
         orchestrator = mock(WhatsAppIngestionOrchestrator.class);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new WhatsAppWebhookV2Controller(orchestrator))
+                .standaloneSetup(new WhatsAppWebhookV2Controller(orchestrator, "test-verify-token"))
                 .build();
     }
 

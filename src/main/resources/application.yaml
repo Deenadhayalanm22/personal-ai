@@ -41,6 +41,7 @@ app:
     action-context-expiry: ${APP_ACTION_CONTEXT_EXPIRY:30m}
 
 whatsapp:
+  verify-token: ${WHATSAPP_VERIFY_TOKEN:}
   access-token: ${WHATSAPP_ACCESS_TOKEN:}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
   destination-number: ${WHATSAPP_DESTINATION_NUMBER:}

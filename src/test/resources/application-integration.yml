@@ -27,6 +27,7 @@ openai:
   model: gpt-test
 
 whatsapp:
+  verify-token: ${WHATSAPP_VERIFY_TOKEN:test-verify-token}
   access-token: ${WHATSAPP_ACCESS_TOKEN:test-access-token}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:test-phone-id}
 

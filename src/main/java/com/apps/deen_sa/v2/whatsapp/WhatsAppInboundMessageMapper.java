@@ -5,19 +5,21 @@ import com.apps.deen_sa.v2.domain.InputType;
 import com.apps.deen_sa.v2.domain.MessageSource;
 import com.apps.deen_sa.v2.dto.WhatsAppWebhookPayload;
 import org.springframework.stereotype.Component;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 @Component
+@Log4j2
 public class WhatsAppInboundMessageMapper {
     public List<InboundMessage> map(WhatsAppWebhookPayload payload) {
         if (payload == null || payload.entry() == null) {
             return List.of();
         }
 
-        return payload.entry().stream()
+        List<InboundMessage> mapped = payload.entry().stream()
                 .filter(Objects::nonNull)
                 .filter(entry -> entry.changes() != null)
                 .flatMap(entry -> entry.changes().stream())
@@ -27,6 +29,9 @@ public class WhatsAppInboundMessageMapper {
                 .filter(Objects::nonNull)
                 .flatMap(this::mapMessage)
                 .toList();
+        log.info("Mapped WhatsApp webhook payload: entries={}, supportedMessages={}",
+                payload.entry().size(), mapped.size());
+        return mapped;
     }
 
     private Stream<InboundMessage> mapMessage(WhatsAppWebhookPayload.Message message) {
@@ -50,6 +55,7 @@ public class WhatsAppInboundMessageMapper {
                     metadata));
         }
 
+        log.info("Ignoring unsupported WhatsApp message: id={}, type={}", message.id(), message.type());
         return Stream.empty();
     }
 }
