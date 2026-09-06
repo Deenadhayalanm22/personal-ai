@@ -1,8 +1,11 @@
 package com.apps.deen_sa.v2.entity;
 
 import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.finance.expense.SpendingNature;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -42,6 +45,10 @@ public class FinancialTransactionEntity {
 
     @Column(length = 100)
     private String subcategory;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "spending_nature", length = 20)
+    private SpendingNature spendingNature;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchant_id")

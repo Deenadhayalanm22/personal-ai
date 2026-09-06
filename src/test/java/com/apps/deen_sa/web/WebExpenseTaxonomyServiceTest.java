@@ -1,6 +1,7 @@
 package com.apps.deen_sa.web;
 
 import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
+import com.apps.deen_sa.finance.expense.SpendingNature;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -18,7 +19,19 @@ class WebExpenseTaxonomyServiceTest {
                 .isSorted().contains("Food & Dining", "Transportation");
         var food = response.categories().stream()
                 .filter(category -> category.name().equals("Food & Dining")).findFirst().orElseThrow();
-        assertThat(food.subcategories()).isSorted().contains("Groceries", "Eating Out");
+        assertThat(food.subcategories()).isSorted().contains("Groceries", "Restaurant & Cafe");
+    }
+
+    @Test
+    void readsSpendingNatureFromTheSelectedTaxonomyPair() {
+        ExpenseTaxonomyRegistry taxonomy = new ExpenseTaxonomyRegistry();
+
+        assertThat(taxonomy.spendingNatureFor("Food & Dining", "Groceries"))
+                .contains(SpendingNature.ESSENTIAL);
+        assertThat(taxonomy.spendingNatureFor("Food & Dining", "Restaurant & Cafe"))
+                .contains(SpendingNature.DISCRETIONARY);
+        assertThat(taxonomy.spendingNatureFor("Transportation", "Auto & Taxi"))
+                .contains(SpendingNature.FLEXIBLE);
     }
 
     @Test

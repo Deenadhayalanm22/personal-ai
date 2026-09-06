@@ -103,6 +103,8 @@ public class FinancialTransactionEditService {
         }
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
+        transaction.setSpendingNature(taxonomy.spendingNatureFor(category, subcategory)
+                .orElseThrow(() -> badRequest("Spending nature is missing from the expense taxonomy")));
     }
 
     private FinancialTransactionListService.ExpenseItem item(

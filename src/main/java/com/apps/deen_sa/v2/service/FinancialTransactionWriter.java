@@ -1,5 +1,6 @@
 package com.apps.deen_sa.v2.service;
 
+import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.v2.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.v2.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.v2.entity.UserReferenceEntity;
@@ -13,6 +14,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class FinancialTransactionWriter {
     private final FinancialTransactionRepository repository;
+    private final ExpenseTaxonomyRegistry taxonomy;
 
     public FinancialTransactionEntity save(
             TransactionDraftExtractionEntity extraction,
@@ -28,6 +30,10 @@ public class FinancialTransactionWriter {
         transaction.setOccurredAt(extraction.getOccurredAt());
         transaction.setCategory(extraction.getCategoryId());
         transaction.setSubcategory(extraction.getSubcategoryId());
+        transaction.setSpendingNature(taxonomy.spendingNatureFor(
+                        extraction.getCategoryId(), extraction.getSubcategoryId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot confirm an expense without a taxonomy spending nature")));
         transaction.setMerchant(merchant);
         transaction.setSourceDraft(extraction.getDraft());
         transaction.setCreatedAt(Instant.now());

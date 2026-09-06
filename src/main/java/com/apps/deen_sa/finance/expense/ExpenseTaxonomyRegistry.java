@@ -10,6 +10,7 @@ import java.util.*;
 public class ExpenseTaxonomyRegistry {
 
     private final Map<String, Set<String>> taxonomy = new LinkedHashMap<>();
+    private final Map<Classification, SpendingNature> spendingNatures = new HashMap<>();
     private final Map<String, String> aliases = new HashMap<>();
 
     public ExpenseTaxonomyRegistry() {
@@ -38,12 +39,39 @@ public class ExpenseTaxonomyRegistry {
 
         Map<String, Object> raw = yaml.load(is);
 
-        raw.forEach((category, subcats) -> {
-            taxonomy.put(
-                    category,
-                    new LinkedHashSet<>((List<String>) subcats)
-            );
+        raw.forEach((category, value) -> {
+            if (!(value instanceof List<?> subcategories)) {
+                throw new IllegalStateException("Taxonomy category must contain a list: " + category);
+            }
+
+            Set<String> names = new LinkedHashSet<>();
+            for (Object entry : subcategories) {
+                if (!(entry instanceof Map<?, ?> definition)) {
+                    throw new IllegalStateException("Taxonomy subcategory must be an object under: " + category);
+                }
+                String name = requiredText(definition, "name", category);
+                String nature = requiredText(definition, "spendingNature", category + " / " + name);
+                SpendingNature spendingNature;
+                try {
+                    spendingNature = SpendingNature.valueOf(nature.toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException exception) {
+                    throw new IllegalStateException("Invalid spendingNature for " + category + " / " + name, exception);
+                }
+                if (!names.add(name)) {
+                    throw new IllegalStateException("Duplicate subcategory under " + category + ": " + name);
+                }
+                spendingNatures.put(new Classification(category, name), spendingNature);
+            }
+            taxonomy.put(category, names);
         });
+    }
+
+    private String requiredText(Map<?, ?> definition, String key, String location) {
+        Object value = definition.get(key);
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalStateException("Missing " + key + " in expense taxonomy at " + location);
+        }
+        return text.trim();
     }
 
     public Set<String> categories() {
@@ -93,4 +121,15 @@ public class ExpenseTaxonomyRegistry {
         return taxonomy.entrySet().stream().filter(entry -> entry.getValue().stream()
                 .anyMatch(value -> value.equalsIgnoreCase(subcategory.trim()))).map(Map.Entry::getKey).findFirst();
     }
+
+    public Optional<SpendingNature> spendingNatureFor(String category, String subcategory) {
+        if (category == null || subcategory == null) return Optional.empty();
+        return spendingNatures.entrySet().stream()
+                .filter(entry -> entry.getKey().category().equalsIgnoreCase(category.trim())
+                        && entry.getKey().subcategory().equalsIgnoreCase(subcategory.trim()))
+                .map(Map.Entry::getValue)
+                .findFirst();
+    }
+
+    private record Classification(String category, String subcategory) { }
 }

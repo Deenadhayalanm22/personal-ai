@@ -1,158 +1,281 @@
 Food & Dining:
-  - Groceries
-  - Vegetables & Fruits
-  - Milk & Dairy
-  - Meat, Fish & Eggs
-  - Rice, Grains & Provisions
-  - Breakfast & Tiffin
-  - Home-Cooked Meals
-  - Special & Celebration Meals
-  - Office Canteen
-  - Office Team Meals
-  - Restaurant & Cafe
-  - Street Food
-  - Takeaway
-  - Snacks
-  - Tea, Coffee & Juice
-  - Sweets & Bakery
-  - Food Delivery
+  - name: Groceries
+    spendingNature: ESSENTIAL
+  - name: Vegetables & Fruits
+    spendingNature: ESSENTIAL
+  - name: Milk & Dairy
+    spendingNature: ESSENTIAL
+  - name: Meat, Fish & Eggs
+    spendingNature: ESSENTIAL
+  - name: Rice, Grains & Provisions
+    spendingNature: ESSENTIAL
+  - name: Breakfast & Tiffin
+    spendingNature: FLEXIBLE
+  - name: Home-Cooked Meals
+    spendingNature: ESSENTIAL
+  - name: Special & Celebration Meals
+    spendingNature: DISCRETIONARY
+  - name: Office Canteen
+    spendingNature: FLEXIBLE
+  - name: Office Team Meals
+    spendingNature: DISCRETIONARY
+  - name: Restaurant & Cafe
+    spendingNature: DISCRETIONARY
+  - name: Street Food
+    spendingNature: DISCRETIONARY
+  - name: Takeaway
+    spendingNature: DISCRETIONARY
+  - name: Snacks
+    spendingNature: DISCRETIONARY
+  - name: Tea, Coffee & Juice
+    spendingNature: FLEXIBLE
+  - name: Sweets & Bakery
+    spendingNature: DISCRETIONARY
+  - name: Food Delivery
+    spendingNature: DISCRETIONARY
 
 Transportation:
-  - Fuel
-  - Auto & Taxi
-  - Bus
-  - Metro & Local Train
-  - Vehicle Maintenance
-  - Two-Wheeler Maintenance
-  - Parking
-  - Toll
-  - Other Local Transport
+  - name: Fuel
+    spendingNature: ESSENTIAL
+  - name: Auto & Taxi
+    spendingNature: FLEXIBLE
+  - name: Bus
+    spendingNature: ESSENTIAL
+  - name: Metro & Local Train
+    spendingNature: ESSENTIAL
+  - name: Vehicle Maintenance
+    spendingNature: ESSENTIAL
+  - name: Two-Wheeler Maintenance
+    spendingNature: ESSENTIAL
+  - name: Parking
+    spendingNature: FLEXIBLE
+  - name: Toll
+    spendingNature: FLEXIBLE
+  - name: Other Local Transport
+    spendingNature: FLEXIBLE
 
 Travel:
-  - Accommodation
-  - Flights
-  - Intercity Transport
-  - Family Visit Travel
-  - Pilgrimage Travel
-  - Travel Activities
-  - Travel Documents & Fees
-  - Other Travel
+  - name: Accommodation
+    spendingNature: FLEXIBLE
+  - name: Flights
+    spendingNature: FLEXIBLE
+  - name: Intercity Transport
+    spendingNature: FLEXIBLE
+  - name: Family Visit Travel
+    spendingNature: FLEXIBLE
+  - name: Pilgrimage Travel
+    spendingNature: DISCRETIONARY
+  - name: Travel Activities
+    spendingNature: DISCRETIONARY
+  - name: Travel Documents & Fees
+    spendingNature: ESSENTIAL
+  - name: Other Travel
+    spendingNature: FLEXIBLE
 
 Shopping:
-  - Clothing
-  - Traditional & Festival Wear
-  - Footwear
-  - Electronics
-  - Jewellery & Accessories
-  - Gifts
-  - Household Items
-  - Kitchenware
-  - Home Appliances
-  - Other Shopping
+  - name: Clothing
+    spendingNature: FLEXIBLE
+  - name: Traditional & Festival Wear
+    spendingNature: DISCRETIONARY
+  - name: Footwear
+    spendingNature: FLEXIBLE
+  - name: Electronics
+    spendingNature: DISCRETIONARY
+  - name: Jewellery & Accessories
+    spendingNature: DISCRETIONARY
+  - name: Gifts
+    spendingNature: DISCRETIONARY
+  - name: Household Items
+    spendingNature: ESSENTIAL
+  - name: Kitchenware
+    spendingNature: FLEXIBLE
+  - name: Home Appliances
+    spendingNature: FLEXIBLE
+  - name: Other Shopping
+    spendingNature: DISCRETIONARY
 
 Personal Care:
-  - Haircut & Grooming
-  - Salon & Beauty
-  - Toiletries
-  - Laundry & Ironing
-  - Fitness & Sports
+  - name: Haircut & Grooming
+    spendingNature: FLEXIBLE
+  - name: Salon & Beauty
+    spendingNature: DISCRETIONARY
+  - name: Toiletries
+    spendingNature: ESSENTIAL
+  - name: Laundry & Ironing
+    spendingNature: FLEXIBLE
+  - name: Fitness & Sports
+    spendingNature: FLEXIBLE
 
 Housing:
-  - Rent
-  - Maintenance
-  - Repairs & Renovation
-  - Furniture
-  - Domestic Help
-  - Association & Security Fees
+  - name: Rent
+    spendingNature: ESSENTIAL
+  - name: Maintenance
+    spendingNature: ESSENTIAL
+  - name: Repairs & Renovation
+    spendingNature: FLEXIBLE
+  - name: Furniture
+    spendingNature: FLEXIBLE
+  - name: Domestic Help
+    spendingNature: FLEXIBLE
+  - name: Association & Security Fees
+    spendingNature: ESSENTIAL
 
 Utilities:
-  - Electricity
-  - Water
-  - LPG & Cooking Fuel
-  - Internet
-  - Mobile
-  - Cable & DTH
-  - Waste Collection
+  - name: Electricity
+    spendingNature: ESSENTIAL
+  - name: Water
+    spendingNature: ESSENTIAL
+  - name: LPG & Cooking Fuel
+    spendingNature: ESSENTIAL
+  - name: Internet
+    spendingNature: ESSENTIAL
+  - name: Mobile
+    spendingNature: ESSENTIAL
+  - name: Cable & DTH
+    spendingNature: DISCRETIONARY
+  - name: Waste Collection
+    spendingNature: ESSENTIAL
 
 Medical:
-  - Doctor Consultation
-  - Medicines
-  - Lab Tests
-  - Hospital Charges
-  - Dental Care
-  - Eye Care
-  - Therapy & Rehabilitation
-  - Traditional Medicine
+  - name: Doctor Consultation
+    spendingNature: ESSENTIAL
+  - name: Medicines
+    spendingNature: ESSENTIAL
+  - name: Lab Tests
+    spendingNature: ESSENTIAL
+  - name: Hospital Charges
+    spendingNature: ESSENTIAL
+  - name: Dental Care
+    spendingNature: ESSENTIAL
+  - name: Eye Care
+    spendingNature: ESSENTIAL
+  - name: Therapy & Rehabilitation
+    spendingNature: ESSENTIAL
+  - name: Traditional Medicine
+    spendingNature: FLEXIBLE
 
 Insurance:
-  - Life Insurance
-  - Health Insurance
-  - Vehicle Insurance
-  - Home Insurance
-  - Other Insurance
+  - name: Life Insurance
+    spendingNature: ESSENTIAL
+  - name: Health Insurance
+    spendingNature: ESSENTIAL
+  - name: Vehicle Insurance
+    spendingNature: ESSENTIAL
+  - name: Home Insurance
+    spendingNature: ESSENTIAL
+  - name: Other Insurance
+    spendingNature: FLEXIBLE
 
 Entertainment:
-  - Movies
-  - OTT Subscription
-  - Games
-  - Events
-  - Music & Cultural Programs
-  - Sports & Recreation
+  - name: Movies
+    spendingNature: DISCRETIONARY
+  - name: OTT Subscription
+    spendingNature: DISCRETIONARY
+  - name: Games
+    spendingNature: DISCRETIONARY
+  - name: Events
+    spendingNature: DISCRETIONARY
+  - name: Music & Cultural Programs
+    spendingNature: DISCRETIONARY
+  - name: Sports & Recreation
+    spendingNature: DISCRETIONARY
 
 Education:
-  - School Fees
-  - College Fees
-  - School Supplies
-  - Books
-  - Exam & Application Fees
-  - School Transport
-  - Tuition
-  - Courses & Training
-  - Hostel & Accommodation
+  - name: School Fees
+    spendingNature: ESSENTIAL
+  - name: College Fees
+    spendingNature: ESSENTIAL
+  - name: School Supplies
+    spendingNature: ESSENTIAL
+  - name: Books
+    spendingNature: FLEXIBLE
+  - name: Exam & Application Fees
+    spendingNature: ESSENTIAL
+  - name: School Transport
+    spendingNature: ESSENTIAL
+  - name: Tuition
+    spendingNature: FLEXIBLE
+  - name: Courses & Training
+    spendingNature: FLEXIBLE
+  - name: Hostel & Accommodation
+    spendingNature: ESSENTIAL
 
 Family:
-  - Child Expenses
-  - Childcare
-  - Parents Support
-  - Elder Care
-  - Family Transfers
-  - Family Functions
+  - name: Child Expenses
+    spendingNature: ESSENTIAL
+  - name: Childcare
+    spendingNature: ESSENTIAL
+  - name: Parents Support
+    spendingNature: ESSENTIAL
+  - name: Elder Care
+    spendingNature: ESSENTIAL
+  - name: Family Transfers
+    spendingNature: FLEXIBLE
+  - name: Family Functions
+    spendingNature: DISCRETIONARY
 
 Religious & Community:
-  - Worship & Offerings
-  - Festivals & Pooja Supplies
-  - Weddings & Ceremonies
-  - Community Contributions
-  - Charity & Annadanam
+  - name: Worship & Offerings
+    spendingNature: DISCRETIONARY
+  - name: Festivals & Pooja Supplies
+    spendingNature: DISCRETIONARY
+  - name: Weddings & Ceremonies
+    spendingNature: DISCRETIONARY
+  - name: Community Contributions
+    spendingNature: DISCRETIONARY
+  - name: Charity & Annadanam
+    spendingNature: DISCRETIONARY
 
 Agriculture & Livestock:
-  - Seeds & Saplings
-  - Fertilizer & Pesticides
-  - Farm Labour
-  - Irrigation & Electricity
-  - Equipment & Repairs
-  - Animal Feed
-  - Veterinary Care
-  - Land Lease
+  - name: Seeds & Saplings
+    spendingNature: ESSENTIAL
+  - name: Fertilizer & Pesticides
+    spendingNature: ESSENTIAL
+  - name: Farm Labour
+    spendingNature: ESSENTIAL
+  - name: Irrigation & Electricity
+    spendingNature: ESSENTIAL
+  - name: Equipment & Repairs
+    spendingNature: ESSENTIAL
+  - name: Animal Feed
+    spendingNature: ESSENTIAL
+  - name: Veterinary Care
+    spendingNature: ESSENTIAL
+  - name: Land Lease
+    spendingNature: ESSENTIAL
 
 Government & Civic:
-  - Property Tax
-  - Government Documents
-  - Licences & Renewals
-  - Municipal Charges
-  - Legal & Registration Fees
+  - name: Property Tax
+    spendingNature: ESSENTIAL
+  - name: Government Documents
+    spendingNature: ESSENTIAL
+  - name: Licences & Renewals
+    spendingNature: ESSENTIAL
+  - name: Municipal Charges
+    spendingNature: ESSENTIAL
+  - name: Legal & Registration Fees
+    spendingNature: ESSENTIAL
 
 Pets:
-  - Pet Food
-  - Veterinary Care
-  - Grooming & Supplies
+  - name: Pet Food
+    spendingNature: ESSENTIAL
+  - name: Veterinary Care
+    spendingNature: ESSENTIAL
+  - name: Grooming & Supplies
+    spendingNature: FLEXIBLE
 
 Fees & Charges:
-  - Service Charges
-  - Penalties & Fines
-  - Interest & Late Fees
-  - Other Charges
+  - name: Service Charges
+    spendingNature: FLEXIBLE
+  - name: Penalties & Fines
+    spendingNature: DISCRETIONARY
+  - name: Interest & Late Fees
+    spendingNature: DISCRETIONARY
+  - name: Other Charges
+    spendingNature: FLEXIBLE
 
 Miscellaneous:
-  - Cash Adjustment
-  - Other
+  - name: Cash Adjustment
+    spendingNature: FLEXIBLE
+  - name: Other
+    spendingNature: FLEXIBLE
