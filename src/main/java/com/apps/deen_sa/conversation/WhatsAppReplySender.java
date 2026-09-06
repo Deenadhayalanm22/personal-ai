@@ -38,27 +38,6 @@ public class WhatsAppReplySender {
         ));
     }
 
-    public void sendAudioConfirmation(String to, String transcription, String confirmationId) {
-        String body = "I heard:\n\n" + limit(transcription, 850)
-                + "\n\nShould I process this?";
-
-        Map<String, Object> payload = Map.of(
-                "messaging_product", "whatsapp",
-                "to", to,
-                "type", "interactive",
-                "interactive", Map.of(
-                        "type", "button",
-                        "body", Map.of("text", body),
-                        "action", Map.of("buttons", java.util.List.of(
-                                replyButton("audio_confirm:" + confirmationId, "Yes"),
-                                replyButton("audio_retry:" + confirmationId, "Retry")
-                        ))
-                )
-        );
-
-        sendPayload(to, "audio transcription confirmation", payload);
-    }
-
     public void sendInteractiveReply(String to, String message, List<ResponseAction> actions) {
         if (actions.size() > 3) {
             sendListReply(to, message, actions);
