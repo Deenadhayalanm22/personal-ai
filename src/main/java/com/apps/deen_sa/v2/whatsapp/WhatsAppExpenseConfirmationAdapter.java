@@ -41,6 +41,13 @@ public class WhatsAppExpenseConfirmationAdapter implements ExpenseConfirmationPo
                                 "v2:expense:discard:" + extraction.extractionId(), "Discard")));
     }
 
+    @Override
+    public void sendExpenseInstruction(String externalUserId) {
+        replySender.sendTextReply(
+                externalUserId,
+                "To record an expense, send the amount and what it was for. Example: Spent ₹250 at Swiggy.");
+    }
+
     private String displayAmount(StoredDraftExtraction extraction) {
         return extraction.amount() == null
                 ? "Not identified"

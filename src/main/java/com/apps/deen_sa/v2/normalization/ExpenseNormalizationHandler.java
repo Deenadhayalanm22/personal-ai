@@ -6,15 +6,15 @@ import com.apps.deen_sa.v2.domain.InputType;
 import com.apps.deen_sa.v2.dto.NormalizedExpense;
 import com.apps.deen_sa.v2.service.TransactionDraftExtractionWriter;
 import com.apps.deen_sa.v2.service.V2MissingTransactionDateContextService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
 @Service
-@RequiredArgsConstructor
 public class ExpenseNormalizationHandler {
     private static final ZoneId DEFAULT_USER_ZONE = ZoneId.of("Asia/Kolkata");
 
@@ -23,6 +23,23 @@ public class ExpenseNormalizationHandler {
     private final ExpenseConfirmationPort confirmation;
     private final Clock clock;
     private final V2MissingTransactionDateContextService dateContexts;
+    private final BigDecimal minimumExpenseConfidence;
+
+    public ExpenseNormalizationHandler(
+            ExpenseNormalizationPort normalizer,
+            TransactionDraftExtractionWriter extractionWriter,
+            ExpenseConfirmationPort confirmation,
+            Clock clock,
+            V2MissingTransactionDateContextService dateContexts,
+            @Value("${openai.escalation-confidence:0.55}") BigDecimal minimumExpenseConfidence
+    ) {
+        this.normalizer = normalizer;
+        this.extractionWriter = extractionWriter;
+        this.confirmation = confirmation;
+        this.clock = clock;
+        this.dateContexts = dateContexts;
+        this.minimumExpenseConfidence = minimumExpenseConfidence;
+    }
 
     public void handle(DraftWriteResult draft, InboundMessage message) {
         if (!draft.created() || message.inputType() != InputType.TEXT) {
@@ -32,6 +49,11 @@ public class ExpenseNormalizationHandler {
         LocalDate today = LocalDate.now(clock.withZone(DEFAULT_USER_ZONE));
         ExpenseNormalizationPort.ExpenseFacts facts =
                 normalizer.normalize(message.externalUserId(), message.rawContent(), today);
+        if (isLowConfidenceNonExpense(facts)) {
+            confirmation.sendExpenseInstruction(message.externalUserId());
+            return;
+        }
+
         LocalDate transactionDate = facts.transactionDate() == null
                 ? today
                 : facts.transactionDate();
@@ -50,5 +72,15 @@ public class ExpenseNormalizationHandler {
 
         var committedExtraction = extractionWriter.saveActive(normalized);
         confirmation.requestConfirmation(committedExtraction);
+    }
+
+    private boolean isLowConfidenceNonExpense(ExpenseNormalizationPort.ExpenseFacts facts) {
+        boolean hasExpenseDetails = facts.amount() != null
+                || facts.category() != null
+                || facts.subcategory() != null
+                || facts.merchant() != null;
+        boolean isLowConfidence = facts.confidence() == null
+                || facts.confidence().compareTo(minimumExpenseConfidence) < 0;
+        return !hasExpenseDetails && isLowConfidence;
     }
 }

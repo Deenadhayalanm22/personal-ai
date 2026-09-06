@@ -33,7 +33,8 @@ class ExpenseNormalizationHandlerTest {
             mock(V2MissingTransactionDateContextService.class);
     private final ExpenseNormalizationHandler handler =
             new ExpenseNormalizationHandler(
-                    normalizer, extractionWriter, confirmation, clock, dateContexts);
+                    normalizer, extractionWriter, confirmation, clock, dateContexts,
+                    new BigDecimal("0.55"));
 
     @Test
     void normalizesCommittedTextAndRequestsConfirmationWithoutPersistingIt() {
@@ -96,6 +97,26 @@ class ExpenseNormalizationHandlerTest {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any());
         verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void sendsOneInstructionForLowConfidenceMessageWithoutExpenseDetails() {
+        InboundMessage greeting = new InboundMessage(
+                "9198", "wamid.greeting", InputType.TEXT, MessageSource.WHATSAPP, "HI");
+        when(normalizer.normalize("9198", "HI", LocalDate.of(2026, 9, 2)))
+                .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(
+                        null, null, null, null, LocalDate.of(2026, 9, 2),
+                        new BigDecimal("0.10")));
+
+        handler.handle(new DraftWriteResult(42L, true), greeting);
+
+        verify(confirmation).sendExpenseInstruction("9198");
+        verify(extractionWriter, never()).saveActive(org.mockito.ArgumentMatchers.any());
+        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+        verify(dateContexts, never()).applyToDraft(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any());
     }
 
     private InboundMessage textMessage() {
