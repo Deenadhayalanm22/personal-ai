@@ -2,7 +2,6 @@ package com.apps.deen_sa.v2.repository;
 
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.domain.MessageSource;
-import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Lock;
@@ -15,12 +14,6 @@ import jakarta.persistence.LockModeType;
 public interface TransactionDraftRepository extends JpaRepository<TransactionDraftEntity, Long> {
     Optional<TransactionDraftEntity> findBySourceAndSourceMessageId(
             MessageSource source, String sourceMessageId);
-
-    Optional<TransactionDraftEntity> findFirstByUserExternalUserIdAndUserChannelAndSourceAndStatusOrderByCreatedAtDesc(
-            String externalUserId,
-            String channel,
-            MessageSource source,
-            TransactionDraftStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT draft FROM TransactionDraftEntity draft WHERE draft.id = :draftId")

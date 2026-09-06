@@ -50,6 +50,7 @@ public class ExpenseNormalizationHandler {
         ExpenseNormalizationPort.ExpenseFacts facts =
                 normalizer.normalize(message.externalUserId(), message.rawContent(), today);
         if (isLowConfidenceNonExpense(facts)) {
+            extractionWriter.cancelWithoutExtraction(draft.draftId());
             confirmation.sendExpenseInstruction(message.externalUserId());
             return;
         }

@@ -6,7 +6,6 @@ import com.apps.deen_sa.v2.dto.InboundMessage;
 import com.apps.deen_sa.v2.dto.DraftWriteResult;
 import com.apps.deen_sa.v2.domain.InputType;
 import com.apps.deen_sa.v2.domain.MessageSource;
-import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.repository.TransactionDraftRepository;
 import org.junit.jupiter.api.Test;
@@ -61,27 +60,26 @@ class TransactionDraftWriterTest {
     }
 
     @Test
-    void ignoresNewTextWhileUserMustConfirmOrDiscardPendingDraft() {
-        TransactionDraftEntity pending = new TransactionDraftEntity();
-        pending.setId(77L);
-        InboundMessage correction = new InboundMessage(
-                "9198", "wamid.correction-1", InputType.TEXT,
-                MessageSource.WHATSAPP, "Star Biryani");
+    void createsNewDraftForDistinctMessageWhileAnotherDraftIsPending() {
+        InboundMessage nextMessage = new InboundMessage(
+                "9198", "wamid.next-1", InputType.TEXT,
+                MessageSource.WHATSAPP, "HI");
+        AppUserEntity user = new AppUserEntity();
+        user.setId(42L);
+        TransactionDraftEntity persisted = new TransactionDraftEntity();
+        persisted.setId(78L);
         when(repository.findBySourceAndSourceMessageId(
-                MessageSource.WHATSAPP, "wamid.correction-1"))
-                .thenReturn(Optional.empty());
-        when(repository
-                .findFirstByUserExternalUserIdAndUserChannelAndSourceAndStatusOrderByCreatedAtDesc(
-                        "9198", "WHATSAPP", MessageSource.WHATSAPP,
-                        TransactionDraftStatus.PENDING))
-                .thenReturn(Optional.of(pending));
+                MessageSource.WHATSAPP, "wamid.next-1"))
+                .thenReturn(Optional.empty(), Optional.of(persisted));
+        when(users.resolve("WHATSAPP", "9198")).thenReturn(user);
+        when(repository.insertPendingIfAbsent(
+                42L, "TEXT", "WHATSAPP", "wamid.next-1", "HI")).thenReturn(1);
 
-        assertThat(writer.routeAndCommit(correction))
-                .isEqualTo(new DraftWriteResult(77L, false));
+        assertThat(writer.routeAndCommit(nextMessage))
+                .isEqualTo(new DraftWriteResult(78L, true));
 
-        verify(users, never()).resolve("WHATSAPP", "9198");
-        verify(repository, never()).insertPendingIfAbsent(
-                42L, "TEXT", "WHATSAPP", "wamid.correction-1", "Star Biryani");
+        verify(repository).insertPendingIfAbsent(
+                42L, "TEXT", "WHATSAPP", "wamid.next-1", "HI");
     }
 
     private InboundMessage message() {

@@ -110,6 +110,7 @@ class ExpenseNormalizationHandlerTest {
 
         handler.handle(new DraftWriteResult(42L, true), greeting);
 
+        verify(extractionWriter).cancelWithoutExtraction(42L);
         verify(confirmation).sendExpenseInstruction("9198");
         verify(extractionWriter, never()).saveActive(org.mockito.ArgumentMatchers.any());
         verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());

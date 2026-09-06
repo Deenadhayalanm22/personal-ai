@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class TransactionDraftExtractionWriter {
@@ -44,6 +46,17 @@ public class TransactionDraftExtractionWriter {
         extraction.setConfidence(normalized.confidence());
 
         return toStored(extractionRepository.saveAndFlush(extraction));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cancelWithoutExtraction(Long draftId) {
+        TransactionDraftEntity draft = draftRepository.findByIdForUpdate(draftId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Transaction draft not found: " + draftId));
+        if (draft.getStatus() == TransactionDraftStatus.PENDING) {
+            draft.setStatus(TransactionDraftStatus.CANCELLED);
+            draft.setUpdatedAt(Instant.now());
+        }
     }
 
     private StoredDraftExtraction toStored(TransactionDraftExtractionEntity extraction) {

@@ -4,6 +4,7 @@ import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.v2.dto.NormalizedExpense;
 import com.apps.deen_sa.v2.dto.StoredDraftExtraction;
 import com.apps.deen_sa.v2.domain.TransactionDraftExtractionStatus;
+import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.v2.repository.TransactionDraftExtractionRepository;
@@ -44,6 +45,16 @@ class TransactionDraftExtractionWriterTest {
         assertThat(saved.categoryId()).isEqualTo("Food & Dining");
         assertThat(saved.subcategoryId()).isEqualTo("Groceries");
         assertThat(saved.confidence()).isEqualByComparingTo("0.94");
+    }
+
+    @Test
+    void cancelsLowConfidenceNonExpenseDraft() {
+        TransactionDraftEntity draft = draft();
+        when(drafts.findByIdForUpdate(1001L)).thenReturn(Optional.of(draft));
+
+        writer.cancelWithoutExtraction(1001L);
+
+        assertThat(draft.getStatus()).isEqualTo(TransactionDraftStatus.CANCELLED);
     }
 
     private TransactionDraftEntity draft() {

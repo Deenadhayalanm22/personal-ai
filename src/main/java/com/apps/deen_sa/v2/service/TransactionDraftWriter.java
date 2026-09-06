@@ -4,7 +4,6 @@ import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.conversation.AppUserService;
 import com.apps.deen_sa.v2.dto.DraftWriteResult;
 import com.apps.deen_sa.v2.dto.InboundMessage;
-import com.apps.deen_sa.v2.domain.TransactionDraftStatus;
 import com.apps.deen_sa.v2.entity.TransactionDraftEntity;
 import com.apps.deen_sa.v2.repository.TransactionDraftRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,23 +21,12 @@ public class TransactionDraftWriter {
     public DraftWriteResult routeAndCommit(InboundMessage message) {
         return repository.findBySourceAndSourceMessageId(message.source(), message.sourceMessageId())
                 .map(existing -> new DraftWriteResult(existing.getId(), false))
-                .orElseGet(() -> pendingDraft(message)
-                        .map(existing -> new DraftWriteResult(existing.getId(), false))
-                        .orElseGet(() -> insertAndLoad(message)));
+                .orElseGet(() -> insertAndLoad(message));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DraftWriteResult saveAndCommit(InboundMessage message) {
         return routeAndCommit(message);
-    }
-
-    private java.util.Optional<TransactionDraftEntity> pendingDraft(InboundMessage message) {
-        return repository
-                .findFirstByUserExternalUserIdAndUserChannelAndSourceAndStatusOrderByCreatedAtDesc(
-                        message.externalUserId(),
-                        message.source().name(),
-                        message.source(),
-                        TransactionDraftStatus.PENDING);
     }
 
     private DraftWriteResult insertAndLoad(InboundMessage message) {
