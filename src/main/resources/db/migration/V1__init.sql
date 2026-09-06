@@ -11,45 +11,6 @@ CREATE TABLE app_user (
     CONSTRAINT uq_app_user_channel_external UNIQUE (channel, external_user_id)
 );
 
-CREATE TABLE conversation_session (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES app_user(id),
-    channel VARCHAR(30) NOT NULL,
-    active_transaction_id BIGINT,
-    active_intent VARCHAR(50),
-    waiting_for_field VARCHAR(100),
-    partial_type VARCHAR(255),
-    partial_json JSONB,
-    pending_events_json JSONB,
-    recent_turns_json JSONB,
-    last_question TEXT,
-    interpreter_version VARCHAR(50),
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_conversation_user_channel UNIQUE (user_id, channel)
-);
-
-CREATE TABLE inbound_message (
-    id BIGSERIAL PRIMARY KEY,
-    channel VARCHAR(30) NOT NULL,
-    external_message_id VARCHAR(255) NOT NULL,
-    external_user_id VARCHAR(255) NOT NULL,
-    status VARCHAR(30) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    processed_at TIMESTAMP,
-    CONSTRAINT uq_inbound_channel_message UNIQUE (channel, external_message_id)
-);
-
-CREATE TABLE audio_confirmation (
-    id UUID PRIMARY KEY,
-    whatsapp_user_id VARCHAR(255) NOT NULL,
-    media_id VARCHAR(255) NOT NULL,
-    transcribed_text TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
-);
-
 CREATE TABLE user_feature_flag (
     id BIGSERIAL PRIMARY KEY,
     channel VARCHAR(30) NOT NULL,
@@ -61,121 +22,153 @@ CREATE TABLE user_feature_flag (
     CONSTRAINT uq_user_feature_flag_subject UNIQUE (channel, external_user_id)
 );
 
+CREATE INDEX idx_user_feature_flag_lookup
+    ON user_feature_flag(channel, external_user_id, enabled);
+
 -- Replace this test number with your own country-code-prefixed WhatsApp number before deployment.
 INSERT INTO user_feature_flag (channel, external_user_id, role, enabled)
 VALUES ('WHATSAPP', '919004656025', 'SUPER_ADMIN', TRUE);
 
-CREATE TABLE state_container (
+CREATE TABLE magic_link (
     id BIGSERIAL PRIMARY KEY,
-    owner_type VARCHAR(30) NOT NULL,
-    owner_id BIGINT NOT NULL,
-    container_type VARCHAR(30) NOT NULL,
-    name TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL,
-    currency VARCHAR(10),
-    current_value NUMERIC(19,4),
-    available_value NUMERIC(19,4),
-    unit VARCHAR(20),
-    capacity_limit NUMERIC(19,4),
-    min_threshold NUMERIC(19,4),
-    priority_order INTEGER,
-    opened_at TIMESTAMP,
-    closed_at TIMESTAMP,
-    last_activity_at TIMESTAMP,
-    external_ref_type VARCHAR(30),
-    external_ref_id TEXT,
-    details JSONB,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    over_limit BOOLEAN DEFAULT FALSE,
-    over_limit_amount NUMERIC(19,4)
+    token_hash VARCHAR(64) NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES app_user(id),
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_magic_link_token_hash UNIQUE (token_hash)
 );
 
-CREATE TABLE state_change (
+CREATE INDEX idx_magic_link_user_created ON magic_link(user_id, created_at DESC);
+
+CREATE TABLE web_session (
     id BIGSERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    business_id VARCHAR(255),
-    transaction_type VARCHAR(50) NOT NULL,
-    amount NUMERIC(15,2) NOT NULL,
-    quantity NUMERIC(15,4),
-    unit VARCHAR(20),
+    token_hash VARCHAR(64) NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES app_user(id),
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_web_session_token_hash UNIQUE (token_hash)
+);
+
+CREATE INDEX idx_web_session_user_created ON web_session(user_id, created_at DESC);
+
+CREATE TABLE pending_action_context (
+    id VARCHAR(40) PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    context_type VARCHAR(50) NOT NULL,
+    context_value VARCHAR(500) NOT NULL,
+    timezone VARCHAR(60),
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    consumed_at TIMESTAMP,
+    replaced_at TIMESTAMP
+);
+
+CREATE UNIQUE INDEX uq_pending_action_context_active_user
+    ON pending_action_context(user_id)
+    WHERE status = 'ACTIVE';
+
+CREATE INDEX idx_pending_action_context_user_expiry
+    ON pending_action_context(user_id, expires_at);
+
+CREATE TABLE transaction_draft (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES app_user(id),
+    input_type VARCHAR(20) NOT NULL,
+    source VARCHAR(30) NOT NULL,
+    source_message_id VARCHAR(255) NOT NULL,
+    raw_text TEXT,
+    transcribed_text TEXT,
+    normalized_text TEXT,
+    pending_action_context_id VARCHAR(40) REFERENCES pending_action_context(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT ck_transaction_draft_status
+        CHECK (status IN ('PENDING', 'CONSUMED', 'EXPIRED', 'CANCELLED')),
+    CONSTRAINT uq_transaction_draft_source_message UNIQUE (source, source_message_id)
+);
+
+CREATE INDEX idx_transaction_draft_user_status_created
+    ON transaction_draft(user_id, status, created_at);
+
+CREATE INDEX idx_transaction_draft_pending_action_context
+    ON transaction_draft(pending_action_context_id)
+    WHERE pending_action_context_id IS NOT NULL;
+
+CREATE TABLE transaction_draft_extraction (
+    id BIGSERIAL PRIMARY KEY,
+    draft_id BIGINT NOT NULL REFERENCES transaction_draft(id),
+    amount NUMERIC(19,2),
+    merchant_name VARCHAR(255),
+    category_id VARCHAR(100),
+    subcategory_id VARCHAR(100),
+    occurred_at DATE NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    confidence NUMERIC(5,4) CHECK (confidence >= 0 AND confidence <= 1),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT ck_transaction_draft_extraction_status
+        CHECK (status IN ('ACTIVE', 'USED', 'REJECTED')),
+    CONSTRAINT uq_transaction_draft_extraction_draft UNIQUE (draft_id)
+);
+
+CREATE INDEX idx_transaction_draft_extraction_draft
+    ON transaction_draft_extraction(draft_id);
+
+CREATE TABLE user_reference_entity (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES app_user(id),
+    entity_type VARCHAR(50) NOT NULL,
+    canonical_name VARCHAR(255) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT ck_user_reference_entity_type
+        CHECK (entity_type IN ('MERCHANT', 'BENEFICIARY'))
+);
+
+CREATE UNIQUE INDEX uq_user_reference_entity_identity
+    ON user_reference_entity(user_id, entity_type, lower(canonical_name));
+
+CREATE INDEX idx_user_reference_entity_user_type_active
+    ON user_reference_entity(user_id, entity_type, active);
+
+CREATE TABLE user_reference_alias (
+    id BIGSERIAL PRIMARY KEY,
+    reference_entity_id BIGINT NOT NULL REFERENCES user_reference_entity(id) ON DELETE CASCADE,
+    alias_text VARCHAR(255) NOT NULL,
+    source VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX uq_user_reference_alias_text
+    ON user_reference_alias(reference_entity_id, lower(alias_text));
+
+CREATE INDEX idx_user_reference_alias_lookup
+    ON user_reference_alias(lower(alias_text));
+
+CREATE TABLE financial_transaction (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES app_user(id),
+    amount NUMERIC(19,2) NOT NULL CHECK (amount > 0),
+    occurred_at DATE NOT NULL,
     category VARCHAR(100),
     subcategory VARCHAR(100),
-    main_entity VARCHAR(150),
-    tx_time TIMESTAMP NOT NULL,
-    raw_text TEXT,
-    details JSONB,
-    source_container_id BIGINT REFERENCES state_container(id),
-    target_container_id BIGINT REFERENCES state_container(id),
-    tags JSONB,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    completeness_level VARCHAR(50) NOT NULL,
-    financially_applied BOOLEAN NOT NULL DEFAULT FALSE,
-    needs_enrichment BOOLEAN NOT NULL DEFAULT FALSE,
-    application_status VARCHAR(50),
-    failure_reason TEXT,
-    applied_at TIMESTAMP,
-    record_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-    root_transaction_id BIGINT REFERENCES state_change(id),
-    replaces_transaction_id BIGINT REFERENCES state_change(id),
-    record_version INTEGER NOT NULL DEFAULT 1,
-    corrected_at TIMESTAMP,
-    correction_reason VARCHAR(100)
-);
-
-CREATE TABLE state_mutation (
-    id BIGSERIAL PRIMARY KEY,
-    transaction_id BIGINT REFERENCES state_change(id),
-    container_id BIGINT REFERENCES state_container(id),
-    adjustment_type VARCHAR(20),
-    amount NUMERIC(19,4),
-    reason VARCHAR(100),
-    occurred_at TIMESTAMP,
-    created_at TIMESTAMP
-);
-
-CREATE TABLE fin_monthly_budget (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    monthly_limit NUMERIC(19,4) NOT NULL CHECK (monthly_limit > 0),
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_fin_monthly_budget_user_category UNIQUE (user_id, category)
-);
-
-CREATE TABLE unprocessed_conversation_message (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    channel VARCHAR(30) NOT NULL,
-    external_message_id VARCHAR(255),
-    message_text TEXT NOT NULL,
-    locale VARCHAR(30),
-    reason VARCHAR(80) NOT NULL,
-    interpreter_version VARCHAR(80),
-    status VARCHAR(30) NOT NULL DEFAULT 'NEW',
-    occurrence_count INTEGER NOT NULL DEFAULT 1,
+    merchant_id BIGINT REFERENCES user_reference_entity(id),
+    source_draft_id BIGINT NOT NULL REFERENCES transaction_draft(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT uq_financial_transaction_source_draft UNIQUE (source_draft_id)
 );
 
-CREATE INDEX idx_conversation_user ON conversation_session(user_id);
-CREATE INDEX idx_inbound_external_user ON inbound_message(external_user_id);
-CREATE INDEX idx_audio_confirmation_user_status ON audio_confirmation(whatsapp_user_id, status);
-CREATE INDEX idx_user_feature_flag_lookup ON user_feature_flag(channel, external_user_id, enabled);
-CREATE INDEX idx_state_container_owner ON state_container(owner_type, owner_id);
-CREATE INDEX idx_state_container_type ON state_container(container_type);
-CREATE INDEX idx_state_change_user ON state_change(user_id);
-CREATE INDEX idx_state_change_type ON state_change(transaction_type);
-CREATE INDEX idx_state_change_active_expense_browse ON state_change(user_id, id DESC)
-    WHERE transaction_type = 'EXPENSE' AND record_status = 'ACTIVE';
-CREATE INDEX idx_state_mutation_statechange ON state_mutation(transaction_id);
-CREATE INDEX idx_state_mutation_container ON state_mutation(container_id);
-CREATE INDEX idx_fin_monthly_budget_user ON fin_monthly_budget(user_id) WHERE active = TRUE;
-CREATE UNIQUE INDEX uq_unprocessed_external_message
-    ON unprocessed_conversation_message(channel, external_message_id)
-    WHERE external_message_id IS NOT NULL;
-CREATE INDEX idx_unprocessed_review_queue ON unprocessed_conversation_message(status, created_at);
+CREATE INDEX idx_financial_transaction_user_occurred
+    ON financial_transaction(user_id, occurred_at DESC)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_financial_transaction_merchant
+    ON financial_transaction(merchant_id)
+    WHERE deleted_at IS NULL;
