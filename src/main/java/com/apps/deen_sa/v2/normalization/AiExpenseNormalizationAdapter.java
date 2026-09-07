@@ -37,7 +37,49 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 systemPrompt(today, externalUserId),
                 "Normalize this expense message:\n" + rawText,
                 ExpenseFacts.class);
-        return enforceTaxonomy(extracted, today);
+        ExpenseFacts normalized = enforceTaxonomy(extracted, today);
+        if (normalized.sourceAccount() != null) {
+            return normalized;
+        }
+
+        String recoveredSourceAccount = recoverSourceAccount(externalUserId, rawText);
+        return new ExpenseFacts(
+                normalized.amount(),
+                normalized.category(),
+                normalized.subcategory(),
+                normalized.merchant(),
+                recoveredSourceAccount,
+                normalized.transactionDate(),
+                normalized.confidence());
+    }
+
+    private String recoverSourceAccount(String externalUserId, String rawText) {
+        SourceAccountFacts recovered = callAndParse(
+                """
+                Extract only the source account used to pay for an expense.
+
+                Return exactly:
+                {"sourceAccount": string or null}
+
+                Rules, in priority order:
+                - An explicitly named account in the message wins over every preferred account.
+                - Account type is part of identity. A credit card, debit card, and bank account are
+                  different accounts even when they share the same institution name.
+                - Example: if "HDFC bank account" is preferred but the message says "HDFC credit card",
+                  return "HDFC credit card". Never return the bank account and never return null.
+                - If an explicit account matches a preferred account of the same type, return the exact
+                  preferred canonical name.
+                - For a generic reference such as "credit card", return a preferred account only when
+                  exactly one preferred account has that type; otherwise return null.
+                - UPI, bank transfer, and payment apps are payment methods, not source accounts.
+                - Return JSON only.
+
+                Preferred accounts:
+                %s
+                """.formatted(preferredAccounts(externalUserId)),
+                "Expense message:\n" + rawText,
+                SourceAccountFacts.class);
+        return recovered == null ? null : blankToNull(recovered.sourceAccount());
     }
 
     private ExpenseFacts enforceTaxonomy(ExpenseFacts extracted, LocalDate today) {
@@ -90,23 +132,7 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                     preferredMerchants.append("\n");
                 });
 
-        StringBuilder preferredAccounts = new StringBuilder();
-        referenceRepository
-                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
-                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
-                .forEach(reference -> {
-                    preferredAccounts.append("- ").append(reference.getCanonicalName());
-                    var aliases = aliasRepository.findByReferenceEntityId(reference.getId());
-                    if (!aliases.isEmpty()) {
-                        preferredAccounts.append(" (aliases: ")
-                                .append(aliases.stream()
-                                        .map(alias -> alias.getAliasText())
-                                        .distinct()
-                                        .toList())
-                                .append(")");
-                    }
-                    preferredAccounts.append("\n");
-                });
+        String preferredAccounts = preferredAccounts(externalUserId);
 
         return """
                 You normalize personal expense messages into JSON.
@@ -159,7 +185,31 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 %s
                 """.formatted(today, configuredTaxonomy,
                 preferredMerchants.isEmpty() ? "- None recorded" : preferredMerchants,
-                preferredAccounts.isEmpty() ? "- None recorded" : preferredAccounts);
+                preferredAccounts);
+    }
+
+    private String preferredAccounts(String externalUserId) {
+        StringBuilder accounts = new StringBuilder();
+        referenceRepository
+                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
+                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
+                .forEach(reference -> {
+                    accounts.append("- ").append(reference.getCanonicalName());
+                    var aliases = aliasRepository.findByReferenceEntityId(reference.getId());
+                    if (!aliases.isEmpty()) {
+                        accounts.append(" (aliases: ")
+                                .append(aliases.stream()
+                                        .map(alias -> alias.getAliasText())
+                                        .distinct()
+                                        .toList())
+                                .append(")");
+                    }
+                    accounts.append("\n");
+                });
+        return accounts.isEmpty() ? "- None recorded" : accounts.toString();
+    }
+
+    private record SourceAccountFacts(String sourceAccount) {
     }
 
     private java.math.BigDecimal validConfidence(java.math.BigDecimal confidence) {
