@@ -40,6 +40,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -394,6 +395,37 @@ class LiveExpenseFlowIT {
                 activeExtraction(draft("wamid.account-ref-4"));
         assertThat(ambiguousCard.getSourceAccountName()).isNull();
         printExtraction("WHATSAPP → USER: Ambiguous generic card not guessed", ambiguousCard);
+
+        // 15. User creates a beneficiary preference with multiple aliases from the web app.
+        String referenceSessionToken = createWebSession(accountReferenceUser);
+        mockMvc.perform(post("/api/web/reference-preferences")
+                        .cookie(new jakarta.servlet.http.Cookie(
+                                "WEB_SESSION", referenceSessionToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "entityType": "BENEFICIARY",
+                                  "primaryReference": "Deena",
+                                  "alias": "Deena S, DS, deena s"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.entityType").value("BENEFICIARY"))
+                .andExpect(jsonPath("$.primaryReference").value("Deena"))
+                .andExpect(jsonPath("$.aliases.length()").value(2))
+                .andExpect(jsonPath("$.aliases[0].alias").value("Deena S"))
+                .andExpect(jsonPath("$.aliases[1].alias").value("DS"));
+
+        var beneficiary = referenceEntityRepository
+                .findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(
+                        accountReferenceUserId,
+                        UserReferenceEntityType.BENEFICIARY,
+                        "Deena")
+                .orElseThrow();
+        assertThat(beneficiary.isActive()).isTrue();
+        assertThat(referenceAliasRepository.findByReferenceEntityId(beneficiary.getId()))
+                .extracting(alias -> alias.getAliasText())
+                .containsExactlyInAnyOrder("Deena S", "DS");
     }
 
     private FinancialTransactionEntity recordYesterdayExpense(
@@ -493,7 +525,7 @@ class LiveExpenseFlowIT {
                 .findByChannelAndExternalUserId("WHATSAPP", externalUserId)
                 .orElseThrow()
                 .getId();
-        String token = "live-v2-calendar-session";
+        String token = "live-v2-session-" + externalUserId;
         WebSessionEntity session = new WebSessionEntity();
         session.setTokenHash(MagicLinkService.hash(token));
         session.setUserId(userId);

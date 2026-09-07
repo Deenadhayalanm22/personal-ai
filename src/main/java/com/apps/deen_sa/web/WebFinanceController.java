@@ -15,15 +15,21 @@ public class WebFinanceController {
     private final WebAuthenticationService authentication;
     private final WebLoginRequestService loginRequests;
     private final WebExpenseTaxonomyService taxonomy;
+    private final WebUserReferenceEntityTypeService referenceEntityTypes;
+    private final WebUserReferencePreferenceService referencePreferences;
     private final boolean secureCookies;
     private final String cookieSameSite;
 
     public WebFinanceController(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
             WebExpenseTaxonomyService taxonomy,
+            WebUserReferenceEntityTypeService referenceEntityTypes,
+            WebUserReferencePreferenceService referencePreferences,
             @Value("${app.web.secure-cookies:false}") boolean secureCookies,
             @Value("${app.web.cookie-same-site:Lax}") String cookieSameSite) {
         this.authentication = authentication; this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
+        this.referenceEntityTypes = referenceEntityTypes;
+        this.referencePreferences = referencePreferences;
         this.secureCookies = secureCookies; this.cookieSameSite = cookieSameSite;
     }
 
@@ -69,6 +75,21 @@ public class WebFinanceController {
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
         authentication.authenticate(token);
         return taxonomy.options();
+    }
+
+    @GetMapping("/reference-entity-types")
+    public WebUserReferenceEntityTypeService.UserReferenceEntityTypesResponse referenceEntityTypes(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        authentication.authenticate(token);
+        return referenceEntityTypes.options();
+    }
+
+    @PostMapping("/reference-preferences")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebUserReferencePreferenceService.UserReferencePreferenceResponse createReferencePreference(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebUserReferencePreferenceService.UserReferencePreferenceRequest request) {
+        return referencePreferences.create(authentication.authenticate(token), request);
     }
 
     private String clientAddress(HttpServletRequest request) {
