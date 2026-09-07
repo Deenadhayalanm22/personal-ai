@@ -136,6 +136,14 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 - Do not use a payment method such as UPI or bank transfer as sourceAccount.
                 - If the source account resembles a preferred account or one of its aliases,
                   return its exact canonical name.
+                - Preferred accounts are not a whitelist. If the user explicitly names an account
+                  that is not in the preferred accounts, return the account name stated by the user.
+                - Resolve partial account references against the preferred accounts. For example,
+                  "HDFC credit card" can refer to a preferred HDFC card.
+                - A generic reference such as "credit card" or "debit card" can refer to a preferred
+                  account when exactly one preferred account matches that account type. Return that
+                  account's exact canonical name. If multiple accounts match and the message does not
+                  identify which one, return null rather than guessing.
                 - Return JSON only, without markdown or explanation.
 
                 Configured taxonomy:

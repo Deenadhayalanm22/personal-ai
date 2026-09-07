@@ -321,6 +321,69 @@ class LiveV2IT {
         assertThat(draftRepository.count()).isEqualTo(18);
         assertThat(extractionRepository.count()).isEqualTo(18);
         assertThat(financialTransactionRepository.count()).isEqualTo(17);
+
+        // 14. Preferred account normalization resolves named and unambiguous generic cards.
+        String accountReferenceUser = "919876543211";
+
+        printUserMessage("Did electricity payment of 922 from cred app paid using hdfc credit card");
+        userSendsText(accountReferenceUser, "wamid.account-ref-1",
+                "Did electricity payment of 922 from cred app paid using hdfc credit card");
+        TransactionDraftExtractionEntity namedCard = activeExtraction(draft("wamid.account-ref-1"));
+        assertThat(namedCard.getSourceAccountName()).isEqualToIgnoringCase("HDFC credit card");
+        printExtraction("WHATSAPP → USER: Named card identified", namedCard);
+        Long accountReferenceUserId = appUserRepository
+                .findByChannelAndExternalUserId("WHATSAPP", accountReferenceUser)
+                .orElseThrow()
+                .getId();
+
+        userSelectsButton(accountReferenceUser, "wamid.account-ref-confirm-1",
+                "v2:expense:confirm:" + namedCard.getId(), "Confirm");
+        String canonicalHdfcCard = referenceEntityRepository
+                .findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(
+                        accountReferenceUserId,
+                        UserReferenceEntityType.ACCOUNT,
+                        "HDFC credit card")
+                .orElseThrow()
+                .getCanonicalName();
+
+        printUserMessage("Paid 500 for groceries using credit card");
+        userSendsText(accountReferenceUser, "wamid.account-ref-2",
+                "Paid 500 for groceries using credit card");
+        TransactionDraftExtractionEntity genericCard =
+                activeExtraction(draft("wamid.account-ref-2"));
+        assertThat(genericCard.getSourceAccountName()).isEqualTo(canonicalHdfcCard);
+        printExtraction("WHATSAPP → USER: Generic card resolved", genericCard);
+        userSelectsButton(accountReferenceUser, "wamid.account-ref-discard-2",
+                "v2:expense:discard:" + genericCard.getId(), "Discard");
+
+        printUserMessage("Paid 250 for lunch using HDFC card");
+        userSendsText(accountReferenceUser, "wamid.account-ref-partial",
+                "Paid 250 for lunch using HDFC card");
+        TransactionDraftExtractionEntity partialCard =
+                activeExtraction(draft("wamid.account-ref-partial"));
+        assertThat(partialCard.getSourceAccountName()).isEqualTo(canonicalHdfcCard);
+        printExtraction("WHATSAPP → USER: Partial card reference resolved", partialCard);
+        userSelectsButton(accountReferenceUser, "wamid.account-ref-discard-partial",
+                "v2:expense:discard:" + partialCard.getId(), "Discard");
+
+        printUserMessage("Paid 700 for fuel using ICICI credit card");
+        userSendsText(accountReferenceUser, "wamid.account-ref-3",
+                "Paid 700 for fuel using ICICI credit card");
+        TransactionDraftExtractionEntity secondNamedCard =
+                activeExtraction(draft("wamid.account-ref-3"));
+        assertThat(secondNamedCard.getSourceAccountName())
+                .isEqualToIgnoringCase("ICICI credit card");
+        printExtraction("WHATSAPP → USER: Second named card identified", secondNamedCard);
+        userSelectsButton(accountReferenceUser, "wamid.account-ref-confirm-3",
+                "v2:expense:confirm:" + secondNamedCard.getId(), "Confirm");
+
+        printUserMessage("Paid 300 for dinner using credit card");
+        userSendsText(accountReferenceUser, "wamid.account-ref-4",
+                "Paid 300 for dinner using credit card");
+        TransactionDraftExtractionEntity ambiguousCard =
+                activeExtraction(draft("wamid.account-ref-4"));
+        assertThat(ambiguousCard.getSourceAccountName()).isNull();
+        printExtraction("WHATSAPP → USER: Ambiguous generic card not guessed", ambiguousCard);
     }
 
     private FinancialTransactionEntity recordYesterdayExpense(

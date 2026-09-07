@@ -18,7 +18,17 @@ class WhatsAppExpenseConfirmationAdapterTest {
 
         verify(replies).sendTextReply(
                 "9198",
-                "To record an expense, send the amount and what it was for. Example: Spent ₹250 at Swiggy.");
+                """
+                I couldn't identify that as an expense.
+
+                Use this format:
+                Spent ₹[amount] for [purpose or merchant] using [account]
+
+                Example:
+                Spent ₹922 for electricity using HDFC credit card.
+
+                Amount and purpose are required. Account is optional. The date defaults to today.
+                """.strip());
         verifyNoMoreInteractions(replies);
     }
 }
