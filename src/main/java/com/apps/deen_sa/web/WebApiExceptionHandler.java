@@ -8,7 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(basePackages = {
         "com.apps.deen_sa.web",
-        "com.apps.deen_sa.v2.controller"
+        "com.apps.deen_sa.controller"
 })
 public class WebApiExceptionHandler {
     @ExceptionHandler(WebApiException.class)

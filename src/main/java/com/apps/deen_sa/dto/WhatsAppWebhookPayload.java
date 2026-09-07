@@ -54,7 +54,11 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
     public record Entry(List<Change> changes) {}
     public record Change(Value value) {}
     public record Value(List<Message> messages) {}
-    public record Message(String id, String from, String type, Text text, Audio audio, Interactive interactive) {}
+    public record Message(String id, String from, String type, Text text, Audio audio, Interactive interactive) {
+        public Message(String id, String from, String type, Text text, Audio audio) {
+            this(id, from, type, text, audio, null);
+        }
+    }
     public record Text(String body) {}
     public record Audio(String id, @JsonProperty("mime_type") String mimeType) {}
     public record Interactive(
@@ -62,7 +66,9 @@ public record WhatsAppWebhookPayload(List<Entry> entry) {
             @JsonProperty("button_reply") ButtonReply buttonReply,
             @JsonProperty("list_reply") ListReply listReply
     ) {
-        String replyId() { return buttonReply != null ? buttonReply.id() : listReply.id(); }
+        public String replyId() {
+            return buttonReply != null ? buttonReply.id() : listReply != null ? listReply.id() : null;
+        }
     }
     public record ButtonReply(String id, String title) {}
     public record ListReply(String id, String title, String description) {}
