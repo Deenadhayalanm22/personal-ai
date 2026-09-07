@@ -11,4 +11,7 @@ public interface UserReferenceAliasRepository extends JpaRepository<UserReferenc
             Long referenceEntityId, String aliasText);
 
     List<UserReferenceAliasEntity> findByReferenceEntityId(Long referenceEntityId);
+
+    List<UserReferenceAliasEntity> findByReferenceEntityIdOrderByAliasTextAsc(
+            Long referenceEntityId);
 }

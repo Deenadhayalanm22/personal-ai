@@ -24,6 +24,25 @@ public class WebUserReferencePreferenceService {
     private final UserReferenceEntityRepository entityRepository;
     private final UserReferenceAliasRepository aliasRepository;
 
+    @Transactional(readOnly = true)
+    public UserReferencePreferenceListResponse list(AppUserEntity user) {
+        List<UserReferencePreferenceResponse> references = entityRepository
+                .findByUserIdAndActiveTrueOrderByEntityTypeAscCanonicalNameAsc(user.getId())
+                .stream()
+                .map(reference -> new UserReferencePreferenceResponse(
+                        reference.getId(),
+                        reference.getEntityType(),
+                        reference.getCanonicalName(),
+                        aliasRepository
+                                .findByReferenceEntityIdOrderByAliasTextAsc(reference.getId())
+                                .stream()
+                                .map(alias -> new AliasResponse(
+                                        alias.getId(), alias.getAliasText()))
+                                .toList()))
+                .toList();
+        return new UserReferencePreferenceListResponse(references);
+    }
+
     @Transactional
     public UserReferencePreferenceResponse create(
             AppUserEntity user,
@@ -131,6 +150,9 @@ public class WebUserReferencePreferenceService {
             UserReferenceEntityType entityType,
             String primaryReference,
             List<AliasResponse> aliases) { }
+
+    public record UserReferencePreferenceListResponse(
+            List<UserReferencePreferenceResponse> references) { }
 
     public record AliasResponse(Long aliasId, String alias) { }
 }

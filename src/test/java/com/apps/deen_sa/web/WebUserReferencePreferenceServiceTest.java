@@ -20,6 +20,39 @@ import static org.mockito.Mockito.when;
 class WebUserReferencePreferenceServiceTest {
 
     @Test
+    void listsActiveReferencesAndTheirAliasesForAuthenticatedUser() {
+        UserReferenceEntityRepository references = mock(UserReferenceEntityRepository.class);
+        UserReferenceAliasRepository aliases = mock(UserReferenceAliasRepository.class);
+        WebUserReferencePreferenceService service =
+                new WebUserReferencePreferenceService(references, aliases);
+        AppUserEntity user = new AppUserEntity();
+        user.setId(42L);
+        UserReferenceEntity account = new UserReferenceEntity();
+        account.setId(7L);
+        account.setEntityType(UserReferenceEntityType.ACCOUNT);
+        account.setCanonicalName("HDFC Salary Account");
+        UserReferenceAliasEntity salary = new UserReferenceAliasEntity();
+        salary.setId(9L);
+        salary.setAliasText("Salary Account");
+        when(references.findByUserIdAndActiveTrueOrderByEntityTypeAscCanonicalNameAsc(42L))
+                .thenReturn(java.util.List.of(account));
+        when(aliases.findByReferenceEntityIdOrderByAliasTextAsc(7L))
+                .thenReturn(java.util.List.of(salary));
+
+        var result = service.list(user);
+
+        assertThat(result.references()).hasSize(1);
+        assertThat(result.references().getFirst().referenceId()).isEqualTo(7L);
+        assertThat(result.references().getFirst().entityType())
+                .isEqualTo(UserReferenceEntityType.ACCOUNT);
+        assertThat(result.references().getFirst().primaryReference())
+                .isEqualTo("HDFC Salary Account");
+        assertThat(result.references().getFirst().aliases())
+                .containsExactly(new WebUserReferencePreferenceService.AliasResponse(
+                        9L, "Salary Account"));
+    }
+
+    @Test
     void createsOneAliasRowForEachCommaSeparatedValue() {
         UserReferenceEntityRepository references = mock(UserReferenceEntityRepository.class);
         UserReferenceAliasRepository aliases = mock(UserReferenceAliasRepository.class);

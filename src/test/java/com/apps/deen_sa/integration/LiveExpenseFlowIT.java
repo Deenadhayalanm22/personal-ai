@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -426,6 +427,21 @@ class LiveExpenseFlowIT {
         assertThat(referenceAliasRepository.findByReferenceEntityId(beneficiary.getId()))
                 .extracting(alias -> alias.getAliasText())
                 .containsExactlyInAnyOrder("Deena S", "DS");
+
+        // 16. Web app lists the user's primary references with their aliases.
+        mockMvc.perform(get("/api/web/reference-preferences")
+                        .cookie(new jakarta.servlet.http.Cookie(
+                                "WEB_SESSION", referenceSessionToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.references[?(@.referenceId == %s)].entityType"
+                                .formatted(beneficiary.getId()))
+                        .value(org.hamcrest.Matchers.hasItem("BENEFICIARY")))
+                .andExpect(jsonPath("$.references[?(@.referenceId == %s)].primaryReference"
+                                .formatted(beneficiary.getId()))
+                        .value(org.hamcrest.Matchers.hasItem("Deena")))
+                .andExpect(jsonPath("$.references[?(@.referenceId == %s)].aliases[*].alias"
+                                .formatted(beneficiary.getId()))
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("DS", "Deena S")));
     }
 
     private FinancialTransactionEntity recordYesterdayExpense(

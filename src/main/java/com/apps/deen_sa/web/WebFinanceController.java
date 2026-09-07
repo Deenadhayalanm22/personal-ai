@@ -92,6 +92,12 @@ public class WebFinanceController {
         return referencePreferences.create(authentication.authenticate(token), request);
     }
 
+    @GetMapping("/reference-preferences")
+    public WebUserReferencePreferenceService.UserReferencePreferenceListResponse referencePreferences(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return referencePreferences.list(authentication.authenticate(token));
+    }
+
     private String clientAddress(HttpServletRequest request) {
         return request.getRemoteAddr();
     }

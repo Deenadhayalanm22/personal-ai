@@ -88,4 +88,48 @@ class WebFinanceControllerTest {
 
         verify(preferences).create(user, request);
     }
+
+    @Test
+    void authenticatesSessionAndListsReferencePreferences() throws Exception {
+        WebAuthenticationService authentication = mock(WebAuthenticationService.class);
+        WebUserReferencePreferenceService preferences =
+                mock(WebUserReferencePreferenceService.class);
+        com.apps.deen_sa.conversation.AppUserEntity user =
+                new com.apps.deen_sa.conversation.AppUserEntity();
+        user.setId(42L);
+        when(authentication.authenticate("session-token")).thenReturn(user);
+        when(preferences.list(user)).thenReturn(
+                new WebUserReferencePreferenceService.UserReferencePreferenceListResponse(
+                        java.util.List.of(
+                                new WebUserReferencePreferenceService.UserReferencePreferenceResponse(
+                                        7L,
+                                        com.apps.deen_sa.domain.UserReferenceEntityType.ACCOUNT,
+                                        "HDFC Salary Account",
+                                        java.util.List.of(
+                                                new WebUserReferencePreferenceService.AliasResponse(
+                                                        9L, "Salary Account"))))));
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(
+                authentication,
+                mock(WebLoginRequestService.class),
+                mock(WebExpenseTaxonomyService.class),
+                new WebUserReferenceEntityTypeService(),
+                preferences,
+                false,
+                "Lax")).build();
+
+        mvc.perform(get("/api/web/reference-preferences")
+                        .cookie(new jakarta.servlet.http.Cookie(
+                                "WEB_SESSION", "session-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.references.length()").value(1))
+                .andExpect(jsonPath("$.references[0].referenceId").value(7))
+                .andExpect(jsonPath("$.references[0].entityType").value("ACCOUNT"))
+                .andExpect(jsonPath("$.references[0].primaryReference")
+                        .value("HDFC Salary Account"))
+                .andExpect(jsonPath("$.references[0].aliases[0].aliasId").value(9))
+                .andExpect(jsonPath("$.references[0].aliases[0].alias")
+                        .value("Salary Account"));
+
+        verify(preferences).list(user);
+    }
 }
