@@ -325,6 +325,16 @@ class LiveV2IT {
         // 14. Preferred account normalization resolves named and unambiguous generic cards.
         String accountReferenceUser = "919876543211";
 
+        printUserMessage("Paid 100 for lunch using HDFC bank account");
+        userSendsText(accountReferenceUser, "wamid.account-ref-bank",
+                "Paid 100 for lunch using HDFC bank account");
+        TransactionDraftExtractionEntity bankAccount =
+                activeExtraction(draft("wamid.account-ref-bank"));
+        assertThat(bankAccount.getSourceAccountName())
+                .isEqualToIgnoringCase("HDFC bank account");
+        userSelectsButton(accountReferenceUser, "wamid.account-ref-confirm-bank",
+                "v2:expense:confirm:" + bankAccount.getId(), "Confirm");
+
         printUserMessage("Did electricity payment of 922 from cred app paid using hdfc credit card");
         userSendsText(accountReferenceUser, "wamid.account-ref-1",
                 "Did electricity payment of 922 from cred app paid using hdfc credit card");

@@ -138,6 +138,9 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                   return its exact canonical name.
                 - Preferred accounts are not a whitelist. If the user explicitly names an account
                   that is not in the preferred accounts, return the account name stated by the user.
+                - Account type is part of the account's identity. Never match a named credit card or
+                  debit card to a bank, salary, savings, or current account just because the institution
+                  name matches. For example, "HDFC credit card" is not "HDFC bank account".
                 - Resolve partial account references against the preferred accounts. For example,
                   "HDFC credit card" can refer to a preferred HDFC card.
                 - A generic reference such as "credit card" or "debit card" can refer to a preferred
