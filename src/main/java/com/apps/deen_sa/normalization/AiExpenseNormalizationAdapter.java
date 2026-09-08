@@ -10,6 +10,7 @@ import com.openai.client.OpenAIClient;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Component
 public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
@@ -38,19 +39,48 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 "Normalize this expense message:\n" + rawText,
                 ExpenseFacts.class);
         ExpenseFacts normalized = enforceTaxonomy(extracted, today);
+        if (hasGenericCreditCardReference(rawText)) {
+            return withSourceAccount(normalized, resolveGenericCardReference(externalUserId, rawText));
+        }
         if (normalized.sourceAccount() != null) {
             return normalized;
         }
 
         String recoveredSourceAccount = recoverSourceAccount(externalUserId, rawText);
+        return withSourceAccount(normalized, recoveredSourceAccount);
+    }
+
+    private String resolveGenericCardReference(String externalUserId, String rawText) {
+        List<String> cards = referenceRepository
+                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
+                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
+                .stream()
+                .map(reference -> reference.getCanonicalName())
+                .filter(this::isCreditCard)
+                .toList();
+        return resolveGenericCreditCardReference(rawText, cards);
+    }
+
+    static String resolveGenericCreditCardReference(String rawText, List<String> cards) {
+        if (!hasGenericCreditCardReference(rawText) || cards.size() != 1) {
+            return null;
+        }
+        return cards.getFirst();
+    }
+
+    static boolean hasGenericCreditCardReference(String rawText) {
+        return rawText != null && rawText.toLowerCase(java.util.Locale.ROOT)
+                .matches(".*\\b(?:using|from|via|on)\\s+(?:my\\s+)?credit\\s+card\\b.*");
+    }
+
+    private boolean isCreditCard(String accountName) {
+        return accountName.toLowerCase(java.util.Locale.ROOT).contains("credit card");
+    }
+
+    private ExpenseFacts withSourceAccount(ExpenseFacts facts, String sourceAccount) {
         return new ExpenseFacts(
-                normalized.amount(),
-                normalized.category(),
-                normalized.subcategory(),
-                normalized.merchant(),
-                recoveredSourceAccount,
-                normalized.transactionDate(),
-                normalized.confidence());
+                facts.amount(), facts.category(), facts.subcategory(), facts.merchant(), sourceAccount,
+                facts.transactionDate(), facts.confidence());
     }
 
     private String recoverSourceAccount(String externalUserId, String rawText) {
