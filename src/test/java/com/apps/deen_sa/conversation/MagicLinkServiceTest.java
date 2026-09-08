@@ -1,5 +1,8 @@
-package com.apps.deen_sa.conversation;
+package com.apps.deen_sa.service;
 
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.entity.MagicLinkEntity;
+import com.apps.deen_sa.repository.MagicLinkRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;

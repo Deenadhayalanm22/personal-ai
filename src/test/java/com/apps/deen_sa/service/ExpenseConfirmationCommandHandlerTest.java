@@ -3,6 +3,7 @@ package com.apps.deen_sa.service;
 import com.apps.deen_sa.dto.ExpenseConfirmationCommand;
 import com.apps.deen_sa.domain.TransactionDraftExtractionStatus;
 import com.apps.deen_sa.domain.TransactionDraftStatus;
+import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.repository.TransactionDraftExtractionRepository;
@@ -18,18 +19,15 @@ import static org.mockito.Mockito.verify;
 class ExpenseConfirmationCommandHandlerTest {
     private final TransactionDraftExtractionRepository repository =
             mock(TransactionDraftExtractionRepository.class);
-    private final ConfirmedMerchantReferenceWriter merchantReferenceWriter =
-            mock(ConfirmedMerchantReferenceWriter.class);
-    private final ConfirmedAccountReferenceWriter accountReferenceWriter =
-            mock(ConfirmedAccountReferenceWriter.class);
+    private final ConfirmedReferenceWriter referenceWriter =
+            mock(ConfirmedReferenceWriter.class);
     private final FinancialTransactionWriter transactionWriter =
             mock(FinancialTransactionWriter.class);
     private final MissingTransactionDateContextService dateContexts =
             mock(MissingTransactionDateContextService.class);
     private final ExpenseConfirmationCommandHandler handler =
             new ExpenseConfirmationCommandHandler(
-                    repository, merchantReferenceWriter, accountReferenceWriter,
-                    transactionWriter, dateContexts);
+                    repository, referenceWriter, transactionWriter, dateContexts);
 
     @Test
     void confirmMarksExtractionUsedAndDraftConsumed() {
@@ -42,8 +40,10 @@ class ExpenseConfirmationCommandHandlerTest {
 
         assertThat(extraction.getStatus()).isEqualTo(TransactionDraftExtractionStatus.USED);
         assertThat(extraction.getDraft().getStatus()).isEqualTo(TransactionDraftStatus.CONSUMED);
-        verify(merchantReferenceWriter).save(extraction);
-        verify(accountReferenceWriter).save(extraction);
+        verify(referenceWriter).save(
+                extraction, UserReferenceEntityType.MERCHANT, extraction.getMerchantName());
+        verify(referenceWriter).save(
+                extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName());
         verify(transactionWriter).save(extraction, null, null);
         verify(dateContexts).consumeForConfirmedDraft(extraction.getDraft());
     }

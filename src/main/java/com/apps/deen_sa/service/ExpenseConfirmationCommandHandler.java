@@ -4,6 +4,7 @@ import com.apps.deen_sa.dto.ExpenseConfirmationCommand;
 import com.apps.deen_sa.dto.RecordedExpense;
 import com.apps.deen_sa.domain.TransactionDraftExtractionStatus;
 import com.apps.deen_sa.domain.TransactionDraftStatus;
+import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.repository.TransactionDraftExtractionRepository;
@@ -18,8 +19,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class ExpenseConfirmationCommandHandler {
     private final TransactionDraftExtractionRepository extractionRepository;
-    private final ConfirmedMerchantReferenceWriter merchantReferenceWriter;
-    private final ConfirmedAccountReferenceWriter accountReferenceWriter;
+    private final ConfirmedReferenceWriter referenceWriter;
     private final FinancialTransactionWriter transactionWriter;
     private final MissingTransactionDateContextService dateContexts;
 
@@ -39,8 +39,10 @@ public class ExpenseConfirmationCommandHandler {
             requireActive(extraction);
             extraction.setStatus(TransactionDraftExtractionStatus.USED);
             draft.setStatus(TransactionDraftStatus.CONSUMED);
-            var merchant = merchantReferenceWriter.save(extraction);
-            var sourceAccount = accountReferenceWriter.save(extraction);
+            var merchant = referenceWriter.save(
+                    extraction, UserReferenceEntityType.MERCHANT, extraction.getMerchantName());
+            var sourceAccount = referenceWriter.save(
+                    extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName());
             transactionWriter.save(extraction, merchant, sourceAccount);
             dateContexts.consumeForConfirmedDraft(draft);
             draft.setUpdatedAt(Instant.now());

@@ -25,10 +25,6 @@ public final class AiCallTelemetry {
                 .register(Metrics.globalRegistry).record(Duration.ofNanos(System.nanoTime() - startedNanos));
     }
 
-    public static void avoided(String reason) {
-        Metrics.counter("deen.ai.calls.avoided", "reason", reason).increment();
-    }
-
     private static io.micrometer.core.instrument.Counter tagsCounter(
             String name, String purpose, String model, String outcome) {
         return Metrics.counter(name, "purpose", purpose, "model", model, "outcome", outcome);

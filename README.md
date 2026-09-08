@@ -11,19 +11,19 @@ manage normal users from WhatsApp with `add user <country-code-number>` and
 
 ### Structure
 
-The application uses a feature-oriented MVC layout under `src/`:
+The application uses a conventional, focused Spring layout under `src/main/java`:
 
-- `controller` and `conversation`: inbound HTTP/WhatsApp adapters and conversation orchestration
-- `finance/expense`: expense capture, validation, categorization, and correction use cases
-- `finance/account`, `finance/payment`, `finance/credit`: supporting expense features
-- `finance/query`: expense reporting
-- `finance/legacy`: expense transactions, payment accounts, and their balance adjustments
-- `dto`: transport objects
-- `llm`: model adapters; business rules remain in services
+- `controller`: HTTP entry points
+- `whatsapp` and `normalization`: inbound-channel and AI adapters
+- `orchestration`: cross-adapter workflow coordination
+- `service`: application use cases and web facade
+- `domain`, `dto`, and `entity`: business types, API payloads, and JPA persistence models
+- `repository`: database access
+- `config`, `exception`, and `llm`: infrastructure concerns
 
 Assets, investments, lending, loans, and unrelated business domains are intentionally not part of
-this baseline. Add each future domain as a feature package with its own controller/service/repository
-boundary; the active expense transaction store is `financial_transaction`.
+this baseline. Add each future domain with its own controller/service/repository boundary; the active
+expense transaction store is `financial_transaction`.
 
 ### Run
 

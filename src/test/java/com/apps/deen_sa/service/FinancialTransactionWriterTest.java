@@ -1,8 +1,7 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
-import com.apps.deen_sa.finance.expense.SpendingNature;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.domain.SpendingNature;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;

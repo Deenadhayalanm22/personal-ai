@@ -1,9 +1,9 @@
 package com.apps.deen_sa.web;
 
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
-import com.apps.deen_sa.finance.expense.SpendingNature;
+import com.apps.deen_sa.service.ExpenseTaxonomyRegistry;
+import com.apps.deen_sa.domain.SpendingNature;
+import com.apps.deen_sa.service.WebExpenseTaxonomyService;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.server.ResponseStatusException;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -34,24 +34,4 @@ class WebExpenseTaxonomyServiceTest {
                 .contains(SpendingNature.FLEXIBLE);
     }
 
-    @Test
-    void canonicalizesAValidPairIgnoringCase() {
-        var result = service.validate("food & dining", "groceries");
-        assertThat(result.category()).isEqualTo("Food & Dining");
-        assertThat(result.subcategory()).isEqualTo("Groceries");
-    }
-
-    @Test
-    void rejectsSubcategoryFromAnotherCategory() {
-        assertThatThrownBy(() -> service.validate("Transportation", "Groceries"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("400 BAD_REQUEST");
-    }
-
-    @Test
-    void rejectsInventedLabels() {
-        assertThatThrownBy(() -> service.validate("Random", "Something"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("400 BAD_REQUEST");
-    }
 }

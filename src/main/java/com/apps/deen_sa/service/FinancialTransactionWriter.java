@@ -1,6 +1,5 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.entity.UserReferenceEntity;

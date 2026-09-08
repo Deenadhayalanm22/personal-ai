@@ -1,6 +1,5 @@
 package com.apps.deen_sa.entity;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
 import com.apps.deen_sa.domain.InputType;
 import com.apps.deen_sa.domain.MessageSource;
 import com.apps.deen_sa.domain.TransactionDraftStatus;

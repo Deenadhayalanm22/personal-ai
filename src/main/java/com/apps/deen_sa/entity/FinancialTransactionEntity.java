@@ -1,7 +1,6 @@
 package com.apps.deen_sa.entity;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.finance.expense.SpendingNature;
+import com.apps.deen_sa.domain.SpendingNature;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

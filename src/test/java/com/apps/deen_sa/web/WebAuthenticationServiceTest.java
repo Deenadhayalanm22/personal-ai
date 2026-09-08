@@ -1,6 +1,11 @@
-package com.apps.deen_sa.web;
+package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.*;
+import com.apps.deen_sa.entity.MagicLinkEntity;
+import com.apps.deen_sa.entity.WebSessionEntity;
+import com.apps.deen_sa.repository.AppUserRepository;
+import com.apps.deen_sa.repository.MagicLinkRepository;
+import com.apps.deen_sa.repository.WebSessionRepository;
+import com.apps.deen_sa.service.MagicLinkService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.server.ResponseStatusException;

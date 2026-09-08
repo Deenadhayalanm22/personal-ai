@@ -1,13 +1,12 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;
-import com.apps.deen_sa.web.WebApiException;
+import com.apps.deen_sa.exception.WebApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,8 +16,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -63,7 +60,7 @@ public class FinancialTransactionEditService {
         }
         transaction.setUpdatedAt(Instant.now());
         FinancialTransactionEntity saved = transactions.saveAndFlush(transaction);
-        return item(saved, user);
+        return FinancialTransactionListService.ExpenseItem.from(saved, user);
     }
 
     @Transactional
@@ -105,29 +102,6 @@ public class FinancialTransactionEditService {
         transaction.setSubcategory(subcategory);
         transaction.setSpendingNature(taxonomy.spendingNatureFor(category, subcategory)
                 .orElseThrow(() -> badRequest("Spending nature is missing from the expense taxonomy")));
-    }
-
-    private FinancialTransactionListService.ExpenseItem item(
-            FinancialTransactionEntity transaction,
-            AppUserEntity user
-    ) {
-        String merchant = transaction.getMerchant() == null
-                ? null
-                : transaction.getMerchant().getCanonicalName();
-        String sourceAccount = transaction.getSourceAccount() == null
-                ? null
-                : transaction.getSourceAccount().getCanonicalName();
-        return new FinancialTransactionListService.ExpenseItem(
-                transaction.getId(),
-                transaction.getSourceDraft().getRawText(),
-                transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
-                user.getCurrency(),
-                transaction.getOccurredAt()
-                        .atStartOfDay(ZoneId.of(user.getTimezone())).toInstant(),
-                transaction.getCategory(),
-                transaction.getSubcategory(),
-                merchant,
-                sourceAccount);
     }
 
     private WebApiException badRequest(String message) {

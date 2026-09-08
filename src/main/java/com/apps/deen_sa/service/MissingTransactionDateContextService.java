@@ -1,8 +1,7 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.context.PendingActionContextRepository;
-import com.apps.deen_sa.conversation.context.PendingActionContextService;
-import com.apps.deen_sa.conversation.context.PendingActionContextStatus;
+import com.apps.deen_sa.repository.PendingActionContextRepository;
+import com.apps.deen_sa.domain.PendingActionContextStatus;
 import com.apps.deen_sa.repository.TransactionDraftRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

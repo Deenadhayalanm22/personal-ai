@@ -1,9 +1,9 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
-import com.apps.deen_sa.web.WebApiException;
+import com.apps.deen_sa.exception.WebApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -49,9 +49,8 @@ public class FinancialTransactionListService {
                 beforeId, PageRequest.of(0, limit + 1));
         boolean hasMore = found.size() > limit;
         List<FinancialTransactionEntity> visible = hasMore ? found.subList(0, limit) : found;
-        ZoneId userZone = ZoneId.of(user.getTimezone());
         List<ExpenseItem> items = visible.stream()
-                .map(row -> item(row, user.getCurrency(), userZone))
+                .map(row -> ExpenseItem.from(row, user))
                 .toList();
         Long nextBeforeId = hasMore && !visible.isEmpty() ? visible.getLast().getId() : null;
 
@@ -65,17 +64,6 @@ public class FinancialTransactionListService {
                 user.getCurrency(), normalized.category(), normalized.subcategory(),
                 List.of(), "any");
         return new ExpensePage(items, nextBeforeId, filterSummary);
-    }
-
-    private ExpenseItem item(FinancialTransactionEntity row, String currency, ZoneId zone) {
-        String merchant = row.getMerchant() == null ? null : row.getMerchant().getCanonicalName();
-        String sourceAccount = row.getSourceAccount() == null
-                ? null
-                : row.getSourceAccount().getCanonicalName();
-        Instant transactionTime = row.getOccurredAt().atStartOfDay(zone).toInstant();
-        return new ExpenseItem(
-                row.getId(), row.getSourceDraft().getRawText(), money(row.getAmount()), currency,
-                transactionTime, row.getCategory(), row.getSubcategory(), merchant, sourceAccount);
     }
 
     private ExpenseFilter normalize(ExpenseFilter filter) {
@@ -129,5 +117,24 @@ public class FinancialTransactionListService {
             String merchant,
             String sourceAccount
     ) {
+        static ExpenseItem from(FinancialTransactionEntity transaction, AppUserEntity user) {
+            String merchant = transaction.getMerchant() == null
+                    ? null
+                    : transaction.getMerchant().getCanonicalName();
+            String sourceAccount = transaction.getSourceAccount() == null
+                    ? null
+                    : transaction.getSourceAccount().getCanonicalName();
+            return new ExpenseItem(
+                    transaction.getId(),
+                    transaction.getSourceDraft().getRawText(),
+                    transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
+                    user.getCurrency(),
+                    transaction.getOccurredAt()
+                            .atStartOfDay(ZoneId.of(user.getTimezone())).toInstant(),
+                    transaction.getCategory(),
+                    transaction.getSubcategory(),
+                    merchant,
+                    sourceAccount);
+        }
     }
 }

@@ -5,7 +5,6 @@ import com.apps.deen_sa.dto.WhatsAppWebhookPayload;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -17,14 +16,7 @@ public class WhatsAppExpenseConfirmationCommandMapper {
         if (payload == null || payload.entry() == null) {
             return List.of();
         }
-        return payload.entry().stream()
-                .filter(Objects::nonNull)
-                .filter(entry -> entry.changes() != null)
-                .flatMap(entry -> entry.changes().stream())
-                .filter(Objects::nonNull)
-                .filter(change -> change.value() != null && change.value().messages() != null)
-                .flatMap(change -> change.value().messages().stream())
-                .filter(Objects::nonNull)
+        return payload.messages().stream()
                 .map(this::mapMessage)
                 .flatMap(Optional::stream)
                 .toList();

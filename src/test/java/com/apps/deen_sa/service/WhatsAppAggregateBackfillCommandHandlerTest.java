@@ -1,7 +1,5 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.UserFeatureFlagService;
-import com.apps.deen_sa.conversation.WhatsAppReplySender;
 import com.apps.deen_sa.domain.InputType;
 import com.apps.deen_sa.domain.MessageSource;
 import com.apps.deen_sa.dto.InboundMessage;

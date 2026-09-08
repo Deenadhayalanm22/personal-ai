@@ -1,14 +1,8 @@
 package com.apps.deen_sa.web;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.controller.WebExpenseController;
-import com.apps.deen_sa.service.MonthlyFinancialTransactionService;
-import com.apps.deen_sa.service.FinancialTransactionListService;
-import com.apps.deen_sa.service.FinancialTransactionCalendarService;
-import com.apps.deen_sa.service.ExpenseEditOptionsService;
-import com.apps.deen_sa.service.FinancialTransactionEditService;
-import com.apps.deen_sa.conversation.context.PendingActionContextService;
-import com.apps.deen_sa.web.WebAuthenticationService;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.controller.WebFinanceController;
+import com.apps.deen_sa.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -43,9 +37,7 @@ class WebExpenseControllerTest {
                         "2026-09", "INR", new BigDecimal("450"), 2,
                         Map.of("Food & Dining", new BigDecimal("450"))));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
-                new WebExpenseController(
-                        authentication, service, listService, calendar, options, editor,
-                        mock(PendingActionContextService.class))).build();
+                controller(authentication, service, listService, calendar, options, editor)).build();
 
         mvc.perform(get("/api/web/expenses/monthly")
                         .param("month", "2026-09")
@@ -84,9 +76,7 @@ class WebExpenseControllerTest {
                                 0, new BigDecimal("0.00"), "INR",
                                 null, null, java.util.List.of(), "any")));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
-                new WebExpenseController(
-                        authentication, monthly, listService, calendar, options, editor,
-                        mock(PendingActionContextService.class))).build();
+                controller(authentication, monthly, listService, calendar, options, editor)).build();
 
         mvc.perform(get("/api/web/expenses")
                         .param("month", "2026-09")
@@ -119,9 +109,7 @@ class WebExpenseControllerTest {
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
-                new WebExpenseController(
-                        authentication, monthly, listService, calendar, options, editor,
-                        mock(PendingActionContextService.class))).build();
+                controller(authentication, monthly, listService, calendar, options, editor)).build();
 
         mvc.perform(delete("/api/web/expenses/1")
                         .cookie(new jakarta.servlet.http.Cookie(
@@ -129,5 +117,27 @@ class WebExpenseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(editor).delete(user, 1L);
+    }
+
+    private WebFinanceController controller(
+            WebAuthenticationService authentication,
+            MonthlyFinancialTransactionService monthly,
+            FinancialTransactionListService list,
+            FinancialTransactionCalendarService calendar,
+            ExpenseEditOptionsService options,
+            FinancialTransactionEditService editor) {
+        return new WebFinanceController(
+                new WebManager(authentication,
+                mock(WebLoginRequestService.class),
+                mock(WebExpenseTaxonomyService.class),
+                mock(WebUserReferencePreferenceService.class),
+                monthly,
+                list,
+                calendar,
+                options,
+                editor,
+                mock(PendingActionContextService.class)),
+                false,
+                "Lax");
     }
 }

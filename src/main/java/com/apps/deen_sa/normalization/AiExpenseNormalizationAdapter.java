@@ -1,7 +1,7 @@
 package com.apps.deen_sa.normalization;
 
 import com.apps.deen_sa.config.ApplicationProperties;
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
+import com.apps.deen_sa.service.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.llm.BaseLLMExtractor;
 import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.repository.UserReferenceAliasRepository;
@@ -76,7 +76,7 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
 
                 Preferred accounts:
                 %s
-                """.formatted(preferredAccounts(externalUserId)),
+                """.formatted(preferredReferences(externalUserId, UserReferenceEntityType.ACCOUNT)),
                 "Expense message:\n" + rawText,
                 SourceAccountFacts.class);
         return recovered == null ? null : blankToNull(recovered.sourceAccount());
@@ -114,25 +114,8 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                     configuredTaxonomy.append("  - ").append(subcategory).append("\n"));
         });
 
-        StringBuilder preferredMerchants = new StringBuilder();
-        referenceRepository
-                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
-                        externalUserId, "WHATSAPP", UserReferenceEntityType.MERCHANT)
-                .forEach(reference -> {
-                    preferredMerchants.append("- ").append(reference.getCanonicalName());
-                    var aliases = aliasRepository.findByReferenceEntityId(reference.getId());
-                    if (!aliases.isEmpty()) {
-                        preferredMerchants.append(" (aliases: ")
-                                .append(aliases.stream()
-                                        .map(alias -> alias.getAliasText())
-                                        .distinct()
-                                        .toList())
-                                .append(")");
-                    }
-                    preferredMerchants.append("\n");
-                });
-
-        String preferredAccounts = preferredAccounts(externalUserId);
+        String preferredMerchants = preferredReferences(externalUserId, UserReferenceEntityType.MERCHANT);
+        String preferredAccounts = preferredReferences(externalUserId, UserReferenceEntityType.ACCOUNT);
 
         return """
                 You normalize personal expense messages into JSON.
@@ -184,29 +167,29 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 User's preferred accounts:
                 %s
                 """.formatted(today, configuredTaxonomy,
-                preferredMerchants.isEmpty() ? "- None recorded" : preferredMerchants,
+                preferredMerchants,
                 preferredAccounts);
     }
 
-    private String preferredAccounts(String externalUserId) {
-        StringBuilder accounts = new StringBuilder();
+    private String preferredReferences(String externalUserId, UserReferenceEntityType type) {
+        StringBuilder references = new StringBuilder();
         referenceRepository
                 .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
-                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
+                        externalUserId, "WHATSAPP", type)
                 .forEach(reference -> {
-                    accounts.append("- ").append(reference.getCanonicalName());
+                    references.append("- ").append(reference.getCanonicalName());
                     var aliases = aliasRepository.findByReferenceEntityId(reference.getId());
                     if (!aliases.isEmpty()) {
-                        accounts.append(" (aliases: ")
+                        references.append(" (aliases: ")
                                 .append(aliases.stream()
                                         .map(alias -> alias.getAliasText())
                                         .distinct()
                                         .toList())
                                 .append(")");
                     }
-                    accounts.append("\n");
+                    references.append("\n");
                 });
-        return accounts.isEmpty() ? "- None recorded" : accounts.toString();
+        return references.isEmpty() ? "- None recorded" : references.toString();
     }
 
     private record SourceAccountFacts(String sourceAccount) {

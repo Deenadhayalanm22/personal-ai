@@ -1,6 +1,6 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
@@ -17,14 +17,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class ConfirmedAccountReferenceWriterTest {
+class ConfirmedReferenceWriterTest {
 
     @Test
     void reusesAnExistingAccountReferenceForTheUser() {
         UserReferenceEntityRepository references = mock(UserReferenceEntityRepository.class);
         UserReferenceAliasRepository aliases = mock(UserReferenceAliasRepository.class);
-        ConfirmedAccountReferenceWriter writer =
-                new ConfirmedAccountReferenceWriter(references, aliases);
+        ConfirmedReferenceWriter writer = new ConfirmedReferenceWriter(references, aliases);
 
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
@@ -45,7 +44,9 @@ class ConfirmedAccountReferenceWriterTest {
                 7L, "HDFC Salary Account"))
                 .thenReturn(Optional.of(new UserReferenceAliasEntity()));
 
-        assertThat(writer.save(extraction)).isSameAs(account);
+        assertThat(writer.save(
+                extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName()))
+                .isSameAs(account);
         verify(references).findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(
                 42L, UserReferenceEntityType.ACCOUNT, "HDFC Salary Account");
     }

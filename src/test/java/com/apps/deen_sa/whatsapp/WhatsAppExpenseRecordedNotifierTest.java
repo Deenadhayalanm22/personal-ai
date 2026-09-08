@@ -1,7 +1,7 @@
 package com.apps.deen_sa.whatsapp;
 
-import com.apps.deen_sa.conversation.MagicLinkService;
-import com.apps.deen_sa.conversation.WhatsAppReplySender;
+import com.apps.deen_sa.service.MagicLinkService;
+import com.apps.deen_sa.service.WhatsAppReplySender;
 import com.apps.deen_sa.dto.RecordedExpense;
 import org.junit.jupiter.api.Test;
 

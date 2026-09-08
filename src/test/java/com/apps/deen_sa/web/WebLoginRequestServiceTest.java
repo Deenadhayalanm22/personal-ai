@@ -1,8 +1,8 @@
-package com.apps.deen_sa.web;
+package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.MagicLinkService;
-import com.apps.deen_sa.conversation.UserFeatureFlagService;
-import com.apps.deen_sa.conversation.WhatsAppReplySender;
+import com.apps.deen_sa.service.MagicLinkService;
+import com.apps.deen_sa.service.UserFeatureFlagService;
+import com.apps.deen_sa.service.WhatsAppReplySender;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;

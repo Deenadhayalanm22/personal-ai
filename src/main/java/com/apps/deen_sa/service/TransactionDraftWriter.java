@@ -1,7 +1,6 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.conversation.AppUserService;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.dto.DraftWriteResult;
 import com.apps.deen_sa.dto.InboundMessage;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
@@ -22,11 +21,6 @@ public class TransactionDraftWriter {
         return repository.findBySourceAndSourceMessageId(message.source(), message.sourceMessageId())
                 .map(existing -> new DraftWriteResult(existing.getId(), false))
                 .orElseGet(() -> insertAndLoad(message));
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DraftWriteResult saveAndCommit(InboundMessage message) {
-        return routeAndCommit(message);
     }
 
     private DraftWriteResult insertAndLoad(InboundMessage message) {

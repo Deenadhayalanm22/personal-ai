@@ -1,6 +1,6 @@
 package com.apps.deen_sa.whatsapp;
 
-import com.apps.deen_sa.conversation.WhatsAppReplySender;
+import com.apps.deen_sa.service.WhatsAppReplySender;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;

@@ -1,7 +1,6 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.conversation.AppUserService;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.dto.InboundMessage;
 import com.apps.deen_sa.dto.DraftWriteResult;
 import com.apps.deen_sa.domain.InputType;
@@ -37,7 +36,7 @@ class TransactionDraftWriterTest {
         when(repository.insertPendingIfAbsent(
                 42L, "TEXT", "WHATSAPP", "wamid.1", "Paid ₹250")).thenReturn(1);
 
-        assertThat(writer.saveAndCommit(message))
+        assertThat(writer.routeAndCommit(message))
                 .isEqualTo(new DraftWriteResult(77L, true));
 
         verify(repository).insertPendingIfAbsent(
@@ -51,7 +50,7 @@ class TransactionDraftWriterTest {
         when(repository.findBySourceAndSourceMessageId(MessageSource.WHATSAPP, "wamid.1"))
                 .thenReturn(Optional.of(persisted));
 
-        assertThat(writer.saveAndCommit(message()))
+        assertThat(writer.routeAndCommit(message()))
                 .isEqualTo(new DraftWriteResult(77L, false));
 
         verify(users, never()).resolve("WHATSAPP", "9198");

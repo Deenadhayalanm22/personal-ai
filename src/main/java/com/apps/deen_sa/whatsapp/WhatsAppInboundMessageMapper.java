@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 @Component
@@ -19,14 +18,7 @@ public class WhatsAppInboundMessageMapper {
             return List.of();
         }
 
-        List<InboundMessage> mapped = payload.entry().stream()
-                .filter(Objects::nonNull)
-                .filter(entry -> entry.changes() != null)
-                .flatMap(entry -> entry.changes().stream())
-                .filter(Objects::nonNull)
-                .filter(change -> change.value() != null && change.value().messages() != null)
-                .flatMap(change -> change.value().messages().stream())
-                .filter(Objects::nonNull)
+        List<InboundMessage> mapped = payload.messages().stream()
                 .flatMap(this::mapMessage)
                 .toList();
         log.info("Mapped WhatsApp webhook payload: entries={}, supportedMessages={}",

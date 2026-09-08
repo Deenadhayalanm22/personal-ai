@@ -1,7 +1,7 @@
 package com.apps.deen_sa.whatsapp;
 
-import com.apps.deen_sa.conversation.ResponseAction;
-import com.apps.deen_sa.conversation.WhatsAppReplySender;
+import com.apps.deen_sa.dto.ResponseAction;
+import com.apps.deen_sa.service.WhatsAppReplySender;
 import com.apps.deen_sa.dto.StoredDraftExtraction;
 import com.apps.deen_sa.normalization.ExpenseConfirmationPort;
 import lombok.RequiredArgsConstructor;

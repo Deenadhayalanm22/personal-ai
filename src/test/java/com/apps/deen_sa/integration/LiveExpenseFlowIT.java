@@ -1,10 +1,9 @@
 package com.apps.deen_sa.integration;
 
-import com.apps.deen_sa.integration.PostgresTestContainerInitializer;
-import com.apps.deen_sa.conversation.AppUserRepository;
-import com.apps.deen_sa.conversation.MagicLinkService;
-import com.apps.deen_sa.web.WebSessionEntity;
-import com.apps.deen_sa.web.WebSessionRepository;
+import com.apps.deen_sa.repository.AppUserRepository;
+import com.apps.deen_sa.service.MagicLinkService;
+import com.apps.deen_sa.entity.WebSessionEntity;
+import com.apps.deen_sa.repository.WebSessionRepository;
 import com.apps.deen_sa.domain.MessageSource;
 import com.apps.deen_sa.domain.TransactionDraftExtractionStatus;
 import com.apps.deen_sa.domain.TransactionDraftStatus;
@@ -12,7 +11,7 @@ import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
-import com.apps.deen_sa.finance.expense.SpendingNature;
+import com.apps.deen_sa.domain.SpendingNature;
 import com.apps.deen_sa.repository.TransactionDraftExtractionRepository;
 import com.apps.deen_sa.repository.TransactionDraftRepository;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;

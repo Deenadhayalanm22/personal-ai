@@ -1,6 +1,6 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

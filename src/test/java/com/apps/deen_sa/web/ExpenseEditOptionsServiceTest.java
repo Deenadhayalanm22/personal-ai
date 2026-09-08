@@ -1,7 +1,7 @@
 package com.apps.deen_sa.web;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
-import com.apps.deen_sa.finance.expense.ExpenseTaxonomyRegistry;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.service.ExpenseTaxonomyRegistry;
 import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;

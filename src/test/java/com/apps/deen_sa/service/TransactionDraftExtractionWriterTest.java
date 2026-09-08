@@ -1,6 +1,6 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.dto.NormalizedExpense;
 import com.apps.deen_sa.dto.StoredDraftExtraction;
 import com.apps.deen_sa.domain.TransactionDraftExtractionStatus;

@@ -1,5 +1,8 @@
 package com.apps.deen_sa.web;
 
+import com.apps.deen_sa.controller.WebFinanceController;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -17,12 +20,17 @@ class WebFinanceControllerTest {
     @Test
     void authenticatesSessionAndReturnsAllReferenceEntityTypes() throws Exception {
         WebAuthenticationService authentication = mock(WebAuthenticationService.class);
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication,
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
-                new WebUserReferenceEntityTypeService(),
                 mock(WebUserReferencePreferenceService.class),
+                mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
+                mock(com.apps.deen_sa.service.ExpenseEditOptionsService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionEditService.class),
+                mock(PendingActionContextService.class)),
                 false,
                 "Lax")).build();
 
@@ -43,8 +51,8 @@ class WebFinanceControllerTest {
         WebAuthenticationService authentication = mock(WebAuthenticationService.class);
         WebUserReferencePreferenceService preferences =
                 mock(WebUserReferencePreferenceService.class);
-        com.apps.deen_sa.conversation.AppUserEntity user =
-                new com.apps.deen_sa.conversation.AppUserEntity();
+        AppUserEntity user =
+                new AppUserEntity();
         user.setId(42L);
         var request = new WebUserReferencePreferenceService.UserReferencePreferenceRequest(
                 com.apps.deen_sa.domain.UserReferenceEntityType.MERCHANT,
@@ -56,12 +64,17 @@ class WebFinanceControllerTest {
                         "Amazon", java.util.List.of(
                                 new WebUserReferencePreferenceService.AliasResponse(9L, "AMZN"),
                                 new WebUserReferencePreferenceService.AliasResponse(10L, "Amazon India"))));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication,
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
-                new WebUserReferenceEntityTypeService(),
                 preferences,
+                mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
+                mock(com.apps.deen_sa.service.ExpenseEditOptionsService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionEditService.class),
+                mock(PendingActionContextService.class)),
                 false,
                 "Lax")).build();
 
@@ -94,8 +107,8 @@ class WebFinanceControllerTest {
         WebAuthenticationService authentication = mock(WebAuthenticationService.class);
         WebUserReferencePreferenceService preferences =
                 mock(WebUserReferencePreferenceService.class);
-        com.apps.deen_sa.conversation.AppUserEntity user =
-                new com.apps.deen_sa.conversation.AppUserEntity();
+        AppUserEntity user =
+                new AppUserEntity();
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
         when(preferences.list(user)).thenReturn(
@@ -108,12 +121,17 @@ class WebFinanceControllerTest {
                                         java.util.List.of(
                                                 new WebUserReferencePreferenceService.AliasResponse(
                                                         9L, "Salary Account"))))));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication,
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
-                new WebUserReferenceEntityTypeService(),
                 preferences,
+                mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
+                mock(com.apps.deen_sa.service.ExpenseEditOptionsService.class),
+                mock(com.apps.deen_sa.service.FinancialTransactionEditService.class),
+                mock(PendingActionContextService.class)),
                 false,
                 "Lax")).build();
 

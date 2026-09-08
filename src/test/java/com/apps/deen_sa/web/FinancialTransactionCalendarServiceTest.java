@@ -1,6 +1,6 @@
 package com.apps.deen_sa.web;
 
-import com.apps.deen_sa.conversation.AppUserEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.service.FinancialTransactionCalendarService;
 import org.junit.jupiter.api.Test;

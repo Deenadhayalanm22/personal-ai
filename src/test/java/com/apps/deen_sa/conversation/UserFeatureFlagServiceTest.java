@@ -1,5 +1,8 @@
 package com.apps.deen_sa.conversation;
 
+import com.apps.deen_sa.entity.UserFeatureFlagEntity;
+import com.apps.deen_sa.repository.UserFeatureFlagRepository;
+import com.apps.deen_sa.service.UserFeatureFlagService;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
