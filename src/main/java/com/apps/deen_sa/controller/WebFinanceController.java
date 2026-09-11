@@ -86,7 +86,7 @@ public class WebFinanceController {
     }
 
     @GetMapping("/expenses/monthly")
-    public MonthlyFinancialTransactionService.MonthlyExpenseResponse monthlyExpenses(
+    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month) {
         return webManager.monthlyExpenses(token, month);

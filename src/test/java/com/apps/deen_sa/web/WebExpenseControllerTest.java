@@ -9,7 +9,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.Map;
+import java.util.List;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -32,10 +32,9 @@ class WebExpenseControllerTest {
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
-        when(service.summarize(user, YearMonth.of(2026, 9))).thenReturn(
-                new MonthlyFinancialTransactionService.MonthlyExpenseResponse(
-                        "2026-09", "INR", new BigDecimal("450"), 2,
-                        Map.of("Food & Dining", new BigDecimal("450"))));
+        when(service.monthlyStories(user, YearMonth.of(2026, 9))).thenReturn(
+                new MoneyStoriesService.MonthlyStoriesApiResponse(
+                        "2026-09", "INR", "Asia/Kolkata", List.of()));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 controller(authentication, service, listService, calendar, options, editor)).build();
 
@@ -45,11 +44,12 @@ class WebExpenseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.month").value("2026-09"))
                 .andExpect(jsonPath("$.currency").value("INR"))
-                .andExpect(jsonPath("$.total").value(450))
-                .andExpect(jsonPath("$.transactionCount").value(2))
-                .andExpect(jsonPath("$.categories['Food & Dining']").value(450));
+                .andExpect(jsonPath("$.timezone").value("Asia/Kolkata"))
+                .andExpect(jsonPath("$.stories").isArray())
+                .andExpect(jsonPath("$.total").doesNotExist())
+                .andExpect(jsonPath("$.moneyStories").doesNotExist());
 
-        verify(service).summarize(user, YearMonth.of(2026, 9));
+        verify(service).monthlyStories(user, YearMonth.of(2026, 9));
     }
 
     @Test

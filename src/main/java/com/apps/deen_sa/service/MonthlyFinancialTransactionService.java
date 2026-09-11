@@ -51,6 +51,14 @@ public class MonthlyFinancialTransactionService {
                         : moneyStories.monthly(user, month));
     }
 
+    /** Web contract for the Money Chapters shelf and expanded story reader. */
+    @Transactional(readOnly = true)
+    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyStories(AppUserEntity user, YearMonth month) {
+        return moneyStories == null
+                ? MoneyStoriesService.MonthlyStoriesApiResponse.empty(month, user)
+                : moneyStories.monthlyForWeb(user, month);
+    }
+
     private BigDecimal money(BigDecimal amount) {
         return amount.setScale(2, RoundingMode.HALF_UP);
     }

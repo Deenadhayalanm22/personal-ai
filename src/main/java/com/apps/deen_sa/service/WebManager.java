@@ -51,10 +51,10 @@ public class WebManager {
         return referencePreferences.list(authentication.authenticate(token));
     }
 
-    public MonthlyFinancialTransactionService.MonthlyExpenseResponse monthlyExpenses(String token, YearMonth month) {
+    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(String token, YearMonth month) {
         AppUserEntity user = authentication.authenticate(token);
         YearMonth selected = month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month;
-        return monthlyTransactions.summarize(user, selected);
+        return monthlyTransactions.monthlyStories(user, selected);
     }
 
     public FinancialTransactionListService.ExpensePage expenses(

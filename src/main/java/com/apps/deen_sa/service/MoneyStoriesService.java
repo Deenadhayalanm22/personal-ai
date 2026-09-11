@@ -42,6 +42,22 @@ public class MoneyStoriesService {
                 .map(this::response).orElseGet(MoneyStoriesResponse::empty);
     }
 
+    /**
+     * Deliberately separate from the internal monthly response: this is the public frontend
+     * contract and exposes only published, non-stale stories.
+     */
+    @Transactional(readOnly = true)
+    public MonthlyStoriesApiResponse monthlyForWeb(AppUserEntity user, YearMonth month) {
+        var snapshot = snapshots.findByUserIdAndScopeMonthAndSupersededAtIsNull(user.getId(), month.atDay(1))
+                .filter(value -> "READY".equals(value.getStatus()));
+        if (snapshot.isEmpty()) return MonthlyStoriesApiResponse.empty(month, user);
+
+        var published = snapshot.get();
+        List<MoneyStoryApi> result = stories.findBySnapshotIdOrderByImpactAmountDesc(published.getId()).stream()
+                .map(story -> publicStory(story, published)).toList();
+        return new MonthlyStoriesApiResponse(month.toString(), published.getCurrency(), published.getTimezone(), result);
+    }
+
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void generateIfNeeded(AppUserEntity user, YearMonth month) {
         LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())));
@@ -186,6 +202,26 @@ public class MoneyStoriesService {
         return new MoneyStoriesResponse(snapshot.getGeneratedAt(), !"READY".equals(snapshot.getStatus()), result);
     }
 
+    private MoneyStoryApi publicStory(MoneyStoryEntity story, MoneyStorySnapshotEntity snapshot) {
+        StoryDto parsed = parse(story);
+        var rows = evidence.findByStoryIdOrderByIdOrdinal(story.getId());
+        BigDecimal total = rows.stream().map(MoneyStoryEvidenceEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        var transactionRows = rows.stream().map(row -> new EvidenceTransaction(
+                Long.toString(row.getTransaction().getId()),
+                row.getOccurredAt().format(DateTimeFormatter.ofPattern("d MMM")),
+                row.getMerchantLabel(), row.getCategoryLabel(),
+                new Component("MONEY", "Amount", row.getAmount(), snapshot.getCurrency(),
+                        money(row.getAmount(), snapshot.getCurrency())))).toList();
+        var storyEvidence = new EvidenceDto("Included in this story", rows.size(),
+                new Component("MONEY", "Total", total, snapshot.getCurrency(), money(total, snapshot.getCurrency())),
+                transactionRows, List.of(new Action("REPORT_CLASSIFICATION", "Report wrong classification")));
+        String stableStoryId = parsed.logicalStoryId() == null || parsed.logicalStoryId().isBlank()
+                ? story.getId().toString() : parsed.logicalStoryId();
+        return new MoneyStoryApi(stableStoryId, parsed.storyType(), parsed.templateVersion(), parsed.generatedAt(),
+                parsed.period(), parsed.cardFace(), parsed.cards(), storyEvidence);
+    }
+
     private static String hash(String input) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8))); }
         catch (Exception failure) { throw new IllegalStateException(failure); }
@@ -194,6 +230,13 @@ public class MoneyStoriesService {
     public record MoneyStoriesResponse(Instant generatedAt, boolean stale, List<StoryDto> stories) {
         public static MoneyStoriesResponse empty() { return new MoneyStoriesResponse(null, false, List.of()); }
     }
+    public record MonthlyStoriesApiResponse(String month, String currency, String timezone, List<MoneyStoryApi> stories) {
+        static MonthlyStoriesApiResponse empty(YearMonth month, AppUserEntity user) {
+            return new MonthlyStoriesApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), List.of());
+        }
+    }
+    public record MoneyStoryApi(String storyId, String storyType, int templateVersion, Instant generatedAt,
+            PeriodDto period, CardFace cardFace, List<CardDto> cards, EvidenceDto evidence) { }
     public record StoryDto(String storyId, String storyType, int templateVersion, Instant generatedAt, PeriodDto period,
             CardFace cardFace, List<CardDto> cards, Object evidence, MoneyStoryLevel level, String logicalStoryId, int revision, String updatedReason) { }
     public record PeriodDto(String type, LocalDate startDate, LocalDate endDate, String displayLabel) { }
@@ -201,6 +244,11 @@ public class MoneyStoriesService {
     public record CardDto(String cardId, int sequence, String layout, String theme, String eyebrow, String title, String body, List<Component> components, List<Action> actions) { }
     public record Component(String type, String label, BigDecimal value, String currency, String displayValue) { }
     public record Action(String type, String label) { }
-    public record EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions) { }
+    public record EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions,
+                              List<Action> actions) {
+        EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions) {
+            this(title, totalCount, totalAmount, transactions, List.of());
+        }
+    }
     public record EvidenceTransaction(String transactionId, String dateLabel, String merchantLabel, String categoryLabel, Component amount) { }
 }
