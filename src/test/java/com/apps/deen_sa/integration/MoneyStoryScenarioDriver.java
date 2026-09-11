@@ -101,7 +101,7 @@ final class MoneyStoryScenarioDriver {
             String category = entry.path("category").asText(), subcategory = entry.path("subcategory").asText();
             assertThat(taxonomy.spendingNatureFor(category, subcategory)).isPresent();
             confirmExpense(externalId, sourceAccount, occurred,
-                    new TransactionFixture(category, subcategory, entry.path("merchant").asText(), entry.path("amount").asText()));
+                    new TransactionFixture(category, subcategory, entry.path("merchant").asText(null), entry.path("amount").asText()));
             long id = jdbc.queryForObject("SELECT max(id) FROM financial_transaction WHERE user_id=?", Long.class, user(externalId).getId());
             ids.put(entry.path("id").asText(), id);
             dates.put(entry.path("id").asText(), occurred);
@@ -139,6 +139,7 @@ final class MoneyStoryScenarioDriver {
     void rerunStoryJob() { storyCron.generateMissingAndStaleSnapshots(); }
     boolean hasRecordedExpenses() { return !ids.isEmpty(); }
     Set<YearMonth> recordedMonths() { return new TreeSet<>(months); }
+    long transactionId(String fixtureId) { return ids.get(fixtureId); }
     Collection<Long> recordedTransactionIds() { return List.copyOf(ids.values()); }
     AppUserEntity owner() { return user(externalId); }
     Instant evaluationTime() { return clock.instant(); }

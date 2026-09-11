@@ -28,13 +28,41 @@ final class MoneyStoryAssertions {
         assertDeckContainsAtMostThreeStories(label, response);
         if (expectObservation) assertChangedPeriodHasUsefulObservation(label, response);
         Set<String> logicalKeys = new HashSet<>();
+        Set<String> observationSubjects = new HashSet<>();
         for (StoryDto story : response.stories()) {
             assertStoryHasSupportedLevel(persona, label, story);
+            assertObservationIsOneGroundedCard(label, story);
+            if (story.observation() != null) checks.assertThat(observationSubjects.add(story.observation().noveltyKey()))
+                    .as(label + " / observations explain distinct subjects").isTrue();
             assertPersistedLevelMatchesPublishedStory(label, story);
             assertStoryHasIdentityAndIsNotDuplicated(label, story, logicalKeys);
             assertStoryDoesNotDescribeTheFuture(label, story, date, evaluatedAt);
             assertEvidenceBelongsToUserAndTotalsReconcile(label, story, owner, transactionIds);
         }
+    }
+
+    private void assertObservationIsOneGroundedCard(String label, StoryDto story) {
+        if (story.level() != com.apps.deen_sa.domain.MoneyStoryLevel.OBSERVATION) return;
+        checks.assertThat(story.cards()).as(label + " / an observation needs only one card").hasSize(1);
+        checks.assertThat(story.observation()).as(label + " / observation exposes its supporting facts").isNotNull();
+        if (story.observation() == null) return;
+        var facts = story.observation();
+        var evidence = mapper.valueToTree(story.evidence());
+        checks.assertThat(facts.total()).as(label + " / observation total agrees with its evidence")
+                .isEqualByComparingTo(evidence.path("totalAmount").path("value").decimalValue());
+        checks.assertThat(facts.focusAmount().add(facts.otherAmount())).as(label + " / explanation accounts for the whole amount")
+                .isEqualByComparingTo(facts.total());
+        checks.assertThat(facts.parts().stream().map(com.apps.deen_sa.service.MoneyStoryObservation.Part::amount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)).as(label + " / subcategory breakdown reconciles")
+                .isEqualByComparingTo(facts.total());
+        checks.assertThat(facts.evidenceIds()).as(label + " / every included expense supports the explanation")
+                .hasSize(evidence.path("totalCount").asInt());
+        story.cards().forEach(card -> {
+            checks.assertThat(card.actions()).as(label + " / evidence opens directly from the observation")
+                    .extracting(com.apps.deen_sa.service.MoneyStoriesService.Action::type).contains("OPEN_EVIDENCE");
+            checks.assertThat(card.body()).as(label + " / no empty comparison filler")
+                    .doesNotContain("This reflects the expenses you have shared for these dates.");
+        });
     }
 
     private void assertDeckContainsAtMostThreeStories(String label, MoneyStoriesResponse response) {
@@ -137,6 +165,35 @@ final class MoneyStoryAssertions {
         if (persona.equals("C")) checks.assertThat(categories)
                 .as("The regular user's published evidence includes rent, commuting and family expenses")
                 .contains("Housing", "Transportation", "Education", "Food & Dining");
+    }
+
+    void assertSeptemberCardsExplainTheRecordedExpenses(com.apps.deen_sa.service.MoneyStoriesService.MonthlyStoriesApiResponse response) {
+        checks.assertThat(response.stories()).as("The September example publishes three complementary observations").hasSize(3);
+        var daily = response.stories().stream().filter(s -> s.storyType().equals("UNUSUAL_HIGH_SPEND_DAY")
+                && s.period().startDate().equals(LocalDate.of(2026, 9, 10))).findFirst();
+        checks.assertThat(daily).as("The concrete September 10 explanation is selected").isPresent();
+        daily.ifPresent(story -> {
+            checks.assertThat(story.observation().focusAmount()).isEqualByComparingTo("5445");
+            checks.assertThat(story.observation().otherAmount()).isEqualByComparingTo("662");
+            checks.assertThat(story.cards()).hasSize(1);
+            checks.assertThat(story.cards().getFirst().body()).contains("Amazon", "₹662");
+            checks.assertThat(story.evidence().transactions()).extracting(com.apps.deen_sa.service.MoneyStoriesService.EvidenceTransaction::subcategoryLabel)
+                    .contains("Household Items");
+        });
+        var food = response.stories().stream().filter(s -> s.observation() != null
+                && s.observation().subject().equals("Groceries & provisions")).findFirst();
+        checks.assertThat(food).as("Food composition remains visible alongside the purchase explanation").isPresent();
+        food.ifPresent(story -> {
+            checks.assertThat(story.observation().total()).isEqualByComparingTo("16203");
+            checks.assertThat(story.observation().focusAmount()).isEqualByComparingTo("13476");
+            checks.assertThat(story.observation().incompleteClassificationCount()).isEqualTo(2);
+            checks.assertThat(story.evidence().totalAmount().value()).isEqualByComparingTo("16203");
+        });
+        response.stories().forEach(story -> {
+            checks.assertThat(story.level()).isEqualTo(com.apps.deen_sa.domain.MoneyStoryLevel.OBSERVATION);
+            checks.assertThat(story.logicalStoryId()).isNotBlank();
+            checks.assertThat(story.revision()).isPositive();
+        });
     }
 
     void assertAllExpectations() { checks.assertAll(); }

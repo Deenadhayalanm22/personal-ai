@@ -1,0 +1,258 @@
+{
+  "description": "User-shared September expenses. Unknown merchant names are neutral test labels; amounts, dates, classifications and repeated entries are retained.",
+  "sourceAccount": "Test Account",
+  "entries": [
+    {
+      "id": "1",
+      "occurredOn": "2026-09-06",
+      "amount": "600.00",
+      "category": "Food & Dining",
+      "subcategory": "Meat, Fish & Eggs",
+      "spendingNature": null,
+      "merchant": "Meat shop"
+    },
+    {
+      "id": "2",
+      "occurredOn": "2026-09-05",
+      "amount": "280.00",
+      "category": "Food & Dining",
+      "subcategory": "Meat, Fish & Eggs",
+      "spendingNature": null,
+      "merchant": "Local food shop"
+    },
+    {
+      "id": "3",
+      "occurredOn": "2026-09-01",
+      "amount": "16000.00",
+      "category": "Housing",
+      "subcategory": "Rent",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "4",
+      "occurredOn": "2026-09-06",
+      "amount": "7756.00",
+      "category": "Food & Dining",
+      "subcategory": "Groceries",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Grocery store"
+    },
+    {
+      "id": "5",
+      "occurredOn": "2026-09-07",
+      "amount": "25.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "7",
+      "occurredOn": "2026-09-07",
+      "amount": "5000.00",
+      "category": "Food & Dining",
+      "subcategory": "Rice, Grains & Provisions",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "8",
+      "occurredOn": "2026-09-02",
+      "amount": "1721.00",
+      "category": "Shopping",
+      "subcategory": "Other Shopping",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "Amazon"
+    },
+    {
+      "id": "9",
+      "occurredOn": "2026-09-05",
+      "amount": "720.00",
+      "category": "Food & Dining",
+      "subcategory": "Rice, Grains & Provisions",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Grocery store"
+    },
+    {
+      "id": "10",
+      "occurredOn": "2026-09-07",
+      "amount": "35.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "6",
+      "occurredOn": "2026-09-07",
+      "amount": "922.00",
+      "category": "Utilities",
+      "subcategory": "Electricity",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "11",
+      "occurredOn": "2026-09-07",
+      "amount": "922.00",
+      "category": "Utilities",
+      "subcategory": "Electricity",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "12",
+      "occurredOn": "2026-09-07",
+      "amount": "922.00",
+      "category": "Utilities",
+      "subcategory": "Electricity",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "13",
+      "occurredOn": "2026-09-08",
+      "amount": "25.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "14",
+      "occurredOn": "2026-09-08",
+      "amount": "35.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "15",
+      "occurredOn": "2026-09-01",
+      "amount": "10000.00",
+      "category": "Family",
+      "subcategory": "Parents Support",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "16",
+      "occurredOn": "2026-09-01",
+      "amount": "10000.00",
+      "category": "Family",
+      "subcategory": "Parents Support",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "17",
+      "occurredOn": "2026-09-08",
+      "amount": "414.00",
+      "category": "Food & Dining",
+      "subcategory": "Meat, Fish & Eggs",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Meat counter"
+    },
+    {
+      "id": "18",
+      "occurredOn": "2026-09-08",
+      "amount": "410.00",
+      "category": "Food & Dining",
+      "subcategory": "Vegetables & Fruits",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Vegetable stall"
+    },
+    {
+      "id": "19",
+      "occurredOn": "2026-09-09",
+      "amount": "237.00",
+      "category": "Food & Dining",
+      "subcategory": "Home-Cooked Meals",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Local food shop"
+    },
+    {
+      "id": "20",
+      "occurredOn": "2026-09-09",
+      "amount": "58.00",
+      "category": "Food & Dining",
+      "subcategory": "Milk & Dairy",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Milk booth"
+    },
+    {
+      "id": "21",
+      "occurredOn": "2026-09-09",
+      "amount": "80.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "22",
+      "occurredOn": "2026-09-09",
+      "amount": "500.00",
+      "category": "Family",
+      "subcategory": "Parents Support",
+      "spendingNature": "ESSENTIAL",
+      "merchant": null
+    },
+    {
+      "id": "23",
+      "occurredOn": "2026-09-10",
+      "amount": "25.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "KK shop"
+    },
+    {
+      "id": "24",
+      "occurredOn": "2026-09-10",
+      "amount": "134.00",
+      "category": "Transportation",
+      "subcategory": "Other Local Transport",
+      "spendingNature": "FLEXIBLE",
+      "merchant": "portar app"
+    },
+    {
+      "id": "25",
+      "occurredOn": "2026-09-10",
+      "amount": "343.00",
+      "category": "Food & Dining",
+      "subcategory": "Restaurant & Cafe",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": null
+    },
+    {
+      "id": "26",
+      "occurredOn": "2026-09-10",
+      "amount": "160.00",
+      "category": "Food & Dining",
+      "subcategory": "Sweets & Bakery",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": null
+    },
+    {
+      "id": "27",
+      "occurredOn": "2026-09-10",
+      "amount": "5445.00",
+      "category": "Shopping",
+      "subcategory": "Household Items",
+      "spendingNature": "ESSENTIAL",
+      "merchant": "Amazon"
+    },
+    {
+      "id": "28",
+      "occurredOn": "2026-09-11",
+      "amount": "363.00",
+      "category": "Entertainment",
+      "subcategory": "Movies",
+      "spendingNature": "DISCRETIONARY",
+      "merchant": "Cinema"
+    }
+  ]
+}

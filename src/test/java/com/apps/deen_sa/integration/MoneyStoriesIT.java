@@ -71,7 +71,7 @@ class MoneyStoriesIT {
                 confirmExpense(externalUserId, fixture.sourceAccount(), date, transaction);
             }
             runDailyAndStoryJobs(date);
-            assertStoryTypes(user(externalUserId), month, day.expectedStoryTypes());
+            assertEarlyObservationsAreCompactAndGrounded(user(externalUserId), month);
         }
         AppUserEntity user = user(externalUserId);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM money_story_snapshot WHERE user_id=?", Integer.class,
@@ -95,13 +95,17 @@ class MoneyStoriesIT {
         storyCron.generateMissingAndStaleSnapshots();
     }
 
-    private void assertStoryTypes(AppUserEntity user, YearMonth month, List<String> expected) {
+    private void assertEarlyObservationsAreCompactAndGrounded(AppUserEntity user, YearMonth month) {
         assertThat(stories.monthly(user, month).stories())
-                .as("Four days of entries support observations, not recurring patterns")
-                .allSatisfy(story -> assertThat(story.level()).isEqualTo(com.apps.deen_sa.domain.MoneyStoryLevel.OBSERVATION));
-        assertThat(stories.monthly(user, month).stories())
-                .extracting(MoneyStoriesService.StoryDto::storyType)
-                .containsExactlyInAnyOrderElementsOf(expected);
+                .as("Four-day capture produces compact observations rather than historical claims")
+                .isNotEmpty().hasSizeLessThanOrEqualTo(3)
+                .allSatisfy(story -> {
+                    assertThat(story.level()).isEqualTo(com.apps.deen_sa.domain.MoneyStoryLevel.OBSERVATION);
+                    assertThat(story.cards()).hasSize(1);
+                    assertThat(story.observation()).isNotNull();
+                    assertThat(story.observation().focusAmount().add(story.observation().otherAmount()))
+                            .isEqualByComparingTo(story.observation().total());
+                });
     }
 
     private AppUserEntity user(String externalId) {
@@ -124,7 +128,7 @@ class MoneyStoriesIT {
     }
 
     private record Fixture(String month, String startDate, String sourceAccount, List<DayFixture> days) { }
-    private record DayFixture(int offset, List<String> expectedStoryTypes, List<TransactionFixture> transactions) { }
+    private record DayFixture(int offset, List<TransactionFixture> transactions) { }
     private record TransactionFixture(String spendingNature, String category, String subcategory,
                                       String merchant, String amount) { }
 }

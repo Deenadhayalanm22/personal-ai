@@ -109,6 +109,31 @@ class MoneyStoriesEvidenceLadderIT {
         expectations.assertAllExpectations();
     }
 
+    @Test
+    void septemberExpensesPublishUsefulSingleCardsThroughThePublicApi() throws Exception {
+        JsonNode fixture = com.apps.deen_sa.support.SeptemberStoryFixture.json();
+        MoneyStoryScenarioDriver journey = new MoneyStoryScenarioDriver(
+                jdbc, users, dailyAggregation, storyCron, stories, drafts, normalization,
+                confirmation, extractions, taxonomy, edits, normalizer, copy, clock);
+        journey.startUser("September-regression", fixture.path("sourceAccount").asText());
+        journey.beginDay(LocalDate.of(2026, 9, 11));
+        journey.recordTodaysExpenses(fixture);
+        // Reproduce the two legacy classification gaps supplied in the real example.
+        for (String id : List.of("1", "2")) jdbc.update(
+                "UPDATE financial_transaction SET spending_nature=NULL WHERE id=?", journey.transactionId(id));
+        journey.rerunStoryJob();
+
+        MoneyStoryAssertions expectations = new MoneyStoryAssertions(jdbc);
+        var published = stories.monthlyForWeb(journey.owner(), YearMonth.of(2026, 9));
+        expectations.assertSeptemberCardsExplainTheRecordedExpenses(published);
+        var internal = journey.readStories(YearMonth.of(2026, 9));
+        expectations.assertMonthlyDeckIsSupportedByRecordedExpenses("September", "September regression", internal,
+                true, LocalDate.of(2026, 9, 11), journey.evaluationTime(), journey.owner(), journey.recordedTransactionIds());
+        journey.rerunStoryJob();
+        expectations.assertUnchangedJobPreservesPublishedStories("September", internal, journey.readStories(YearMonth.of(2026, 9)));
+        expectations.assertAllExpectations();
+    }
+
     private void verifyStoriesForToday(String persona, JsonNode day, LocalDate date,
             MoneyStoryScenarioDriver journey, MoneyStoryAssertions expectations) {
         if (!journey.hasRecordedExpenses()) return;

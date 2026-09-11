@@ -5,11 +5,6 @@
   "days": [
     {
       "offset": 0,
-      "expectedStoryTypes": [
-        "UNUSUAL_HIGH_SPEND_DAY",
-        "CATEGORY_SPENDING_GROWTH",
-        "MERCHANT_CONCENTRATION"
-      ],
       "transactions": [
         {
           "spendingNature": "ESSENTIAL",
@@ -50,11 +45,6 @@
     },
     {
       "offset": 1,
-      "expectedStoryTypes": [
-        "UNUSUAL_HIGH_SPEND_DAY",
-        "CATEGORY_SPENDING_GROWTH",
-        "MERCHANT_CONCENTRATION"
-      ],
       "transactions": [
         {
           "spendingNature": "FLEXIBLE",
@@ -130,10 +120,6 @@
     },
     {
       "offset": 2,
-      "expectedStoryTypes": [
-        "UNUSUAL_HIGH_SPEND_DAY",
-        "CATEGORY_SPENDING_GROWTH"
-      ],
       "transactions": [
         {
           "spendingNature": "DISCRETIONARY",
@@ -209,11 +195,6 @@
     },
     {
       "offset": 3,
-      "expectedStoryTypes": [
-        "UNUSUAL_HIGH_SPEND_DAY",
-        "CATEGORY_SPENDING_GROWTH",
-        "DISCRETIONARY_FREQUENCY"
-      ],
       "transactions": [
         {
           "spendingNature": "ESSENTIAL",

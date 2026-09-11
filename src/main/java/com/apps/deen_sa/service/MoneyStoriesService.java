@@ -33,6 +33,7 @@ public class MoneyStoriesService {
     private final MoneyStoriesProperties properties;
     private final MoneyStorySelector selector;
     private final MoneyStoryRenderer renderer;
+    private final MoneyStoryObservationFactory observationFactory;
     private final Clock clock;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -53,7 +54,7 @@ public class MoneyStoriesService {
         if (snapshot.isEmpty()) return MonthlyStoriesApiResponse.empty(month, user);
 
         var published = snapshot.get();
-        List<MoneyStoryApi> result = stories.findBySnapshotIdOrderByImpactAmountDesc(published.getId()).stream()
+        List<MoneyStoryApi> result = stories.findBySnapshotIdOrderByDisplayOrderAscIdAsc(published.getId()).stream()
                 .map(story -> publicStory(story, published)).toList();
         return new MonthlyStoriesApiResponse(month.toString(), published.getCurrency(), published.getTimezone(), result);
     }
@@ -64,13 +65,25 @@ public class MoneyStoriesService {
         if (month.atDay(1).isAfter(today)) return;
         var previous = snapshots.findByUserIdAndScopeMonthAndSupersededAtIsNull(user.getId(), month.atDay(1)).orElse(null);
         StoryEvaluationContext context = loadContext(user, month, today);
-        var candidates = rules.stream().filter(MoneyStoryRule::enabled)
-                .map(rule -> rule.evaluate(context)).flatMap(Optional::stream).toList();
-        List<PreparedStory> prepared = prepareEvidence(user, selector.select(candidates));
-        String fingerprint = hash(user.getCurrency() + ":" + user.getLocale() + ":" + user.getTimezone() + ":v2:" +
+        LocalDate end = today.isBefore(month.atEndOfMonth()) ? today.plusDays(1) : month.plusMonths(1).atDay(1);
+        var source = transactions.findStoryEvidence(user.getId(), month.atDay(1).minusWeeks(
+                Math.max(8, properties.rules().unusualHighSpendDay().baselineWeeks())), end, null, null, null);
+        // Observations include all valid amounts. Historical claims wait for complete classification.
+        boolean classificationComplete = source.stream().allMatch(tx -> tx.getCategory() != null
+                && !tx.getCategory().isBlank() && tx.getSubcategory() != null && !tx.getSubcategory().isBlank()
+                && tx.getSpendingNature() != null);
+        Set<MoneyStoryType> enabledTypes = rules.stream().filter(MoneyStoryRule::enabled).map(MoneyStoryRule::type)
+                .collect(java.util.stream.Collectors.toSet());
+        List<MoneyStoryCandidate> candidates = new ArrayList<>(observationFactory.create(month, today, source)
+                .stream().filter(c -> enabledTypes.contains(c.type())).toList());
+        if (classificationComplete) rules.stream().filter(MoneyStoryRule::enabled).map(rule -> rule.evaluate(context))
+                .flatMap(Optional::stream).filter(c -> c.level() == MoneyStoryLevel.PATTERN).forEach(candidates::add);
+        List<PreparedStory> prepared = prepareEvidence(user, selector.select(candidates), source);
+        String fingerprint = hash(user.getCurrency() + ":" + user.getLocale() + ":" + user.getTimezone() + ":v3:" +
                 prepared.stream().map(PreparedStory::fingerprint).toList());
-        Instant watermark = Stream.concat(context.history().stream().map(MoneyStoryAggregateRepository.CategoryDay::updatedAt),
-                        context.references().stream().map(MoneyStoryAggregateRepository.ReferenceDay::updatedAt))
+        Instant watermark = Stream.concat(source.stream().map(FinancialTransactionEntity::getUpdatedAt),
+                Stream.concat(context.history().stream().map(MoneyStoryAggregateRepository.CategoryDay::updatedAt),
+                        context.references().stream().map(MoneyStoryAggregateRepository.ReferenceDay::updatedAt)))
                 .filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(Instant.EPOCH);
 
         if (previous != null && fingerprint.equals(previous.getContentFingerprint())) {
@@ -107,11 +120,13 @@ public class MoneyStoriesService {
                 aggregates.references(user.getId(), start.minusWeeks(weeks), end));
     }
 
-    private List<PreparedStory> prepareEvidence(AppUserEntity user, List<MoneyStoryCandidate> candidates) {
+    private List<PreparedStory> prepareEvidence(AppUserEntity user, List<MoneyStoryCandidate> candidates, List<FinancialTransactionEntity> source) {
         List<PreparedStory> result = new ArrayList<>();
         Set<List<Long>> includedEvidence = new HashSet<>();
         for (var candidate : candidates) {
-            var rows = transactions.findStoryEvidence(user.getId(), candidate.evidenceStart(), candidate.evidenceEnd(),
+            var rows = candidate.observation() != null
+                    ? source.stream().filter(tx -> candidate.observation().evidenceIds().contains(tx.getId())).toList()
+                    : transactions.findStoryEvidence(user.getId(), candidate.evidenceStart(), candidate.evidenceEnd(),
                     candidate.merchantId() == null ? candidate.category() : null, candidate.nature(), candidate.merchantId())
                     .stream().filter(tx -> candidate.type() != MoneyStoryType.WEEKEND_SPENDING_PATTERN
                             || MoneyStoryRuleSupport.weekend(tx.getOccurredAt())).toList();
@@ -123,8 +138,8 @@ public class MoneyStoriesService {
             }
             // Exact duplicate evidence adds no useful second observation to the same deck.
             if (!includedEvidence.add(rows.stream().map(FinancialTransactionEntity::getId).toList())) continue;
-            String content = candidate + ":" + rows.stream().map(tx -> tx.getId() + ":" + tx.getAmount()
-                    + ":" + tx.getOccurredAt() + ":" + tx.getCategory() + ":"
+            String content = "template3:" + candidate + ":" + rows.stream().map(tx -> tx.getId() + ":" + tx.getAmount()
+                    + ":" + tx.getOccurredAt() + ":" + tx.getCategory() + ":" + tx.getSubcategory() + ":" + tx.getSpendingNature() + ":"
                     + (tx.getMerchant() == null ? "" : tx.getMerchant().getCanonicalName())).toList();
             result.add(new PreparedStory(candidate, rows, hash(content)));
         }
@@ -135,16 +150,17 @@ public class MoneyStoriesService {
             List<PreparedStory> prepared, String fingerprint, Instant watermark) {
         Map<String, MoneyStoryEntity> priorStories = new HashMap<>();
         if (previous != null) {
-            stories.findBySnapshotIdOrderByImpactAmountDesc(previous.getId()).forEach(s -> priorStories.put(s.getStoryKey(), s));
+            stories.findBySnapshotIdOrderByDisplayOrderAscIdAsc(previous.getId()).forEach(s -> priorStories.put(s.getStoryKey(), s));
             previous.setSupersededAt(clock.instant());
             snapshots.saveAndFlush(previous); // Release the one-current-snapshot constraint before insertion.
         }
         var snapshot = new MoneyStorySnapshotEntity();
         snapshot.setId(UUID.randomUUID()); snapshot.setUser(user); snapshot.setScopeMonth(month.atDay(1));
         snapshot.setTimezone(user.getTimezone()); snapshot.setLocale(user.getLocale()); snapshot.setCurrency(user.getCurrency());
-        snapshot.setStatus("READY"); snapshot.setGeneratedAt(clock.instant()); snapshot.setCalculationVersion(2);
+        snapshot.setStatus("READY"); snapshot.setGeneratedAt(clock.instant()); snapshot.setCalculationVersion(3);
         snapshot.setInputWatermark(watermark); snapshot.setEvaluatedOn(today); snapshot.setContentFingerprint(fingerprint);
         snapshots.saveAndFlush(snapshot);
+        int displayOrder = 0;
         for (PreparedStory item : prepared) {
             var c = item.candidate();
             var old = priorStories.get(c.logicalKey());
@@ -154,11 +170,12 @@ public class MoneyStoriesService {
             int revision = oldDto == null ? 1 : Math.max(1, oldDto.revision()) + (item.fingerprint().equals(old.getContentHash()) ? 0 : 1);
             StoryDto dto = old != null && item.fingerprint().equals(old.getContentHash())
                     ? new StoryDto(UUID.randomUUID().toString(), oldDto.storyType(), oldDto.templateVersion(), oldDto.generatedAt(),
-                        oldDto.period(), oldDto.cardFace(), oldDto.cards(), null, oldDto.level(), logicalId, revision, oldDto.updatedReason())
+                        oldDto.period(), oldDto.cardFace(), oldDto.cards(), null, oldDto.level(), logicalId, revision, oldDto.updatedReason(), oldDto.observation())
                     : renderer.render(c, user, logicalId, revision, snapshot.getGeneratedAt());
             var entity = new MoneyStoryEntity();
             entity.setId(UUID.fromString(dto.storyId())); entity.setSnapshot(snapshot); entity.setStoryKey(c.logicalKey());
-            entity.setStoryType(c.type().name()); entity.setStoryLevel(c.level()); entity.setRuleVersion(2); entity.setTemplateVersion(2);
+            entity.setStoryType(c.type().name()); entity.setStoryLevel(c.level()); entity.setRuleVersion(c.level() == MoneyStoryLevel.OBSERVATION ? 3 : 2); entity.setTemplateVersion(3);
+            entity.setDisplayOrder(displayOrder++);
             entity.setPeriodType(dto.period().type()); entity.setPeriodStart(c.periodStart()); entity.setPeriodEnd(c.periodEnd());
             entity.setImpactAmount(c.impact()); entity.setContentHash(item.fingerprint());
             try { entity.setPayload(mapper.writeValueAsString(dto)); }
@@ -176,7 +193,7 @@ public class MoneyStoriesService {
             id.setStoryId(story.getId()); id.setOrdinal(ordinal++); row.setId(id); row.setStory(story);
             row.setTransaction(tx); row.setAmount(tx.getAmount()); row.setOccurredAt(tx.getOccurredAt());
             row.setMerchantLabel(tx.getMerchant() == null ? null : tx.getMerchant().getCanonicalName());
-            row.setCategoryLabel(tx.getCategory()); evidence.save(row);
+            row.setCategoryLabel(tx.getCategory()); row.setSubcategoryLabel(tx.getSubcategory()); evidence.save(row);
         }
     }
 
@@ -186,7 +203,7 @@ public class MoneyStoriesService {
     }
 
     private MoneyStoriesResponse response(MoneyStorySnapshotEntity snapshot) {
-        List<StoryDto> result = stories.findBySnapshotIdOrderByImpactAmountDesc(snapshot.getId()).stream().map(s -> {
+        List<StoryDto> result = stories.findBySnapshotIdOrderByDisplayOrderAscIdAsc(snapshot.getId()).stream().map(s -> {
             StoryDto parsed = parse(s);
             var rows = evidence.findByStoryIdOrderByIdOrdinal(s.getId());
             BigDecimal total = rows.stream().map(MoneyStoryEvidenceEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -194,11 +211,10 @@ public class MoneyStoriesService {
                     new Component("MONEY", "Total", total, snapshot.getCurrency(), money(total, snapshot.getCurrency())),
                     rows.stream().map(row -> new EvidenceTransaction(Long.toString(row.getTransaction().getId()),
                             row.getOccurredAt().format(DateTimeFormatter.ofPattern("d MMM")), row.getMerchantLabel(),
-                            row.getCategoryLabel(), new Component("MONEY", "Amount", row.getAmount(), snapshot.getCurrency(), money(row.getAmount(), snapshot.getCurrency())))).toList());
+                            row.getCategoryLabel(), new Component("MONEY", "Amount", row.getAmount(), snapshot.getCurrency(), money(row.getAmount(), snapshot.getCurrency())), row.getSubcategoryLabel())).toList());
             return new StoryDto(parsed.storyId(), parsed.storyType(), parsed.templateVersion(), parsed.generatedAt(), parsed.period(),
-                    parsed.cardFace(), parsed.cards(), value, parsed.level(), parsed.logicalStoryId(), parsed.revision(), parsed.updatedReason());
-        }).sorted(Comparator.comparingInt((StoryDto s) -> s.level() == MoneyStoryLevel.PATTERN ? 0 : 1)
-                .thenComparing(s -> s.period().startDate(), Comparator.reverseOrder()).thenComparing(StoryDto::storyType)).toList();
+                    parsed.cardFace(), parsed.cards(), value, parsed.level(), parsed.logicalStoryId(), parsed.revision(), parsed.updatedReason(), parsed.observation());
+        }).toList();
         return new MoneyStoriesResponse(snapshot.getGeneratedAt(), !"READY".equals(snapshot.getStatus()), result);
     }
 
@@ -212,14 +228,15 @@ public class MoneyStoriesService {
                 row.getOccurredAt().format(DateTimeFormatter.ofPattern("d MMM")),
                 row.getMerchantLabel(), row.getCategoryLabel(),
                 new Component("MONEY", "Amount", row.getAmount(), snapshot.getCurrency(),
-                        money(row.getAmount(), snapshot.getCurrency())))).toList();
+                        money(row.getAmount(), snapshot.getCurrency())), row.getSubcategoryLabel())).toList();
         var storyEvidence = new EvidenceDto("Included in this story", rows.size(),
                 new Component("MONEY", "Total", total, snapshot.getCurrency(), money(total, snapshot.getCurrency())),
                 transactionRows, List.of(new Action("REPORT_CLASSIFICATION", "Report wrong classification")));
         String stableStoryId = parsed.logicalStoryId() == null || parsed.logicalStoryId().isBlank()
                 ? story.getId().toString() : parsed.logicalStoryId();
         return new MoneyStoryApi(stableStoryId, parsed.storyType(), parsed.templateVersion(), parsed.generatedAt(),
-                parsed.period(), parsed.cardFace(), parsed.cards(), storyEvidence);
+                parsed.period(), parsed.cardFace(), parsed.cards(), storyEvidence, parsed.level(), parsed.logicalStoryId(),
+                parsed.revision(), parsed.updatedReason(), parsed.observation());
     }
 
     private static String hash(String input) {
@@ -236,9 +253,10 @@ public class MoneyStoriesService {
         }
     }
     public record MoneyStoryApi(String storyId, String storyType, int templateVersion, Instant generatedAt,
-            PeriodDto period, CardFace cardFace, List<CardDto> cards, EvidenceDto evidence) { }
+            PeriodDto period, CardFace cardFace, List<CardDto> cards, EvidenceDto evidence, MoneyStoryLevel level,
+            String logicalStoryId, int revision, String updatedReason, MoneyStoryObservation observation) { }
     public record StoryDto(String storyId, String storyType, int templateVersion, Instant generatedAt, PeriodDto period,
-            CardFace cardFace, List<CardDto> cards, Object evidence, MoneyStoryLevel level, String logicalStoryId, int revision, String updatedReason) { }
+            CardFace cardFace, List<CardDto> cards, Object evidence, MoneyStoryLevel level, String logicalStoryId, int revision, String updatedReason, MoneyStoryObservation observation) { }
     public record PeriodDto(String type, LocalDate startDate, LocalDate endDate, String displayLabel) { }
     public record CardFace(String heading, String displayValue, String theme) { }
     public record CardDto(String cardId, int sequence, String layout, String theme, String eyebrow, String title, String body, List<Component> components, List<Action> actions) { }
@@ -250,5 +268,5 @@ public class MoneyStoriesService {
             this(title, totalCount, totalAmount, transactions, List.of());
         }
     }
-    public record EvidenceTransaction(String transactionId, String dateLabel, String merchantLabel, String categoryLabel, Component amount) { }
+    public record EvidenceTransaction(String transactionId, String dateLabel, String merchantLabel, String categoryLabel, Component amount, String subcategoryLabel) { }
 }

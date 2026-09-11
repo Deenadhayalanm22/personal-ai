@@ -24,6 +24,7 @@ public class MoneyStoryEntity {
     @Column(name = "period_type", nullable = false) private String periodType;
     @Column(name = "period_start", nullable = false) private LocalDate periodStart;
     @Column(name = "period_end", nullable = false) private LocalDate periodEnd;
+    @Column(name = "display_order", nullable = false) private int displayOrder;
     @Column(name = "impact_amount", nullable = false) private BigDecimal impactAmount;
     @Column(nullable = false, columnDefinition = "text") private String payload;
     @Column(name = "content_hash", nullable = false) private String contentHash;

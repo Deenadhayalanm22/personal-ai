@@ -19,6 +19,7 @@ public class MoneyStoryEvidenceEntity {
     @Column(nullable = false) private BigDecimal amount;
     @Column(name = "occurred_at", nullable = false) private LocalDate occurredAt;
     @Column(name = "merchant_label") private String merchantLabel;
+    @Column(name = "subcategory_label") private String subcategoryLabel;
     @Column(name = "category_label") private String categoryLabel;
 
     @Embeddable @Getter @Setter

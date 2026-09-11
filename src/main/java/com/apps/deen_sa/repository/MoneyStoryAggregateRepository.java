@@ -42,8 +42,8 @@ public class MoneyStoryAggregateRepository {
         return jdbc.query("""
                 SELECT candidates.user_id, candidates.scope_month
                 FROM (
-                    SELECT DISTINCT user_id, date_trunc('month', aggregate_date)::date AS scope_month
-                    FROM expense_daily_aggregate
+                    SELECT DISTINCT user_id, date_trunc('month', occurred_at)::date AS scope_month
+                    FROM financial_transaction WHERE deleted_at IS NULL
                     UNION
                     SELECT user_id, scope_month FROM money_story_snapshot
                     WHERE superseded_at IS NULL AND status = 'STALE'
@@ -52,12 +52,18 @@ public class MoneyStoryAggregateRepository {
                     AND ready.scope_month=candidates.scope_month AND ready.superseded_at IS NULL
                     AND ready.status='READY'
                 JOIN app_user owner ON owner.id=candidates.user_id
-                WHERE ready.id IS NULL OR ready.evaluated_on IS NULL
+                WHERE ready.id IS NULL OR ready.evaluated_on IS NULL OR ready.calculation_version < 3
                    OR ready.evaluated_on <> (CAST(:now AS timestamptz) AT TIME ZONE owner.timezone)::date
                    OR EXISTS (
                     SELECT 1 FROM expense_daily_aggregate changed
                     WHERE changed.user_id=candidates.user_id
                       AND date_trunc('month', changed.aggregate_date)::date=candidates.scope_month
+                      AND changed.updated_at > ready.input_watermark
+                )
+                   OR EXISTS (
+                    SELECT 1 FROM financial_transaction changed
+                    WHERE changed.user_id=candidates.user_id
+                      AND date_trunc('month', changed.occurred_at)::date=candidates.scope_month
                       AND changed.updated_at > ready.input_watermark
                 )
                 ORDER BY candidates.scope_month, candidates.user_id

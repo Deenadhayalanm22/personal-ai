@@ -6,5 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface MoneyStoryRepository extends JpaRepository<MoneyStoryEntity, UUID> {
+    List<MoneyStoryEntity> findBySnapshotIdOrderByDisplayOrderAscIdAsc(UUID snapshotId);
     List<MoneyStoryEntity> findBySnapshotIdOrderByImpactAmountDesc(UUID snapshotId);
 }

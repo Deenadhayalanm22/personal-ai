@@ -10,7 +10,14 @@ import java.time.LocalDate;
 public record MoneyStoryCandidate(MoneyStoryType type, MoneyStoryLevel level,
         LocalDate periodStart, LocalDate periodEnd, BigDecimal impact, int count,
         BigDecimal comparison, String category, BigDecimal percentOrRatio,
-        SpendingNature nature, Long merchantId, LocalDate evidenceStart, LocalDate evidenceEnd) {
+        SpendingNature nature, Long merchantId, LocalDate evidenceStart, LocalDate evidenceEnd,
+        MoneyStoryObservation observation) {
+    public MoneyStoryCandidate(MoneyStoryType type, MoneyStoryLevel level, LocalDate periodStart,
+            LocalDate periodEnd, BigDecimal impact, int count, BigDecimal comparison, String category,
+            BigDecimal percentOrRatio, SpendingNature nature, Long merchantId, LocalDate evidenceStart, LocalDate evidenceEnd) {
+        this(type, level, periodStart, periodEnd, impact, count, comparison, category, percentOrRatio,
+                nature, merchantId, evidenceStart, evidenceEnd, null);
+    }
     public String logicalKey() {
         return type + ":" + periodStart + ":" + (merchantId != null ? merchantId : category == null ? "" : category);
     }
