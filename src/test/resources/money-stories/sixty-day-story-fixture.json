@@ -1,0 +1,3631 @@
+{
+  "startDate": "2026-07-06",
+  "endDate": "2026-09-03",
+  "timezone": "Asia/Kolkata",
+  "sourceAccount": "HDFC Salary Account",
+  "users": [
+    {
+      "user": "A",
+      "description": "Occasional logger: remembers selected household purchases, with long gaps",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [
+            {
+              "id": "A-1",
+              "occurredOn": "2026-07-06",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "Rice and cooking provisions"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [
+            {
+              "id": "A-3",
+              "occurredOn": "2026-07-08",
+              "amount": "500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Bike petrol; corrected on day 8"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [
+            {
+              "id": "A-6",
+              "occurredOn": "2026-07-11",
+              "amount": "500.00",
+              "category": "Entertainment",
+              "subcategory": "Movies",
+              "merchant": "PVR Nexus",
+              "note": "Duplicate movie expense deleted on day 9"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [],
+          "edits": [
+            {
+              "operation": "AMOUNT",
+              "transaction": "A-3",
+              "amount": "200.00"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [],
+          "edits": [
+            {
+              "operation": "DELETE",
+              "transaction": "A-6"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [
+            {
+              "id": "A-19",
+              "occurredOn": "2026-07-24",
+              "amount": "1800.00",
+              "category": "Travel",
+              "subcategory": "Accommodation",
+              "merchant": "Mysuru Guest House",
+              "note": "Remembered one night from family trip"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [
+            {
+              "id": "A-35",
+              "occurredOn": "2026-08-09",
+              "amount": "1200.00",
+              "category": "Education",
+              "subcategory": "School Supplies",
+              "merchant": "Sapna Book House",
+              "note": "Child school supplies"
+            },
+            {
+              "id": "A-35-rent",
+              "occurredOn": "2026-08-01",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Remembered August rent"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [
+            {
+              "id": "A-52",
+              "occurredOn": "2026-08-26",
+              "amount": "900.00",
+              "category": "Medical",
+              "subcategory": "Doctor Consultation",
+              "merchant": "Neighbourhood Clinic",
+              "note": "Child consultation"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    },
+    {
+      "user": "B",
+      "description": "Partial month-end logger: enters remembered bills and outings, omits most daily spending",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [
+            {
+              "id": "B-26-0",
+              "occurredOn": "2026-07-07",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Rent remembered at month end"
+            },
+            {
+              "id": "B-26-1",
+              "occurredOn": "2026-07-07",
+              "amount": "6500.00",
+              "category": "Education",
+              "subcategory": "School Fees",
+              "merchant": "Neighbourhood Primary School",
+              "note": "Child monthly school fee"
+            },
+            {
+              "id": "B-26-2",
+              "occurredOn": "2026-07-09",
+              "amount": "1450.00",
+              "category": "Utilities",
+              "subcategory": "Electricity",
+              "merchant": "BESCOM",
+              "note": "Electricity bill"
+            },
+            {
+              "id": "B-26-3",
+              "occurredOn": "2026-07-09",
+              "amount": "999.00",
+              "category": "Utilities",
+              "subcategory": "Internet",
+              "merchant": "ACT Fibernet",
+              "note": "Broadband bill"
+            },
+            {
+              "id": "B-26-4",
+              "occurredOn": "2026-07-12",
+              "amount": "2200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "One grocery bill; other purchases omitted"
+            },
+            {
+              "id": "B-26-5",
+              "occurredOn": "2026-07-12",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Bike fuel"
+            },
+            {
+              "id": "B-26-6",
+              "occurredOn": "2026-07-19",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Family car fuel"
+            },
+            {
+              "id": "B-26-7",
+              "occurredOn": "2026-07-19",
+              "amount": "1100.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Family lunch"
+            },
+            {
+              "id": "B-26-8",
+              "occurredOn": "2026-07-19",
+              "amount": "900.00",
+              "category": "Entertainment",
+              "subcategory": "Movies",
+              "merchant": "PVR Nexus",
+              "note": "Family movie"
+            },
+            {
+              "id": "B-26-9",
+              "occurredOn": "2026-07-23",
+              "amount": "450.00",
+              "category": "Medical",
+              "subcategory": "Medicines",
+              "merchant": "Apollo Pharmacy",
+              "note": "Remembered pharmacy bill"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [
+            {
+              "id": "B-57-0",
+              "occurredOn": "2026-08-07",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Rent remembered at month end"
+            },
+            {
+              "id": "B-57-1",
+              "occurredOn": "2026-08-07",
+              "amount": "6500.00",
+              "category": "Education",
+              "subcategory": "School Fees",
+              "merchant": "Neighbourhood Primary School",
+              "note": "Child monthly school fee"
+            },
+            {
+              "id": "B-57-2",
+              "occurredOn": "2026-08-09",
+              "amount": "1650.00",
+              "category": "Utilities",
+              "subcategory": "Electricity",
+              "merchant": "BESCOM",
+              "note": "Electricity bill"
+            },
+            {
+              "id": "B-57-3",
+              "occurredOn": "2026-08-09",
+              "amount": "999.00",
+              "category": "Utilities",
+              "subcategory": "Internet",
+              "merchant": "ACT Fibernet",
+              "note": "Broadband bill"
+            },
+            {
+              "id": "B-57-4",
+              "occurredOn": "2026-08-12",
+              "amount": "2200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "One grocery bill; other purchases omitted"
+            },
+            {
+              "id": "B-57-5",
+              "occurredOn": "2026-08-12",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Bike fuel"
+            },
+            {
+              "id": "B-57-6",
+              "occurredOn": "2026-08-19",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Family car fuel"
+            },
+            {
+              "id": "B-57-7",
+              "occurredOn": "2026-08-19",
+              "amount": "1100.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Family lunch"
+            },
+            {
+              "id": "B-57-8",
+              "occurredOn": "2026-08-19",
+              "amount": "900.00",
+              "category": "Entertainment",
+              "subcategory": "Movies",
+              "merchant": "PVR Nexus",
+              "note": "Family movie"
+            },
+            {
+              "id": "B-57-9",
+              "occurredOn": "2026-08-23",
+              "amount": "450.00",
+              "category": "Medical",
+              "subcategory": "Medicines",
+              "merchant": "Apollo Pharmacy",
+              "note": "Remembered pharmacy bill"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    },
+    {
+      "user": "C",
+      "description": "Consistent logger: Bengaluru renter living with wife and school-age child; bike commute, family car, home cooking and occasional leisure",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [
+            {
+              "id": "C-1-milk",
+              "occurredOn": "2026-07-06",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-1-parking",
+              "occurredOn": "2026-07-06",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-1-lunch",
+              "occurredOn": "2026-07-06",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-1-bike-petrol",
+              "occurredOn": "2026-07-06",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            },
+            {
+              "id": "C-1-rent",
+              "occurredOn": "2026-07-06",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Monthly rent for the family apartment"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [
+            {
+              "id": "C-2-milk",
+              "occurredOn": "2026-07-07",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-2-parking",
+              "occurredOn": "2026-07-07",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-2-school",
+              "occurredOn": "2026-07-07",
+              "amount": "6500.00",
+              "category": "Education",
+              "subcategory": "School Fees",
+              "merchant": "Neighbourhood Primary School",
+              "note": "Child school tuition"
+            },
+            {
+              "id": "C-2-childcare",
+              "occurredOn": "2026-07-07",
+              "amount": "2500.00",
+              "category": "Family",
+              "subcategory": "Childcare",
+              "merchant": "After School Club",
+              "note": "After-school care"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [
+            {
+              "id": "C-3-milk",
+              "occurredOn": "2026-07-08",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-3-parking",
+              "occurredOn": "2026-07-08",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-3-lunch",
+              "occurredOn": "2026-07-08",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-3-vegetables",
+              "occurredOn": "2026-07-08",
+              "amount": "280.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-3-bakery",
+              "occurredOn": "2026-07-08",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [
+            {
+              "id": "C-4-milk",
+              "occurredOn": "2026-07-09",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-4-parking",
+              "occurredOn": "2026-07-09",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-4-power",
+              "occurredOn": "2026-07-09",
+              "amount": "1450.00",
+              "category": "Utilities",
+              "subcategory": "Electricity",
+              "merchant": "BESCOM",
+              "note": "Monthly electricity"
+            },
+            {
+              "id": "C-4-internet",
+              "occurredOn": "2026-07-09",
+              "amount": "999.00",
+              "category": "Utilities",
+              "subcategory": "Internet",
+              "merchant": "ACT Fibernet",
+              "note": "Home broadband"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [
+            {
+              "id": "C-5-milk",
+              "occurredOn": "2026-07-10",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-5-parking",
+              "occurredOn": "2026-07-10",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-5-lunch",
+              "occurredOn": "2026-07-10",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-5-snack",
+              "occurredOn": "2026-07-10",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            },
+            {
+              "id": "C-5-maintenance",
+              "occurredOn": "2026-07-10",
+              "amount": "2500.00",
+              "category": "Housing",
+              "subcategory": "Maintenance",
+              "merchant": "Apartment Association",
+              "note": "Monthly maintenance"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [
+            {
+              "id": "C-6-milk",
+              "occurredOn": "2026-07-11",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-6-groceries",
+              "occurredOn": "2026-07-11",
+              "amount": "1400.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-6-car-petrol",
+              "occurredOn": "2026-07-11",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Car petrol for family use"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [
+            {
+              "id": "C-7-milk",
+              "occurredOn": "2026-07-12",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-7-family-meal",
+              "occurredOn": "2026-07-12",
+              "amount": "900.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "MTR",
+              "note": "Sunday family meal out"
+            },
+            {
+              "id": "C-7-play",
+              "occurredOn": "2026-07-12",
+              "amount": "400.00",
+              "category": "Entertainment",
+              "subcategory": "Games",
+              "merchant": "Neighbourhood Play Zone",
+              "note": "Child play-area visit"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [
+            {
+              "id": "C-8-milk",
+              "occurredOn": "2026-07-13",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-8-parking",
+              "occurredOn": "2026-07-13",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-8-lunch",
+              "occurredOn": "2026-07-13",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-8-bike-petrol",
+              "occurredOn": "2026-07-13",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [
+            {
+              "id": "C-9-milk",
+              "occurredOn": "2026-07-14",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-9-parking",
+              "occurredOn": "2026-07-14",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [
+            {
+              "id": "C-10-milk",
+              "occurredOn": "2026-07-15",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-10-parking",
+              "occurredOn": "2026-07-15",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-10-lunch",
+              "occurredOn": "2026-07-15",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-10-vegetables",
+              "occurredOn": "2026-07-15",
+              "amount": "280.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-10-bakery",
+              "occurredOn": "2026-07-15",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            },
+            {
+              "id": "C-10-help",
+              "occurredOn": "2026-07-15",
+              "amount": "2200.00",
+              "category": "Housing",
+              "subcategory": "Domestic Help",
+              "merchant": "Household Helper",
+              "note": "Monthly domestic help"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [
+            {
+              "id": "C-11-milk",
+              "occurredOn": "2026-07-16",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-11-parking",
+              "occurredOn": "2026-07-16",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-11-delivery",
+              "occurredOn": "2026-07-16",
+              "amount": "650.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy",
+              "note": "Occasional busy-evening delivery"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [
+            {
+              "id": "C-12-milk",
+              "occurredOn": "2026-07-17",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-12-parking",
+              "occurredOn": "2026-07-17",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-12-lunch",
+              "occurredOn": "2026-07-17",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-12-snack",
+              "occurredOn": "2026-07-17",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            },
+            {
+              "id": "C-12-mobile",
+              "occurredOn": "2026-07-17",
+              "amount": "349.00",
+              "category": "Utilities",
+              "subcategory": "Mobile",
+              "merchant": "Airtel",
+              "note": "Mobile recharge"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [
+            {
+              "id": "C-13-milk",
+              "occurredOn": "2026-07-18",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-13-groceries",
+              "occurredOn": "2026-07-18",
+              "amount": "1400.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-13-movie",
+              "occurredOn": "2026-07-18",
+              "amount": "1050.00",
+              "category": "Entertainment",
+              "subcategory": "Movies",
+              "merchant": "PVR Nexus",
+              "note": "Weekend family movie"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [
+            {
+              "id": "C-14-milk",
+              "occurredOn": "2026-07-19",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-14-family-meal",
+              "occurredOn": "2026-07-19",
+              "amount": "900.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Sunday family meal out"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [
+            {
+              "id": "C-15-milk",
+              "occurredOn": "2026-07-20",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-15-parking",
+              "occurredOn": "2026-07-20",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-15-lunch",
+              "occurredOn": "2026-07-20",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-15-bike-petrol",
+              "occurredOn": "2026-07-20",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            },
+            {
+              "id": "C-15-bike-service",
+              "occurredOn": "2026-07-20",
+              "amount": "1250.00",
+              "category": "Transportation",
+              "subcategory": "Two-Wheeler Maintenance",
+              "merchant": "Honda Service HSR",
+              "note": "Bike service"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [
+            {
+              "id": "C-16-milk",
+              "occurredOn": "2026-07-21",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-16-parking",
+              "occurredOn": "2026-07-21",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [
+            {
+              "id": "C-17-milk",
+              "occurredOn": "2026-07-22",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-17-parking",
+              "occurredOn": "2026-07-22",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-17-lunch",
+              "occurredOn": "2026-07-22",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-17-vegetables",
+              "occurredOn": "2026-07-22",
+              "amount": "280.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-17-bakery",
+              "occurredOn": "2026-07-22",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            },
+            {
+              "id": "C-17-school-supplies",
+              "occurredOn": "2026-07-22",
+              "amount": "850.00",
+              "category": "Education",
+              "subcategory": "School Supplies",
+              "merchant": "Sapna Book House",
+              "note": "School notebooks and stationery"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [
+            {
+              "id": "C-18-milk",
+              "occurredOn": "2026-07-23",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-18-parking",
+              "occurredOn": "2026-07-23",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-18-clothes",
+              "occurredOn": "2026-07-23",
+              "amount": "1600.00",
+              "category": "Shopping",
+              "subcategory": "Clothing",
+              "merchant": "Max Fashion",
+              "note": "Clothes for child"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [
+            {
+              "id": "C-19-milk",
+              "occurredOn": "2026-07-24",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-19-parking",
+              "occurredOn": "2026-07-24",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-19-lunch",
+              "occurredOn": "2026-07-24",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-19-snack",
+              "occurredOn": "2026-07-24",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [
+            {
+              "id": "C-20-milk",
+              "occurredOn": "2026-07-25",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-20-groceries",
+              "occurredOn": "2026-07-25",
+              "amount": "1400.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-20-car-petrol",
+              "occurredOn": "2026-07-25",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Car petrol for family use"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [
+            {
+              "id": "C-21-milk",
+              "occurredOn": "2026-07-26",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-21-family-meal",
+              "occurredOn": "2026-07-26",
+              "amount": "900.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "MTR",
+              "note": "Sunday family meal out"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [
+            {
+              "id": "C-22-milk",
+              "occurredOn": "2026-07-27",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-22-parking",
+              "occurredOn": "2026-07-27",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-22-lunch",
+              "occurredOn": "2026-07-27",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-22-bike-petrol",
+              "occurredOn": "2026-07-27",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            },
+            {
+              "id": "C-22-lpg",
+              "occurredOn": "2026-07-27",
+              "amount": "850.00",
+              "category": "Utilities",
+              "subcategory": "LPG & Cooking Fuel",
+              "merchant": "Indane Gas",
+              "note": "Cooking gas refill"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [
+            {
+              "id": "C-23-milk",
+              "occurredOn": "2026-07-28",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-23-parking",
+              "occurredOn": "2026-07-28",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [
+            {
+              "id": "C-24-milk",
+              "occurredOn": "2026-07-29",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-24-parking",
+              "occurredOn": "2026-07-29",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-24-lunch",
+              "occurredOn": "2026-07-29",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-24-vegetables",
+              "occurredOn": "2026-07-29",
+              "amount": "280.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-24-bakery",
+              "occurredOn": "2026-07-29",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            },
+            {
+              "id": "C-24-doctor",
+              "occurredOn": "2026-07-29",
+              "amount": "700.00",
+              "category": "Medical",
+              "subcategory": "Doctor Consultation",
+              "merchant": "Neighbourhood Clinic",
+              "note": "Child fever consultation"
+            },
+            {
+              "id": "C-24-medicine",
+              "occurredOn": "2026-07-29",
+              "amount": "380.00",
+              "category": "Medical",
+              "subcategory": "Medicines",
+              "merchant": "Apollo Pharmacy",
+              "note": "Prescription medicines"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [
+            {
+              "id": "C-25-milk",
+              "occurredOn": "2026-07-30",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-25-parking",
+              "occurredOn": "2026-07-30",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [
+            {
+              "id": "C-26-milk",
+              "occurredOn": "2026-07-31",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-26-parking",
+              "occurredOn": "2026-07-31",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-26-lunch",
+              "occurredOn": "2026-07-31",
+              "amount": "110.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-26-snack",
+              "occurredOn": "2026-07-31",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [
+            {
+              "id": "C-27-milk",
+              "occurredOn": "2026-08-01",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-27-groceries",
+              "occurredOn": "2026-08-01",
+              "amount": "1900.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-27-rent",
+              "occurredOn": "2026-08-01",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Monthly rent for the family apartment"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [
+            {
+              "id": "C-28-milk",
+              "occurredOn": "2026-08-02",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-28-family-meal",
+              "occurredOn": "2026-08-02",
+              "amount": "1500.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Sunday family meal out"
+            },
+            {
+              "id": "C-28-school",
+              "occurredOn": "2026-08-02",
+              "amount": "6500.00",
+              "category": "Education",
+              "subcategory": "School Fees",
+              "merchant": "Neighbourhood Primary School",
+              "note": "Child school tuition"
+            },
+            {
+              "id": "C-28-childcare",
+              "occurredOn": "2026-08-02",
+              "amount": "2500.00",
+              "category": "Family",
+              "subcategory": "Childcare",
+              "merchant": "After School Club",
+              "note": "After-school care"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [
+            {
+              "id": "C-29-milk",
+              "occurredOn": "2026-08-03",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-29-parking",
+              "occurredOn": "2026-08-03",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-29-lunch",
+              "occurredOn": "2026-08-03",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-29-bike-petrol",
+              "occurredOn": "2026-08-03",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [
+            {
+              "id": "C-30-milk",
+              "occurredOn": "2026-08-04",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-30-parking",
+              "occurredOn": "2026-08-04",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-30-delivery",
+              "occurredOn": "2026-08-04",
+              "amount": "650.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy",
+              "note": "Occasional busy-evening delivery"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [
+            {
+              "id": "C-31-milk",
+              "occurredOn": "2026-08-05",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-31-parking",
+              "occurredOn": "2026-08-05",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-31-lunch",
+              "occurredOn": "2026-08-05",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-31-vegetables",
+              "occurredOn": "2026-08-05",
+              "amount": "360.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-31-bakery",
+              "occurredOn": "2026-08-05",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [
+            {
+              "id": "C-32-milk",
+              "occurredOn": "2026-08-06",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-32-parking",
+              "occurredOn": "2026-08-06",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-32-power",
+              "occurredOn": "2026-08-06",
+              "amount": "1650.00",
+              "category": "Utilities",
+              "subcategory": "Electricity",
+              "merchant": "BESCOM",
+              "note": "Monthly electricity"
+            },
+            {
+              "id": "C-32-internet",
+              "occurredOn": "2026-08-06",
+              "amount": "999.00",
+              "category": "Utilities",
+              "subcategory": "Internet",
+              "merchant": "ACT Fibernet",
+              "note": "Home broadband"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [
+            {
+              "id": "C-33-milk",
+              "occurredOn": "2026-08-07",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-33-parking",
+              "occurredOn": "2026-08-07",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-33-lunch",
+              "occurredOn": "2026-08-07",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-33-snack",
+              "occurredOn": "2026-08-07",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            },
+            {
+              "id": "C-33-maintenance",
+              "occurredOn": "2026-08-07",
+              "amount": "2500.00",
+              "category": "Housing",
+              "subcategory": "Maintenance",
+              "merchant": "Apartment Association",
+              "note": "Monthly maintenance"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [
+            {
+              "id": "C-34-milk",
+              "occurredOn": "2026-08-08",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-34-groceries",
+              "occurredOn": "2026-08-08",
+              "amount": "1900.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-34-car-petrol",
+              "occurredOn": "2026-08-08",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Car petrol for family use"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [
+            {
+              "id": "C-35-milk",
+              "occurredOn": "2026-08-09",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-35-family-meal",
+              "occurredOn": "2026-08-09",
+              "amount": "1500.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "MTR",
+              "note": "Sunday family meal out"
+            },
+            {
+              "id": "C-35-play",
+              "occurredOn": "2026-08-09",
+              "amount": "400.00",
+              "category": "Entertainment",
+              "subcategory": "Games",
+              "merchant": "Neighbourhood Play Zone",
+              "note": "Child play-area visit"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [
+            {
+              "id": "C-36-milk",
+              "occurredOn": "2026-08-10",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-36-parking",
+              "occurredOn": "2026-08-10",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-36-lunch",
+              "occurredOn": "2026-08-10",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-36-bike-petrol",
+              "occurredOn": "2026-08-10",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            },
+            {
+              "id": "C-36-insurance",
+              "occurredOn": "2026-08-10",
+              "amount": "7200.00",
+              "category": "Insurance",
+              "subcategory": "Vehicle Insurance",
+              "merchant": "Car Insurer",
+              "note": "Annual car policy renewal"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [
+            {
+              "id": "C-37-milk",
+              "occurredOn": "2026-08-11",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-37-parking",
+              "occurredOn": "2026-08-11",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [
+            {
+              "id": "C-38-milk",
+              "occurredOn": "2026-08-12",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-38-parking",
+              "occurredOn": "2026-08-12",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-38-lunch",
+              "occurredOn": "2026-08-12",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-38-vegetables",
+              "occurredOn": "2026-08-12",
+              "amount": "360.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-38-bakery",
+              "occurredOn": "2026-08-12",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            },
+            {
+              "id": "C-38-help",
+              "occurredOn": "2026-08-12",
+              "amount": "2200.00",
+              "category": "Housing",
+              "subcategory": "Domestic Help",
+              "merchant": "Household Helper",
+              "note": "Monthly domestic help"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [
+            {
+              "id": "C-39-milk",
+              "occurredOn": "2026-08-13",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-39-parking",
+              "occurredOn": "2026-08-13",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [
+            {
+              "id": "C-40-milk",
+              "occurredOn": "2026-08-14",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-40-parking",
+              "occurredOn": "2026-08-14",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-40-lunch",
+              "occurredOn": "2026-08-14",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-40-snack",
+              "occurredOn": "2026-08-14",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            },
+            {
+              "id": "C-40-mobile",
+              "occurredOn": "2026-08-14",
+              "amount": "349.00",
+              "category": "Utilities",
+              "subcategory": "Mobile",
+              "merchant": "Airtel",
+              "note": "Mobile recharge"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [
+            {
+              "id": "C-41-milk",
+              "occurredOn": "2026-08-15",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-41-groceries",
+              "occurredOn": "2026-08-15",
+              "amount": "1900.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-41-movie",
+              "occurredOn": "2026-08-15",
+              "amount": "1050.00",
+              "category": "Entertainment",
+              "subcategory": "Movies",
+              "merchant": "PVR Nexus",
+              "note": "Weekend family movie"
+            },
+            {
+              "id": "C-41-hotel",
+              "occurredOn": "2026-08-15",
+              "amount": "6500.00",
+              "category": "Travel",
+              "subcategory": "Accommodation",
+              "merchant": "Mysuru Family Hotel",
+              "note": "Two-night family road trip"
+            },
+            {
+              "id": "C-41-toll",
+              "occurredOn": "2026-08-15",
+              "amount": "420.00",
+              "category": "Transportation",
+              "subcategory": "Toll",
+              "merchant": "FASTag",
+              "note": "Bengaluru–Mysuru highway tolls"
+            },
+            {
+              "id": "C-41-trip-fuel",
+              "occurredOn": "2026-08-15",
+              "amount": "2200.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "HP Highway Fuel",
+              "note": "Fuel for family road trip"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [
+            {
+              "id": "C-42-milk",
+              "occurredOn": "2026-08-16",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-42-family-meal",
+              "occurredOn": "2026-08-16",
+              "amount": "1500.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Sunday family meal out"
+            },
+            {
+              "id": "C-42-zoo",
+              "occurredOn": "2026-08-16",
+              "amount": "600.00",
+              "category": "Travel",
+              "subcategory": "Travel Activities",
+              "merchant": "Mysuru Zoo",
+              "note": "Family trip activity"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [
+            {
+              "id": "C-43-milk",
+              "occurredOn": "2026-08-17",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-43-parking",
+              "occurredOn": "2026-08-17",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-43-lunch",
+              "occurredOn": "2026-08-17",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-43-bike-petrol",
+              "occurredOn": "2026-08-17",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [
+            {
+              "id": "C-44-milk",
+              "occurredOn": "2026-08-18",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-44-parking",
+              "occurredOn": "2026-08-18",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [
+            {
+              "id": "C-45-milk",
+              "occurredOn": "2026-08-19",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-45-parking",
+              "occurredOn": "2026-08-19",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-45-lunch",
+              "occurredOn": "2026-08-19",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-45-vegetables",
+              "occurredOn": "2026-08-19",
+              "amount": "360.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-45-bakery",
+              "occurredOn": "2026-08-19",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            },
+            {
+              "id": "C-45-household",
+              "occurredOn": "2026-08-19",
+              "amount": "950.00",
+              "category": "Shopping",
+              "subcategory": "Household Items",
+              "merchant": "Amazon",
+              "note": "Replacement household supplies"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [
+            {
+              "id": "C-46-milk",
+              "occurredOn": "2026-08-20",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-46-parking",
+              "occurredOn": "2026-08-20",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-46-delivery",
+              "occurredOn": "2026-08-20",
+              "amount": "650.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy",
+              "note": "Occasional busy-evening delivery"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [
+            {
+              "id": "C-47-milk",
+              "occurredOn": "2026-08-21",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-47-parking",
+              "occurredOn": "2026-08-21",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-47-lunch",
+              "occurredOn": "2026-08-21",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-47-snack",
+              "occurredOn": "2026-08-21",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [
+            {
+              "id": "C-48-milk",
+              "occurredOn": "2026-08-22",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-48-groceries",
+              "occurredOn": "2026-08-22",
+              "amount": "1900.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "DMart",
+              "note": "Weekly groceries for cooking at home"
+            },
+            {
+              "id": "C-48-car-petrol",
+              "occurredOn": "2026-08-22",
+              "amount": "2500.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Shell Bellandur",
+              "note": "Car petrol for family use"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [
+            {
+              "id": "C-49-milk",
+              "occurredOn": "2026-08-23",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-49-family-meal",
+              "occurredOn": "2026-08-23",
+              "amount": "1500.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "MTR",
+              "note": "Sunday family meal out"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [
+            {
+              "id": "C-50-milk",
+              "occurredOn": "2026-08-24",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-50-parking",
+              "occurredOn": "2026-08-24",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-50-lunch",
+              "occurredOn": "2026-08-24",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-50-bike-petrol",
+              "occurredOn": "2026-08-24",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            },
+            {
+              "id": "C-spike",
+              "occurredOn": "2026-08-24",
+              "amount": "6000.00",
+              "category": "Transportation",
+              "subcategory": "Vehicle Maintenance",
+              "merchant": "Maruti Service Centre",
+              "note": "Car repair entered with wrong date; moved to July 20 on day 59"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [
+            {
+              "id": "C-51-milk",
+              "occurredOn": "2026-08-25",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-51-parking",
+              "occurredOn": "2026-08-25",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [
+            {
+              "id": "C-52-milk",
+              "occurredOn": "2026-08-26",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-52-parking",
+              "occurredOn": "2026-08-26",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-52-lunch",
+              "occurredOn": "2026-08-26",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-52-vegetables",
+              "occurredOn": "2026-08-26",
+              "amount": "360.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-52-bakery",
+              "occurredOn": "2026-08-26",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [
+            {
+              "id": "C-53-milk",
+              "occurredOn": "2026-08-27",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-53-parking",
+              "occurredOn": "2026-08-27",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-53-haircut",
+              "occurredOn": "2026-08-27",
+              "amount": "350.00",
+              "category": "Personal Care",
+              "subcategory": "Haircut & Grooming",
+              "merchant": "Local Barber",
+              "note": "Haircut"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [
+            {
+              "id": "C-54-milk",
+              "occurredOn": "2026-08-28",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-54-parking",
+              "occurredOn": "2026-08-28",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-54-lunch",
+              "occurredOn": "2026-08-28",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-54-snack",
+              "occurredOn": "2026-08-28",
+              "amount": "100.00",
+              "category": "Food & Dining",
+              "subcategory": "Snacks",
+              "merchant": "Office Snack Counter",
+              "note": "Friday snack"
+            },
+            {
+              "id": "C-54-gift",
+              "occurredOn": "2026-08-28",
+              "amount": "800.00",
+              "category": "Shopping",
+              "subcategory": "Gifts",
+              "merchant": "Hamleys",
+              "note": "Child birthday party gift"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [
+            {
+              "id": "C-55-milk",
+              "occurredOn": "2026-08-29",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-55-groceries",
+              "occurredOn": "2026-08-29",
+              "amount": "1900.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket",
+              "note": "Weekly groceries for cooking at home"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [
+            {
+              "id": "C-56-milk",
+              "occurredOn": "2026-08-30",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-56-family-meal",
+              "occurredOn": "2026-08-30",
+              "amount": "1500.00",
+              "category": "Food & Dining",
+              "subcategory": "Restaurant & Cafe",
+              "merchant": "Udupi Garden",
+              "note": "Sunday family meal out"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [
+            {
+              "id": "C-57-milk",
+              "occurredOn": "2026-08-31",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-57-parking",
+              "occurredOn": "2026-08-31",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-57-lunch",
+              "occurredOn": "2026-08-31",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-57-bike-petrol",
+              "occurredOn": "2026-08-31",
+              "amount": "600.00",
+              "category": "Transportation",
+              "subcategory": "Fuel",
+              "merchant": "Indian Oil HSR",
+              "note": "Weekly bike petrol"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [
+            {
+              "id": "C-58-milk",
+              "occurredOn": "2026-09-01",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-58-parking",
+              "occurredOn": "2026-09-01",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-58-rent",
+              "occurredOn": "2026-09-01",
+              "amount": "28000.00",
+              "category": "Housing",
+              "subcategory": "Rent",
+              "merchant": "Apartment Landlord",
+              "note": "Monthly rent for the family apartment"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [
+            {
+              "id": "C-59-milk",
+              "occurredOn": "2026-09-02",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-59-parking",
+              "occurredOn": "2026-09-02",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            },
+            {
+              "id": "C-59-lunch",
+              "occurredOn": "2026-09-02",
+              "amount": "150.00",
+              "category": "Food & Dining",
+              "subcategory": "Office Canteen",
+              "merchant": "Office Canteen",
+              "note": "Office lunch; packed lunch on other weekdays"
+            },
+            {
+              "id": "C-59-vegetables",
+              "occurredOn": "2026-09-02",
+              "amount": "360.00",
+              "category": "Food & Dining",
+              "subcategory": "Vegetables & Fruits",
+              "merchant": "HSR Vegetable Market",
+              "note": "Vegetables for home cooking"
+            },
+            {
+              "id": "C-59-bakery",
+              "occurredOn": "2026-09-02",
+              "amount": "120.00",
+              "category": "Food & Dining",
+              "subcategory": "Sweets & Bakery",
+              "merchant": "Iyengar Bakery",
+              "note": "Family evening snack"
+            }
+          ],
+          "edits": [
+            {
+              "operation": "MOVE",
+              "transaction": "C-spike",
+              "occurredOn": "2026-07-20"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [
+            {
+              "id": "C-60-milk",
+              "occurredOn": "2026-09-03",
+              "amount": "60.00",
+              "category": "Food & Dining",
+              "subcategory": "Milk & Dairy",
+              "merchant": "Nandini Milk Booth",
+              "note": "Milk for home breakfast"
+            },
+            {
+              "id": "C-60-parking",
+              "occurredOn": "2026-09-03",
+              "amount": "20.00",
+              "category": "Transportation",
+              "subcategory": "Parking",
+              "merchant": "Office Bike Parking",
+              "note": "Bike commute parking"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    }
+  ],
+  "householdContext": "Synthetic Bengaluru household expenses, not a claim about average city prices. Male renter with wife and school-age child, bike commute and a family car. A/B record incomplete subsets; C logs consistently. Home cooking is represented by ingredients, not a second fictional meal expense."
+}

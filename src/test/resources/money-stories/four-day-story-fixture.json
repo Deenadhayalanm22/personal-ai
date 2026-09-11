@@ -1,0 +1,305 @@
+{
+  "month": "2026-09",
+  "startDate": "2026-09-07",
+  "sourceAccount": "HDFC Salary Account",
+  "days": [
+    {
+      "offset": 0,
+      "expectedStoryTypes": [
+        "UNUSUAL_HIGH_SPEND_DAY",
+        "CATEGORY_SPENDING_GROWTH",
+        "MERCHANT_CONCENTRATION"
+      ],
+      "transactions": [
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Housing",
+          "subcategory": "Rent",
+          "merchant": "Landlord",
+          "amount": "28000.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Utilities",
+          "subcategory": "Electricity",
+          "merchant": "BESCOM",
+          "amount": "1850.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Food & Dining",
+          "subcategory": "Groceries",
+          "merchant": "BigBasket",
+          "amount": "2640.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Family",
+          "subcategory": "Childcare",
+          "merchant": "Little Millennium",
+          "amount": "3500.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Medical",
+          "subcategory": "Medicines",
+          "merchant": "Apollo Pharmacy",
+          "amount": "620.00"
+        }
+      ]
+    },
+    {
+      "offset": 1,
+      "expectedStoryTypes": [
+        "UNUSUAL_HIGH_SPEND_DAY",
+        "CATEGORY_SPENDING_GROWTH",
+        "MERCHANT_CONCENTRATION"
+      ],
+      "transactions": [
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Transportation",
+          "subcategory": "Auto & Taxi",
+          "merchant": "Namma Yatri",
+          "amount": "210.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Personal Care",
+          "subcategory": "Haircut & Grooming",
+          "merchant": "Urban Company",
+          "amount": "499.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Clothing",
+          "merchant": "Lifestyle",
+          "amount": "1299.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Shopping",
+          "subcategory": "Household Items",
+          "merchant": "DMart",
+          "amount": "780.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Transportation",
+          "subcategory": "Fuel",
+          "merchant": "Indian Oil",
+          "amount": "1500.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Housing",
+          "subcategory": "Repairs & Renovation",
+          "merchant": "Local Plumber",
+          "amount": "650.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Clothing",
+          "merchant": "FirstCry",
+          "amount": "899.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Kitchenware",
+          "merchant": "IKEA",
+          "amount": "945.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Personal Care",
+          "subcategory": "Fitness & Sports",
+          "merchant": "Cult Fit",
+          "amount": "999.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Education",
+          "subcategory": "Books",
+          "merchant": "Sapna Book House",
+          "amount": "540.00"
+        }
+      ]
+    },
+    {
+      "offset": 2,
+      "expectedStoryTypes": [
+        "UNUSUAL_HIGH_SPEND_DAY",
+        "CATEGORY_SPENDING_GROWTH"
+      ],
+      "transactions": [
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Food & Dining",
+          "subcategory": "Food Delivery",
+          "merchant": "Swiggy",
+          "amount": "460.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Food & Dining",
+          "subcategory": "Restaurant & Cafe",
+          "merchant": "MTR",
+          "amount": "1250.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Entertainment",
+          "subcategory": "Movies",
+          "merchant": "PVR",
+          "amount": "850.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Food & Dining",
+          "subcategory": "Street Food",
+          "merchant": "Third Wave Coffee",
+          "amount": "340.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Traditional & Festival Wear",
+          "merchant": "H&M",
+          "amount": "1799.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Entertainment",
+          "subcategory": "OTT Subscription",
+          "merchant": "Netflix",
+          "amount": "649.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Food & Dining",
+          "subcategory": "Sweets & Bakery",
+          "merchant": "Corner House",
+          "amount": "420.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Gifts",
+          "merchant": "Hamleys",
+          "amount": "1100.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Entertainment",
+          "subcategory": "Games",
+          "merchant": "Play Arena",
+          "amount": "700.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Food & Dining",
+          "subcategory": "Sweets & Bakery",
+          "merchant": "Glen's Bakehouse",
+          "amount": "560.00"
+        }
+      ]
+    },
+    {
+      "offset": 3,
+      "expectedStoryTypes": [
+        "UNUSUAL_HIGH_SPEND_DAY",
+        "CATEGORY_SPENDING_GROWTH",
+        "DISCRETIONARY_FREQUENCY"
+      ],
+      "transactions": [
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Shopping",
+          "subcategory": "Household Items",
+          "merchant": "Amazon",
+          "amount": "799.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Clothing",
+          "merchant": "Amazon",
+          "amount": "1199.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Kitchenware",
+          "merchant": "Amazon",
+          "amount": "899.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Electronics",
+          "merchant": "Amazon",
+          "amount": "1499.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Gifts",
+          "merchant": "Amazon",
+          "amount": "1299.00"
+        },
+        {
+          "spendingNature": "ESSENTIAL",
+          "category": "Shopping",
+          "subcategory": "Household Items",
+          "merchant": "Amazon",
+          "amount": "650.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Personal Care",
+          "subcategory": "Fitness & Sports",
+          "merchant": "Amazon",
+          "amount": "999.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Education",
+          "subcategory": "Books",
+          "merchant": "Amazon",
+          "amount": "720.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Housing",
+          "subcategory": "Furniture",
+          "merchant": "Amazon",
+          "amount": "6499.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Electronics",
+          "merchant": "Amazon",
+          "amount": "3899.00"
+        },
+        {
+          "spendingNature": "DISCRETIONARY",
+          "category": "Shopping",
+          "subcategory": "Other Shopping",
+          "merchant": "Amazon",
+          "amount": "1099.00"
+        },
+        {
+          "spendingNature": "FLEXIBLE",
+          "category": "Shopping",
+          "subcategory": "Kitchenware",
+          "merchant": "Amazon",
+          "amount": "845.00"
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
+import com.apps.deen_sa.domain.SpendingNature;
 
 public interface FinancialTransactionRepository
         extends JpaRepository<FinancialTransactionEntity, Long> {
@@ -101,4 +102,19 @@ public interface FinancialTransactionRepository
             @Param("userId") Long userId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
+
+    @Query("""
+            SELECT transaction FROM FinancialTransactionEntity transaction
+            LEFT JOIN FETCH transaction.merchant merchant
+            WHERE transaction.user.id = :userId AND transaction.occurredAt >= :start
+              AND transaction.occurredAt < :end AND transaction.deletedAt IS NULL
+              AND (:category IS NULL OR transaction.category = :category)
+              AND (:nature IS NULL OR transaction.spendingNature = :nature)
+              AND (:merchantId IS NULL OR transaction.merchant.id = :merchantId)
+            ORDER BY transaction.occurredAt, transaction.id
+            """)
+    List<FinancialTransactionEntity> findStoryEvidence(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end,
+            @Param("category") String category, @Param("nature") SpendingNature nature,
+            @Param("merchantId") Long merchantId);
 }

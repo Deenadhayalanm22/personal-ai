@@ -1,0 +1,9 @@
+package com.apps.deen_sa.domain;
+
+public enum MoneyStoryType {
+    DISCRETIONARY_FREQUENCY,
+    CATEGORY_SPENDING_GROWTH,
+    WEEKEND_SPENDING_PATTERN,
+    MERCHANT_CONCENTRATION,
+    UNUSUAL_HIGH_SPEND_DAY
+}

@@ -1,0 +1,2435 @@
+{
+  "startDate": "2026-07-06",
+  "endDate": "2026-09-03",
+  "timezone": "Asia/Kolkata",
+  "sourceAccount": "HDFC Salary Account",
+  "users": [
+    {
+      "user": "A",
+      "description": "Sparse same-day entries",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [
+            {
+              "id": "A-1",
+              "occurredOn": "2026-07-06",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [
+            {
+              "id": "A-3",
+              "occurredOn": "2026-07-08",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [
+            {
+              "id": "A-6",
+              "occurredOn": "2026-07-11",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [],
+          "edits": [
+            {
+              "operation": "AMOUNT",
+              "transaction": "A-3",
+              "amount": "200.00"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [],
+          "edits": [
+            {
+              "operation": "DELETE",
+              "transaction": "A-6"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [
+            {
+              "id": "A-19",
+              "occurredOn": "2026-07-24",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [
+            {
+              "id": "A-35",
+              "occurredOn": "2026-08-09",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [
+            {
+              "id": "A-52",
+              "occurredOn": "2026-08-26",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    },
+    {
+      "user": "B",
+      "description": "Monthly partial backfill, not complete coverage",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [
+            {
+              "id": "B-26-7",
+              "occurredOn": "2026-07-07",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            },
+            {
+              "id": "B-26-12",
+              "occurredOn": "2026-07-12",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            },
+            {
+              "id": "B-26-19",
+              "occurredOn": "2026-07-19",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [
+            {
+              "id": "B-57-7",
+              "occurredOn": "2026-08-07",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            },
+            {
+              "id": "B-57-12",
+              "occurredOn": "2026-08-12",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            },
+            {
+              "id": "B-57-19",
+              "occurredOn": "2026-08-19",
+              "amount": "500.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    },
+    {
+      "user": "C",
+      "description": "Daily entries; completeness is not assumed",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-07-06",
+          "entries": [
+            {
+              "id": "C-1-g",
+              "occurredOn": "2026-07-06",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-1-f",
+              "occurredOn": "2026-07-06",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 2,
+          "date": "2026-07-07",
+          "entries": [
+            {
+              "id": "C-2-g",
+              "occurredOn": "2026-07-07",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-2-f",
+              "occurredOn": "2026-07-07",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 3,
+          "date": "2026-07-08",
+          "entries": [
+            {
+              "id": "C-3-g",
+              "occurredOn": "2026-07-08",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-3-f",
+              "occurredOn": "2026-07-08",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 4,
+          "date": "2026-07-09",
+          "entries": [
+            {
+              "id": "C-4-g",
+              "occurredOn": "2026-07-09",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-4-f",
+              "occurredOn": "2026-07-09",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 5,
+          "date": "2026-07-10",
+          "entries": [
+            {
+              "id": "C-5-g",
+              "occurredOn": "2026-07-10",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-5-f",
+              "occurredOn": "2026-07-10",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 6,
+          "date": "2026-07-11",
+          "entries": [
+            {
+              "id": "C-6-g",
+              "occurredOn": "2026-07-11",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-6-f",
+              "occurredOn": "2026-07-11",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 7,
+          "date": "2026-07-12",
+          "entries": [
+            {
+              "id": "C-7-g",
+              "occurredOn": "2026-07-12",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-7-f",
+              "occurredOn": "2026-07-12",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 8,
+          "date": "2026-07-13",
+          "entries": [
+            {
+              "id": "C-8-g",
+              "occurredOn": "2026-07-13",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-8-f",
+              "occurredOn": "2026-07-13",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 9,
+          "date": "2026-07-14",
+          "entries": [
+            {
+              "id": "C-9-g",
+              "occurredOn": "2026-07-14",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-9-f",
+              "occurredOn": "2026-07-14",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 10,
+          "date": "2026-07-15",
+          "entries": [
+            {
+              "id": "C-10-g",
+              "occurredOn": "2026-07-15",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-10-f",
+              "occurredOn": "2026-07-15",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 11,
+          "date": "2026-07-16",
+          "entries": [
+            {
+              "id": "C-11-g",
+              "occurredOn": "2026-07-16",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-11-f",
+              "occurredOn": "2026-07-16",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 12,
+          "date": "2026-07-17",
+          "entries": [
+            {
+              "id": "C-12-g",
+              "occurredOn": "2026-07-17",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-12-f",
+              "occurredOn": "2026-07-17",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 13,
+          "date": "2026-07-18",
+          "entries": [
+            {
+              "id": "C-13-g",
+              "occurredOn": "2026-07-18",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-13-f",
+              "occurredOn": "2026-07-18",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 14,
+          "date": "2026-07-19",
+          "entries": [
+            {
+              "id": "C-14-g",
+              "occurredOn": "2026-07-19",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-14-f",
+              "occurredOn": "2026-07-19",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 15,
+          "date": "2026-07-20",
+          "entries": [
+            {
+              "id": "C-15-g",
+              "occurredOn": "2026-07-20",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-15-f",
+              "occurredOn": "2026-07-20",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 16,
+          "date": "2026-07-21",
+          "entries": [
+            {
+              "id": "C-16-g",
+              "occurredOn": "2026-07-21",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-16-f",
+              "occurredOn": "2026-07-21",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 17,
+          "date": "2026-07-22",
+          "entries": [
+            {
+              "id": "C-17-g",
+              "occurredOn": "2026-07-22",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-17-f",
+              "occurredOn": "2026-07-22",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 18,
+          "date": "2026-07-23",
+          "entries": [
+            {
+              "id": "C-18-g",
+              "occurredOn": "2026-07-23",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-18-f",
+              "occurredOn": "2026-07-23",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 19,
+          "date": "2026-07-24",
+          "entries": [
+            {
+              "id": "C-19-g",
+              "occurredOn": "2026-07-24",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-19-f",
+              "occurredOn": "2026-07-24",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 20,
+          "date": "2026-07-25",
+          "entries": [
+            {
+              "id": "C-20-g",
+              "occurredOn": "2026-07-25",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-20-f",
+              "occurredOn": "2026-07-25",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 21,
+          "date": "2026-07-26",
+          "entries": [
+            {
+              "id": "C-21-g",
+              "occurredOn": "2026-07-26",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-21-f",
+              "occurredOn": "2026-07-26",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 22,
+          "date": "2026-07-27",
+          "entries": [
+            {
+              "id": "C-22-g",
+              "occurredOn": "2026-07-27",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-22-f",
+              "occurredOn": "2026-07-27",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 23,
+          "date": "2026-07-28",
+          "entries": [
+            {
+              "id": "C-23-g",
+              "occurredOn": "2026-07-28",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-23-f",
+              "occurredOn": "2026-07-28",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 24,
+          "date": "2026-07-29",
+          "entries": [
+            {
+              "id": "C-24-g",
+              "occurredOn": "2026-07-29",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-24-f",
+              "occurredOn": "2026-07-29",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 25,
+          "date": "2026-07-30",
+          "entries": [
+            {
+              "id": "C-25-g",
+              "occurredOn": "2026-07-30",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-25-f",
+              "occurredOn": "2026-07-30",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 26,
+          "date": "2026-07-31",
+          "entries": [
+            {
+              "id": "C-26-g",
+              "occurredOn": "2026-07-31",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-26-f",
+              "occurredOn": "2026-07-31",
+              "amount": "300.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 27,
+          "date": "2026-08-01",
+          "entries": [
+            {
+              "id": "C-27-g",
+              "occurredOn": "2026-08-01",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-27-f",
+              "occurredOn": "2026-08-01",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 28,
+          "date": "2026-08-02",
+          "entries": [
+            {
+              "id": "C-28-g",
+              "occurredOn": "2026-08-02",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-28-f",
+              "occurredOn": "2026-08-02",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 29,
+          "date": "2026-08-03",
+          "entries": [
+            {
+              "id": "C-29-g",
+              "occurredOn": "2026-08-03",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-29-f",
+              "occurredOn": "2026-08-03",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 30,
+          "date": "2026-08-04",
+          "entries": [
+            {
+              "id": "C-30-g",
+              "occurredOn": "2026-08-04",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-30-f",
+              "occurredOn": "2026-08-04",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 31,
+          "date": "2026-08-05",
+          "entries": [
+            {
+              "id": "C-31-g",
+              "occurredOn": "2026-08-05",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-31-f",
+              "occurredOn": "2026-08-05",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 32,
+          "date": "2026-08-06",
+          "entries": [
+            {
+              "id": "C-32-g",
+              "occurredOn": "2026-08-06",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-32-f",
+              "occurredOn": "2026-08-06",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 33,
+          "date": "2026-08-07",
+          "entries": [
+            {
+              "id": "C-33-g",
+              "occurredOn": "2026-08-07",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-33-f",
+              "occurredOn": "2026-08-07",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 34,
+          "date": "2026-08-08",
+          "entries": [
+            {
+              "id": "C-34-g",
+              "occurredOn": "2026-08-08",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-34-f",
+              "occurredOn": "2026-08-08",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 35,
+          "date": "2026-08-09",
+          "entries": [
+            {
+              "id": "C-35-g",
+              "occurredOn": "2026-08-09",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-35-f",
+              "occurredOn": "2026-08-09",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 36,
+          "date": "2026-08-10",
+          "entries": [
+            {
+              "id": "C-36-g",
+              "occurredOn": "2026-08-10",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-36-f",
+              "occurredOn": "2026-08-10",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 37,
+          "date": "2026-08-11",
+          "entries": [
+            {
+              "id": "C-37-g",
+              "occurredOn": "2026-08-11",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-37-f",
+              "occurredOn": "2026-08-11",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 38,
+          "date": "2026-08-12",
+          "entries": [
+            {
+              "id": "C-38-g",
+              "occurredOn": "2026-08-12",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-38-f",
+              "occurredOn": "2026-08-12",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 39,
+          "date": "2026-08-13",
+          "entries": [
+            {
+              "id": "C-39-g",
+              "occurredOn": "2026-08-13",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-39-f",
+              "occurredOn": "2026-08-13",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 40,
+          "date": "2026-08-14",
+          "entries": [
+            {
+              "id": "C-40-g",
+              "occurredOn": "2026-08-14",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-40-f",
+              "occurredOn": "2026-08-14",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 41,
+          "date": "2026-08-15",
+          "entries": [
+            {
+              "id": "C-41-g",
+              "occurredOn": "2026-08-15",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-41-f",
+              "occurredOn": "2026-08-15",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 42,
+          "date": "2026-08-16",
+          "entries": [
+            {
+              "id": "C-42-g",
+              "occurredOn": "2026-08-16",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-42-f",
+              "occurredOn": "2026-08-16",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 43,
+          "date": "2026-08-17",
+          "entries": [
+            {
+              "id": "C-43-g",
+              "occurredOn": "2026-08-17",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-43-f",
+              "occurredOn": "2026-08-17",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 44,
+          "date": "2026-08-18",
+          "entries": [
+            {
+              "id": "C-44-g",
+              "occurredOn": "2026-08-18",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-44-f",
+              "occurredOn": "2026-08-18",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 45,
+          "date": "2026-08-19",
+          "entries": [
+            {
+              "id": "C-45-g",
+              "occurredOn": "2026-08-19",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-45-f",
+              "occurredOn": "2026-08-19",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 46,
+          "date": "2026-08-20",
+          "entries": [
+            {
+              "id": "C-46-g",
+              "occurredOn": "2026-08-20",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-46-f",
+              "occurredOn": "2026-08-20",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 47,
+          "date": "2026-08-21",
+          "entries": [
+            {
+              "id": "C-47-g",
+              "occurredOn": "2026-08-21",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-47-f",
+              "occurredOn": "2026-08-21",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 48,
+          "date": "2026-08-22",
+          "entries": [
+            {
+              "id": "C-48-g",
+              "occurredOn": "2026-08-22",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-48-f",
+              "occurredOn": "2026-08-22",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 49,
+          "date": "2026-08-23",
+          "entries": [
+            {
+              "id": "C-49-g",
+              "occurredOn": "2026-08-23",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-49-f",
+              "occurredOn": "2026-08-23",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 50,
+          "date": "2026-08-24",
+          "entries": [
+            {
+              "id": "C-50-g",
+              "occurredOn": "2026-08-24",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-50-f",
+              "occurredOn": "2026-08-24",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            },
+            {
+              "id": "C-spike",
+              "occurredOn": "2026-08-24",
+              "amount": "6000.00",
+              "category": "Shopping",
+              "subcategory": "Electronics",
+              "merchant": "Amazon"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 51,
+          "date": "2026-08-25",
+          "entries": [
+            {
+              "id": "C-51-g",
+              "occurredOn": "2026-08-25",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-51-f",
+              "occurredOn": "2026-08-25",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 52,
+          "date": "2026-08-26",
+          "entries": [
+            {
+              "id": "C-52-g",
+              "occurredOn": "2026-08-26",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-52-f",
+              "occurredOn": "2026-08-26",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 53,
+          "date": "2026-08-27",
+          "entries": [
+            {
+              "id": "C-53-g",
+              "occurredOn": "2026-08-27",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-53-f",
+              "occurredOn": "2026-08-27",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 54,
+          "date": "2026-08-28",
+          "entries": [
+            {
+              "id": "C-54-g",
+              "occurredOn": "2026-08-28",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-54-f",
+              "occurredOn": "2026-08-28",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 55,
+          "date": "2026-08-29",
+          "entries": [
+            {
+              "id": "C-55-g",
+              "occurredOn": "2026-08-29",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-55-f",
+              "occurredOn": "2026-08-29",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 56,
+          "date": "2026-08-30",
+          "entries": [
+            {
+              "id": "C-56-g",
+              "occurredOn": "2026-08-30",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-56-f",
+              "occurredOn": "2026-08-30",
+              "amount": "600.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 57,
+          "date": "2026-08-31",
+          "entries": [
+            {
+              "id": "C-57-g",
+              "occurredOn": "2026-08-31",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-57-f",
+              "occurredOn": "2026-08-31",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 58,
+          "date": "2026-09-01",
+          "entries": [
+            {
+              "id": "C-58-g",
+              "occurredOn": "2026-09-01",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-58-f",
+              "occurredOn": "2026-09-01",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        },
+        {
+          "day": 59,
+          "date": "2026-09-02",
+          "entries": [
+            {
+              "id": "C-59-g",
+              "occurredOn": "2026-09-02",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-59-f",
+              "occurredOn": "2026-09-02",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [
+            {
+              "operation": "MOVE",
+              "transaction": "C-spike",
+              "occurredOn": "2026-07-20"
+            }
+          ],
+          "runJobs": true
+        },
+        {
+          "day": 60,
+          "date": "2026-09-03",
+          "entries": [
+            {
+              "id": "C-60-g",
+              "occurredOn": "2026-09-03",
+              "amount": "200.00",
+              "category": "Food & Dining",
+              "subcategory": "Groceries",
+              "merchant": "BigBasket"
+            },
+            {
+              "id": "C-60-f",
+              "occurredOn": "2026-09-03",
+              "amount": "450.00",
+              "category": "Food & Dining",
+              "subcategory": "Food Delivery",
+              "merchant": "Swiggy"
+            }
+          ],
+          "edits": [],
+          "runJobs": true
+        }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@ package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +14,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class MonthlyFinancialTransactionService {
     private final FinancialTransactionRepository transactions;
+    private final MoneyStoriesService moneyStories;
+
+    /** Kept for focused unit tests and non-web callers. Spring uses the two-argument constructor. */
+    public MonthlyFinancialTransactionService(FinancialTransactionRepository transactions) {
+        this(transactions, null);
+    }
+
+    @Autowired
+    public MonthlyFinancialTransactionService(FinancialTransactionRepository transactions,
+                                              MoneyStoriesService moneyStories) {
+        this.transactions = transactions;
+        this.moneyStories = moneyStories;
+    }
 
     @Transactional(readOnly = true)
     public MonthlyExpenseResponse summarize(AppUserEntity user, YearMonth month) {
@@ -34,8 +46,9 @@ public class MonthlyFinancialTransactionService {
                 .countByUserIdAndOccurredAtGreaterThanEqualAndOccurredAtLessThanAndDeletedAtIsNull(
                         user.getId(), start, end);
 
-        return new MonthlyExpenseResponse(
-                month.toString(), user.getCurrency(), total, transactionCount, categories);
+        return new MonthlyExpenseResponse(month.toString(), user.getCurrency(), total, transactionCount, categories,
+                moneyStories == null ? MoneyStoriesService.MoneyStoriesResponse.empty()
+                        : moneyStories.monthly(user, month));
     }
 
     private BigDecimal money(BigDecimal amount) {
@@ -47,7 +60,12 @@ public class MonthlyFinancialTransactionService {
             String currency,
             BigDecimal total,
             long transactionCount,
-            Map<String, BigDecimal> categories
+            Map<String, BigDecimal> categories,
+            MoneyStoriesService.MoneyStoriesResponse moneyStories
     ) {
+        public MonthlyExpenseResponse(String month, String currency, BigDecimal total, long transactionCount,
+                                      Map<String, BigDecimal> categories) {
+            this(month, currency, total, transactionCount, categories, MoneyStoriesService.MoneyStoriesResponse.empty());
+        }
     }
 }

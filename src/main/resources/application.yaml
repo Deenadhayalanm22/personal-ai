@@ -34,6 +34,33 @@ app:
     scheduling-enabled: ${APP_AGGREGATION_SCHEDULING_ENABLED:false}
     daily-cron: ${APP_AGGREGATION_DAILY_CRON:0 0 1 * * *}
     time-zone: ${APP_AGGREGATION_TIME_ZONE:Asia/Kolkata}
+  money-stories:
+    generation-cron: ${APP_MONEY_STORIES_GENERATION_CRON:0 */15 * * * *}
+    batch-size: ${APP_MONEY_STORIES_BATCH_SIZE:100}
+    rules:
+      discretionary-frequency:
+        enabled: ${APP_MONEY_STORIES_DISCRETIONARY_ENABLED:true}
+        min-transaction-count: ${APP_MONEY_STORIES_DISCRETIONARY_MIN_TRANSACTION_COUNT:3}
+      category-spending-growth:
+        enabled: ${APP_MONEY_STORIES_CATEGORY_GROWTH_ENABLED:true}
+        min-current-amount: ${APP_MONEY_STORIES_CATEGORY_GROWTH_MIN_CURRENT_AMOUNT:1000}
+        min-absolute-growth: ${APP_MONEY_STORIES_CATEGORY_GROWTH_MIN_ABSOLUTE_GROWTH:500}
+        min-growth-percent: ${APP_MONEY_STORIES_CATEGORY_GROWTH_MIN_PERCENT:25}
+      weekend-spending-pattern:
+        enabled: ${APP_MONEY_STORIES_WEEKEND_ENABLED:true}
+        min-weekend-amount: ${APP_MONEY_STORIES_WEEKEND_MIN_AMOUNT:1500}
+        min-weekend-share-percent: ${APP_MONEY_STORIES_WEEKEND_MIN_PERCENT:35}
+      merchant-concentration:
+        enabled: ${APP_MONEY_STORIES_MERCHANT_ENABLED:true}
+        min-merchant-amount: ${APP_MONEY_STORIES_MERCHANT_MIN_AMOUNT:1500}
+        min-transaction-count: ${APP_MONEY_STORIES_MERCHANT_MIN_TRANSACTION_COUNT:3}
+        min-monthly-share-percent: ${APP_MONEY_STORIES_MERCHANT_MIN_PERCENT:25}
+      unusual-high-spend-day:
+        enabled: ${APP_MONEY_STORIES_UNUSUAL_DAY_ENABLED:true}
+        min-day-amount: ${APP_MONEY_STORIES_UNUSUAL_DAY_MIN_AMOUNT:2000}
+        min-multiple-of-median: ${APP_MONEY_STORIES_UNUSUAL_DAY_MIN_MULTIPLE:2.5}
+        baseline-weeks: ${APP_MONEY_STORIES_UNUSUAL_DAY_BASELINE_WEEKS:8}
+        min-baseline-active-days: ${APP_MONEY_STORIES_UNUSUAL_DAY_MIN_ACTIVE_DAYS:15}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
   web:

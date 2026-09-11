@@ -7,9 +7,9 @@ import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;
 import com.apps.deen_sa.exception.WebApiException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -18,11 +18,25 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 @Service
-@RequiredArgsConstructor
 public class FinancialTransactionEditService {
     private final FinancialTransactionRepository transactions;
     private final UserReferenceEntityRepository references;
     private final ExpenseTaxonomyRegistry taxonomy;
+    private final MoneyStoryChangeService storyChanges;
+
+    public FinancialTransactionEditService(FinancialTransactionRepository transactions,
+                                           UserReferenceEntityRepository references,
+                                           ExpenseTaxonomyRegistry taxonomy) {
+        this(transactions, references, taxonomy, null);
+    }
+    @Autowired
+    public FinancialTransactionEditService(FinancialTransactionRepository transactions,
+                                           UserReferenceEntityRepository references,
+                                           ExpenseTaxonomyRegistry taxonomy,
+                                           MoneyStoryChangeService storyChanges) {
+        this.transactions = transactions; this.references = references; this.taxonomy = taxonomy;
+        this.storyChanges = storyChanges;
+    }
 
     @Transactional
     public FinancialTransactionListService.ExpenseItem edit(
@@ -38,6 +52,7 @@ public class FinancialTransactionEditService {
                 .orElseThrow(() -> new WebApiException(
                         HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND",
                         "Expense not found or no longer active"));
+        LocalDate previousDate = transaction.getOccurredAt();
 
         if (request.amount() != null) {
             if (request.amount().signum() <= 0) {
@@ -60,6 +75,10 @@ public class FinancialTransactionEditService {
         }
         transaction.setUpdatedAt(Instant.now());
         FinancialTransactionEntity saved = transactions.saveAndFlush(transaction);
+        if (storyChanges != null) {
+            storyChanges.changed(user, previousDate);
+            if (!previousDate.equals(saved.getOccurredAt())) storyChanges.changed(user, saved.getOccurredAt());
+        }
         return FinancialTransactionListService.ExpenseItem.from(saved, user);
     }
 
@@ -74,6 +93,7 @@ public class FinancialTransactionEditService {
         transaction.setDeletedAt(now);
         transaction.setUpdatedAt(now);
         transactions.saveAndFlush(transaction);
+        if (storyChanges != null) storyChanges.changed(user, transaction.getOccurredAt());
     }
 
     private void updateClassification(

@@ -4,16 +4,25 @@ import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 
 @Service
-@RequiredArgsConstructor
 public class FinancialTransactionWriter {
     private final FinancialTransactionRepository repository;
     private final ExpenseTaxonomyRegistry taxonomy;
+    private final MoneyStoryChangeService storyChanges;
+
+    public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy) {
+        this(repository, taxonomy, null);
+    }
+    @Autowired
+    public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy,
+                                      MoneyStoryChangeService storyChanges) {
+        this.repository = repository; this.taxonomy = taxonomy; this.storyChanges = storyChanges;
+    }
 
     public FinancialTransactionEntity save(
             TransactionDraftExtractionEntity extraction,
@@ -39,6 +48,8 @@ public class FinancialTransactionWriter {
         transaction.setSourceDraft(extraction.getDraft());
         transaction.setCreatedAt(Instant.now());
         transaction.setUpdatedAt(Instant.now());
-        return repository.saveAndFlush(transaction);
+        FinancialTransactionEntity saved = repository.saveAndFlush(transaction);
+        if (storyChanges != null) storyChanges.changed(saved.getUser(), saved.getOccurredAt());
+        return saved;
     }
 }
