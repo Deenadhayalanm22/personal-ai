@@ -117,4 +117,24 @@ public interface FinancialTransactionRepository
             @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end,
             @Param("category") String category, @Param("nature") SpendingNature nature,
             @Param("merchantId") Long merchantId);
+
+    @Query("""
+            SELECT transaction FROM FinancialTransactionEntity transaction
+            WHERE transaction.user.id = :userId AND transaction.merchant.id IN :referenceIds
+            ORDER BY transaction.id
+            """)
+    List<FinancialTransactionEntity> findByMerchantReferences(
+            @Param("userId") Long userId, @Param("referenceIds") List<Long> referenceIds);
+
+    @Query("""
+            SELECT transaction FROM FinancialTransactionEntity transaction
+            WHERE transaction.user.id = :userId AND transaction.sourceAccount.id IN :referenceIds
+            ORDER BY transaction.id
+            """)
+    List<FinancialTransactionEntity> findByAccountReferences(
+            @Param("userId") Long userId, @Param("referenceIds") List<Long> referenceIds);
+
+    long countByUserIdAndMerchantId(Long userId, Long merchantId);
+
+    long countByUserIdAndSourceAccountId(Long userId, Long sourceAccountId);
 }

@@ -7,6 +7,7 @@ import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.UserReferenceAliasRepository;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;
+import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.service.WebUserReferencePreferenceService;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +27,8 @@ class WebUserReferencePreferenceServiceTest {
         UserReferenceEntityRepository references = mock(UserReferenceEntityRepository.class);
         UserReferenceAliasRepository aliases = mock(UserReferenceAliasRepository.class);
         WebUserReferencePreferenceService service =
-                new WebUserReferencePreferenceService(references, aliases);
+                new WebUserReferencePreferenceService(references, aliases,
+                        mock(FinancialTransactionRepository.class));
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         UserReferenceEntity account = new UserReferenceEntity();
@@ -59,7 +61,8 @@ class WebUserReferencePreferenceServiceTest {
         UserReferenceEntityRepository references = mock(UserReferenceEntityRepository.class);
         UserReferenceAliasRepository aliases = mock(UserReferenceAliasRepository.class);
         WebUserReferencePreferenceService service =
-                new WebUserReferencePreferenceService(references, aliases);
+                new WebUserReferencePreferenceService(references, aliases,
+                        mock(FinancialTransactionRepository.class));
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         when(references.findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(
@@ -102,7 +105,8 @@ class WebUserReferencePreferenceServiceTest {
     void rejectsBlankPrimaryReference() {
         WebUserReferencePreferenceService service = new WebUserReferencePreferenceService(
                 mock(UserReferenceEntityRepository.class),
-                mock(UserReferenceAliasRepository.class));
+                mock(UserReferenceAliasRepository.class),
+                mock(FinancialTransactionRepository.class));
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
 

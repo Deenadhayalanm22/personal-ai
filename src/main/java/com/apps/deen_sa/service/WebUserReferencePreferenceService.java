@@ -7,6 +7,7 @@ import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.UserReferenceAliasRepository;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;
+import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class WebUserReferencePreferenceService {
 
     private final UserReferenceEntityRepository entityRepository;
     private final UserReferenceAliasRepository aliasRepository;
+    private final FinancialTransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
     public UserReferencePreferenceListResponse list(AppUserEntity user) {
@@ -39,7 +41,8 @@ public class WebUserReferencePreferenceService {
                                 .stream()
                                 .map(alias -> new AliasResponse(
                                         alias.getId(), alias.getAliasText()))
-                                .toList()))
+                                .toList(),
+                        transactionCount(user, reference)))
                 .toList();
         return new UserReferencePreferenceListResponse(references);
     }
@@ -72,7 +75,7 @@ public class WebUserReferencePreferenceService {
 
         return new UserReferencePreferenceResponse(
                 reference.getId(), reference.getEntityType(), reference.getCanonicalName(),
-                savedAliases);
+                savedAliases, transactionCount(user, reference));
     }
 
     private UserReferenceEntity activate(UserReferenceEntity reference) {
@@ -141,6 +144,13 @@ public class WebUserReferencePreferenceService {
                 HttpStatus.BAD_REQUEST, "INVALID_REFERENCE_PREFERENCE", message);
     }
 
+    private long transactionCount(AppUserEntity user, UserReferenceEntity reference) {
+        if (reference.getEntityType() == UserReferenceEntityType.BENEFICIARY) return 0;
+        return reference.getEntityType() == UserReferenceEntityType.MERCHANT
+                ? transactionRepository.countByUserIdAndMerchantId(user.getId(), reference.getId())
+                : transactionRepository.countByUserIdAndSourceAccountId(user.getId(), reference.getId());
+    }
+
     public record UserReferencePreferenceRequest(
             UserReferenceEntityType entityType,
             String primaryReference,
@@ -150,7 +160,8 @@ public class WebUserReferencePreferenceService {
             Long referenceId,
             UserReferenceEntityType entityType,
             String primaryReference,
-            List<AliasResponse> aliases) { }
+            List<AliasResponse> aliases,
+            long transactionCount) { }
 
     public record UserReferencePreferenceListResponse(
             List<UserReferencePreferenceResponse> references) { }

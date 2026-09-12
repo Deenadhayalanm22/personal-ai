@@ -129,8 +129,9 @@ class WebExpenseControllerTest {
         return new WebFinanceController(
                 new WebManager(authentication,
                 mock(WebLoginRequestService.class),
-                mock(WebExpenseTaxonomyService.class),
-                mock(WebUserReferencePreferenceService.class),
+                        mock(WebExpenseTaxonomyService.class),
+                        mock(WebUserReferencePreferenceService.class),
+                        mock(WebReferenceMergeService.class),
                 monthly,
                 list,
                 calendar,

@@ -17,6 +17,7 @@ public class WebManager {
     private final WebLoginRequestService loginRequests;
     private final WebExpenseTaxonomyService taxonomy;
     private final WebUserReferencePreferenceService referencePreferences;
+    private final WebReferenceMergeService referenceMerges;
     private final MonthlyFinancialTransactionService monthlyTransactions;
     private final FinancialTransactionListService transactionList;
     private final FinancialTransactionCalendarService transactionCalendar;
@@ -49,6 +50,11 @@ public class WebManager {
 
     public WebUserReferencePreferenceService.UserReferencePreferenceListResponse referencePreferences(String token) {
         return referencePreferences.list(authentication.authenticate(token));
+    }
+
+    public WebReferenceMergeService.MergeResponse mergeReferences(
+            String token, WebReferenceMergeService.MergeRequest request) {
+        return referenceMerges.merge(authentication.authenticate(token), request);
     }
 
     public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(String token, YearMonth month) {

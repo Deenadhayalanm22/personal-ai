@@ -85,6 +85,13 @@ public class WebFinanceController {
         return webManager.referencePreferences(token);
     }
 
+    @PostMapping("/reference-preferences/merge")
+    public WebReferenceMergeService.MergeResponse mergeReferences(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebReferenceMergeService.MergeRequest request) {
+        return webManager.mergeReferences(token, request);
+    }
+
     @GetMapping("/expenses/monthly")
     public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,

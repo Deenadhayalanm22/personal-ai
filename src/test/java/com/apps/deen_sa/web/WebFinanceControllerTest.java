@@ -18,6 +18,40 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WebFinanceControllerTest {
 
     @Test
+    void exposesReferenceMergeContract() throws Exception {
+        WebAuthenticationService authentication = mock(WebAuthenticationService.class);
+        WebReferenceMergeService referenceMerges = mock(WebReferenceMergeService.class);
+        AppUserEntity user = new AppUserEntity(); user.setId(42L);
+        when(authentication.authenticate("session-token")).thenReturn(user);
+        var mergeRequest = new WebReferenceMergeService.MergeRequest(
+                com.apps.deen_sa.domain.UserReferenceEntityType.ACCOUNT,
+                java.util.List.of(101L, 214L), "HDFC Bank");
+        when(referenceMerges.merge(user, mergeRequest)).thenReturn(new WebReferenceMergeService.MergeResponse(
+                "merge_01J", new WebReferenceMergeService.CanonicalReference(101L, "HDFC Bank",
+                        com.apps.deen_sa.domain.UserReferenceEntityType.ACCOUNT,
+                        java.util.List.of("HDFC Bank account", "HDFC UPI")),
+                java.util.List.of(214L), 15, "COMPLETED"));
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
+                authentication, mock(WebLoginRequestService.class), mock(WebExpenseTaxonomyService.class),
+                mock(WebUserReferencePreferenceService.class), referenceMerges,
+                mock(MonthlyFinancialTransactionService.class), mock(FinancialTransactionListService.class),
+                mock(FinancialTransactionCalendarService.class), mock(ExpenseEditOptionsService.class),
+                mock(FinancialTransactionEditService.class), mock(PendingActionContextService.class)),
+                false, "Lax")).build();
+        var cookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "session-token");
+
+        mvc.perform(post("/api/web/reference-preferences/merge").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"entityType":"ACCOUNT","referenceIds":[101,214],"canonicalName":"HDFC Bank"}
+                                """).cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mergeId").value("merge_01J"))
+                .andExpect(jsonPath("$.canonicalReference.name").value("HDFC Bank"))
+                .andExpect(jsonPath("$.mergedReferenceIds[0]").value(214))
+                .andExpect(jsonPath("$.updatedTransactionCount").value(15));
+    }
+
+    @Test
     void authenticatesSessionAndReturnsAllReferenceEntityTypes() throws Exception {
         WebAuthenticationService authentication = mock(WebAuthenticationService.class);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
@@ -25,6 +59,7 @@ class WebFinanceControllerTest {
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
                 mock(WebUserReferencePreferenceService.class),
+                mock(WebReferenceMergeService.class),
                 mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
@@ -63,12 +98,13 @@ class WebFinanceControllerTest {
                         7L, com.apps.deen_sa.domain.UserReferenceEntityType.MERCHANT,
                         "Amazon", java.util.List.of(
                                 new WebUserReferencePreferenceService.AliasResponse(9L, "AMZN"),
-                                new WebUserReferencePreferenceService.AliasResponse(10L, "Amazon India"))));
+                                new WebUserReferencePreferenceService.AliasResponse(10L, "Amazon India")), 0));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication,
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
                 preferences,
+                mock(WebReferenceMergeService.class),
                 mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
@@ -120,12 +156,13 @@ class WebFinanceControllerTest {
                                         "HDFC Salary Account",
                                         java.util.List.of(
                                                 new WebUserReferencePreferenceService.AliasResponse(
-                                                        9L, "Salary Account"))))));
+                                                        9L, "Salary Account")), 9))));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication,
                 mock(WebLoginRequestService.class),
                 mock(WebExpenseTaxonomyService.class),
                 preferences,
+                mock(WebReferenceMergeService.class),
                 mock(com.apps.deen_sa.service.MonthlyFinancialTransactionService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionListService.class),
                 mock(com.apps.deen_sa.service.FinancialTransactionCalendarService.class),
@@ -146,7 +183,8 @@ class WebFinanceControllerTest {
                         .value("HDFC Salary Account"))
                 .andExpect(jsonPath("$.references[0].aliases[0].aliasId").value(9))
                 .andExpect(jsonPath("$.references[0].aliases[0].alias")
-                        .value("Salary Account"));
+                        .value("Salary Account"))
+                .andExpect(jsonPath("$.references[0].transactionCount").value(9));
 
         verify(preferences).list(user);
     }
