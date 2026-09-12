@@ -25,12 +25,18 @@ class ExpenseEditOptionsServiceTest {
         UserReferenceEntity merchant = new UserReferenceEntity();
         merchant.setId(7L);
         merchant.setCanonicalName("Nandana Palace");
+        UserReferenceEntity account = new UserReferenceEntity();
+        account.setId(8L);
+        account.setCanonicalName("HDFC Salary Account");
         when(taxonomy.categories()).thenReturn(new LinkedHashSet<>(List.of("Food & Dining")));
         when(taxonomy.subcategoriesFor("Food & Dining"))
                 .thenReturn(new LinkedHashSet<>(List.of("Restaurant & Cafe", "Food Delivery")));
         when(references.findByUserIdAndEntityTypeAndActiveTrueOrderByCanonicalNameAsc(
                 42L, UserReferenceEntityType.MERCHANT))
                 .thenReturn(List.of(merchant));
+        when(references.findByUserIdAndEntityTypeAndActiveTrueOrderByCanonicalNameAsc(
+                42L, UserReferenceEntityType.ACCOUNT))
+                .thenReturn(List.of(account));
 
         var result = new ExpenseEditOptionsService(taxonomy, references).options(user);
 
@@ -39,5 +45,7 @@ class ExpenseEditOptionsServiceTest {
                         "Food & Dining", List.of("Restaurant & Cafe", "Food Delivery")));
         assertThat(result.merchants()).containsExactly(
                 new ExpenseEditOptionsService.MerchantOption(7L, "Nandana Palace"));
+        assertThat(result.accounts()).containsExactly(
+                new ExpenseEditOptionsService.AccountOption(8L, "HDFC Salary Account"));
     }
 }

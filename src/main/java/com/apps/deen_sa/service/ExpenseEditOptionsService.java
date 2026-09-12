@@ -29,12 +29,20 @@ public class ExpenseEditOptionsService {
                 .map(reference -> new MerchantOption(
                         reference.getId(), reference.getCanonicalName()))
                 .toList();
-        return new ExpenseEditOptions(categories, merchants);
+        List<AccountOption> accounts = references
+                .findByUserIdAndEntityTypeAndActiveTrueOrderByCanonicalNameAsc(
+                        user.getId(), UserReferenceEntityType.ACCOUNT)
+                .stream()
+                .map(reference -> new AccountOption(
+                        reference.getId(), reference.getCanonicalName()))
+                .toList();
+        return new ExpenseEditOptions(categories, merchants, accounts);
     }
 
     public record ExpenseEditOptions(
             List<CategoryOption> categories,
-            List<MerchantOption> merchants
+            List<MerchantOption> merchants,
+            List<AccountOption> accounts
     ) {
     }
 
@@ -42,5 +50,8 @@ public class ExpenseEditOptionsService {
     }
 
     public record MerchantOption(Long id, String name) {
+    }
+
+    public record AccountOption(Long id, String name) {
     }
 }
