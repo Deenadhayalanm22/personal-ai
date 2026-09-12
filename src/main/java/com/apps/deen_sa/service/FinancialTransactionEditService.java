@@ -73,6 +73,15 @@ public class FinancialTransactionEditService {
                             "Merchant is unavailable for this user"));
             transaction.setMerchant(merchant);
         }
+        if (request.accountId() != null) {
+            UserReferenceEntity account = references
+                    .findByIdAndUserIdAndEntityTypeAndActiveTrue(
+                            request.accountId(), user.getId(), UserReferenceEntityType.ACCOUNT)
+                    .orElseThrow(() -> new WebApiException(
+                            HttpStatus.BAD_REQUEST, "INVALID_ACCOUNT",
+                            "Account is unavailable for this user"));
+            transaction.setSourceAccount(account);
+        }
         transaction.setUpdatedAt(Instant.now());
         FinancialTransactionEntity saved = transactions.saveAndFlush(transaction);
         if (storyChanges != null) {
@@ -133,11 +142,13 @@ public class FinancialTransactionEditService {
             LocalDate transactionDate,
             String category,
             String subcategory,
-            Long merchantId
+            Long merchantId,
+            Long accountId
     ) {
         boolean hasNoChanges() {
             return amount == null && transactionDate == null
-                    && category == null && subcategory == null && merchantId == null;
+                    && category == null && subcategory == null
+                    && merchantId == null && accountId == null;
         }
     }
 }

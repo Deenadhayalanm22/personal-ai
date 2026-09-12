@@ -114,7 +114,9 @@ public class FinancialTransactionListService {
             Instant transactionTime,
             String category,
             String subcategory,
+            Long merchantId,
             String merchant,
+            Long accountId,
             String sourceAccount
     ) {
         static ExpenseItem from(FinancialTransactionEntity transaction, AppUserEntity user) {
@@ -133,7 +135,9 @@ public class FinancialTransactionListService {
                             .atStartOfDay(ZoneId.of(user.getTimezone())).toInstant(),
                     transaction.getCategory(),
                     transaction.getSubcategory(),
+                    transaction.getMerchant() == null ? null : transaction.getMerchant().getId(),
                     merchant,
+                    transaction.getSourceAccount() == null ? null : transaction.getSourceAccount().getId(),
                     sourceAccount);
         }
     }

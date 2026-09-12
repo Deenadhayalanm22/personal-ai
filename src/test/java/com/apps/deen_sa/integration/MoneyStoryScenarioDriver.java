@@ -116,11 +116,11 @@ final class MoneyStoryScenarioDriver {
             dirty.add(dates.get(key));
             switch (change.path("operation").asText()) {
                 case "AMOUNT" -> edits.edit(user(externalId), ids.get(key), new FinancialTransactionEditService.ExpenseUpdate(
-                        new BigDecimal(change.path("amount").asText()), null, null, null, null));
+                        new BigDecimal(change.path("amount").asText()), null, null, null, null, null));
                 case "DELETE" -> edits.delete(user(externalId), ids.get(key));
                 case "MOVE" -> {
                     LocalDate moved = LocalDate.parse(change.path("occurredOn").asText());
-                    edits.edit(user(externalId), ids.get(key), new FinancialTransactionEditService.ExpenseUpdate(null, moved, null, null, null));
+                    edits.edit(user(externalId), ids.get(key), new FinancialTransactionEditService.ExpenseUpdate(null, moved, null, null, null, null));
                     dates.put(key, moved);
                     dirty.add(moved);
                     months.add(YearMonth.from(moved));
