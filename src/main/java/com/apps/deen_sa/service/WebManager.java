@@ -3,7 +3,7 @@ package com.apps.deen_sa.service;
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.exception.WebApiException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +11,6 @@ import java.time.*;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class WebManager {
     private final WebAuthenticationService authentication;
     private final WebLoginRequestService loginRequests;
@@ -24,6 +23,40 @@ public class WebManager {
     private final ExpenseEditOptionsService editOptions;
     private final FinancialTransactionEditService transactionEditor;
     private final PendingActionContextService actionContexts;
+    private final WebLoanService loans;
+
+    @Autowired
+    public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
+                      WebExpenseTaxonomyService taxonomy, WebUserReferencePreferenceService referencePreferences,
+                      WebReferenceMergeService referenceMerges, MonthlyFinancialTransactionService monthlyTransactions,
+                      FinancialTransactionListService transactionList,
+                      FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
+                      FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
+                      WebLoanService loans) {
+        this.authentication = authentication;
+        this.loginRequests = loginRequests;
+        this.taxonomy = taxonomy;
+        this.referencePreferences = referencePreferences;
+        this.referenceMerges = referenceMerges;
+        this.monthlyTransactions = monthlyTransactions;
+        this.transactionList = transactionList;
+        this.transactionCalendar = transactionCalendar;
+        this.editOptions = editOptions;
+        this.transactionEditor = transactionEditor;
+        this.actionContexts = actionContexts;
+        this.loans = loans;
+    }
+
+    /** Retained for focused web-controller tests that do not exercise loans. */
+    public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
+                      WebExpenseTaxonomyService taxonomy, WebUserReferencePreferenceService referencePreferences,
+                      WebReferenceMergeService referenceMerges, MonthlyFinancialTransactionService monthlyTransactions,
+                      FinancialTransactionListService transactionList,
+                      FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
+                      FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
+        this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null);
+    }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
         loginRequests.request(phoneNumber, clientAddress);
@@ -94,6 +127,19 @@ public class WebManager {
 
     public void deleteExpense(String token, Long id) {
         transactionEditor.delete(authentication.authenticate(token), id);
+    }
+
+    public WebLoanService.LoanResponse createLoan(String token, WebLoanService.LoanCreateRequest request) {
+        return loans.create(authentication.authenticate(token), request);
+    }
+
+    public WebLoanService.LoanListResponse loans(String token) {
+        return loans.list(authentication.authenticate(token));
+    }
+
+    public WebLoanService.LoanResponse updateLoan(
+            String token, Long id, WebLoanService.LoanUpdateRequest request) {
+        return loans.update(authentication.authenticate(token), id, request);
     }
 
     public PendingActionContextService.ContextResponse createPendingActionContext(

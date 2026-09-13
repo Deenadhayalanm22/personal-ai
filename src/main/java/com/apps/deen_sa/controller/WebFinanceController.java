@@ -138,6 +138,28 @@ public class WebFinanceController {
         webManager.deleteExpense(token, id);
     }
 
+    @PostMapping("/loans")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebLoanService.LoanResponse createLoan(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebLoanService.LoanCreateRequest request) {
+        return webManager.createLoan(token, request);
+    }
+
+    @GetMapping("/loans")
+    public WebLoanService.LoanListResponse loans(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.loans(token);
+    }
+
+    @PatchMapping("/loans/{id}")
+    public WebLoanService.LoanResponse updateLoan(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id,
+            @RequestBody WebLoanService.LoanUpdateRequest request) {
+        return webManager.updateLoan(token, id, request);
+    }
+
     @PostMapping("/expenses/calendar/context")
     @ResponseStatus(HttpStatus.CREATED)
     public PendingActionContextService.ContextResponse createPendingActionContext(
