@@ -14,12 +14,13 @@ The app does not persist a shared fund catalogue. Search MFAPI through the searc
 [
   {
     "schemeCode": "122639",
-    "schemeName": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth"
+    "schemeName": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+    "latestNav": 87.25
   }
 ]
 ```
 
-Use the returned full scheme name as the one-choice picker label. It includes the plan and option, so the frontend must not present separate Direct/Regular or Growth/IDCW fields.
+Use the returned full scheme name as the one-choice picker label. It includes the plan and option, so the frontend must not present separate Direct/Regular or Growth/IDCW fields. `latestNav` is an informational current price from MFAPI and may be `null` if that provider is unavailable; it is not an investment confirmation NAV.
 
 ## 2. Add a mutual fund
 

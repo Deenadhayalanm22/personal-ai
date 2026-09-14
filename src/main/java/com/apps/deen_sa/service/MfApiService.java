@@ -24,7 +24,9 @@ public class MfApiService {
         try {
             MfApiScheme[] result = http.getForObject("https://api.mfapi.in/mf/search?q={query}", MfApiScheme[].class, query.trim());
             return result == null ? List.of() : Arrays.stream(result)
-                    .map(row -> new SchemeSearchResult(String.valueOf(row.schemeCode()), row.schemeName())).toList();
+                    .map(row -> new SchemeSearchResult(String.valueOf(row.schemeCode()), row.schemeName(),
+                            latestNav(String.valueOf(row.schemeCode())).orElse(null)))
+                    .toList();
         } catch (RuntimeException failure) {
             throw new WebApiException(HttpStatus.BAD_GATEWAY, "SCHEME_LOOKUP_FAILED", "Unable to search mutual fund schemes");
         }
@@ -44,5 +46,5 @@ public class MfApiService {
     private record MfApiScheme(Long schemeCode, String schemeName) { }
     private record MfApiLatest(MfApiNav[] data) { }
     private record MfApiNav(String nav) { }
-    public record SchemeSearchResult(String schemeCode, String schemeName) { }
+    public record SchemeSearchResult(String schemeCode, String schemeName, BigDecimal latestNav) { }
 }
