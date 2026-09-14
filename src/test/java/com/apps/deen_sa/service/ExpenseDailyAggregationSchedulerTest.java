@@ -14,12 +14,14 @@ class ExpenseDailyAggregationSchedulerTest {
     @Test
     void aggregatesPreviousDayInIndiaAtScheduledExecution() {
         ExpenseDailyAggregationService service = mock(ExpenseDailyAggregationService.class);
+        DailyUserActionScheduler actions = mock(DailyUserActionScheduler.class);
         Clock clock = Clock.fixed(Instant.parse("2026-09-06T19:30:00Z"), ZoneOffset.UTC);
         ExpenseDailyAggregationScheduler scheduler =
-                new ExpenseDailyAggregationScheduler(service, clock, "Asia/Kolkata");
+                new ExpenseDailyAggregationScheduler(service, actions, clock, "Asia/Kolkata");
 
         scheduler.aggregatePreviousDay();
 
         verify(service).rebuild(java.time.LocalDate.of(2026, 9, 6));
+        verify(actions).evaluateActions();
     }
 }

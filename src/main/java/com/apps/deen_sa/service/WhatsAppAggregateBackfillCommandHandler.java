@@ -19,6 +19,7 @@ public class WhatsAppAggregateBackfillCommandHandler {
 
     private final UserFeatureFlagService featureFlags;
     private final ExpenseDailyAggregationService aggregationService;
+    private final DailyUserActionScheduler actions;
     private final WhatsAppReplySender replySender;
     private final Clock clock;
     private final ZoneId aggregationZone;
@@ -26,12 +27,14 @@ public class WhatsAppAggregateBackfillCommandHandler {
     public WhatsAppAggregateBackfillCommandHandler(
             UserFeatureFlagService featureFlags,
             ExpenseDailyAggregationService aggregationService,
+            DailyUserActionScheduler actions,
             WhatsAppReplySender replySender,
             Clock clock,
             @Value("${app.aggregation.time-zone:Asia/Kolkata}") String aggregationTimeZone
     ) {
         this.featureFlags = featureFlags;
         this.aggregationService = aggregationService;
+        this.actions = actions;
         this.replySender = replySender;
         this.clock = clock;
         this.aggregationZone = ZoneId.of(aggregationTimeZone);
@@ -53,6 +56,7 @@ public class WhatsAppAggregateBackfillCommandHandler {
         LocalDate today = LocalDate.now(clock.withZone(aggregationZone));
         ExpenseDailyAggregationService.BackfillResult result =
                 aggregationService.rebuildMissingBefore(today);
+        actions.evaluateActions();
         String response = result.rebuiltDates().isEmpty()
                 ? "Expense aggregates are already up to date."
                 : "Expense aggregate backfill completed: %d date(s), %d aggregate row(s)."

@@ -26,6 +26,7 @@ public class WebManager {
     private final WebLoanService loans;
     private final WebMutualFundService mutualFunds;
     private final MfApiService mfApi;
+    private final ActionManagementService actions;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -34,7 +35,8 @@ public class WebManager {
                       FinancialTransactionListService transactionList,
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
-                      WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi) {
+                      WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi,
+                      ActionManagementService actions) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -49,6 +51,7 @@ public class WebManager {
         this.loans = loans;
         this.mutualFunds = mutualFunds;
         this.mfApi = mfApi;
+        this.actions = actions;
     }
 
     /** Retained for focused web-controller tests that do not exercise loans. */
@@ -59,7 +62,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
@@ -148,6 +151,14 @@ public class WebManager {
     public WebLoanService.LoanResponse updateLoan(
             String token, Long id, WebLoanService.LoanUpdateRequest request) {
         return loans.update(authentication.authenticate(token), id, request);
+    }
+
+    public ActionManagementService.ActionListResponse actions(String token) {
+        return actions.openActions(authentication.authenticate(token));
+    }
+
+    public ActionManagementService.ActionResponse completeAction(String token, Long id) {
+        return actions.complete(authentication.authenticate(token), id);
     }
 
     public WebMutualFundService.MutualFundResponse createMutualFund(String token, WebMutualFundService.MutualFundCreateRequest request) {

@@ -178,6 +178,18 @@ public class WebFinanceController {
         return webManager.updateLoan(token, id, request);
     }
 
+    @GetMapping("/actions")
+    public ActionManagementService.ActionListResponse actions(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.actions(token);
+    }
+
+    @PostMapping("/actions/{id}/complete")
+    public ActionManagementService.ActionResponse completeAction(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) {
+        return webManager.completeAction(token, id);
+    }
+
     @PostMapping("/mutual-funds")
     @ResponseStatus(HttpStatus.CREATED)
     public WebMutualFundService.MutualFundResponse createMutualFund(

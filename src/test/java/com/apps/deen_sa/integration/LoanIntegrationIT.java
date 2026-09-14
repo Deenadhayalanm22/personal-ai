@@ -5,6 +5,8 @@ import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.UserLoanEntity;
 import com.apps.deen_sa.repository.AppUserRepository;
 import com.apps.deen_sa.repository.UserLoanRepository;
+import com.apps.deen_sa.repository.UserActionItemRepository;
+import com.apps.deen_sa.service.LoanClosureReminderService;
 import com.apps.deen_sa.service.WebAuthenticationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,8 @@ class LoanIntegrationIT {
     @Autowired private MockMvc mockMvc;
     @Autowired private AppUserRepository users;
     @Autowired private UserLoanRepository loans;
+    @Autowired private UserActionItemRepository actions;
+    @Autowired private LoanClosureReminderService closureReminders;
     @MockBean private WebAuthenticationService authentication;
 
     @Test
@@ -104,6 +108,48 @@ class LoanIntegrationIT {
                         .content("{" + "\"loanName\":\"Not allowed\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LOAN_NOT_FOUND"));
+    }
+
+    @Test
+    void it_loan_002_createsAndResolvesAClosureReminder() throws Exception {
+        AppUserEntity owner = createUser("loan-closure-owner");
+        when(authentication.authenticate("loan-closure-session")).thenReturn(owner);
+        var cookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-closure-session");
+
+        mockMvc.perform(post("/api/web/loans").cookie(cookie).contentType(MediaType.APPLICATION_JSON).content("""
+                {
+                  "loanName": "Completed credit card EMI",
+                  "loanType": "CREDIT_CARD_EMI",
+                  "lenderName": "Bajaj Finance",
+                  "originalPrincipal": 6000,
+                  "monthlyEmiAmount": 2000,
+                  "totalTenureMonths": 1,
+                  "firstEmiDueDate": "2026-07-05"
+                }
+                """))
+                .andExpect(status().isCreated());
+
+        closureReminders.createDueReminders();
+        UserLoanEntity loan = loans.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst();
+        var action = actions.findByUserIdAndStatusOrderByCreatedAtDesc(
+                owner.getId(), com.apps.deen_sa.domain.UserActionItemStatus.OPEN).getFirst();
+
+        mockMvc.perform(get("/api/web/actions").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actions.length()").value(1))
+                .andExpect(jsonPath("$.actions[0].id").value(action.getId()))
+                .andExpect(jsonPath("$.actions[0].referenceId").value(loan.getId()))
+                .andExpect(jsonPath("$.actions[0].actionType").value("LOAN_CLOSURE_CONFIRMATION"));
+
+        mockMvc.perform(post("/api/web/actions/{id}/complete", action.getId()).cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(action.getId()));
+
+        assertThat(loans.findById(loan.getId()).orElseThrow().getStatus())
+                .isEqualTo(com.apps.deen_sa.domain.LoanStatus.CLOSED);
+        mockMvc.perform(get("/api/web/actions").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actions").isEmpty());
     }
 
     private AppUserEntity createUser(String externalUserId) {

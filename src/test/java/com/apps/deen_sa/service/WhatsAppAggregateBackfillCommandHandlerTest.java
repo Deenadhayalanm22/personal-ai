@@ -17,10 +17,11 @@ import static org.mockito.Mockito.*;
 class WhatsAppAggregateBackfillCommandHandlerTest {
     private final UserFeatureFlagService flags = mock(UserFeatureFlagService.class);
     private final ExpenseDailyAggregationService aggregation = mock(ExpenseDailyAggregationService.class);
+    private final DailyUserActionScheduler actions = mock(DailyUserActionScheduler.class);
     private final WhatsAppReplySender replies = mock(WhatsAppReplySender.class);
     private final WhatsAppAggregateBackfillCommandHandler handler =
             new WhatsAppAggregateBackfillCommandHandler(
-                    flags, aggregation, replies,
+                    flags, aggregation, actions, replies,
                     Clock.fixed(Instant.parse("2026-09-06T19:30:00Z"), ZoneOffset.UTC),
                     "Asia/Kolkata");
 
@@ -34,6 +35,7 @@ class WhatsAppAggregateBackfillCommandHandlerTest {
         boolean handled = handler.handleIfSupported(message("/aggregate"));
 
         assertThat(handled).isTrue();
+        verify(actions).evaluateActions();
         verify(replies).sendTextReply("9198",
                 "Expense aggregate backfill completed: 2 date(s), 7 aggregate row(s).");
     }
@@ -43,7 +45,7 @@ class WhatsAppAggregateBackfillCommandHandlerTest {
         boolean handled = handler.handleIfSupported(message("/aggregate"));
 
         assertThat(handled).isTrue();
-        verifyNoInteractions(aggregation);
+        verifyNoInteractions(aggregation, actions);
         verify(replies).sendTextReply("9198",
                 "This aggregation command is restricted to the super admin.");
     }
@@ -51,7 +53,7 @@ class WhatsAppAggregateBackfillCommandHandlerTest {
     @Test
     void ignoresOrdinaryMessages() {
         assertThat(handler.handleIfSupported(message("Spent 200 on groceries"))).isFalse();
-        verifyNoInteractions(flags, aggregation, replies);
+        verifyNoInteractions(flags, aggregation, actions, replies);
     }
 
     private InboundMessage message(String text) {
