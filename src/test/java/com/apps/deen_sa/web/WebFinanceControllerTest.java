@@ -12,10 +12,34 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class WebFinanceControllerTest {
+
+    @Test
+    void enablesDemoProfileWithoutAcceptingAUserIdFromTheBrowser() throws Exception {
+        WebAuthenticationService authentication = mock(WebAuthenticationService.class);
+        when(authentication.setDemoMode("session-token", true))
+                .thenReturn(new WebAuthenticationService.DemoProfile(true));
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
+                authentication, mock(WebLoginRequestService.class), mock(WebExpenseTaxonomyService.class),
+                mock(WebUserReferencePreferenceService.class), mock(WebReferenceMergeService.class),
+                mock(MonthlyFinancialTransactionService.class), mock(FinancialTransactionListService.class),
+                mock(FinancialTransactionCalendarService.class), mock(ExpenseEditOptionsService.class),
+                mock(FinancialTransactionEditService.class), mock(PendingActionContextService.class)),
+                false, "Lax")).build();
+
+        mvc.perform(put("/api/web/auth/demo-profile")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}")
+                        .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "session-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.demoMode").value(true));
+
+        verify(authentication).setDemoMode("session-token", true);
+    }
 
     @Test
     void exposesReferenceMergeContract() throws Exception {

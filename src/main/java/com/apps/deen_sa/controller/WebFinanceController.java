@@ -59,6 +59,24 @@ public class WebFinanceController {
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie("", Duration.ZERO).toString());
     }
 
+    /** Returns only mode state; real and demo profile identifiers are never sent to the browser. */
+    @GetMapping("/auth/demo-profile")
+    public WebAuthenticationService.DemoProfile demoProfile(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.demoProfile(token);
+    }
+
+    /**
+     * The frontend should call this once when its demo switch changes. All existing
+     * API endpoints then use the selected profile through the session automatically.
+     */
+    @PutMapping("/auth/demo-profile")
+    public WebAuthenticationService.DemoProfile setDemoProfile(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebManager.DemoModeRequest request) {
+        return webManager.setDemoMode(token, request.enabled());
+    }
+
     @GetMapping("/expense-taxonomy")
     public WebExpenseTaxonomyService.TaxonomyResponse expenseTaxonomy(
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {

@@ -64,10 +64,35 @@ public class WebAuthenticationService {
 
     @Transactional(readOnly = true)
     public AppUserEntity authenticate(String token) {
-        if (token == null || token.isBlank()) throw unauthorized();
-        WebSessionEntity session = sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
-                MagicLinkService.hash(token), clock.instant()).orElseThrow(WebAuthenticationService::unauthorized);
-        return users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+        WebSessionEntity session = activeSession(token);
+        Long activeUserId = session.getActiveUserId() == null ? session.getUserId() : session.getActiveUserId();
+        return users.findById(activeUserId).orElseThrow(WebAuthenticationService::unauthorized);
+    }
+
+    /**
+     * Selects an isolated, non-WhatsApp profile for the current web session.  The
+     * primary account remains the session owner, so turning demo mode off can never
+     * depend on a client-supplied user id.
+     */
+    @Transactional
+    public DemoProfile setDemoMode(String token, boolean enabled) {
+        WebSessionEntity session = activeSession(token);
+        if (!enabled) {
+            session.setActiveUserId(null);
+            return new DemoProfile(false);
+        }
+
+        AppUserEntity owner = users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+        String demoExternalId = "web-demo:" + owner.getId();
+        AppUserEntity demo = users.findByChannelAndExternalUserId("WEB_DEMO", demoExternalId)
+                .orElseGet(() -> createDemoUser(demoExternalId, owner));
+        session.setActiveUserId(demo.getId());
+        return new DemoProfile(true);
+    }
+
+    @Transactional(readOnly = true)
+    public DemoProfile demoProfile(String token) {
+        return new DemoProfile(activeSession(token).getActiveUserId() != null);
     }
 
     @Transactional
@@ -78,9 +103,26 @@ public class WebAuthenticationService {
                 .ifPresent(session -> session.setRevokedAt(clock.instant()));
     }
 
+    private WebSessionEntity activeSession(String token) {
+        if (token == null || token.isBlank()) throw unauthorized();
+        return sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
+                MagicLinkService.hash(token), clock.instant()).orElseThrow(WebAuthenticationService::unauthorized);
+    }
+
+    private AppUserEntity createDemoUser(String externalId, AppUserEntity owner) {
+        AppUserEntity demo = new AppUserEntity();
+        demo.setChannel("WEB_DEMO");
+        demo.setExternalUserId(externalId);
+        demo.setCurrency(owner.getCurrency());
+        demo.setLocale(owner.getLocale());
+        demo.setTimezone(owner.getTimezone());
+        return users.saveAndFlush(demo);
+    }
+
     private static ResponseStatusException unauthorized() {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired access");
     }
 
     public record SessionGrant(String token, Instant expiresAt) { }
+    public record DemoProfile(boolean demoMode) { }
 }

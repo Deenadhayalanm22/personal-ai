@@ -69,6 +69,10 @@ public class WebManager {
     public WebAuthenticationService.SessionGrant exchange(String token) { return authentication.exchange(token); }
     public void validateSession(String token) { authentication.authenticate(token); }
     public void logout(String token) { authentication.logout(token); }
+    public WebAuthenticationService.DemoProfile demoProfile(String token) { return authentication.demoProfile(token); }
+    public WebAuthenticationService.DemoProfile setDemoMode(String token, boolean enabled) {
+        return authentication.setDemoMode(token, enabled);
+    }
 
     public WebExpenseTaxonomyService.TaxonomyResponse expenseTaxonomy(String token) {
         authentication.authenticate(token);
@@ -195,5 +199,6 @@ public class WebManager {
     public record LoginLinkResponse(String message) { }
     public record MagicLinkRequest(String token) { }
     public record AuthResponse(boolean authenticated, Instant expiresAt) { }
+    public record DemoModeRequest(boolean enabled) { }
     public record UserReferenceEntityTypesResponse(List<UserReferenceEntityType> entityTypes) { }
 }
