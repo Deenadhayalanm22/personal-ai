@@ -24,6 +24,8 @@ public class WebManager {
     private final FinancialTransactionEditService transactionEditor;
     private final PendingActionContextService actionContexts;
     private final WebLoanService loans;
+    private final WebMutualFundService mutualFunds;
+    private final MfApiService mfApi;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -32,7 +34,7 @@ public class WebManager {
                       FinancialTransactionListService transactionList,
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
-                      WebLoanService loans) {
+                      WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -45,6 +47,8 @@ public class WebManager {
         this.transactionEditor = transactionEditor;
         this.actionContexts = actionContexts;
         this.loans = loans;
+        this.mutualFunds = mutualFunds;
+        this.mfApi = mfApi;
     }
 
     /** Retained for focused web-controller tests that do not exercise loans. */
@@ -55,7 +59,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
@@ -140,6 +144,29 @@ public class WebManager {
     public WebLoanService.LoanResponse updateLoan(
             String token, Long id, WebLoanService.LoanUpdateRequest request) {
         return loans.update(authentication.authenticate(token), id, request);
+    }
+
+    public WebMutualFundService.MutualFundResponse createMutualFund(String token, WebMutualFundService.MutualFundCreateRequest request) {
+        return mutualFunds.create(authentication.authenticate(token), request);
+    }
+
+    public java.util.List<MfApiService.SchemeSearchResult> searchMutualFunds(String token, String query) {
+        authentication.authenticate(token);
+        return mfApi.search(query);
+    }
+
+    public WebMutualFundService.MutualFundListResponse mutualFunds(String token) {
+        return mutualFunds.list(authentication.authenticate(token));
+    }
+
+    public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,
+                                                                           WebMutualFundService.LumpSumRequest request) {
+        return mutualFunds.addLumpSum(authentication.authenticate(token), id, request);
+    }
+
+    public WebMutualFundService.TransactionResponse confirmMutualFundSip(String token, Long id, YearMonth month,
+                                                                           WebMutualFundService.LumpSumRequest request) {
+        return mutualFunds.confirmSip(authentication.authenticate(token), id, month, request);
     }
 
     public PendingActionContextService.ContextResponse createPendingActionContext(

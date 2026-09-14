@@ -160,6 +160,41 @@ public class WebFinanceController {
         return webManager.updateLoan(token, id, request);
     }
 
+    @PostMapping("/mutual-funds")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebMutualFundService.MutualFundResponse createMutualFund(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebMutualFundService.MutualFundCreateRequest request) {
+        return webManager.createMutualFund(token, request);
+    }
+
+    @GetMapping("/mutual-funds/search")
+    public java.util.List<MfApiService.SchemeSearchResult> searchMutualFunds(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam("q") String query) {
+        return webManager.searchMutualFunds(token, query);
+    }
+
+    @GetMapping("/mutual-funds")
+    public WebMutualFundService.MutualFundListResponse mutualFunds(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.mutualFunds(token);
+    }
+
+    @PostMapping("/mutual-funds/{id}/lump-sums")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebMutualFundService.TransactionResponse addMutualFundLumpSum(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @RequestBody WebMutualFundService.LumpSumRequest request) {
+        return webManager.addMutualFundLumpSum(token, id, request);
+    }
+
+    @PostMapping("/mutual-funds/{id}/sip-occurrences/{month}/confirm")
+    public WebMutualFundService.TransactionResponse confirmMutualFundSip(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @PathVariable YearMonth month, @RequestBody WebMutualFundService.LumpSumRequest request) {
+        return webManager.confirmMutualFundSip(token, id, month, request);
+    }
+
     @PostMapping("/expenses/calendar/context")
     @ResponseStatus(HttpStatus.CREATED)
     public PendingActionContextService.ContextResponse createPendingActionContext(

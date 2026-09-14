@@ -30,6 +30,8 @@ management:
           - metrics
 
 app:
+  investments:
+    sip-scheduling-enabled: ${APP_INVESTMENTS_SIP_SCHEDULING_ENABLED:false}
   aggregation:
     scheduling-enabled: ${APP_AGGREGATION_SCHEDULING_ENABLED:false}
     daily-cron: ${APP_AGGREGATION_DAILY_CRON:0 0 1 * * *}
