@@ -59,21 +59,24 @@ Successful response: `201 Created`, returning a `MutualFund` object below. Creat
       "id": 1,
       "schemeCode": "122639",
       "schemeName": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
-      "isin": "INF879O01027",
-      "monthlySipAmount": 25000.00,
-      "sipDay": 5,
-      "startMonth": "2026-10",
-      "sipStatus": "ACTIVE",
-      "currentUnits": 128.456000,
-      "totalInvestedAmount": 10000.00,
-      "averagePurchaseCost": 77.847668,
-      "activity": []
+      "invested": 10000.00,
+      "currentValue": 10732.81,
+      "profitOrLoss": 732.81,
+      "profitOrLossPercent": 7.33,
+      "latestNav": 83.56,
+      "activeSip": {
+        "amount": 25000.00,
+        "day": 5,
+        "startMonth": "2026-10"
+      }
     }
   ]
 }
 ```
 
-`currentUnits`, `totalInvestedAmount`, and `averagePurchaseCost` are backend-calculated from `CONFIRMED` activity only. Do not calculate or overwrite them in the client.
+This is deliberately a summary endpoint: it does not expose units, average cost, ISIN, or activity history. `currentValue`, `profitOrLoss`, and `profitOrLossPercent` are calculated by the backend using the latest public MFAPI NAV. If MFAPI is unavailable, these four valuation fields are `null`; still display the recorded `invested` amount and active SIP.
+
+Display `profitOrLoss` green when it is positive, red when it is negative, and neutral when it is zero or `null`. The API intentionally returns a number, not a UI colour.
 
 ## 4. Record a lump-sum investment
 

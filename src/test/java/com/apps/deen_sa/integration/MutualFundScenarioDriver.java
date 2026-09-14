@@ -5,13 +5,17 @@ import com.apps.deen_sa.repository.AppUserRepository;
 import com.apps.deen_sa.repository.InvestmentTransactionRepository;
 import com.apps.deen_sa.repository.UserInvestmentRepository;
 import com.apps.deen_sa.service.WebAuthenticationService;
+import com.apps.deen_sa.service.MfApiService;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,14 +28,20 @@ final class MutualFundScenarioDriver {
     private final UserInvestmentRepository investments;
     private final InvestmentTransactionRepository transactions;
     private final WebAuthenticationService authentication;
+    private final MfApiService mfApi;
     private AppUserEntity owner;
     private jakarta.servlet.http.Cookie session;
     private Long investmentId;
 
     MutualFundScenarioDriver(MockMvc mockMvc, AppUserRepository users, UserInvestmentRepository investments,
                              InvestmentTransactionRepository transactions, WebAuthenticationService authentication) {
+        this(mockMvc, users, investments, transactions, authentication, null);
+    }
+
+    MutualFundScenarioDriver(MockMvc mockMvc, AppUserRepository users, UserInvestmentRepository investments,
+                             InvestmentTransactionRepository transactions, WebAuthenticationService authentication, MfApiService mfApi) {
         this.mockMvc = mockMvc; this.users = users; this.investments = investments;
-        this.transactions = transactions; this.authentication = authentication;
+        this.transactions = transactions; this.authentication = authentication; this.mfApi = mfApi;
     }
 
     void startUser() {
@@ -39,6 +49,7 @@ final class MutualFundScenarioDriver {
         owner.setChannel("WHATSAPP"); owner.setExternalUserId("mutual-fund-owner"); owner.setCreatedAt(Instant.now());
         owner = users.saveAndFlush(owner);
         when(authentication.authenticate("mutual-fund-session")).thenReturn(owner);
+        when(mfApi.latestNav(anyString())).thenReturn(Optional.of(new BigDecimal("200.00")));
         session = new jakarta.servlet.http.Cookie("WEB_SESSION", "mutual-fund-session");
     }
 
@@ -50,18 +61,16 @@ final class MutualFundScenarioDriver {
                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.schemeCode").value("122639"))
-                .andExpect(jsonPath("$.sipStatus").value("ACTIVE"));
+                .andExpect(jsonPath("$.schemeName").value("Parag Parikh Flexi Cap Fund - Direct Plan - Growth"));
         investmentId = investments.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getId();
     }
 
     void assertOpeningHoldingAndDueSip() throws Exception {
         assertThat(transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId)).hasSize(2);
-        portfolio().andExpect(jsonPath("$.mutualFunds[0].currentUnits").value(128.456))
-                .andExpect(jsonPath("$.mutualFunds[0].totalInvestedAmount").value(10000))
-                .andExpect(jsonPath("$.mutualFunds[0].averagePurchaseCost").value(77.847668))
-                .andExpect(jsonPath("$.mutualFunds[0].activity[0].transactionKind").value("OPENING_BALANCE"))
-                .andExpect(jsonPath("$.mutualFunds[0].activity[1].transactionKind").value("SIP"))
-                .andExpect(jsonPath("$.mutualFunds[0].activity[1].status").value("DUE"));
+        portfolio().andExpect(jsonPath("$.mutualFunds[0].invested").value(10000))
+                .andExpect(jsonPath("$.mutualFunds[0].currentValue").value(25691.2))
+                .andExpect(jsonPath("$.mutualFunds[0].profitOrLoss").value(15691.2))
+                .andExpect(jsonPath("$.mutualFunds[0].activeSip.amount").value(25000));
     }
 
     void recordNavEstimatedLumpSum() throws Exception {
@@ -86,10 +95,9 @@ final class MutualFundScenarioDriver {
 
     void assertCombinedHoldingIsAccurate() throws Exception {
         portfolio().andExpect(jsonPath("$.mutualFunds.length()").value(1))
-                .andExpect(jsonPath("$.mutualFunds[0].activity.length()").value(4))
-                .andExpect(jsonPath("$.mutualFunds[0].activity[2].calculationSource").value("NAV_ESTIMATED"))
-                .andExpect(jsonPath("$.mutualFunds[0].activity[3].calculationSource").value("STATEMENT_VERIFIED"))
-                .andExpect(jsonPath("$.mutualFunds[0].totalInvestedAmount").value(70000));
+                .andExpect(jsonPath("$.mutualFunds[0].invested").value(70000))
+                .andExpect(jsonPath("$.mutualFunds[0].currentValue").value(162903.25))
+                .andExpect(jsonPath("$.mutualFunds[0].profitOrLoss").value(92903.25));
     }
 
     private org.springframework.test.web.servlet.ResultActions portfolio() throws Exception {

@@ -21,11 +21,14 @@ public class WebMutualFundService {
     private static final String MFAPI = "MFAPI";
     private final UserInvestmentRepository investments;
     private final InvestmentTransactionRepository transactions;
+    private final MfApiService mfApi;
     private final Clock clock;
 
-    public WebMutualFundService(UserInvestmentRepository investments, InvestmentTransactionRepository transactions, Clock clock) {
+    public WebMutualFundService(UserInvestmentRepository investments, InvestmentTransactionRepository transactions,
+                                 MfApiService mfApi, Clock clock) {
         this.investments = investments;
         this.transactions = transactions;
+        this.mfApi = mfApi;
         this.clock = clock;
     }
 
@@ -87,7 +90,7 @@ public class WebMutualFundService {
     @Transactional(readOnly = true)
     public MutualFundListResponse list(AppUserEntity user) {
         return new MutualFundListResponse(investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
-                .filter(i -> i.getAssetType() == InvestmentAssetType.MUTUAL_FUND).map(this::response).toList());
+                .filter(i -> i.getAssetType() == InvestmentAssetType.MUTUAL_FUND).map(this::summary).toList());
     }
 
     private void createOpeningBalance(UserInvestmentEntity investment, ExistingHoldingRequest opening) {
@@ -146,17 +149,25 @@ public class WebMutualFundService {
     }
 
     private MutualFundResponse response(UserInvestmentEntity investment) {
+        return summary(investment);
+    }
+
+    private MutualFundResponse summary(UserInvestmentEntity investment) {
         List<InvestmentTransactionEntity> rows = transactions.findByInvestmentIdOrderByCreatedAtAsc(investment.getId());
-        List<TransactionResponse> activity = rows.stream().map(TransactionResponse::from).toList();
         BigDecimal units = rows.stream().filter(r -> r.getStatus() == InvestmentTransactionStatus.CONFIRMED)
                 .map(InvestmentTransactionEntity::getUnits).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal invested = rows.stream().filter(r -> r.getStatus() == InvestmentTransactionStatus.CONFIRMED)
                 .map(InvestmentTransactionEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal average = units.signum() == 0 ? null : invested.divide(units, 6, RoundingMode.HALF_UP);
+        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
+        BigDecimal currentValue = latestNav == null ? null : units.multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(invested).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLossPercent = profitOrLoss == null || invested.signum() == 0 ? null
+                : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(invested, 2, RoundingMode.HALF_UP);
+        ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
+                ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth())) : null;
         return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
-                investment.getIsinSnapshot(), investment.getSipAmount(), investment.getSipDay(),
-                investment.getSipStartMonth() == null ? null : YearMonth.from(investment.getSipStartMonth()),
-                investment.getSipStatus(), units, invested, average, activity);
+                invested, currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip);
     }
 
     private UserInvestmentEntity owned(AppUserEntity user, Long id) {
@@ -181,9 +192,9 @@ public class WebMutualFundService {
         static TransactionResponse from(InvestmentTransactionEntity t) { return new TransactionResponse(t.getId(), t.getTransactionKind(), t.getStatus(),
                 t.getScheduledMonth() == null ? null : YearMonth.from(t.getScheduledMonth()), t.getTransactionDate(), t.getAmount(), t.getUnitPrice(), t.getUnits(), t.getCalculationSource()); }
     }
-    public record MutualFundResponse(Long id, String schemeCode, String schemeName, String isin, BigDecimal monthlySipAmount,
-                                     Integer sipDay, YearMonth startMonth, InvestmentSipStatus sipStatus,
-                                     BigDecimal currentUnits, BigDecimal totalInvestedAmount, BigDecimal averagePurchaseCost,
-                                     List<TransactionResponse> activity) { }
+    public record MutualFundResponse(Long id, String schemeCode, String schemeName, BigDecimal invested,
+                                     BigDecimal currentValue, BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
+                                     BigDecimal latestNav, ActiveSip activeSip) { }
+    public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth) { }
     public record MutualFundListResponse(List<MutualFundResponse> mutualFunds) { }
 }

@@ -4,6 +4,7 @@ import com.apps.deen_sa.repository.AppUserRepository;
 import com.apps.deen_sa.repository.InvestmentTransactionRepository;
 import com.apps.deen_sa.repository.UserInvestmentRepository;
 import com.apps.deen_sa.service.WebAuthenticationService;
+import com.apps.deen_sa.service.MfApiService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -24,10 +25,11 @@ class MutualFundIntegrationIT {
     @Autowired private UserInvestmentRepository investments;
     @Autowired private InvestmentTransactionRepository transactions;
     @MockBean private WebAuthenticationService authentication;
+    @MockBean private MfApiService mfApi;
 
     @Test
     void it_mutual_fund_001_tracksOpeningHoldingSipAndLumpSumInOneInvestment() throws Exception {
-        MutualFundScenarioDriver scenario = new MutualFundScenarioDriver(mockMvc, users, investments, transactions, authentication);
+        MutualFundScenarioDriver scenario = new MutualFundScenarioDriver(mockMvc, users, investments, transactions, authentication, mfApi);
         scenario.startUser();
 
         // A user begins with an existing holding and commits to a monthly SIP.
