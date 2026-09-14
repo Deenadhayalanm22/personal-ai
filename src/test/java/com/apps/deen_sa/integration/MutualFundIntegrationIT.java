@@ -42,5 +42,6 @@ class MutualFundIntegrationIT {
 
         // The fund keeps all activity in one ledger and derives the combined holding from confirmed entries only.
         scenario.assertCombinedHoldingIsAccurate();
+        scenario.assertFundCardShowsReturnsAndHoldingMetrics();
     }
 }

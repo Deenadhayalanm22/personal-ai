@@ -78,7 +78,27 @@ This is deliberately a summary endpoint: it does not expose units, average cost,
 
 Display `profitOrLoss` green when it is positive, red when it is negative, and neutral when it is zero or `null`. The API intentionally returns a number, not a UI colour.
 
-## 4. Record a lump-sum investment
+## 4. Fund card details
+
+`GET /api/web/mutual-funds/{id}`
+
+```json
+{
+  "id": 1,
+  "schemeName": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+  "invested": 10000.00,
+  "currentValue": 10732.81,
+  "profitOrLoss": 732.81,
+  "profitOrLossPercent": 7.33,
+  "averageNav": 77.847668,
+  "currentNav": 83.56,
+  "units": 128.456000
+}
+```
+
+`averageNav` is the calculated average purchase cost. `currentNav` is the latest MFAPI NAV. Both `currentNav` and all current-value/P&L fields are `null` when the public provider is unavailable.
+
+## 5. Record a lump-sum investment
 
 `POST /api/web/mutual-funds/{id}/lump-sums`
 
@@ -105,7 +125,7 @@ Display `profitOrLoss` green when it is positive, red when it is negative, and n
 
 Successful response: `201 Created` with a confirmed `Activity` object.
 
-## 5. Confirm a due SIP
+## 6. Confirm a due SIP
 
 `POST /api/web/mutual-funds/{id}/sip-occurrences/{month}/confirm`
 

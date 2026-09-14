@@ -159,6 +159,10 @@ public class WebManager {
         return mutualFunds.list(authentication.authenticate(token));
     }
 
+    public WebMutualFundService.MutualFundDetailResponse mutualFund(String token, Long id) {
+        return mutualFunds.detail(authentication.authenticate(token), id);
+    }
+
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,
                                                                            WebMutualFundService.LumpSumRequest request) {
         return mutualFunds.addLumpSum(authentication.authenticate(token), id, request);

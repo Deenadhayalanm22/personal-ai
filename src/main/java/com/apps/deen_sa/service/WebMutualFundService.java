@@ -93,6 +93,19 @@ public class WebMutualFundService {
                 .filter(i -> i.getAssetType() == InvestmentAssetType.MUTUAL_FUND).map(this::summary).toList());
     }
 
+    @Transactional(readOnly = true)
+    public MutualFundDetailResponse detail(AppUserEntity user, Long investmentId) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        Holding holding = holding(investment);
+        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
+        BigDecimal currentValue = latestNav == null ? null : holding.units().multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(holding.invested()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLossPercent = profitOrLoss == null || holding.invested().signum() == 0 ? null
+                : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(holding.invested(), 2, RoundingMode.HALF_UP);
+        return new MutualFundDetailResponse(investment.getId(), investment.getDisplayNameSnapshot(), holding.invested(),
+                currentValue, profitOrLoss, profitOrLossPercent, holding.averagePurchaseCost(), latestNav, holding.units());
+    }
+
     private void createOpeningBalance(UserInvestmentEntity investment, ExistingHoldingRequest opening) {
         BigDecimal amount = amount(opening.totalInvestedAmount(), "totalInvestedAmount");
         BigDecimal units = positive(opening.currentUnits(), "currentUnits", 6);
@@ -153,21 +166,25 @@ public class WebMutualFundService {
     }
 
     private MutualFundResponse summary(UserInvestmentEntity investment) {
+        Holding holding = holding(investment);
+        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
+        BigDecimal currentValue = latestNav == null ? null : holding.units().multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(holding.invested()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profitOrLossPercent = profitOrLoss == null || holding.invested().signum() == 0 ? null
+                : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(holding.invested(), 2, RoundingMode.HALF_UP);
+        ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
+                ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth())) : null;
+        return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
+                holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip);
+    }
+
+    private Holding holding(UserInvestmentEntity investment) {
         List<InvestmentTransactionEntity> rows = transactions.findByInvestmentIdOrderByCreatedAtAsc(investment.getId());
         BigDecimal units = rows.stream().filter(r -> r.getStatus() == InvestmentTransactionStatus.CONFIRMED)
                 .map(InvestmentTransactionEntity::getUnits).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal invested = rows.stream().filter(r -> r.getStatus() == InvestmentTransactionStatus.CONFIRMED)
                 .map(InvestmentTransactionEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal average = units.signum() == 0 ? null : invested.divide(units, 6, RoundingMode.HALF_UP);
-        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
-        BigDecimal currentValue = latestNav == null ? null : units.multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(invested).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal profitOrLossPercent = profitOrLoss == null || invested.signum() == 0 ? null
-                : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(invested, 2, RoundingMode.HALF_UP);
-        ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
-                ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth())) : null;
-        return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
-                invested, currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip);
+        return new Holding(units, invested, units.signum() == 0 ? null : invested.divide(units, 6, RoundingMode.HALF_UP));
     }
 
     private UserInvestmentEntity owned(AppUserEntity user, Long id) {
@@ -196,5 +213,9 @@ public class WebMutualFundService {
                                      BigDecimal currentValue, BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
                                      BigDecimal latestNav, ActiveSip activeSip) { }
     public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth) { }
+    public record MutualFundDetailResponse(Long id, String schemeName, BigDecimal invested, BigDecimal currentValue,
+                                           BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
+                                           BigDecimal averageNav, BigDecimal currentNav, BigDecimal units) { }
     public record MutualFundListResponse(List<MutualFundResponse> mutualFunds) { }
+    private record Holding(BigDecimal units, BigDecimal invested, BigDecimal averagePurchaseCost) { }
 }

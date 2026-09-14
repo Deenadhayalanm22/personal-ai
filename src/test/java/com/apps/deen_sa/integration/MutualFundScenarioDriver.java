@@ -100,6 +100,19 @@ final class MutualFundScenarioDriver {
                 .andExpect(jsonPath("$.mutualFunds[0].profitOrLoss").value(92903.25));
     }
 
+    void assertFundCardShowsReturnsAndHoldingMetrics() throws Exception {
+        mockMvc.perform(get("/api/web/mutual-funds/{id}", investmentId).cookie(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemeName").value("Parag Parikh Flexi Cap Fund - Direct Plan - Growth"))
+                .andExpect(jsonPath("$.invested").value(70000))
+                .andExpect(jsonPath("$.currentValue").value(162903.25))
+                .andExpect(jsonPath("$.profitOrLoss").value(92903.25))
+                .andExpect(jsonPath("$.profitOrLossPercent").value(132.72))
+                .andExpect(jsonPath("$.averageNav").value(85.940581))
+                .andExpect(jsonPath("$.currentNav").value(200))
+                .andExpect(jsonPath("$.units").value(814.516253));
+    }
+
     private org.springframework.test.web.servlet.ResultActions portfolio() throws Exception {
         return mockMvc.perform(get("/api/web/mutual-funds").cookie(session)).andExpect(status().isOk());
     }

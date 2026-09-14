@@ -180,6 +180,12 @@ public class WebFinanceController {
         return webManager.mutualFunds(token);
     }
 
+    @GetMapping("/mutual-funds/{id}")
+    public WebMutualFundService.MutualFundDetailResponse mutualFund(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) {
+        return webManager.mutualFund(token, id);
+    }
+
     @PostMapping("/mutual-funds/{id}/lump-sums")
     @ResponseStatus(HttpStatus.CREATED)
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(
