@@ -55,8 +55,9 @@
 
 1. **Given** a selected month, **when** stories exist, **then** the response contains the selected month, currency, timezone, and only the story cards/evidence generated for that user.
 2. **Given** a story with multiple cards, **when** the portal opens it, **then** cards are ordered by `sequence` and evidence can be opened only from the supplied action.
-3. **Given** an expense edit or soft deletion, **when** an affected month is re-evaluated, **then** story change tracking ensures stale insight data is not treated as final.
-4. **Given** no eligible story, **when** the endpoint is read, **then** it returns an empty `stories` array rather than invented guidance.
+3. **Given** multiple available stories, **when** the portal shows its Home preview or Stories view, **then** it presents one active card in a horizontally swipeable, stacked card rail with a visible dot/count indicator and a partial next-card preview.
+4. **Given** an expense edit or soft deletion, **when** an affected month is re-evaluated, **then** story change tracking ensures stale insight data is not treated as final.
+5. **Given** no eligible story, **when** the endpoint is read, **then** it returns an empty `stories` array rather than invented guidance.
 
 ### Integration-test scenarios
 
