@@ -4,8 +4,14 @@ This is a monorepo for the Personal AI expense assistant.
 
 ## Projects
 
-- [`backend/`](backend/) — Spring Boot API, database migrations, WhatsApp integration, and backend documentation.
+- [`backend/`](backend/) — Spring Boot API, database migrations, and WhatsApp integration.
 - [`frontend/`](frontend/) — Svelte/Vite web dashboard.
+
+Project documentation is consolidated in [`docs/`](docs/):
+
+- [`docs/backend/`](docs/backend/) — backend architecture, APIs, test plans, and delivery notes.
+- [`docs/frontend/`](docs/frontend/) — frontend contracts, behavior notes, and design artifacts.
+- [`docs/product/`](docs/product/) — product requirements and vision documents.
 
 ## Local development
 
@@ -24,4 +30,5 @@ npm ci
 npm run dev
 ```
 
-See each project's README for configuration, testing, and deployment details.
+See the [backend guide](docs/backend/README.md) and [frontend guide](docs/frontend/README.md)
+for configuration, testing, and deployment details.
