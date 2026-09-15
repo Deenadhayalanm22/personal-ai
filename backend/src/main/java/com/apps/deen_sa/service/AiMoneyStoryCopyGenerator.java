@@ -40,6 +40,9 @@ public class AiMoneyStoryCopyGenerator extends BaseLLMExtractor implements Money
 
                 This is a Monthly Commitment story for a trusted closed-circle finance app. Use a warm, playful,
                 celebratory voice—not a formal advisor voice. You may use at most one fitting emoji across all fields.
+                Make one punchline, not a financial report. heading has at most 16 characters, eyebrow at most 5 words,
+                title at most 7 words, and body at most 18 words. Mention only the single soonestPayoff; never list a
+                second loan or say \"plus\". Do not repeat the total or bucket figures in title/body because the UI shows them.
                 When loanPayoffFacts say a payment ends soon, make that the hook using light phrases such as
                 \"leaving the chat\", \"escape artist\", \"final episode\", \"money squad\", or \"wallet comeback arc\".
                 State the supplied end month, remaining-payment count, amount freed, and free-from month exactly when used.
