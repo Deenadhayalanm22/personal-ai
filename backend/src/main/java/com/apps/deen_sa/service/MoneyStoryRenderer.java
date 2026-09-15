@@ -25,6 +25,7 @@ public class MoneyStoryRenderer {
         String period = label(c.periodStart(), c.periodEnd());
         boolean pattern = c.level() == MoneyStoryLevel.PATTERN;
         String subject = switch (c.type()) {
+            case MONTHLY_COMMITMENT -> "monthly commitment";
             case DISCRETIONARY_FREQUENCY -> "discretionary purchases";
             case CATEGORY_SPENDING_GROWTH -> c.category();
             case WEEKEND_SPENDING_PATTERN -> "weekend expenses";

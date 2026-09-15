@@ -27,7 +27,7 @@ class MoneyStoryEvidenceRulesTest {
             new MoneyStoriesProperties.UnusualHighSpendDay(true, amount("2000"), amount("2.5"), 8, 15)));
 
     @ParameterizedTest(name = "{0}: sparse data supports an observation")
-    @EnumSource(MoneyStoryType.class)
+    @EnumSource(value = MoneyStoryType.class, names = "MONTHLY_COMMITMENT", mode = EnumSource.Mode.EXCLUDE)
     void everyTopicOffersFactualObservationBeforePatternsAreSupported(MoneyStoryType topic) throws Exception {
         // Day 6 includes the first weekend, so all five topics have relevant facts.
         var candidate = rule(topic).evaluate(context("A", 6, YearMonth.of(2026, 7))).orElseThrow();
@@ -38,7 +38,7 @@ class MoneyStoryEvidenceRulesTest {
     }
 
     @ParameterizedTest(name = "{0}: sufficient history supports a pattern")
-    @EnumSource(MoneyStoryType.class)
+    @EnumSource(value = MoneyStoryType.class, names = "MONTHLY_COMMITMENT", mode = EnumSource.Mode.EXCLUDE)
     void everyTopicCanBecomeAPatternWithItsRequiredEvidence(MoneyStoryType topic) throws Exception {
         int day = switch (topic) {
             case CATEGORY_SPENDING_GROWTH -> 60;
@@ -78,7 +78,7 @@ class MoneyStoryEvidenceRulesTest {
     }
 
     @ParameterizedTest
-    @EnumSource(MoneyStoryType.class)
+    @EnumSource(value = MoneyStoryType.class, names = "MONTHLY_COMMITMENT", mode = EnumSource.Mode.EXCLUDE)
     void partialMonthlyBackfillsDoNotQualifyAsPatterns(MoneyStoryType topic) throws Exception {
         rule(topic).evaluate(context("B", 60, YearMonth.of(2026, 8))).ifPresent(candidate ->
                 assertThat(candidate.level()).isEqualTo(MoneyStoryLevel.OBSERVATION));
@@ -125,6 +125,7 @@ class MoneyStoryEvidenceRulesTest {
 
     private MoneyStoryRule rule(MoneyStoryType topic) {
         return switch (topic) {
+            case MONTHLY_COMMITMENT -> throw new IllegalArgumentException("Live commitment is not a rule-backed expense story");
             case DISCRETIONARY_FREQUENCY -> new DiscretionaryFrequencyRule(properties);
             case CATEGORY_SPENDING_GROWTH -> new CategorySpendingGrowthRule(properties);
             case WEEKEND_SPENDING_PATTERN -> new WeekendSpendingPatternRule(properties);

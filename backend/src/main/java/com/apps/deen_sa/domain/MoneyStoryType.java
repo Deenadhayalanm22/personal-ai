@@ -1,6 +1,7 @@
 package com.apps.deen_sa.domain;
 
 public enum MoneyStoryType {
+    MONTHLY_COMMITMENT,
     DISCRETIONARY_FREQUENCY,
     CATEGORY_SPENDING_GROWTH,
     WEEKEND_SPENDING_PATTERN,

@@ -35,6 +35,7 @@ public class MoneyStoriesService {
     private final MoneyStorySelector selector;
     private final MoneyStoryRenderer renderer;
     private final MoneyStoryObservationFactory observationFactory;
+    private final MonthlyCommitmentStoryService monthlyCommitment;
     private final Clock clock;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -46,18 +47,20 @@ public class MoneyStoriesService {
 
     /**
      * Deliberately separate from the internal monthly response: this is the public frontend
-     * contract and exposes only published, non-stale stories.
+     * contract. It starts with the live commitment anchor, then exposes published snapshots.
      */
     @Transactional(readOnly = true)
     public MonthlyStoriesApiResponse monthlyForWeb(AppUserEntity user, YearMonth month) {
+        List<MoneyStoryApi> result = new ArrayList<>();
+        result.add(monthlyCommitment.currentFor(user));
         var snapshot = snapshots.findByUserIdAndScopeMonthAndSupersededAtIsNull(user.getId(), month.atDay(1))
                 .filter(value -> "READY".equals(value.getStatus()));
-        if (snapshot.isEmpty()) return MonthlyStoriesApiResponse.empty(month, user);
+        if (snapshot.isEmpty()) return new MonthlyStoriesApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), result);
 
         var published = snapshot.get();
-        List<MoneyStoryApi> result = stories.findBySnapshotIdOrderByDisplayOrderAscIdAsc(published.getId()).stream()
-                .map(story -> publicStory(story, published)).toList();
-        return new MonthlyStoriesApiResponse(month.toString(), published.getCurrency(), published.getTimezone(), result);
+        result.addAll(stories.findBySnapshotIdOrderByDisplayOrderAscIdAsc(published.getId()).stream()
+                .map(story -> publicStory(story, published)).toList());
+        return new MonthlyStoriesApiResponse(month.toString(), published.getCurrency(), published.getTimezone(), List.copyOf(result));
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)

@@ -56,3 +56,14 @@
 
 - Search, create, and list a stock; assert quantity, invested value, current value, P&L, and duplicate handling.
 - Stub an unavailable price and assert that the holding remains listed with null valuation fields.
+
+## FIN-018 — Pin the live monthly commitment story
+
+**Status:** Done · **Priority:** P1
+
+### Acceptance criteria
+
+1. **Given** any signed-in profile, **when** its existing monthly Stories endpoint is read, **then** `MONTHLY_COMMITMENT` is the first story, including when no generated expense-story snapshot exists.
+2. **Given** an active loan whose EMI tenure includes the current month, **when** the story is read, **then** its EMI is included once in the live monthly commitment total; closed, future, and elapsed-tenure loans are excluded.
+3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
+4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the commitment reflects current source records without waiting for the money-story snapshot scheduler.
