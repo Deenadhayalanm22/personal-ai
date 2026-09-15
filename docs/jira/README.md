@@ -13,7 +13,7 @@ INIT-002  Personal Expense Extension
 └── FIN-EPIC-005  Loans and mutual-fund planning
 ```
 
-The codebase has no extension manifest/runtime, generic event-and-movement ledger, tenant platform, or Saree Job-Work extension. Earlier core documents are historical proposals only, not acceptance criteria for this final code.
+The codebase has no extension manifest/runtime, generic event-and-movement ledger, tenant platform, or Saree Job-Work extension. Earlier core documents are historical proposals only, not acceptance criteria for this final code. WhatsApp expense ingestion is part of FIN-EPIC-001, and the spending workspace is part of FIN-EPIC-003.
 
 ## Files
 
@@ -39,4 +39,4 @@ A story is done when its acceptance criteria pass, relevant tests exist, movemen
 
 ## Historical proposals
 
-`core/` contains pre-finalization proposals. It must not be used to derive tests, customer commitments, or feature claims. Use `personal-expense/` and [`docs/contracts`](../../../README.md) for current behavior.
+`core/` contains pre-finalization proposals. It must not be used to derive tests, customer commitments, or feature claims. Use `personal-expense/` and the [contract index](../README.md) for current behavior.

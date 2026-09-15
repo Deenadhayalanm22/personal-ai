@@ -6,6 +6,17 @@
 | Status | In Progress |
 | Goal | Explain recorded spending without claiming information the user has not provided |
 
+## Cross-stack ownership
+
+| Layer | Implemented responsibility |
+| --- | --- |
+| `FinancialTransactionCalendarService` | Aggregates visible expenses by selected month and produces the per-day transaction count, total spend, and intensity. |
+| `FinancialTransactionListService` | Returns recent or selected-date expense rows, ownership-scoped filter summary, and cursor metadata. |
+| `PendingActionContextService` | Creates the short-lived selected-date context consumed by the next eligible WhatsApp text expense. |
+| `MoneyStoriesService` and scheduler | Persist and refresh read-only monthly story snapshots with evidence. |
+| `frontend/src/App.svelte` | Owns selected month, URL `?month=YYYY-MM`, online refresh, and month/profile-local cache. |
+| `frontend/src/Home.svelte` | Renders calendar intensity, month summary, recent/date activity tabs, missing-transaction handoff, story filtering, story deck, and evidence. |
+
 ## FIN-009 — Browse a monthly spending calendar
 
 **Status:** Done · **Priority:** P0
@@ -17,11 +28,24 @@
 3. **Given** a month/date expense query, **when** it is requested, **then** only visible expenses belonging to the active profile are returned with filter summary and cursor metadata.
 4. **Given** an invalid/missing calendar month, **when** requested, **then** it returns `400 INVALID_MONTH`.
 
+### Portal behavior
+
+1. The selected month comes from `?month=YYYY-MM` or defaults to the current local month. Changing it updates browser history and reloads calendar, recent activity, and stories.
+2. Each day button uses the API-provided `intensity` (0–4) as its visual spend-depth class. The frontend does not calculate or reinterpret intensity from transaction amounts.
+3. The month summary displays API totals: `totalSpend`, `transactionCount`, and `highestSpend`.
+4. **Recent** displays the latest five records loaded for the selected month. Selecting a calendar day switches to the date activity tab and requests up to 50 records for that selected date.
+5. The activity panel initially shows five items and can expand to all returned items. It is a presentation limit, not backend pagination.
+6. A future day cannot be selected. An empty past day can open the missing-transaction flow, which creates a date context and offers the returned WhatsApp URL.
+7. Editing or deleting an item refreshes calendar, recent activity, and stories so all three views converge on the updated record.
+
 ### Integration-test scenarios
 
 - Seed expenses across days and assert aggregate totals, highest day, and timezone-aware dates.
 - Request a valid missing-date context, then assert a future date and invalid timezone fail.
 - Verify a session cannot read another profile's calendar or expense list.
+- Render a fixture with intensities 0–4 and assert each calendar day uses the matching visual class without recalculating it.
+- Select a populated day and assert a date-scoped expense request; select an empty past day and assert context creation plus WhatsApp handoff; assert future days are disabled.
+- Edit/delete a displayed item and assert all three dashboard fetches are requested again.
 
 ## FIN-010 — Render explainable money stories
 

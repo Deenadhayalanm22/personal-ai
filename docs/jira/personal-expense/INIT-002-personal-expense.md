@@ -18,7 +18,7 @@ This extension currently owns conversational expense capture, expense categories
 3. The dashboard presents a selected month's calendar, recent expenses, and generated stories. The user can correct or soft-delete an expense.
 4. The user can standardize reference names, add planning data (loans or mutual funds), and confirm due SIPs.
 
-Each epic contains the behavior, state changes, and integration-test scenarios for one part of that journey. The endpoint-level schema remains in the [contract index](../../../README.md).
+Each epic is a cross-stack vertical slice: it owns user-visible behavior, frontend state and interaction, backend rules and state changes, and integration-test scenarios. The endpoint-level schema remains in the [contract index](../../README.md).
 
 ## Initiative acceptance criteria
 

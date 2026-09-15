@@ -11,6 +11,15 @@
 
 The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive confirmation replies are processed first. Text/audio messages may be handled as an administrative aggregate-backfill command; all other messages are persisted as idempotent drafts and passed to normalization. A successful confirmation produces a financial transaction and an outbound acknowledgement. The portal does not create raw expenses; it only displays and corrects captured ones.
 
+## Cross-stack ownership
+
+| Layer | Implemented responsibility |
+| --- | --- |
+| WhatsApp/controller/orchestration | Maps inbound payloads, writes idempotent drafts, normalizes new text, and handles confirm/discard buttons. |
+| Expense services and database | Persist drafts, extractions, transactions, references, and confirmation outcome. |
+| `frontend/src/App.svelte` | Refreshes calendar, recent activity, and stories from the captured transaction data. |
+| `frontend/src/Home.svelte` | Lets the user inspect, edit, or delete a captured expense; it does not submit a new raw expense. |
+
 ## FIN-001 — Receive, route, and retain an inbound turn
 
 **Status:** Done · **Priority:** P0

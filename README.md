@@ -9,8 +9,9 @@ This is a monorepo for the Personal AI expense assistant.
 
 Project documentation is consolidated in [`docs/`](docs/):
 
-- [`docs/backend/`](docs/backend/) — backend architecture, APIs, test plans, and delivery notes.
-- [`docs/frontend/`](docs/frontend/) — frontend contracts, behavior notes, and design artifacts.
+- [`docs/jira/`](docs/jira/) — cross-stack feature behavior and integration-test scenarios.
+- [`docs/contracts/`](docs/contracts/) — current API and integration contracts.
+- [`docs/engineering/`](docs/engineering/) — backend and frontend setup guides.
 - [`docs/product/`](docs/product/) — product requirements and vision documents.
 
 ## Local development
@@ -30,5 +31,5 @@ npm ci
 npm run dev
 ```
 
-See the [backend guide](docs/backend/README.md) and [frontend guide](docs/frontend/README.md)
+See the [backend guide](docs/engineering/backend-development.md) and [frontend guide](docs/engineering/frontend-development.md)
 for configuration, testing, and deployment details.

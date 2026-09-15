@@ -32,7 +32,7 @@ import org.springframework.test.context.ContextConfiguration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 
-/** Red acceptance tests for the proposed evidence ladder; see docs/backend/testing/money-stories-tdd-plan.md. */
+/** Red acceptance tests for the proposed evidence ladder; see docs/testing/money-stories-tdd-plan.md. */
 @SpringBootTest(properties = {"openai.api-key=", "app.money-stories.generation-cron=-",
         "app.aggregation.scheduling-enabled=false"})
 @ActiveProfiles("test")
