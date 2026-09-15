@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
+/** FIN-EPIC-002 — Expense data correctness and repair. See docs/jira/personal-expense/FIN-EPIC-002-correctness.md. */
 @Service
 @RequiredArgsConstructor
 public class WebUserReferencePreferenceService {

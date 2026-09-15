@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Service
 @RequiredArgsConstructor
 public class FinancialTransactionCalendarService {

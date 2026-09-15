@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+/** FIN-EPIC-001 — Conversational expense capture. See docs/jira/personal-expense/FIN-EPIC-001-capture.md. */
 @Service
 @RequiredArgsConstructor
 @Log4j2

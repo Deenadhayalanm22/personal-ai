@@ -9,6 +9,7 @@ import com.apps.deen_sa.repository.UserLoanRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+/** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Component
 public class LoanClosureConfirmationActionHandler implements UserActionCompletionHandler {
     private final UserLoanRepository loans;

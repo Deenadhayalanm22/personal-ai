@@ -1,3 +1,4 @@
+<!-- FIN-EPIC-004: docs/jira/personal-expense/FIN-EPIC-004-portal-and-references.md -->
 <script>
   import { onDestroy } from 'svelte';
   import { ApiError, requestLoginLink } from './lib/api.js';

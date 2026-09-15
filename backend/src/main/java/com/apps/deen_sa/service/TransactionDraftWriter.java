@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+/** FIN-EPIC-001 — Conversational expense capture. See docs/jira/personal-expense/FIN-EPIC-001-capture.md. */
 @Service
 @RequiredArgsConstructor
 public class TransactionDraftWriter {

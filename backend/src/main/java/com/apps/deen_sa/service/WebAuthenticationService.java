@@ -18,6 +18,7 @@ import java.security.SecureRandom;
 import java.time.*;
 import java.util.Base64;
 
+/** FIN-EPIC-004 — Portal access and reference hygiene. See docs/jira/personal-expense/FIN-EPIC-004-portal-and-references.md. */
 @Service
 public class WebAuthenticationService {
     private final MagicLinkRepository magicLinks;

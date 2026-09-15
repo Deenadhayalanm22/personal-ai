@@ -1,3 +1,4 @@
+<!-- FIN-EPIC-002: docs/jira/personal-expense/FIN-EPIC-002-correctness.md -->
 <script>
   import { createReferencePreference, getReferenceEntityTypes, getReferencePreferences, mergeReferencePreferences } from './lib/api.js';
 

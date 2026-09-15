@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Service
 @RequiredArgsConstructor
 public class ExpenseDailyAggregationService {

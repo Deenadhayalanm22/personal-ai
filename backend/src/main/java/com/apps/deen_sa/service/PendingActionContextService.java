@@ -17,6 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Service
 public class PendingActionContextService {
     public static final String TYPE = "MISSING_TRANSACTION_DATE";

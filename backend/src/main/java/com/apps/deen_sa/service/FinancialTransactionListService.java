@@ -18,6 +18,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Service
 @RequiredArgsConstructor
 public class FinancialTransactionListService {

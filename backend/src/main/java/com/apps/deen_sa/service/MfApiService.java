@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** Read-through lookup only: MFAPI remains the scheme catalogue, not our database. */
+/** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Service
 public class MfApiService {
     private final RestTemplate http;

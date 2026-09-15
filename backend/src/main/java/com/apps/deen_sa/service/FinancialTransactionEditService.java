@@ -17,6 +17,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 
+/** FIN-EPIC-002 — Expense data correctness and repair. See docs/jira/personal-expense/FIN-EPIC-002-correctness.md. */
 @Service
 public class FinancialTransactionEditService {
     private final FinancialTransactionRepository transactions;

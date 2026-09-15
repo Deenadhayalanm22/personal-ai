@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 import static com.apps.deen_sa.service.MoneyStoryRenderer.money;
 
 /** Coordinates evaluation and atomic snapshot publication. Web reads never generate stories. */
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Service
 @RequiredArgsConstructor
 public class MoneyStoriesService {

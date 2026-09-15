@@ -13,6 +13,7 @@ import java.time.Clock;
 import java.util.List;
 
 /** The sole producer of Money Stories. Dashboard/API requests are read-only. */
+/** FIN-EPIC-003 — Personal spending calendar and insights. See docs/jira/personal-expense/FIN-EPIC-003-insights.md. */
 @Component
 @RequiredArgsConstructor
 @Slf4j

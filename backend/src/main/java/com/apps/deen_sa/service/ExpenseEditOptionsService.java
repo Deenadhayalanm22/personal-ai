@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** FIN-EPIC-002 — Expense data correctness and repair. See docs/jira/personal-expense/FIN-EPIC-002-correctness.md. */
 @Service
 @RequiredArgsConstructor
 public class ExpenseEditOptionsService {

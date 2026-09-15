@@ -11,6 +11,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** FIN-EPIC-004 — Portal access and reference hygiene. See docs/jira/personal-expense/FIN-EPIC-004-portal-and-references.md. */
 @Service
 public class WebLoginRequestService {
     private static final String CHANNEL = "WHATSAPP";

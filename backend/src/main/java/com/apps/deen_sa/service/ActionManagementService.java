@@ -19,6 +19,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Persistent action queue and its common API boundary. */
+/** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Service
 public class ActionManagementService {
     private final UserActionItemRepository actions;

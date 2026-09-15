@@ -1,3 +1,4 @@
+<!-- FIN-EPIC-003 and FIN-EPIC-004: docs/jira/personal-expense/FIN-EPIC-003-insights.md and FIN-EPIC-004-portal-and-references.md -->
 <script>
   import { onMount } from 'svelte';
   import Home from './Home.svelte'; import Auth from './Auth.svelte'; import PrivacyPolicy from './PrivacyPolicy.svelte';

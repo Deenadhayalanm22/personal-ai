@@ -1,3 +1,4 @@
+<!-- FIN-EPIC-002, FIN-EPIC-003, and FIN-EPIC-005: see docs/jira/personal-expense/FIN-EPIC-002-correctness.md, FIN-EPIC-003-insights.md, and FIN-EPIC-005-planning.md -->
 <script>
   import { onMount } from 'svelte';
   import { ApiError, completeAction, confirmSipOccurrence, createLoan, createMissingDateContext, createMutualFund, deleteExpense, getActions, getExpenseOptions, getExpensesForDate, getLoans, getMutualFund, getMutualFunds, logout, searchMutualFunds, updateExpense, updateLoan } from './lib/api.js';

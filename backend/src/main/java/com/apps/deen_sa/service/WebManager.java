@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.*;
 import java.util.List;
 
+/** Cross-stack API façade for FIN-EPIC-002 through FIN-EPIC-005. See docs/jira/personal-expense/. */
 @Service
 public class WebManager {
     private final WebAuthenticationService authentication;
