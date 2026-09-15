@@ -1,55 +1,39 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.domain.InvestmentAssetType;
-import com.apps.deen_sa.domain.InvestmentSipStatus;
-import com.apps.deen_sa.domain.LoanStatus;
 import com.apps.deen_sa.domain.MoneyStoryLevel;
 import com.apps.deen_sa.domain.MoneyStoryType;
 import com.apps.deen_sa.entity.AppUserEntity;
-import com.apps.deen_sa.entity.UserInvestmentEntity;
-import com.apps.deen_sa.entity.UserLoanEntity;
-import com.apps.deen_sa.repository.UserInvestmentRepository;
-import com.apps.deen_sa.repository.UserLoanRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
- * Produces the always-current planning anchor in the existing Stories response.
- * It is deliberately not snapshot-backed: changing a loan or SIP is visible on the next read.
+ * FIN-018 — Pin the live monthly commitment story. See docs/jira/personal-expense/FIN-EPIC-005-planning.md.
+ * Produces the first planning story from the canonical monthly financial snapshot; it never recalculates loans/SIPs on a normal read.
  */
 @Service
 public class MonthlyCommitmentStoryService {
-    private final UserLoanRepository loans;
-    private final UserInvestmentRepository investments;
+    private final MonthlyFinancialSnapshotService snapshots;
     private final Clock clock;
 
-    public MonthlyCommitmentStoryService(UserLoanRepository loans, UserInvestmentRepository investments, Clock clock) {
-        this.loans = loans;
-        this.investments = investments;
+    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, Clock clock) {
+        this.snapshots = snapshots;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public MoneyStoriesService.MoneyStoryApi currentFor(AppUserEntity user) {
-        YearMonth month = YearMonth.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
-        List<UserLoanEntity> activeLoans = loans.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
-                .filter(loan -> hasEmiIn(loan, month)).toList();
-        BigDecimal emiTotal = activeLoans.stream().map(UserLoanEntity::getMonthlyEmiAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<UserInvestmentEntity> activeSips = investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
-                .filter(investment -> hasSipIn(investment, month)).toList();
-        BigDecimal sipTotal = activeSips.stream().map(UserInvestmentEntity::getSipAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal total = emiTotal.add(sipTotal);
+        var snapshot = snapshots.current(user);
+        YearMonth month = YearMonth.parse(snapshot.month());
+        var debt = snapshot.commitmentBuckets().stream().filter(bucket -> "DEBT_REPAYMENTS".equals(bucket.key())).findFirst().orElseThrow();
+        var investing = snapshot.commitmentBuckets().stream().filter(bucket -> "PLANNED_INVESTING".equals(bucket.key())).findFirst().orElseThrow();
+        BigDecimal emiTotal = debt.plannedAmount(), sipTotal = investing.plannedAmount(), total = snapshot.fullIntendedCommitment();
         String currency = user.getCurrency();
         String value = MoneyStoryRenderer.money(total, currency);
         List<MoneyStoriesService.Component> components = new ArrayList<>();
@@ -61,8 +45,8 @@ public class MonthlyCommitmentStoryService {
                 ? commitmentBody(value, emiTotal, sipTotal, currency)
                 : "Add a loan or a mutual fund SIP and it will appear here as part of your monthly commitment.";
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = new ArrayList<>();
-        activeLoans.forEach(loan -> evidenceRows.add(loanEvidence(loan, month, currency)));
-        activeSips.forEach(investment -> evidenceRows.add(sipEvidence(investment, currency)));
+        debt.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
+        investing.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
         List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
         var card = new MoneyStoriesService.CardDto("commitment", 1, "HERO_STAT", "CALM_CONTEXT",
@@ -74,21 +58,6 @@ public class MonthlyCommitmentStoryService {
         return new MoneyStoriesService.MoneyStoryApi("monthly-commitment", MoneyStoryType.MONTHLY_COMMITMENT.name(), 1,
                 Instant.now(clock), period, face, List.of(card), evidence, MoneyStoryLevel.OBSERVATION,
                 "monthly-commitment", 1, null, null);
-    }
-
-    private boolean hasEmiIn(UserLoanEntity loan, YearMonth month) {
-        if (loan.getStatus() != LoanStatus.ACTIVE) return false;
-        YearMonth first = YearMonth.from(loan.getFirstEmiDueDate());
-        YearMonth last = first.plusMonths(loan.getTotalTenureMonths() - 1L);
-        return !month.isBefore(first) && !month.isAfter(last);
-    }
-
-    private boolean hasSipIn(UserInvestmentEntity investment, YearMonth month) {
-        return investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND
-                && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
-                && investment.getSipAmount() != null
-                && investment.getSipStartMonth() != null
-                && !month.isBefore(YearMonth.from(investment.getSipStartMonth()));
     }
 
     private MoneyStoriesService.Component component(String label, BigDecimal amount, String currency) {
@@ -105,25 +74,11 @@ public class MonthlyCommitmentStoryService {
         return "Your planned investing total is " + total + " this month.";
     }
 
-    private MoneyStoriesService.EvidenceTransaction loanEvidence(UserLoanEntity loan, YearMonth month, String currency) {
-        LocalDate due = LocalDate.of(month.getYear(), month.getMonth(), Math.min(loan.getFirstEmiDueDate().getDayOfMonth(), month.lengthOfMonth()));
-        return new MoneyStoriesService.EvidenceTransaction("loan:" + sourceId(loan.getId(), loan.getLoanName()),
-                due.format(java.time.format.DateTimeFormatter.ofPattern("d MMM")), loan.getLoanName(), "Loan EMI",
-                component("Monthly EMI", loan.getMonthlyEmiAmount(), currency), loan.getLenderName());
+    private MoneyStoriesService.EvidenceTransaction evidence(MonthlyFinancialSnapshotService.Source source, String currency) {
+        String date = source.dueDate() == null ? "Every month" : source.dueDate().format(java.time.format.DateTimeFormatter.ofPattern("d MMM"));
+        return new MoneyStoriesService.EvidenceTransaction(source.sourceType().toLowerCase() + ":" + source.sourceId(), date,
+                source.label(), source.category(), component("Monthly amount", source.plannedAmount(), currency), source.detail());
     }
-
-    private MoneyStoriesService.EvidenceTransaction sipEvidence(UserInvestmentEntity investment, String currency) {
-        String due = "Every month";
-        if (investment.getSipDay() != null) due = investment.getSipDay() + ordinal(investment.getSipDay()) + " of month";
-        return new MoneyStoriesService.EvidenceTransaction("sip:" + sourceId(investment.getId(), investment.getDisplayNameSnapshot()),
-                due, investment.getDisplayNameSnapshot(), "Mutual fund SIP",
-                component("Monthly SIP", investment.getSipAmount(), currency), "Active SIP");
-    }
-
-    private String sourceId(Long id, String fallback) { return id == null ? Objects.requireNonNullElse(fallback, "unknown") : id.toString(); }
-    private String ordinal(int day) { return day % 100 >= 11 && day % 100 <= 13 ? "th" : switch (day % 10) {
-        case 1 -> "st"; case 2 -> "nd"; case 3 -> "rd"; default -> "th";
-    }; }
 
     private String monthLabel(YearMonth month) {
         return month.getMonth().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("en-IN"))

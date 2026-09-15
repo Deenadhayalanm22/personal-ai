@@ -8,6 +8,7 @@ import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.InvestmentTransactionRepository;
 import com.apps.deen_sa.repository.UserInvestmentRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,13 +25,20 @@ public class WebMutualFundService {
     private final InvestmentTransactionRepository transactions;
     private final MfApiService mfApi;
     private final Clock clock;
+    private final MonthlyFinancialSnapshotService snapshots;
 
+    @Autowired
     public WebMutualFundService(UserInvestmentRepository investments, InvestmentTransactionRepository transactions,
                                  MfApiService mfApi, Clock clock) {
+        this(investments, transactions, mfApi, clock, null);
+    }
+    public WebMutualFundService(UserInvestmentRepository investments, InvestmentTransactionRepository transactions,
+                                 MfApiService mfApi, Clock clock, MonthlyFinancialSnapshotService snapshots) {
         this.investments = investments;
         this.transactions = transactions;
         this.mfApi = mfApi;
         this.clock = clock;
+        this.snapshots = snapshots;
     }
 
     @Transactional
@@ -51,7 +59,9 @@ public class WebMutualFundService {
         }
         if (request.existingHolding() != null) createOpeningBalance(investment, request.existingHolding());
         createInitialSipOccurrenceIfNeeded(investment);
-        return response(investment);
+        MutualFundResponse response = response(investment);
+        if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh the monthly financial snapshot atomically with its investment source.
+        return response;
     }
 
     @Transactional
@@ -60,7 +70,9 @@ public class WebMutualFundService {
         if (request == null) throw invalid("Lump sum details are required");
         InvestmentTransactionEntity tx = confirmed(investment, InvestmentTransactionKind.LUMPSUM,
                 request.amount(), request.transactionDate(), request.nav(), request.units(), request.calculationSource());
-        return TransactionResponse.from(transactions.save(tx));
+        TransactionResponse response = TransactionResponse.from(transactions.save(tx));
+        if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh the monthly financial snapshot atomically with its investment source.
+        return response;
     }
 
     @Transactional
@@ -77,7 +89,9 @@ public class WebMutualFundService {
                 request.transactionDate(), request.nav(), request.units(), request.calculationSource());
         tx.setStatus(confirmed.getStatus()); tx.setAmount(confirmed.getAmount()); tx.setTransactionDate(confirmed.getTransactionDate());
         tx.setUnitPrice(confirmed.getUnitPrice()); tx.setUnits(confirmed.getUnits()); tx.setCalculationSource(confirmed.getCalculationSource());
-        return TransactionResponse.from(transactions.save(tx));
+        TransactionResponse response = TransactionResponse.from(transactions.save(tx));
+        if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: confirmation changes current planning evidence.
+        return response;
     }
 
     @Transactional

@@ -7,6 +7,7 @@ import com.apps.deen_sa.entity.UserLoanEntity;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.UserLoanRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,14 @@ import java.util.List;
 @Service
 public class WebLoanService {
     private final UserLoanRepository loans;
+    private final MonthlyFinancialSnapshotService snapshots;
 
     public WebLoanService(UserLoanRepository loans) {
-        this.loans = loans;
+        this(loans, null);
+    }
+    @Autowired
+    public WebLoanService(UserLoanRepository loans, MonthlyFinancialSnapshotService snapshots) {
+        this.loans = loans; this.snapshots = snapshots;
     }
 
     @Transactional
@@ -33,7 +39,9 @@ public class WebLoanService {
         apply(loan, request.loanName(), request.loanType(), request.lenderName(), request.originalPrincipal(),
                 request.monthlyEmiAmount(), request.totalTenureMonths(), request.firstEmiDueDate(),
                 request.status() == null ? LoanStatus.ACTIVE : request.status(), request.notes());
-        return LoanResponse.from(loans.save(loan));
+        LoanResponse response = LoanResponse.from(loans.save(loan));
+        if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh commitment snapshot atomically with its loan source.
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +66,9 @@ public class WebLoanService {
                 loan.getStatus(),
                 request.notes() == null ? loan.getNotes() : request.notes());
         loan.setUpdatedAt(Instant.now());
-        return LoanResponse.from(loans.save(loan));
+        LoanResponse response = LoanResponse.from(loans.save(loan));
+        if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh commitment snapshot atomically with its loan source.
+        return response;
     }
 
     private void validateCreate(LoanCreateRequest request) {

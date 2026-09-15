@@ -67,3 +67,25 @@
 2. **Given** an active loan whose EMI tenure includes the current month, **when** the story is read, **then** its EMI is included once in the live monthly commitment total; closed, future, and elapsed-tenure loans are excluded.
 3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
 4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the commitment reflects current source records without waiting for the money-story snapshot scheduler.
+5. **Given** a loan or SIP source write, **when** it commits, **then** the current month's canonical `monthly_financial_snapshot` is rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads that snapshot rather than recalculating source records on every request.
+
+### Design and lifecycle
+
+`monthly_financial_snapshot` is the one canonical per-user/per-month financial read model. It is not a second user-facing API and it does not duplicate domain ownership: loans remain in `user_loan`; SIP configuration remains in `user_investment`; the snapshot stores only the calculated monthly planning projection and its explainable source rows.
+
+The v1 payload contains `fullIntendedCommitment` and two semantic buckets:
+
+| Bucket | Current source records | Meaning |
+| --- | --- | --- |
+| `DEBT_REPAYMENTS` | Active loan EMIs whose tenure includes the snapshot month | Required debt repayment plan. |
+| `PLANNED_INVESTING` | Active mutual-fund SIPs whose start month has arrived | User-selected investing plan. |
+
+The pinned `MONTHLY_COMMITMENT` story reads this snapshot and is always returned first in the existing monthly Stories response. Its evidence lists the source loan/SIP rows, amounts, due dates, and labels. The story does not include stock holdings, income, cash balances, or ordinary recorded expenses in v1.
+
+#### Population and refresh rules
+
+1. **Existing users:** the first monthly Stories read finds no current-month snapshot, builds it from the user’s existing source records, saves it, and returns it. No re-entry is required.
+2. **New or changed sources:** loan create/update and mutual-fund SIP create/confirmation call `MonthlyFinancialSnapshotService.refreshCurrent(user)` inside the same transaction. Source and snapshot therefore commit or roll back together.
+3. **Normal reads:** once present, the Stories response reads the stored snapshot rather than scanning loans and investments.
+4. **Future source mutations:** any new command that changes a commitment source—loan closure, SIP pause/resume/edit, emergency reserve rule, goal contribution, or eligible essential-spending classification—must invoke the same refresh method in its transaction.
+5. **Future buckets:** Essential living, emergency reserve, goal contributions, and protection commitments extend this one payload; they must not create independent commitment tables or duplicate total-calculation logic.
