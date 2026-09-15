@@ -6,6 +6,8 @@
 | Status | In Progress |
 | Goal | Store simple quantities and credits/debits safely across unrelated domains |
 
+> **Historical proposal — not implemented.** The final code persists expense transactions, user references, loans, investments, and story snapshots; it does not implement the generic event/resource/container/movement ledger described below.
+
 ## CORE-011 — Store actors, resources, containers, and units
 
 **Status:** In Progress · **Priority:** P0

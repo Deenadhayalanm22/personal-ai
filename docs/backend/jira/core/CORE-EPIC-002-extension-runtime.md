@@ -6,6 +6,8 @@
 | Status | To Do |
 | Goal | Add a new domain without modifying core conversation or ledger logic |
 
+> **Historical proposal — not implemented.** There is no extension manifest, plugin runtime, tenant-scoped enablement, or third reference extension in the final code. The stories below are archived design material only.
+
 ## CORE-006 — Define a versioned extension manifest
 
 **Status:** To Do · **Priority:** P0

@@ -6,6 +6,8 @@
 | Status | In Progress |
 | Goal | Complete simple tasks through understandable WhatsApp voice or text without forms |
 
+> **Historical proposal — not implemented as a generic core.** The final code accepts WhatsApp text, audio, and interactive messages, but only text enters expense normalization; it has no general multi-domain conversation engine, localization suite, generic correction flow, or review queue described below.
+
 ## CORE-001 — Accept voice and text consistently
 
 **Status:** In Progress · **Priority:** P0

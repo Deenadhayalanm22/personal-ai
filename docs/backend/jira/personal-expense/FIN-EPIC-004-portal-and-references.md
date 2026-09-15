@@ -1,0 +1,38 @@
+# FIN-EPIC-004 — Portal access and reference hygiene
+
+| Field | Value |
+|---|---|
+| Parent | INIT-002 |
+| Status | Done |
+| Goal | Give an authorized user a safe web view of only their profile's financial data |
+
+## FIN-012 — Sign in through a one-time WhatsApp link
+
+### Acceptance criteria
+
+1. **Given** a phone-number login request, **when** submitted, **then** it returns the same accepted message whether or not the number is registered.
+2. **Given** a valid one-time link, **when** exchanged, **then** it creates an HttpOnly, scoped web session; expired/used links return `401`.
+3. **Given** a session logout, **when** completed, **then** the server invalidates it and clears the browser cookie.
+4. **Given** an unauthenticated API request, **when** made, **then** no domain data is returned and the browser redirects to portal sign-in.
+
+### Integration-test scenarios
+
+- Request links for registered/unregistered numbers and assert indistinguishable status/body.
+- Exchange a token twice; assert first session works and second fails.
+- Call a protected endpoint after logout and assert `401`.
+
+## FIN-013 — Switch presentation profile without leakage
+
+### Acceptance criteria
+
+1. **Given** an authenticated session, **when** demo mode is read or changed, **then** only `{ demoMode }` is exposed; underlying profile IDs remain server-only.
+2. **Given** demo mode changes, **when** the portal refreshes, **then** it clears real/demo caches and reloads all sections for the selected profile.
+3. **Given** a server endpoint, **when** demo mode is active, **then** its authenticated data is resolved against the selected profile consistently.
+
+## FIN-014 — Keep portal data usable offline without changing truth
+
+### Acceptance criteria
+
+1. **Given** a successful online load, **when** connectivity later drops, **then** the dashboard may show only cache for the same month and active profile.
+2. **Given** no matching cache while offline, **when** a section opens, **then** it is unavailable rather than empty-but-authoritative.
+3. **Given** connectivity returns, **when** health succeeds, **then** calendar, recent expenses, and stories are refreshed independently.

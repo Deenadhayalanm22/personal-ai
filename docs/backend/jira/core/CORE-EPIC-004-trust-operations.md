@@ -6,6 +6,8 @@
 | Status | In Progress |
 | Goal | Make the shared platform safe, measurable, recoverable, and affordable |
 
+> **Historical proposal — partly represented, not a delivered generic platform.** The final code has cookie-backed web authentication, per-user ownership checks, configuration-based CORS, Flyway validation, health/metrics exposure, and application logs. It does not establish the complete tenant, signature-verification, retention, evaluation, alerting, or cost-control program described below.
+
 ## CORE-016 — Isolate tenants and verify requests
 
 **Status:** To Do · **Priority:** P0

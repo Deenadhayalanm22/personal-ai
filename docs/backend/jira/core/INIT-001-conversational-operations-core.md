@@ -8,6 +8,8 @@
 | Users | People with limited literacy, limited software familiarity, accessibility needs, or a preference for voice/chat |
 | Channels | WhatsApp text and voice first; channel-neutral application API |
 
+> **Historical proposal — not implemented.** This initiative describes a reusable platform that is not present in the final codebase. It must not be used as a product commitment or test specification. The current implementation is a single Personal Expense application; see `../personal-expense/INIT-002-personal-expense.md`.
+
 ## Problem and promise
 
 Most small operational software assumes that a user can navigate menus, understand field names, type accurately, and complete a form. The core removes that assumption. A user describes what happened; the system extracts known facts, asks only for information required by the installed extension, confirms consequential actions, stores an auditable event, and answers simple questions.
