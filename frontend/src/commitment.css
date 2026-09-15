@@ -8,3 +8,4 @@
 .commitment-card.playful strong{max-width:270px;color:#3f4d23}
 .commitment-icon{position:absolute;top:16px;right:51px;display:grid;place-items:center;width:44px;height:44px;border-radius:15px;background:rgba(255,255,255,.68);font-size:25px;transform:rotate(-7deg);box-shadow:0 7px 17px rgba(118,90,22,.13)}
 .commitment-card.playful .story-source{background:#fff0b5;color:#80651d}
+.story-slide.deck-theme-WARM_NOTICE{background:linear-gradient(150deg,#fff7d8,#f2dfa0);border-color:#e2cd77}.deck-theme-WARM_NOTICE .slide-eyebrow{color:#80651d}.deck-theme-WARM_NOTICE .story-amount strong{color:#69511a}

@@ -50,7 +50,7 @@
   const monthLabel=value=>{const[y,m]=value.split('-').map(Number);return new Intl.DateTimeFormat(undefined,{month:'long',year:'numeric'}).format(new Date(y,m-1));};
   const greeting=()=>new Date().getHours()<12?'Good morning':new Date().getHours()<17?'Good afternoon':'Good evening'; const isoDate=day=>`${selectedMonth}-${String(day).padStart(2,'0')}`;
   const hasDeck=story=>Array.isArray(story.cards)&&story.cards.length>0; const storyName=story=>String(story.storyType||story.type||'Money story').replaceAll('_',' '); const storyTone=story=>story.cardFace?.theme||'calm'; const storyCardFace=story=>story.cardFace||{heading:'Money story',displayValue:'View',theme:'calm'}; const storySource=story=>story.source||story.domain||(story.storyType==='MONTHLY_COMMITMENT'?'Planning':'Spending');
-  const isCommitment=story=>story?.storyType==='MONTHLY_COMMITMENT'; const storyIcon=()=>''; const storyHeading=story=>storyCardFace(story).heading;
+  const isCommitment=story=>story?.storyType==='MONTHLY_COMMITMENT'; const storyIcon=story=>isCommitment(story)?'🎬':''; const storyHeading=story=>storyCardFace(story).heading;
   function setCommitmentStyle(style){commitmentStyle=style;try{localStorage.setItem('money-stories.commitment-style',style);}catch{}}
   $: connectionLabel=connectionStatus==='online'?'Online':connectionStatus==='offline'?'Offline':'Checking';
   $: evidenceItems=evidenceFor(openedStory);
