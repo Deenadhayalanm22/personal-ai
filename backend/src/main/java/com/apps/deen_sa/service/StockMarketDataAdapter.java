@@ -13,5 +13,5 @@ public interface StockMarketDataAdapter {
     List<StockSearchResult> search(String query);
     Optional<BigDecimal> latestPrice(String symbol);
 
-    record StockSearchResult(String symbol, String name, String exchange) { }
+    record StockSearchResult(String symbol, String name, String exchange, BigDecimal latestPrice) { }
 }

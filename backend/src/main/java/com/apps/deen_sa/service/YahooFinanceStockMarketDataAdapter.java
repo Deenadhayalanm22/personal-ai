@@ -33,7 +33,8 @@ public class YahooFinanceStockMarketDataAdapter implements StockMarketDataAdapte
             if (response == null || response.quotes() == null) return List.of();
             return Arrays.stream(response.quotes())
                     .filter(q -> q.symbol() != null && q.quoteType() != null && q.quoteType().equalsIgnoreCase("EQUITY"))
-                    .map(q -> new StockSearchResult(q.symbol(), q.longname() != null ? q.longname() : q.shortname(), q.exchange()))
+                    .map(q -> new StockSearchResult(q.symbol(), q.longname() != null ? q.longname() : q.shortname(),
+                            q.exchange(), latestPrice(q.symbol()).orElse(null)))
                     .toList();
         } catch (RuntimeException failure) {
             throw new WebApiException(HttpStatus.BAD_GATEWAY, "STOCK_LOOKUP_FAILED", "Unable to search stock symbols");

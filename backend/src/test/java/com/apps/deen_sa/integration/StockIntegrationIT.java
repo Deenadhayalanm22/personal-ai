@@ -45,11 +45,12 @@ class StockIntegrationIT {
         user = users.saveAndFlush(user);
         var session = new jakarta.servlet.http.Cookie("WEB_SESSION", "stock-session");
         when(authentication.authenticate("stock-session")).thenReturn(user);
-        when(marketData.search("itc")).thenReturn(List.of(new StockMarketDataAdapter.StockSearchResult("ITC.NS", "ITC Limited", "NSI")));
+        when(marketData.search("itc")).thenReturn(List.of(new StockMarketDataAdapter.StockSearchResult("ITC.NS", "ITC Limited", "NSI", new BigDecimal("425.50"))));
         when(marketData.latestPrice("ITC.NS")).thenReturn(Optional.of(new BigDecimal("425.50")));
 
         mockMvc.perform(get("/api/web/stocks/search").cookie(session).param("q", "itc"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].symbol").value("ITC.NS"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].symbol").value("ITC.NS"))
+                .andExpect(jsonPath("$[0].latestPrice").value(425.5));
         mockMvc.perform(post("/api/web/stocks").cookie(session).contentType(MediaType.APPLICATION_JSON).content("""
                 {"symbol":"ITC.NS","name":"ITC Limited","exchange":"NSI","quantity":10,"totalInvestedAmount":4000}
                 """))
