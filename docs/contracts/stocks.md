@@ -4,7 +4,7 @@ Stock holdings are add-and-view only in this release. The backend stores a selec
 
 | Endpoint | Request and response | Frontend owner |
 | --- | --- | --- |
-| `GET /api/web/stocks/search?q=text` | Required query with at least two characters. Array of `{ symbol, name, exchange }`. | Stock picker. |
+| `GET /api/web/stocks/search?q=text` | Required query with at least two characters. Array of `{ symbol, name, exchange, latestPrice }`; price is `null` when chart lookup is unavailable. | Stock picker. |
 | `POST /api/web/stocks` | `{ symbol, name, exchange?, quantity, totalInvestedAmount }`. Returns the stock summary with `201`. | Add-stock form. |
 | `GET /api/web/stocks` | `{ stocks }`; each stock includes symbol/name/exchange, quantity, invested/current value/P&L, and `latestPrice`. | Stock portfolio cards. |
 
