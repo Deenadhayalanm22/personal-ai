@@ -15,7 +15,7 @@ This repository enforces strict governance rules to prevent documentation sprawl
 
 ### Financial Rules Documentation
 
-**CRITICAL: Financial rules must live ONLY in `docs/FINANCIAL_RULES.md`**
+**CRITICAL: Financial rules must live ONLY in `backend/docs/FINANCIAL_RULES.md`**
 
 - ❌ **DO NOT create** separate files for financial rules
 - ❌ **DO NOT duplicate** financial rule definitions across files
@@ -48,15 +48,15 @@ When working on this repository:
 #### ❌ WRONG: Creating New Documentation File
 
 ```
-Creating new file: docs/payment-rules.md
+Creating new file: backend/docs/payment-rules.md
 ```
 
-**Why wrong**: Financial rules belong in `docs/FINANCIAL_RULES.md`
+**Why wrong**: Financial rules belong in `backend/docs/FINANCIAL_RULES.md`
 
 #### ✅ CORRECT: Extending Existing File
 
 ```
-Adding payment rules section to docs/FINANCIAL_RULES.md
+Adding payment rules section to backend/docs/FINANCIAL_RULES.md
 ```
 
 **Why correct**: Consolidates financial rules in the authoritative location
@@ -64,8 +64,8 @@ Adding payment rules section to docs/FINANCIAL_RULES.md
 #### ❌ WRONG: Splitting Documentation
 
 ```
-Creating docs/integration-testing-part-2.md because 
-docs/INTEGRATION_TESTING.md is getting long
+Creating backend/docs/integration-testing-part-2.md because 
+backend/docs/INTEGRATION_TESTING.md is getting long
 ```
 
 **Why wrong**: Creates documentation sprawl, exceeds file limit
@@ -74,7 +74,7 @@ docs/INTEGRATION_TESTING.md is getting long
 
 ```
 Adding new section "Advanced Integration Testing" 
-to docs/INTEGRATION_TESTING.md
+to backend/docs/INTEGRATION_TESTING.md
 ```
 
 **Why correct**: Keeps related content together, respects file limit
@@ -84,7 +84,7 @@ to docs/INTEGRATION_TESTING.md
 These rules are enforced by:
 
 1. **This file** - Instructs GitHub Copilot on repository conventions
-2. **docs/GOVERNANCE.md** - Documents the governance policy
+2. **backend/docs/GOVERNANCE.md** - Documents the governance policy
 3. **Code review** - Human reviewers must reject PRs that violate these rules
 4. **CI checks** (if implemented) - Automated validation of file counts
 
@@ -93,7 +93,7 @@ These rules are enforced by:
 Override these rules only when:
 
 1. **Explicitly approved** by repository maintainers
-2. **Documented exception** is added to `docs/GOVERNANCE.md`
+2. **Documented exception** is added to `backend/docs/GOVERNANCE.md`
 3. **Compensating file deletion** brings total back under limit
 
 ## Questions?
