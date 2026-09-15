@@ -45,7 +45,13 @@ class MonthlyCommitmentStoryServiceTest {
         assertThat(story.storyId()).isEqualTo("monthly-commitment");
         assertThat(story.cardFace().displayValue()).contains("46,000");
         assertThat(story.cards().getFirst().components()).extracting(component -> component.label())
-                .containsExactly("Loan EMIs", "Mutual fund SIPs");
+                .containsExactly("Debt repayments", "Planned investing");
+        assertThat(story.cards().getFirst().body()).contains("full intended commitment")
+                .contains("debt repayments").contains("planned investing");
+        assertThat(story.evidence().transactions()).hasSize(2);
+        assertThat(story.evidence().transactions()).extracting(row -> row.categoryLabel())
+                .containsExactly("Loan EMI", "Mutual fund SIP");
+        assertThat(story.cards().getFirst().actions()).extracting(action -> action.type()).containsExactly("OPEN_EVIDENCE");
     }
 
     private UserLoanEntity loan(String name, String amount, LocalDate firstDue, int tenure, LoanStatus status) {
