@@ -23,7 +23,7 @@ public class AiMoneyStoryCopyGenerator extends BaseLLMExtractor implements Money
                     You may use only facts supplied by the user prompt. Never invent or alter an amount,
                     percentage, count, date, merchant, category, comparison, or recommendation.
                     Keep the tone observational, non-judgmental, and no more than two short sentences per field.
-                    """, "Story type: " + type + "\nFacts (use values exactly): " + facts, Copy.class);
+                    """ + styleInstruction(type), "Story type: " + type + "\nFacts (use values exactly): " + facts, Copy.class);
             return valid(copy) ? copy : fallback;
         } catch (RuntimeException ignored) { return fallback; }
     }
@@ -32,5 +32,20 @@ public class AiMoneyStoryCopyGenerator extends BaseLLMExtractor implements Money
                 && java.util.Set.of("warm","calm","focus","alert","action").contains(c.faceTheme())
                 && java.util.Set.of("WARM_NOTICE","CALM_CONTEXT","FOCUS","HIGH_SPEND_ALERT","POSITIVE_ACTION").contains(c.theme())
                 && c.eyebrow()!=null && c.title()!=null && c.body()!=null && c.comparisonTitle()!=null && c.comparisonBody()!=null;
+    }
+
+    private String styleInstruction(MoneyStoryType type) {
+        if (type != MoneyStoryType.MONTHLY_COMMITMENT) return "";
+        return """
+
+                This is a Monthly Commitment story for a trusted closed-circle finance app. Use a warm, playful,
+                celebratory voice—not a formal advisor voice. You may use at most one fitting emoji across all fields.
+                When loanPayoffFacts say a payment ends soon, make that the hook using light phrases such as
+                \"leaving the chat\", \"escape artist\", \"final episode\", \"money squad\", or \"wallet comeback arc\".
+                State the supplied end month, remaining-payment count, amount freed, and free-from month exactly when used.
+                Never joke about debt, missed payments, low balances, or the user; the playfulness is about a commitment
+                ending and money becoming available. If no payoff fact is supplied, use the monthly cast/squad theme and
+                do not imply that any payment is ending.
+                """;
     }
 }

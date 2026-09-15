@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * FIN-018 — Pin the live monthly commitment story. See docs/jira/personal-expense/FIN-EPIC-005-planning.md.
@@ -20,10 +22,12 @@ import java.util.List;
 @Service
 public class MonthlyCommitmentStoryService {
     private final MonthlyFinancialSnapshotService snapshots;
+    private final MoneyStoryCopyGenerator copyGenerator;
     private final Clock clock;
 
-    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, Clock clock) {
+    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock) {
         this.snapshots = snapshots;
+        this.copyGenerator = copyGenerator;
         this.clock = clock;
     }
 
@@ -44,15 +48,24 @@ public class MonthlyCommitmentStoryService {
         String body = total.signum() > 0
                 ? commitmentBody(value, emiTotal, sipTotal, currency)
                 : "Add a loan or a mutual fund SIP and it will appear here as part of your monthly commitment.";
+        String payoffFacts = debt.sources().stream().filter(source -> source.remainingPayments() != null)
+                .map(source -> source.label() + ": " + source.remainingPayments() + " payments remaining, ends " + source.endsInMonth()
+                        + ", frees " + MoneyStoryRenderer.money(source.plannedAmount(), currency) + "/month from " + source.freesFromMonth())
+                .collect(Collectors.joining("; "));
+        var fallback = new MoneyStoryCopyGenerator.Copy("🎬 Money squad", "warm", "WARM_NOTICE",
+                monthLabel(month) + " · Your monthly cast", title, body, "", "");
+        var copy = copyGenerator.generate(MoneyStoryType.MONTHLY_COMMITMENT, Map.of("month", monthLabel(month), "total", value,
+                "debtRepayments", MoneyStoryRenderer.money(emiTotal, currency), "plannedInvesting", MoneyStoryRenderer.money(sipTotal, currency),
+                "loanPayoffFacts", payoffFacts), fallback);
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = new ArrayList<>();
         debt.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
         investing.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
         List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
-        var card = new MoneyStoriesService.CardDto("commitment", 1, "HERO_STAT", "CALM_CONTEXT",
-                monthLabel(month) + " · Planning", title, body, List.copyOf(components), actions);
+        var card = new MoneyStoriesService.CardDto("commitment", 1, "HERO_STAT", copy.theme(),
+                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
         var period = new MoneyStoriesService.PeriodDto("MONTH", month.atDay(1), month.atEndOfMonth(), monthLabel(month));
-        var face = new MoneyStoriesService.CardFace("Monthly commitment", value, "calm");
+        var face = new MoneyStoriesService.CardFace(copy.heading(), value, copy.faceTheme());
         var evidence = new MoneyStoriesService.EvidenceDto("Commitment sources by bucket", evidenceRows.size(),
                 component("Monthly total", total, currency), List.copyOf(evidenceRows));
         return new MoneyStoriesService.MoneyStoryApi("monthly-commitment", MoneyStoryType.MONTHLY_COMMITMENT.name(), 1,

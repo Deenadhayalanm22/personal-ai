@@ -82,6 +82,8 @@ The v1 payload contains `fullIntendedCommitment` and two semantic buckets:
 
 The pinned `MONTHLY_COMMITMENT` story reads this snapshot and is always returned first in the existing monthly Stories response. Its evidence lists the source loan/SIP rows, amounts, due dates, and labels. The story does not include stock holdings, income, cash balances, or ordinary recorded expenses in v1.
 
+For a loan source, the snapshot also stores deterministic payoff facts: `remainingPayments`, `endsInMonth`, and `freesFromMonth`. The AI copy generator receives only these verified facts plus bucket totals; it uses an approved Monthly Commitment prompt for a warm closed-circle voice (for example, “leaving the chat” or “escape artist”), with at most one emoji. It may not calculate, alter, or invent payoff information, and it must never joke about debt stress, missed payments, low balances, or the user.
+
 #### Population and refresh rules
 
 1. **Existing users:** the first monthly Stories read finds no current-month snapshot, builds it from the user’s existing source records, saves it, and returns it. No re-entry is required.

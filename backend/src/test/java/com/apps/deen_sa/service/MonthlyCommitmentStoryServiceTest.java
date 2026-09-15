@@ -17,16 +17,19 @@ class MonthlyCommitmentStoryServiceTest {
     @Test
     void totalsOnlyCommitmentsActiveInTheCurrentMonth() {
         MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
+        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
         AppUserEntity user = new AppUserEntity();
         user.setId(7L); user.setCurrency("INR"); user.setTimezone("Asia/Kolkata");
         when(snapshots.current(user)).thenReturn(new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-10", "INR", 1,
                 new BigDecimal("46000"), List.of(
                 new MonthlyFinancialSnapshotService.Bucket("DEBT_REPAYMENTS", "Debt repayments", new BigDecimal("26000"), List.of(
-                        new MonthlyFinancialSnapshotService.Source("LOAN", "1", "Home loan", new BigDecimal("26000"), null, "Loan EMI", "Bank"))),
+                        new MonthlyFinancialSnapshotService.Source("LOAN", "1", "Home loan", new BigDecimal("26000"), null, "Loan EMI", "Bank", 24, "2028-09", "2028-10"))),
                 new MonthlyFinancialSnapshotService.Bucket("PLANNED_INVESTING", "Planned investing", new BigDecimal("20000"), List.of(
-                        new MonthlyFinancialSnapshotService.Source("MUTUAL_FUND_SIP", "2", "Fund", new BigDecimal("20000"), null, "Mutual fund SIP", "Active SIP"))))));
+                        new MonthlyFinancialSnapshotService.Source("MUTUAL_FUND_SIP", "2", "Fund", new BigDecimal("20000"), null, "Mutual fund SIP", "Active SIP", null, null, null))))));
 
-        var story = new MonthlyCommitmentStoryService(snapshots,
+        when(copy.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(2));
+        var story = new MonthlyCommitmentStoryService(snapshots, copy,
                 Clock.fixed(Instant.parse("2026-10-10T00:00:00Z"), ZoneId.of("Asia/Kolkata"))).currentFor(user);
 
         assertThat(story.storyType()).isEqualTo("MONTHLY_COMMITMENT");

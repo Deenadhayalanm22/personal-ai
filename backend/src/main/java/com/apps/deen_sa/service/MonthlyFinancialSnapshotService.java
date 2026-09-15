@@ -32,7 +32,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 1;
+    private static final int CALCULATION_VERSION = 2;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -49,6 +49,7 @@ public class MonthlyFinancialSnapshotService {
     public MonthlySnapshot current(AppUserEntity user) {
         YearMonth month = currentMonth(user);
         return snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1))
+                .filter(snapshot -> snapshot.getCalculationVersion() == CALCULATION_VERSION)
                 .map(this::parse).orElseGet(() -> rebuild(user, month));
     }
 
@@ -58,13 +59,11 @@ public class MonthlyFinancialSnapshotService {
 
     private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {
         List<Source> debt = loans.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(loan -> hasEmiIn(loan, month))
-                .map(loan -> new Source("LOAN", String.valueOf(loan.getId()), loan.getLoanName(), loan.getMonthlyEmiAmount(),
-                        LocalDate.of(month.getYear(), month.getMonth(), Math.min(loan.getFirstEmiDueDate().getDayOfMonth(), month.lengthOfMonth())),
-                        "Loan EMI", loan.getLenderName())).toList();
+                .map(loan -> loanSource(loan, month)).toList();
         List<Source> investing = investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(investment -> hasSipIn(investment, month))
                 .map(investment -> new Source("MUTUAL_FUND_SIP", String.valueOf(investment.getId()), investment.getDisplayNameSnapshot(), investment.getSipAmount(),
                         investment.getSipDay() == null ? null : month.atDay(Math.min(investment.getSipDay(), month.lengthOfMonth())),
-                        "Mutual fund SIP", "Active SIP")).toList();
+                        "Mutual fund SIP", "Active SIP", null, null, null)).toList();
         Bucket debtBucket = bucket("DEBT_REPAYMENTS", "Debt repayments", debt);
         Bucket investingBucket = bucket("PLANNED_INVESTING", "Planned investing", investing);
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
@@ -83,6 +82,13 @@ public class MonthlyFinancialSnapshotService {
     private Bucket bucket(String key, String label, List<Source> sources) {
         return new Bucket(key, label, sources.stream().map(Source::plannedAmount).reduce(BigDecimal.ZERO, BigDecimal::add), sources);
     }
+    private Source loanSource(UserLoanEntity loan, YearMonth month) {
+        YearMonth end = YearMonth.from(loan.getFirstEmiDueDate()).plusMonths(loan.getTotalTenureMonths() - 1L);
+        int remaining = (int) java.time.temporal.ChronoUnit.MONTHS.between(month, end) + 1;
+        return new Source("LOAN", String.valueOf(loan.getId()), loan.getLoanName(), loan.getMonthlyEmiAmount(),
+                LocalDate.of(month.getYear(), month.getMonth(), Math.min(loan.getFirstEmiDueDate().getDayOfMonth(), month.lengthOfMonth())),
+                "Loan EMI", loan.getLenderName(), remaining, end.toString(), end.plusMonths(1).toString());
+    }
     private boolean hasEmiIn(UserLoanEntity loan, YearMonth month) {
         if (loan.getStatus() != LoanStatus.ACTIVE) return false;
         YearMonth first = YearMonth.from(loan.getFirstEmiDueDate());
@@ -99,5 +105,6 @@ public class MonthlyFinancialSnapshotService {
 
     public record MonthlySnapshot(String month, String currency, int calculationVersion, BigDecimal fullIntendedCommitment, List<Bucket> commitmentBuckets) { }
     public record Bucket(String key, String label, BigDecimal plannedAmount, List<Source> sources) { }
-    public record Source(String sourceType, String sourceId, String label, BigDecimal plannedAmount, LocalDate dueDate, String category, String detail) { }
+    public record Source(String sourceType, String sourceId, String label, BigDecimal plannedAmount, LocalDate dueDate, String category,
+                         String detail, Integer remainingPayments, String endsInMonth, String freesFromMonth) { }
 }
