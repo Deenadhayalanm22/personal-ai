@@ -1,4 +1,4 @@
-# FIN-EPIC-005 — Loans and mutual-fund planning
+# FIN-EPIC-005 — Loans and investment planning
 
 | Field | Value |
 |---|---|
@@ -39,3 +39,20 @@
 - Create SIP with opening holding, confirm occurrence, and assert invested/units/average NAV include only confirmed rows.
 - Create a fund twice and assert conflict; confirm same SIP twice and assert transaction count is one.
 - Stub missing MFAPI NAV and assert detail/list expose null valuation fields.
+
+## FIN-017 — Add and view listed stock holdings
+
+**Status:** Done · **Priority:** P1
+
+### Acceptance criteria
+
+1. **Given** a signed-in user searches at least two characters, **when** matching listed equities are returned, **then** the browser can select a symbol/name/exchange from the stock-search response.
+2. **Given** a selected stock with positive share quantity and total invested amount, **when** created, **then** it is stored as the user's opening holding; a duplicate symbol is rejected with `409 STOCK_EXISTS`.
+3. **Given** a tracked stock, **when** it is listed, **then** its current value and P&L use the latest market price; if price lookup is unavailable, invested value remains visible and valuation fields are `null`.
+4. **Given** the initial stock release, **when** a holding is viewed, **then** the portal supports add and view only—there are no edit, delete, buy, or sell operations.
+5. **Given** a market-data provider change, **when** the replacement is implemented, **then** portfolio services remain dependent on `StockMarketDataAdapter`, not a Yahoo-specific client.
+
+### Integration-test scenarios
+
+- Search, create, and list a stock; assert quantity, invested value, current value, P&L, and duplicate handling.
+- Stub an unavailable price and assert that the holding remains listed with null valuation fields.

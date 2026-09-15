@@ -10,6 +10,7 @@ This directory is the source of truth for implemented product behavior and API c
 - [Reference cleanup](contracts/reference-cleanup.md)
 - [Loans and actions](contracts/loans-and-actions.md)
 - [Mutual funds](contracts/mutual-funds.md)
+- [Stocks](contracts/stocks.md)
 - [Platform and WhatsApp](contracts/platform-and-whatsapp.md)
 
 ## Functional Jira specification

@@ -27,6 +27,8 @@ public class WebManager {
     private final WebLoanService loans;
     private final WebMutualFundService mutualFunds;
     private final MfApiService mfApi;
+    private final WebStockService stocks;
+    private final StockMarketDataAdapter stockMarketData;
     private final ActionManagementService actions;
 
     @Autowired
@@ -37,7 +39,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
                       WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi,
-                      ActionManagementService actions) {
+                      ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -53,6 +55,8 @@ public class WebManager {
         this.mutualFunds = mutualFunds;
         this.mfApi = mfApi;
         this.actions = actions;
+        this.stocks = stocks;
+        this.stockMarketData = stockMarketData;
     }
 
     /** Retained for focused web-controller tests that do not exercise loans. */
@@ -63,7 +67,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
@@ -177,6 +181,19 @@ public class WebManager {
 
     public WebMutualFundService.MutualFundDetailResponse mutualFund(String token, Long id) {
         return mutualFunds.detail(authentication.authenticate(token), id);
+    }
+
+    public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(String token, String query) {
+        authentication.authenticate(token);
+        return stockMarketData.search(query);
+    }
+
+    public WebStockService.StockResponse createStock(String token, WebStockService.StockCreateRequest request) {
+        return stocks.create(authentication.authenticate(token), request);
+    }
+
+    public WebStockService.StockListResponse stocks(String token) {
+        return stocks.list(authentication.authenticate(token));
     }
 
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,

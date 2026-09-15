@@ -216,6 +216,26 @@ public class WebFinanceController {
         return webManager.mutualFund(token, id);
     }
 
+    @GetMapping("/stocks/search")
+    public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam("q") String query) {
+        return webManager.searchStocks(token, query);
+    }
+
+    @PostMapping("/stocks")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WebStockService.StockResponse createStock(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestBody WebStockService.StockCreateRequest request) {
+        return webManager.createStock(token, request);
+    }
+
+    @GetMapping("/stocks")
+    public WebStockService.StockListResponse stocks(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.stocks(token);
+    }
+
     @PostMapping("/mutual-funds/{id}/lump-sums")
     @ResponseStatus(HttpStatus.CREATED)
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(
