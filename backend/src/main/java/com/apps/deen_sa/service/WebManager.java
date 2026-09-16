@@ -169,6 +169,8 @@ public class WebManager {
     public WebRecurringCommitmentService.CommitmentListResponse commitments(String token) { return commitments.list(authentication.authenticate(token)); }
     public WebRecurringCommitmentService.CommitmentResponse createCommitment(String token, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.create(authentication.authenticate(token), request); }
     public WebRecurringCommitmentService.CommitmentResponse updateCommitment(String token, Long id, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.update(authentication.authenticate(token), id, request); }
+    public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(String token, YearMonth month) { return commitments.review(authentication.authenticate(token), month == null ? null : month.toString()); }
+    public void resolveCommitmentReview(String token, Long id, WebRecurringCommitmentService.ResolveRequest request) { commitments.resolve(authentication.authenticate(token), id, request); }
 
     public WebLoanService.LoanResponse createLoan(String token, WebLoanService.LoanCreateRequest request) {
         return loans.create(authentication.authenticate(token), request);

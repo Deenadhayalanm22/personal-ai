@@ -137,4 +137,7 @@ public interface FinancialTransactionRepository
     long countByUserIdAndMerchantId(Long userId, Long merchantId);
 
     long countByUserIdAndSourceAccountId(Long userId, Long sourceAccountId);
+
+    @Query("select t from FinancialTransactionEntity t left join fetch t.merchant where t.user.id = :userId and t.occurredAt >= :start and t.occurredAt < :end and t.deletedAt is null and t.commitmentMatchStatus = com.apps.deen_sa.domain.CommitmentMatchStatus.CANDIDATE order by t.occurredAt desc, t.id desc")
+    List<FinancialTransactionEntity> findCommitmentCandidates(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

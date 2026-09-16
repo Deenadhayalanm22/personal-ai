@@ -39,6 +39,22 @@ public class WebRecurringCommitmentService {
     public CommitmentResponse update(AppUserEntity user, Long id, CommitmentRequest request) {
         UserRecurringCommitmentEntity value = owned(user, id); apply(user, value, request, false); commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value);
     }
+    @Transactional(readOnly = true)
+    public CommitmentReviewResponse review(AppUserEntity user, String month) {
+        YearMonth scope = month == null ? YearMonth.now() : parseMonth(month);
+        return new CommitmentReviewResponse(transactions.findCommitmentCandidates(user.getId(), scope.atDay(1), scope.plusMonths(1).atDay(1)).stream()
+                .map(tx -> new CandidateResponse(tx.getId(), tx.getAmount(), tx.getOccurredAt(), tx.getCategory(), tx.getSubcategory(),
+                        commitments.findAllOwned(user.getId()).stream().filter(c -> c.getStatus() == RecurringCommitmentStatus.ACTIVE
+                                && java.util.Objects.equals(c.getCategory(), tx.getCategory()) && java.util.Objects.equals(c.getSubcategory(), tx.getSubcategory()))
+                                .map(this::response).toList())).toList());
+    }
+    @Transactional
+    public void resolve(AppUserEntity user, Long transactionId, ResolveRequest request) {
+        FinancialTransactionEntity transaction = transactions.findOwnedVisibleById(transactionId, user.getId()).orElseThrow(() -> invalid("Transaction is unavailable"));
+        if (request == null || request.commitmentId() == null) { transaction.setRecurringCommitment(null); transaction.setCommitmentMatchStatus(com.apps.deen_sa.domain.CommitmentMatchStatus.NOT_LINKED); }
+        else { UserRecurringCommitmentEntity commitment = owned(user, request.commitmentId()); transaction.setRecurringCommitment(commitment); transaction.setCommitmentMatchStatus(com.apps.deen_sa.domain.CommitmentMatchStatus.MATCHED); }
+        transactions.saveAndFlush(transaction); snapshots.refreshCurrent(user);
+    }
     private void apply(AppUserEntity user, UserRecurringCommitmentEntity value, CommitmentRequest r, boolean creating) {
         if (r == null) throw invalid("Commitment details are required");
         if (r.label() != null) { if (r.label().isBlank() || r.label().length() > 120) throw invalid("Label must be 1 to 120 characters"); value.setLabel(r.label().trim()); }
@@ -78,4 +94,7 @@ public class WebRecurringCommitmentService {
     public record CommitmentRequest(String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, Long sourceTransactionId, List<Long> transactionIds) { }
     public record CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds) { }
     public record CommitmentListResponse(List<CommitmentResponse> items) { }
+    public record CandidateResponse(Long transactionId, BigDecimal amount, LocalDate transactionDate, String category, String subcategory, List<CommitmentResponse> choices) { }
+    public record CommitmentReviewResponse(List<CandidateResponse> items) { }
+    public record ResolveRequest(Long commitmentId) { }
 }

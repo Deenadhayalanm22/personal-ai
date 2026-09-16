@@ -1,6 +1,7 @@
 package com.apps.deen_sa.entity;
 
 import com.apps.deen_sa.domain.SpendingNature;
+import com.apps.deen_sa.domain.CommitmentMatchStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -56,6 +57,14 @@ public class FinancialTransactionEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id")
     private UserReferenceEntity sourceAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_commitment_id")
+    private UserRecurringCommitmentEntity recurringCommitment;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "commitment_match_status", length = 20)
+    private CommitmentMatchStatus commitmentMatchStatus;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "source_draft_id", nullable = false, unique = true)

@@ -14,14 +14,17 @@ public class FinancialTransactionWriter {
     private final FinancialTransactionRepository repository;
     private final ExpenseTaxonomyRegistry taxonomy;
     private final MoneyStoryChangeService storyChanges;
+    private final RecurringCommitmentMatcher commitmentMatcher;
 
     public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy) {
-        this(repository, taxonomy, null);
+        this(repository, taxonomy, null, null);
     }
+    public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy,
+                                      MoneyStoryChangeService storyChanges) { this(repository, taxonomy, storyChanges, null); }
     @Autowired
     public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy,
-                                      MoneyStoryChangeService storyChanges) {
-        this.repository = repository; this.taxonomy = taxonomy; this.storyChanges = storyChanges;
+                                      MoneyStoryChangeService storyChanges, RecurringCommitmentMatcher commitmentMatcher) {
+        this.repository = repository; this.taxonomy = taxonomy; this.storyChanges = storyChanges; this.commitmentMatcher = commitmentMatcher;
     }
 
     public FinancialTransactionEntity save(
@@ -48,6 +51,7 @@ public class FinancialTransactionWriter {
         transaction.setSourceDraft(extraction.getDraft());
         transaction.setCreatedAt(Instant.now());
         transaction.setUpdatedAt(Instant.now());
+        if (commitmentMatcher != null) commitmentMatcher.classify(transaction);
         FinancialTransactionEntity saved = repository.saveAndFlush(transaction);
         if (storyChanges != null) storyChanges.changed(saved.getUser(), saved.getOccurredAt());
         return saved;

@@ -3,6 +3,7 @@ package com.apps.deen_sa.service;
 import com.apps.deen_sa.domain.MoneyStoryLevel;
 import com.apps.deen_sa.domain.MoneyStoryType;
 import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +28,19 @@ public class MonthlyCommitmentStoryService {
     private final MoneyStoryCopyGenerator copyGenerator;
     private final Clock clock;
     private final StoryEnrichmentPipeline enrichment;
+    private final FinancialTransactionRepository transactions;
 
     /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock) {
-        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()));
+        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()), null);
     }
+    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
+                                         StoryEnrichmentPipeline enrichment) { this(snapshots, copyGenerator, clock, enrichment, null); }
 
     @Autowired
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
-                                         StoryEnrichmentPipeline enrichment) {
-        this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment;
+                                         StoryEnrichmentPipeline enrichment, FinancialTransactionRepository transactions) {
+        this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment; this.transactions = transactions;
     }
 
     @Transactional(readOnly = true)
@@ -82,8 +86,10 @@ public class MonthlyCommitmentStoryService {
                 new MoneyStoryCopyGenerator.CommitmentRunwayCopy(fallback, nextFallback));
         var copy = runwayCopy.current();
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
-        List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
-                : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
+        List<MoneyStoriesService.Action> actions = new ArrayList<>();
+        if (!evidenceRows.isEmpty()) actions.add(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
+        int candidates = transactions == null ? 0 : transactions.findCommitmentCandidates(user.getId(), month.atDay(1), month.plusMonths(1).atDay(1)).size();
+        if (candidates > 0) actions.add(new MoneyStoriesService.Action("OPEN_COMMITMENT_REVIEW", candidates == 1 ? "Review 1 payment" : "Review " + candidates + " payments"));
         StoryContext context = enrichment.enrich(new StoryEnrichmentRequest(user, MoneyStoryType.MONTHLY_COMMITMENT, month,
                 Map.of("commitment.total", total)));
         StoryInsight salaryInsight = context.insights().stream()
@@ -91,7 +97,7 @@ public class MonthlyCommitmentStoryService {
                 .findFirst().orElse(null);
         addSalaryContext(components, salaryInsight, total);
         var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
-                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
+                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), List.copyOf(actions));
         var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next(), salaryInsight);
         List<MoneyStoriesService.CardDto> cards = new ArrayList<>(List.of(card, nextCard));
         if (context.insights().isEmpty() && total.signum() > 0) {
