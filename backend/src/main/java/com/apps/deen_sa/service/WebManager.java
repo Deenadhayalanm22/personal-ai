@@ -33,6 +33,7 @@ public class WebManager {
     private final StockMarketDataAdapter stockMarketData;
     private final ActionManagementService actions;
     private final WebIncomeService income;
+    private final WebRecurringCommitmentService commitments;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -42,7 +43,8 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
                       WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi,
-                      ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData, WebIncomeService income) {
+                      ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData, WebIncomeService income,
+                      WebRecurringCommitmentService commitments) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -61,6 +63,7 @@ public class WebManager {
         this.stocks = stocks;
         this.stockMarketData = stockMarketData;
         this.income = income;
+        this.commitments = commitments;
     }
 
     /**
@@ -73,7 +76,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
@@ -162,6 +165,10 @@ public class WebManager {
     public void deleteExpense(String token, Long id) {
         transactionEditor.delete(authentication.authenticate(token), id);
     }
+
+    public WebRecurringCommitmentService.CommitmentListResponse commitments(String token) { return commitments.list(authentication.authenticate(token)); }
+    public WebRecurringCommitmentService.CommitmentResponse createCommitment(String token, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.create(authentication.authenticate(token), request); }
+    public WebRecurringCommitmentService.CommitmentResponse updateCommitment(String token, Long id, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.update(authentication.authenticate(token), id, request); }
 
     public WebLoanService.LoanResponse createLoan(String token, WebLoanService.LoanCreateRequest request) {
         return loans.create(authentication.authenticate(token), request);

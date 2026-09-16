@@ -16,7 +16,7 @@ This extension currently owns conversational expense capture, expense categories
 1. The user sends an expense or confirmation through WhatsApp; the backend stores a draft, normalizes it, and replies.
 2. The user requests a one-time portal link through WhatsApp and exchanges it for a cookie-backed web session.
 3. The dashboard presents a selected month's calendar, recent expenses, and generated stories. The user can correct or soft-delete an expense.
-4. The user can standardize reference names, add planning data (loans or mutual funds), and confirm due SIPs.
+4. The user can standardize reference names, add planning data (loans or mutual funds), confirm due SIPs, and manage user-selected recurring commitments.
 
 Each epic is a cross-stack vertical slice: it owns user-visible behavior, frontend state and interaction, backend rules and state changes, and integration-test scenarios. The endpoint-level schema remains in the [contract index](../../README.md).
 
@@ -35,3 +35,4 @@ Each epic is a cross-stack vertical slice: it owns user-visible behavior, fronte
 - [FIN-EPIC-003 — Personal spending calendar and insights](FIN-EPIC-003-insights.md)
 - [FIN-EPIC-004 — Portal access and reference hygiene](FIN-EPIC-004-portal-and-references.md)
 - [FIN-EPIC-005 — Loans and mutual-fund planning](FIN-EPIC-005-planning.md)
+- [FIN-EPIC-006 — User-managed recurring commitments](FIN-EPIC-006-essential-commitments.md)

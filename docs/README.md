@@ -7,6 +7,7 @@ This directory is the source of truth for implemented product behavior and API c
 - [Authentication and session](contracts/authentication.md)
 - [Expenses and calendar](contracts/expenses.md)
 - [Money stories](contracts/money-stories.md)
+- [Recurring commitments](contracts/recurring-commitments.md)
 - [Reference cleanup](contracts/reference-cleanup.md)
 - [Loans and actions](contracts/loans-and-actions.md)
 - [Mutual funds](contracts/mutual-funds.md)

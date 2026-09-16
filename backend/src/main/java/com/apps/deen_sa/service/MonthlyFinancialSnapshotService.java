@@ -10,9 +10,11 @@ import com.apps.deen_sa.entity.UserLoanEntity;
 import com.apps.deen_sa.repository.MonthlyFinancialSnapshotRepository;
 import com.apps.deen_sa.repository.UserInvestmentRepository;
 import com.apps.deen_sa.repository.UserLoanRepository;
+import com.apps.deen_sa.repository.UserRecurringCommitmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,12 +38,19 @@ public class MonthlyFinancialSnapshotService {
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
+    private final UserRecurringCommitmentRepository recurringCommitments;
     private final Clock clock;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    @Autowired
+    public MonthlyFinancialSnapshotService(MonthlyFinancialSnapshotRepository snapshots, UserLoanRepository loans,
+                                           UserInvestmentRepository investments, UserRecurringCommitmentRepository recurringCommitments, Clock clock) {
+        this.snapshots = snapshots; this.loans = loans; this.investments = investments; this.recurringCommitments = recurringCommitments; this.clock = clock;
+    }
+    /** Compatibility constructor for focused unit tests predating FIN-020. */
     public MonthlyFinancialSnapshotService(MonthlyFinancialSnapshotRepository snapshots, UserLoanRepository loans,
                                            UserInvestmentRepository investments, Clock clock) {
-        this.snapshots = snapshots; this.loans = loans; this.investments = investments; this.clock = clock;
+        this(snapshots, loans, investments, null, clock);
     }
 
     /** FIN-018: a missing legacy snapshot is built once; subsequent story reads perform one snapshot lookup. */
@@ -77,10 +86,18 @@ public class MonthlyFinancialSnapshotService {
                 .map(investment -> new Source("MUTUAL_FUND_SIP", String.valueOf(investment.getId()), investment.getDisplayNameSnapshot(), investment.getSipAmount(),
                         investment.getSipDay() == null ? null : month.atDay(Math.min(investment.getSipDay(), month.lengthOfMonth())),
                         "Mutual fund SIP", "Active SIP", null, null, null)).toList();
+        List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
+                        commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
+                                && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
+                .map(commitment -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
+                        commitment.getDueDay() == null ? null : month.atDay(Math.min(commitment.getDueDay(), month.lengthOfMonth())),
+                        commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
+                        commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount", null, null, null)).toList();
         Bucket debtBucket = bucket("DEBT_REPAYMENTS", "Debt repayments", debt);
         Bucket investingBucket = bucket("PLANNED_INVESTING", "Planned investing", investing);
+        Bucket essentialBucket = bucket("ESSENTIAL_LIVING", "Essential living", essential);
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
-                debtBucket.plannedAmount().add(investingBucket.plannedAmount()), List.of(debtBucket, investingBucket));
+                debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket));
         String payload = write(value);
         String fingerprint = fingerprint(payload);
         MonthlyFinancialSnapshotEntity entity = snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1)).orElseGet(() -> {

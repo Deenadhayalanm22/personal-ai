@@ -158,6 +158,13 @@ public class WebFinanceController {
         webManager.deleteExpense(token, id);
     }
 
+    @GetMapping("/recurring-commitments")
+    public WebRecurringCommitmentService.CommitmentListResponse commitments(@CookieValue(name = SESSION_COOKIE, required = false) String token) { return webManager.commitments(token); }
+    @PostMapping("/recurring-commitments") @ResponseStatus(HttpStatus.CREATED)
+    public WebRecurringCommitmentService.CommitmentResponse createCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestBody WebRecurringCommitmentService.CommitmentRequest request) { return webManager.createCommitment(token, request); }
+    @PatchMapping("/recurring-commitments/{id}")
+    public WebRecurringCommitmentService.CommitmentResponse updateCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebRecurringCommitmentService.CommitmentRequest request) { return webManager.updateCommitment(token, id, request); }
+
     @PostMapping("/loans")
     @ResponseStatus(HttpStatus.CREATED)
     public WebLoanService.LoanResponse createLoan(

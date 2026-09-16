@@ -77,6 +77,7 @@ public class MonthlyCommitmentStoryService {
         copyFacts.put("nextTotal", MoneyStoryRenderer.money(nextSnapshot.fullIntendedCommitment(), currency));
         copyFacts.put("nextDebtRepayments", bucketAmount(nextSnapshot, "DEBT_REPAYMENTS", currency));
         copyFacts.put("nextPlannedInvesting", bucketAmount(nextSnapshot, "PLANNED_INVESTING", currency));
+        copyFacts.put("nextEssentialLiving", bucketAmount(nextSnapshot, "ESSENTIAL_LIVING", currency));
         var runwayCopy = copyGenerator.generateCommitmentRunway(copyFacts,
                 new MoneyStoryCopyGenerator.CommitmentRunwayCopy(fallback, nextFallback));
         var copy = runwayCopy.current();
@@ -188,6 +189,7 @@ public class MonthlyCommitmentStoryService {
     }
 
     private String evidenceTag(MonthlyFinancialSnapshotService.Source source) {
+        if ("RECURRING_COMMITMENT".equals(source.sourceType())) return "Recent-bill estimate".equals(source.detail()) ? "Recent-bill estimate" : "Fixed monthly amount";
         if (source.remainingPayments() == null) return "🌱 Future-you contribution";
         String end = monthLabel(YearMonth.parse(source.endsInMonth()));
         if (source.remainingPayments() <= 2) return "🚪 Final episode · exits " + end;

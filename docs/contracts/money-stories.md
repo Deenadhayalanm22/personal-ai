@@ -1,6 +1,6 @@
 # Money stories
 
-Money stories are explainable cards in one ordered feed. Most are generated monthly observations about expense activity. The first card is always the live **Monthly commitment** planning story, derived on each read from active loans and mutual-fund SIPs; it is not a stored expense snapshot. The UI only renders server-supplied story data.
+Money stories are explainable cards in one ordered feed. Most are generated monthly observations about expense activity. The first card is always the live **Monthly commitment** planning story, derived on each read from active loans, mutual-fund SIPs, and user-managed recurring commitments; it is not a stored expense snapshot. The UI only renders server-supplied story data.
 
 | Endpoint | Contract | Frontend owner |
 | --- | --- | --- |
@@ -8,7 +8,7 @@ Money stories are explainable cards in one ordered feed. Most are generated mont
 
 A story contains `storyId`, `storyType`, `templateVersion`, `generatedAt`, `period`, `cardFace`, `cards`, `evidence`, `level`, `logicalStoryId`, `revision`, `updatedReason`, and `observation`. `period` is `{ type, startDate, endDate, displayLabel }`; `cardFace` is `{ heading, displayValue, theme }`. Cards have ordered `sequence`, layout/theme, copy, components, and actions. The current UI recognizes `OPEN_EVIDENCE` and opens an evidence modal. A monthly-commitment evidence payload is `{ title, byCard }`, where `byCard` keys match card IDs and each value is an ordinary evidence object.
 
-`MONTHLY_COMMITMENT` is always the first returned story. It has a current-month commitment card and next-month runway, followed by one optional context card. Its semantic buckets are `Debt repayments` (active loan EMIs whose tenure includes the card month) and `Planned investing` (active mutual-fund SIPs that have started). Card headlines and commitment totals remain the combined **full intended commitment**; individual loans and SIPs remain source evidence, with their monthly amount and due cadence.
+`MONTHLY_COMMITMENT` is always the first returned story. It has a current-month commitment card and next-month runway, followed by one optional context card. Its semantic buckets are `Debt repayments` (active loan EMIs whose tenure includes the card month), `Planned investing` (active mutual-fund SIPs that have started), and `Essential living` (active user-managed recurring commitments effective in the card month). Card headlines and commitment totals remain the combined **full intended commitment**; individual sources remain evidence, with their monthly amount and due cadence.
 
 Voluntary salary context can add an independent third card. A saved salary **range** produces qualitative context only; it does not calculate a percentage. A voluntarily saved exact monthly salary can produce a deterministic commitment-to-salary percentage. Salary never changes commitment totals, creates an income transaction, becomes evidence, or implies an account balance. If salary context is absent and the story has a positive commitment, the context card exposes the non-blocking `OPEN_SALARY_OUTLOOK` action. Future optional modules use the same contributor/rule/composer architecture documented in `FIN-ARCH-001`; they are independent lenses, not required progression steps.
 
