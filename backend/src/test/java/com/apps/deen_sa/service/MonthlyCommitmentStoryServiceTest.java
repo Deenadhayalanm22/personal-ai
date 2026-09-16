@@ -1,6 +1,8 @@
 package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.entity.UserIncomeProfileEntity;
+import com.apps.deen_sa.repository.UserIncomeProfileRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -8,6 +10,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -56,5 +59,41 @@ class MonthlyCommitmentStoryServiceTest {
         assertThat(story.cards().getFirst().actions()).extracting(action -> action.type()).containsExactly("OPEN_EVIDENCE");
         assertThat(story.cards().get(2).actions()).extracting(action -> action.type()).containsExactly("OPEN_SALARY_OUTLOOK");
         assertThat(story.evidence().byCard()).containsKeys("commitment", "next-commitment");
+    }
+
+    @Test
+    void exactMonthlySalaryAddsAPeriodSpecificPercentageToBothCommitmentCardsWithoutAStandaloneCard() {
+        MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
+        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
+        UserIncomeProfileRepository profiles = mock(UserIncomeProfileRepository.class);
+        AppUserEntity user = new AppUserEntity();
+        user.setId(7L); user.setCurrency("INR"); user.setTimezone("Asia/Kolkata");
+        UserIncomeProfileEntity income = new UserIncomeProfileEntity();
+        income.setSalaryVisibility("EXACT"); income.setExactMonthlySalary(new BigDecimal("80000")); income.setSalaryFrequency("MONTHLY");
+        when(profiles.findById(7L)).thenReturn(Optional.of(income));
+        var september = snapshot("2026-09", new BigDecimal("62510"));
+        var october = snapshot("2026-10", new BigDecimal("107510"));
+        when(snapshots.current(user)).thenReturn(september);
+        when(snapshots.next(user)).thenReturn(october);
+        when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        var pipeline = new StoryEnrichmentPipeline(List.of(new SalaryStoryContextContributor(profiles)), List.of(new CommitmentSalaryInsightRule()));
+
+        var story = new MonthlyCommitmentStoryService(snapshots, copy,
+                Clock.fixed(Instant.parse("2026-09-16T00:00:00Z"), ZoneId.of("Asia/Kolkata")), pipeline).currentFor(user);
+
+        assertThat(story.cards()).hasSize(2);
+        assertThat(story.cards().getFirst().components()).filteredOn(component -> component.label().equals("Of monthly salary"))
+                .extracting(component -> component.displayValue()).containsExactly("78.1%");
+        assertThat(story.cards().get(1).components()).filteredOn(component -> component.label().equals("Of monthly salary"))
+                .extracting(component -> component.displayValue()).containsExactly("134.4%");
+        assertThat(story.cards()).extracting(card -> card.cardId()).doesNotContain("commitment-income");
+    }
+
+    private MonthlyFinancialSnapshotService.MonthlySnapshot snapshot(String month, BigDecimal total) {
+        return new MonthlyFinancialSnapshotService.MonthlySnapshot(month, "INR", 1, total, List.of(
+                new MonthlyFinancialSnapshotService.Bucket("DEBT_REPAYMENTS", "Debt repayments", total, List.of(
+                        new MonthlyFinancialSnapshotService.Source("LOAN", "1", "Loan", total, null, "Loan EMI", "Bank", 24, "2028-09", "2028-10"))),
+                new MonthlyFinancialSnapshotService.Bucket("PLANNED_INVESTING", "Planned investing", BigDecimal.ZERO, List.of())));
     }
 }

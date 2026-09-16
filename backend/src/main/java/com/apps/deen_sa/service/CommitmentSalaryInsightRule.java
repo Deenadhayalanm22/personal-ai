@@ -18,7 +18,8 @@ public class CommitmentSalaryInsightRule implements StoryInsightRule {
             Optional<BigDecimal> commitment = context.fact("commitment.total", BigDecimal.class);
             if (salary.isPresent() && salary.get().signum() > 0 && commitment.isPresent()) {
                 BigDecimal percent = commitment.get().multiply(BigDecimal.valueOf(100)).divide(salary.get(), 1, RoundingMode.HALF_UP);
-                return Optional.of(new StoryInsight("COMMITMENT_INCOME_EXACT", Map.of("percent", percent)));
+                // This stays inside story composition. The salary itself is never serialized in the story response.
+                return Optional.of(new StoryInsight("COMMITMENT_INCOME_EXACT", Map.of("percent", percent, "monthlySalary", salary.get())));
             }
         }
         return Optional.empty();

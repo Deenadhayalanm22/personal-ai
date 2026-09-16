@@ -83,13 +83,16 @@ public class MonthlyCommitmentStoryService {
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
-        var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
-                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
-        var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next());
         StoryContext context = enrichment.enrich(new StoryEnrichmentRequest(user, MoneyStoryType.MONTHLY_COMMITMENT, month,
                 Map.of("commitment.total", total)));
+        StoryInsight salaryInsight = context.insights().stream()
+                .filter(insight -> insight.key().startsWith("COMMITMENT_INCOME_"))
+                .findFirst().orElse(null);
+        addSalaryContext(components, salaryInsight, total);
+        var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
+                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
+        var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next(), salaryInsight);
         List<MoneyStoriesService.CardDto> cards = new ArrayList<>(List.of(card, nextCard));
-        context.insights().forEach(insight -> cards.add(insightCard(insight, cards.size() + 1, value)));
         if (context.insights().isEmpty() && total.signum() > 0) {
             cards.add(new MoneyStoriesService.CardDto("commitment-context", cards.size() + 1, "CONTEXT", "CALM_CONTEXT",
                     "OPTIONAL · PRIVATE", "Want a clearer monthly view?", "Add a salary range to see a private affordability lens for your commitments. "
@@ -106,37 +109,27 @@ public class MonthlyCommitmentStoryService {
                 "monthly-commitment", 1, null, null);
     }
 
-    private MoneyStoriesService.CardDto insightCard(StoryInsight insight, int sequence, String commitmentTotal) {
-        if ("COMMITMENT_INCOME_EXACT".equals(insight.key())) {
-            BigDecimal percent = (BigDecimal) insight.facts().get("percent");
-            return new MoneyStoriesService.CardDto("commitment-income", sequence, "CONTEXT", "CALM_CONTEXT", "PRIVATE SALARY CONTEXT",
-                    "Your commitments have a clear monthly frame", commitmentTotal + " is " + percent.stripTrailingZeros().toPlainString()
-                    + "% of the monthly salary amount you chose to share.", List.of(), List.of());
-        }
-        String range = salaryRangeLabel((String) insight.facts().get("range"));
-        return new MoneyStoriesService.CardDto("commitment-income", sequence, "CONTEXT", "CALM_CONTEXT", "PRIVATE SALARY CONTEXT",
-                "Your commitments, with context", "You chose to share a salary range of " + range + ". Your known commitments are "
-                + commitmentTotal + ". This range is private and does not change your balance.", List.of(), List.of());
-    }
-
-    private String salaryRangeLabel(String range) {
-        return switch (range) {
-            case "UNDER_25000" -> "under ₹25,000";
-            case "FROM_25000_TO_50000" -> "₹25,000–₹50,000";
-            case "FROM_50000_TO_100000" -> "₹50,000–₹1,00,000";
-            case "FROM_100000_TO_200000" -> "₹1,00,000–₹2,00,000";
-            case "OVER_200000" -> "over ₹2,00,000";
-            default -> "the range you chose";
-        };
-    }
-
     private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency,
-                                                        MoneyStoryCopyGenerator.Copy copy) {
+                                                        MoneyStoryCopyGenerator.Copy copy, StoryInsight salaryInsight) {
         List<MoneyStoriesService.EvidenceTransaction> rows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = rows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View " + monthLabel(YearMonth.parse(snapshot.month())) + " commitments"));
+        List<MoneyStoriesService.Component> components = new ArrayList<>(components(snapshot, currency));
+        addSalaryContext(components, salaryInsight, snapshot.fullIntendedCommitment());
         return new MoneyStoriesService.CardDto("next-commitment", 2, "COMMITMENT", copy.theme(),
-                copy.eyebrow(), copy.title(), copy.body(), components(snapshot, currency), actions);
+                copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
+    }
+
+    private void addSalaryContext(List<MoneyStoriesService.Component> components, StoryInsight insight, BigDecimal commitment) {
+        if (insight == null) return;
+        if ("COMMITMENT_INCOME_EXACT".equals(insight.key())) {
+            BigDecimal salary = (BigDecimal) insight.facts().get("monthlySalary");
+            BigDecimal percent = commitment.multiply(BigDecimal.valueOf(100)).divide(salary, 1, java.math.RoundingMode.HALF_UP);
+            components.add(new MoneyStoriesService.Component("PERCENTAGE", "Of monthly salary", percent, null,
+                    percent.stripTrailingZeros().toPlainString() + "%"));
+            return;
+        }
+        components.add(new MoneyStoriesService.Component("PRIVATE", "Salary context", null, null, "Range shared privately"));
     }
 
     private MoneyStoryCopyGenerator.Copy nextFallback(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
