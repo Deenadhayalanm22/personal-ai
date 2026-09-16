@@ -4,6 +4,7 @@ import com.apps.deen_sa.domain.MoneyStoryLevel;
 import com.apps.deen_sa.domain.MoneyStoryType;
 import com.apps.deen_sa.entity.AppUserEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -25,11 +26,17 @@ public class MonthlyCommitmentStoryService {
     private final MonthlyFinancialSnapshotService snapshots;
     private final MoneyStoryCopyGenerator copyGenerator;
     private final Clock clock;
+    private final StoryEnrichmentPipeline enrichment;
 
+    /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock) {
-        this.snapshots = snapshots;
-        this.copyGenerator = copyGenerator;
-        this.clock = clock;
+        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()));
+    }
+
+    @Autowired
+    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
+                                         StoryEnrichmentPipeline enrichment) {
+        this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment;
     }
 
     @Transactional(readOnly = true)
@@ -79,14 +86,48 @@ public class MonthlyCommitmentStoryService {
         var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
                 copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
         var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next());
+        StoryContext context = enrichment.enrich(new StoryEnrichmentRequest(user, MoneyStoryType.MONTHLY_COMMITMENT, month,
+                Map.of("commitment.total", total)));
+        List<MoneyStoriesService.CardDto> cards = new ArrayList<>(List.of(card, nextCard));
+        context.insights().forEach(insight -> cards.add(insightCard(insight, cards.size() + 1, value)));
+        if (context.insights().isEmpty() && total.signum() > 0) {
+            cards.add(new MoneyStoriesService.CardDto("commitment-context", cards.size() + 1, "CONTEXT", "CALM_CONTEXT",
+                    "OPTIONAL · PRIVATE", "Want a clearer monthly view?", "Add a salary range to see a private affordability lens for your commitments. "
+                    + "It never changes your balance or records an income transaction.", List.of(),
+                    List.of(new MoneyStoriesService.Action("OPEN_SALARY_OUTLOOK", "Add salary context"))));
+        }
         var period = new MoneyStoriesService.PeriodDto("MONTH", month.atDay(1), month.atEndOfMonth(), monthLabel(month));
         var face = new MoneyStoriesService.CardFace(copy.heading(), value, copy.faceTheme());
         var evidence = new MoneyStoriesService.EvidenceDto("Commitment sources for the selected month", evidenceRows.size(),
                 component("Monthly total", total, currency), List.of(), List.of(), Map.of(
                 "commitment", evidence(snapshot, currency), "next-commitment", evidence(nextSnapshot, currency)));
-        return new MoneyStoriesService.MoneyStoryApi("monthly-commitment", MoneyStoryType.MONTHLY_COMMITMENT.name(), 1,
-                Instant.now(clock), period, face, List.of(card, nextCard), evidence, MoneyStoryLevel.OBSERVATION,
+        return new MoneyStoriesService.MoneyStoryApi("monthly-commitment", MoneyStoryType.MONTHLY_COMMITMENT.name(), 2,
+                Instant.now(clock), period, face, List.copyOf(cards), evidence, MoneyStoryLevel.OBSERVATION,
                 "monthly-commitment", 1, null, null);
+    }
+
+    private MoneyStoriesService.CardDto insightCard(StoryInsight insight, int sequence, String commitmentTotal) {
+        if ("COMMITMENT_INCOME_EXACT".equals(insight.key())) {
+            BigDecimal percent = (BigDecimal) insight.facts().get("percent");
+            return new MoneyStoriesService.CardDto("commitment-income", sequence, "CONTEXT", "CALM_CONTEXT", "PRIVATE SALARY CONTEXT",
+                    "Your commitments have a clear monthly frame", commitmentTotal + " is " + percent.stripTrailingZeros().toPlainString()
+                    + "% of the monthly salary amount you chose to share.", List.of(), List.of());
+        }
+        String range = salaryRangeLabel((String) insight.facts().get("range"));
+        return new MoneyStoriesService.CardDto("commitment-income", sequence, "CONTEXT", "CALM_CONTEXT", "PRIVATE SALARY CONTEXT",
+                "Your commitments, with context", "You chose to share a salary range of " + range + ". Your known commitments are "
+                + commitmentTotal + ". This range is private and does not change your balance.", List.of(), List.of());
+    }
+
+    private String salaryRangeLabel(String range) {
+        return switch (range) {
+            case "UNDER_25000" -> "under ₹25,000";
+            case "FROM_25000_TO_50000" -> "₹25,000–₹50,000";
+            case "FROM_50000_TO_100000" -> "₹50,000–₹1,00,000";
+            case "FROM_100000_TO_200000" -> "₹1,00,000–₹2,00,000";
+            case "OVER_200000" -> "over ₹2,00,000";
+            default -> "the range you chose";
+        };
     }
 
     private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency,

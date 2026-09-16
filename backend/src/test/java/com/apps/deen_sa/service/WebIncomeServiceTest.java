@@ -17,8 +17,7 @@ class WebIncomeServiceTest {
         when(profiles.save(any())).thenAnswer(i->i.getArgument(0));
         WebIncomeService service=new WebIncomeService(profiles);
         var saved=service.saveProfile(user(),new WebIncomeService.ProfileRequest("RANGE","FROM_50000_TO_100000",null,"MONTHLY"));
-        assertThat(saved.salaryRange()).isEqualTo("FROM_50000_TO_100000");
-        assertThat(saved.exactMonthlySalary()).isNull();
+        assertThat(saved.maskedValue()).isEqualTo("**");
     }
     @Test void rejectsExactModeWithoutAPositiveAmount() {
         WebIncomeService service=new WebIncomeService(mock(UserIncomeProfileRepository.class));

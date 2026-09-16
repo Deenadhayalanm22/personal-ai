@@ -27,7 +27,7 @@ This is a voluntary planning input. It is never treated as a bank balance, an in
 
 | Endpoint | Contract |
 | --- | --- |
-| `GET /api/web/income-outlook` | `{ salary }`; salary may be empty. |
-| `PUT /api/web/income-outlook/salary` | `{ salaryVisibility: RANGE|EXACT|SKIPPED, salaryRange?, exactMonthlySalary?, salaryFrequency }`. A range is required for `RANGE`, and a positive amount for `EXACT`. |
+| `GET /api/web/income-outlook` | `{ salary }`; `salary` is empty when no salary is shared, otherwise it is `{ maskedValue: "**" }`. It never returns the saved range, exact amount, or frequency. |
+| `PUT /api/web/income-outlook/salary` | Request: `{ salaryVisibility: RANGE|EXACT|SKIPPED, salaryRange?, exactMonthlySalary?, salaryFrequency }`. A range is required for `RANGE`, and a positive amount for `EXACT`. A shared-salary response is `{ maskedValue: "**" }`; a skipped response is empty. Neither echoes submitted salary data. |
 
 Ranges are `UNDER_25000`, `FROM_25000_TO_50000`, `FROM_50000_TO_100000`, `FROM_100000_TO_200000`, or `OVER_200000`. Validation failure is `400 INVALID_INCOME_OUTLOOK`.

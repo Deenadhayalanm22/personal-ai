@@ -186,7 +186,7 @@ public class WebFinanceController {
     }
 
     @PutMapping("/income-outlook/salary")
-    public WebIncomeService.ProfileResponse saveIncomeProfile(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+    public WebIncomeService.SalaryResponse saveIncomeProfile(@CookieValue(name = SESSION_COOKIE, required = false) String token,
                                                               @RequestBody WebIncomeService.ProfileRequest request) {
         return webManager.saveIncomeProfile(token, request);
     }

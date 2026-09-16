@@ -44,7 +44,7 @@ class MonthlyCommitmentStoryServiceTest {
         assertThat(story.cards().getFirst().components()).extracting(component -> component.label())
                 .containsExactly("Debt repayments", "Planned investing");
         assertThat(story.cards().getFirst().layout()).isEqualTo("COMMITMENT");
-        assertThat(story.cards()).hasSize(2);
+        assertThat(story.cards()).hasSize(3);
         assertThat(story.cards().get(1).cardId()).isEqualTo("next-commitment");
         assertThat(story.cards().get(1).eyebrow()).isEqualTo("NEXT MONTH · READY");
         assertThat(story.cards().getFirst().body()).contains("free from October 2028");
@@ -54,6 +54,7 @@ class MonthlyCommitmentStoryServiceTest {
                 .containsExactly("Loan EMI · 👾 Long-game member · ends September 2028",
                         "Mutual fund SIP · 🌱 Future-you contribution");
         assertThat(story.cards().getFirst().actions()).extracting(action -> action.type()).containsExactly("OPEN_EVIDENCE");
+        assertThat(story.cards().get(2).actions()).extracting(action -> action.type()).containsExactly("OPEN_SALARY_OUTLOOK");
         assertThat(story.evidence().byCard()).containsKeys("commitment", "next-commitment");
     }
 }

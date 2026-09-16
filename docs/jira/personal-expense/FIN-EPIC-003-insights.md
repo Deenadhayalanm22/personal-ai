@@ -17,6 +17,8 @@
 | `frontend/src/App.svelte` | Owns selected month, URL `?month=YYYY-MM`, online refresh, and month/profile-local cache. |
 | `frontend/src/Home.svelte` | Renders calendar intensity, month summary, recent/date activity tabs, missing-transaction handoff, story filtering, story deck, and evidence. |
 
+Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). They must remain relevant to each story's evidence and must not make an optional input a prerequisite for normal expense insights.
+
 ## FIN-009 — Browse a monthly spending calendar
 
 **Status:** Done · **Priority:** P0

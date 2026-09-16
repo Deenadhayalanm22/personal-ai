@@ -233,7 +233,7 @@ public class WebManager {
         return income.outlook(authentication.authenticate(token));
     }
 
-    public WebIncomeService.ProfileResponse saveIncomeProfile(String token, WebIncomeService.ProfileRequest request) {
+    public WebIncomeService.SalaryResponse saveIncomeProfile(String token, WebIncomeService.ProfileRequest request) {
         return income.saveProfile(authentication.authenticate(token), request);
     }
 

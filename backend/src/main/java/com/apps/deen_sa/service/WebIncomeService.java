@@ -26,11 +26,11 @@ public class WebIncomeService {
 
     @Transactional(readOnly = true)
     public OutlookResponse outlook(AppUserEntity u) {
-        return new OutlookResponse(profiles.findById(u.getId()).map(ProfileResponse::from).orElse(null));
+        return new OutlookResponse(profiles.findById(u.getId()).filter(WebIncomeService::isShared).map(profile -> SalaryResponse.masked()).orElse(null));
     }
 
     @Transactional
-    public ProfileResponse saveProfile(AppUserEntity u, ProfileRequest r) {
+    public SalaryResponse saveProfile(AppUserEntity u, ProfileRequest r) {
         if (r == null || !Set.of("RANGE", "EXACT", "SKIPPED").contains(r.salaryVisibility()))
             throw invalid("Choose how you would like to share your salary");
         if (!SALARY_FREQUENCIES.contains(r.salaryFrequency())) throw invalid("Choose a salary frequency");
@@ -46,7 +46,8 @@ public class WebIncomeService {
         p.setExactMonthlySalary("EXACT".equals(r.salaryVisibility()) ? positive(r.exactMonthlySalary(), "exactMonthlySalary") : null);
         p.setSalaryFrequency(r.salaryFrequency());
         p.setUpdatedAt(Instant.now());
-        return ProfileResponse.from(profiles.save(p));
+        profiles.save(p);
+        return isShared(p) ? SalaryResponse.masked() : null;
     }
 
     private BigDecimal positive(BigDecimal v, String f) {
@@ -61,13 +62,17 @@ public class WebIncomeService {
                                  String salaryFrequency) {
     }
 
-    public record ProfileResponse(String salaryVisibility, String salaryRange, BigDecimal exactMonthlySalary,
-                                  String salaryFrequency) {
-        static ProfileResponse from(UserIncomeProfileEntity e) {
-            return new ProfileResponse(e.getSalaryVisibility(), e.getSalaryRange(), e.getExactMonthlySalary(), e.getSalaryFrequency());
+    private static boolean isShared(UserIncomeProfileEntity profile) {
+        return "RANGE".equals(profile.getSalaryVisibility()) || "EXACT".equals(profile.getSalaryVisibility());
+    }
+
+    /** Deliberately excludes the saved range, exact amount, and frequency from browser responses. */
+    public record SalaryResponse(String maskedValue) {
+        static SalaryResponse masked() {
+            return new SalaryResponse("**");
         }
     }
 
-    public record OutlookResponse(ProfileResponse salary) {
+    public record OutlookResponse(SalaryResponse salary) {
     }
 }

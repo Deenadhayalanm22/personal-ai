@@ -46,14 +46,19 @@ class IncomeOutlookIntegrationIT {
                                 {"salaryVisibility":"RANGE","salaryRange":"FROM_50000_TO_100000","salaryFrequency":"MONTHLY"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.salaryVisibility").value("RANGE"))
-                .andExpect(jsonPath("$.salaryRange").value("FROM_50000_TO_100000"))
-                .andExpect(jsonPath("$.exactMonthlySalary").doesNotExist());
+                .andExpect(jsonPath("$.maskedValue").value("**"))
+                .andExpect(jsonPath("$.salaryVisibility").doesNotExist())
+                .andExpect(jsonPath("$.salaryRange").doesNotExist())
+                .andExpect(jsonPath("$.exactMonthlySalary").doesNotExist())
+                .andExpect(jsonPath("$.salaryFrequency").doesNotExist());
 
         assertThat(profiles.findById(owner.getId())).isPresent()
                 .get().extracting(profile -> profile.getExactMonthlySalary()).isNull();
         mockMvc.perform(get("/api/web/income-outlook").cookie(ownerCookie))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.salary.salaryRange").value("FROM_50000_TO_100000"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.salary.maskedValue").value("**"))
+                .andExpect(jsonPath("$.salary.salaryRange").doesNotExist())
+                .andExpect(jsonPath("$.salary.exactMonthlySalary").doesNotExist())
+                .andExpect(jsonPath("$.salary.salaryFrequency").doesNotExist());
         mockMvc.perform(get("/api/web/income-outlook").cookie(otherCookie))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.salary").doesNotExist());
     }
@@ -67,8 +72,10 @@ class IncomeOutlookIntegrationIT {
                         .contentType(MediaType.APPLICATION_JSON).content("""
                                 {"salaryVisibility":"EXACT","exactMonthlySalary":82500.499,"salaryFrequency":"MONTHLY"}
                                 """))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.exactMonthlySalary").value(82500.5))
-                .andExpect(jsonPath("$.salaryRange").doesNotExist());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.maskedValue").value("**"))
+                .andExpect(jsonPath("$.exactMonthlySalary").doesNotExist())
+                .andExpect(jsonPath("$.salaryRange").doesNotExist())
+                .andExpect(jsonPath("$.salaryFrequency").doesNotExist());
         assertThat(profiles.findById(user.getId()).orElseThrow().getExactMonthlySalary()).isEqualByComparingTo("82500.50");
 
         mockMvc.perform(put("/api/web/income-outlook/salary").cookie(cookie)

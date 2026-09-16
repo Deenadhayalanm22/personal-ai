@@ -77,6 +77,7 @@
 
 1. **Given** a user opens Your money, **when** they choose to share salary context, **then** the first question offers a monthly range and an explicit optional path for an exact figure; no exact amount is required.
 2. **Given** the user chooses a range, exact amount, or skips salary, **when** saved, **then** the preference and frequency are private user-owned planning data and no income transaction, balance, or spending-story evidence is created.
+3. **Given** a user has shared salary context, **when** the portal reads or saves the outlook, **then** the API returns only a masked `"**"` marker, never the saved range, exact amount, or frequency; the portal presents that marker in a compact privacy summary.
 
 ### Product behaviour
 
@@ -86,6 +87,11 @@ The initial release is deliberately limited to salary context. It uses “privat
 
 - Save a salary range without an exact amount; verify it is returned only to the authenticated user.
 - Save an exact salary after explicitly choosing that option; verify two-decimal storage and rejection of zero or invalid input.
+- Read and save a shared salary; verify that neither response exposes the range, exact amount, or frequency and that the response contains only the masked marker.
+
+## Story enrichment architecture
+
+The planned way to use voluntary salary context and future planning modules in stories is documented in [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). Salary is an independent optional lens, not a required progression step or a change to commitment accounting.
 
 ### Design and lifecycle
 
