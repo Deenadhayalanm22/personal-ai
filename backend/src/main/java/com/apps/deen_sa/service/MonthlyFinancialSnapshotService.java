@@ -28,11 +28,11 @@ import java.util.UUID;
 
 /**
  * FIN-018 — Pin the live monthly commitment story. See docs/jira/personal-expense/FIN-EPIC-005-planning.md.
- * Builds the canonical current-month snapshot. New buckets are added to this payload, not new snapshot tables.
+ * Builds canonical current- and next-month snapshots. New buckets are added to this payload, not new snapshot tables.
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 2;
+    private static final int CALCULATION_VERSION = 3;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -47,15 +47,28 @@ public class MonthlyFinancialSnapshotService {
     /** FIN-018: a missing legacy snapshot is built once; subsequent story reads perform one snapshot lookup. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public MonthlySnapshot current(AppUserEntity user) {
-        YearMonth month = currentMonth(user);
+        return projection(user, currentMonth(user));
+    }
+
+    /** FIN-018: the next-month runway uses the identical projection and persistence model. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public MonthlySnapshot next(AppUserEntity user) {
+        return projection(user, currentMonth(user).plusMonths(1));
+    }
+
+    private MonthlySnapshot projection(AppUserEntity user, YearMonth month) {
         return snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1))
                 .filter(snapshot -> snapshot.getCalculationVersion() == CALCULATION_VERSION)
                 .map(this::parse).orElseGet(() -> rebuild(user, month));
     }
 
-    /** FIN-018: source writers call this inside their transaction, keeping the current snapshot in lockstep with source data. */
+    /** FIN-018: source writers keep both runway months in lockstep with source data. */
     @Transactional
-    public void refreshCurrent(AppUserEntity user) { rebuild(user, currentMonth(user)); }
+    public void refreshCurrent(AppUserEntity user) {
+        YearMonth month = currentMonth(user);
+        rebuild(user, month);
+        rebuild(user, month.plusMonths(1));
+    }
 
     private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {
         List<Source> debt = loans.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(loan -> hasEmiIn(loan, month))

@@ -34,6 +34,7 @@ public class MonthlyCommitmentStoryService {
     @Transactional(readOnly = true)
     public MoneyStoriesService.MoneyStoryApi currentFor(AppUserEntity user) {
         var snapshot = snapshots.current(user);
+        var nextSnapshot = snapshots.next(user);
         YearMonth month = YearMonth.parse(snapshot.month());
         var debt = snapshot.commitmentBuckets().stream().filter(bucket -> "DEBT_REPAYMENTS".equals(bucket.key())).findFirst().orElseThrow();
         var investing = snapshot.commitmentBuckets().stream().filter(bucket -> "PLANNED_INVESTING".equals(bucket.key())).findFirst().orElseThrow();
@@ -63,20 +64,54 @@ public class MonthlyCommitmentStoryService {
                 "debtRepayments", MoneyStoryRenderer.money(emiTotal, currency), "plannedInvesting", MoneyStoryRenderer.money(sipTotal, currency),
                 "loanPayoffFacts", payoffFacts, "soonestPayoff", soonest == null ? "None" : soonest.label() + " frees "
                         + MoneyStoryRenderer.money(soonest.plannedAmount(), currency) + "/month from " + soonest.freesFromMonth()), fallback);
-        List<MoneyStoriesService.EvidenceTransaction> evidenceRows = new ArrayList<>();
-        debt.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
-        investing.sources().forEach(source -> evidenceRows.add(evidence(source, currency)));
+        List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
         var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
                 copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
+        var nextCard = nextMonthCard(nextSnapshot, currency);
         var period = new MoneyStoriesService.PeriodDto("MONTH", month.atDay(1), month.atEndOfMonth(), monthLabel(month));
         var face = new MoneyStoriesService.CardFace(copy.heading(), value, copy.faceTheme());
-        var evidence = new MoneyStoriesService.EvidenceDto("Commitment sources by bucket", evidenceRows.size(),
-                component("Monthly total", total, currency), List.copyOf(evidenceRows));
+        var evidence = new MoneyStoriesService.EvidenceDto("Commitment sources for the selected month", evidenceRows.size(),
+                component("Monthly total", total, currency), List.of(), List.of(), Map.of(
+                "commitment", evidence(snapshot, currency), "next-commitment", evidence(nextSnapshot, currency)));
         return new MoneyStoriesService.MoneyStoryApi("monthly-commitment", MoneyStoryType.MONTHLY_COMMITMENT.name(), 1,
-                Instant.now(clock), period, face, List.of(card), evidence, MoneyStoryLevel.OBSERVATION,
+                Instant.now(clock), period, face, List.of(card, nextCard), evidence, MoneyStoryLevel.OBSERVATION,
                 "monthly-commitment", 1, null, null);
+    }
+
+    private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
+        YearMonth month = YearMonth.parse(snapshot.month());
+        List<MoneyStoriesService.Component> components = components(snapshot, currency);
+        List<MoneyStoriesService.EvidenceTransaction> rows = evidenceRows(snapshot, currency);
+        String total = MoneyStoryRenderer.money(snapshot.fullIntendedCommitment(), currency);
+        String title = snapshot.fullIntendedCommitment().signum() > 0 ? "Next month is queued" : "A clear runway ahead";
+        String body = snapshot.fullIntendedCommitment().signum() > 0
+                ? total + " is already planned for " + monthLabel(month) + ". Keep it ready before the month begins."
+                : "No known loan EMI or SIP is planned for " + monthLabel(month) + " yet.";
+        List<MoneyStoriesService.Action> actions = rows.isEmpty() ? List.of()
+                : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View " + monthLabel(month) + " commitments"));
+        return new MoneyStoriesService.CardDto("next-commitment", 2, "COMMITMENT", "warm",
+                "NEXT MONTH · READY", title, body, components, actions);
+    }
+
+    private List<MoneyStoriesService.Component> components(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
+        List<MoneyStoriesService.Component> components = new ArrayList<>();
+        snapshot.commitmentBuckets().forEach(bucket -> {
+            if (bucket.plannedAmount().signum() > 0) components.add(component(bucket.label(), bucket.plannedAmount(), currency));
+        });
+        return List.copyOf(components);
+    }
+
+    private MoneyStoriesService.EvidenceDto evidence(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
+        List<MoneyStoriesService.EvidenceTransaction> rows = evidenceRows(snapshot, currency);
+        return new MoneyStoriesService.EvidenceDto("Commitment sources by bucket", rows.size(),
+                component("Monthly total", snapshot.fullIntendedCommitment(), currency), rows);
+    }
+
+    private List<MoneyStoriesService.EvidenceTransaction> evidenceRows(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
+        return snapshot.commitmentBuckets().stream().flatMap(bucket -> bucket.sources().stream())
+                .map(source -> evidence(source, currency)).toList();
     }
 
     private MoneyStoriesService.Component component(String label, BigDecimal amount, String currency) {

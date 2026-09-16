@@ -66,8 +66,8 @@
 1. **Given** any signed-in profile, **when** its existing monthly Stories endpoint is read, **then** `MONTHLY_COMMITMENT` is the first story, including when no generated expense-story snapshot exists.
 2. **Given** an active loan whose EMI tenure includes the current month, **when** the story is read, **then** its EMI is included once in the live monthly commitment total; closed, future, and elapsed-tenure loans are excluded.
 3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
-4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the commitment reflects current source records without waiting for the money-story snapshot scheduler.
-5. **Given** a loan or SIP source write, **when** it commits, **then** the current month's canonical `monthly_financial_snapshot` is rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads that snapshot rather than recalculating source records on every request.
+4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the current and next-month runway reflect current source records without waiting for the money-story snapshot scheduler.
+5. **Given** a loan or SIP source write, **when** it commits, **then** the current and next month's canonical `monthly_financial_snapshot` rows are rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads those snapshots rather than recalculating source records on every request.
 
 ### Design and lifecycle
 
@@ -80,7 +80,7 @@ The v1 payload contains `fullIntendedCommitment` and two semantic buckets:
 | `DEBT_REPAYMENTS` | Active loan EMIs whose tenure includes the snapshot month | Required debt repayment plan. |
 | `PLANNED_INVESTING` | Active mutual-fund SIPs whose start month has arrived | User-selected investing plan. |
 
-The pinned `MONTHLY_COMMITMENT` story reads this snapshot and is always returned first in the existing monthly Stories response. Its evidence lists the source loan/SIP rows, amounts, due dates, and labels. Each row also carries a deterministic, playful status tag: a loan nearing payoff gets its exact end month, a longer loan is marked as a long-game member, and an SIP is a future-you contribution. This keeps the detail sheet useful without adding a second AI request per row. The story does not include stock holdings, income, cash balances, or ordinary recorded expenses in v1.
+The pinned `MONTHLY_COMMITMENT` story reads these snapshots and is always returned first in the existing monthly Stories response. It contains a current-month card followed by a next-month runway card, each with its own evidence list. Its evidence lists the source loan/SIP rows, amounts, due dates, and labels. Each row also carries a deterministic, playful status tag: a loan nearing payoff gets its exact end month, a longer loan is marked as a long-game member, and an SIP is a future-you contribution. This keeps the detail sheet useful without adding a second AI request per row. The story does not include stock holdings, income, cash balances, or ordinary recorded expenses in v1.
 
 For a loan source, the snapshot also stores deterministic payoff facts: `remainingPayments`, `endsInMonth`, and `freesFromMonth`. The AI copy generator receives only these verified facts plus bucket totals; it uses an approved Monthly Commitment prompt for a warm closed-circle voice (for example, “leaving the chat” or “escape artist”), with at most one emoji. It may not calculate, alter, or invent payoff information, and it must never joke about debt stress, missed payments, low balances, or the user.
 

@@ -267,9 +267,12 @@ public class MoneyStoriesService {
     public record Component(String type, String label, BigDecimal value, String currency, String displayValue) { }
     public record Action(String type, String label) { }
     public record EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions,
-                              List<Action> actions) {
+                              List<Action> actions, java.util.Map<String, EvidenceDto> byCard) {
         EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions) {
-            this(title, totalCount, totalAmount, transactions, List.of());
+            this(title, totalCount, totalAmount, transactions, List.of(), java.util.Map.of());
+        }
+        EvidenceDto(String title, int totalCount, Component totalAmount, List<EvidenceTransaction> transactions, List<Action> actions) {
+            this(title, totalCount, totalAmount, transactions, actions, java.util.Map.of());
         }
     }
     public record EvidenceTransaction(String transactionId, String dateLabel, String merchantLabel, String categoryLabel, Component amount, String subcategoryLabel) { }
