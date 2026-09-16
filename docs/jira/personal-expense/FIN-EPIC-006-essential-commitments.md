@@ -73,6 +73,8 @@ When a new matching payment is recorded, the product may show a non-blocking sug
 4. **Given** a commitment create, edit, effective-date change, one-month override, skip, pause, resume, end, or confirmed estimate update, **when** it commits, **then** the current and next `monthly_financial_snapshot` rows refresh in the same transaction.
 5. **Given** the story evidence is opened, **when** a commitment is present, **then** it shows the label, projected amount, expected due date when known, bucket, and a truthful tag such as `fixed monthly amount`, `recent-bill estimate`, `overridden this month`, or `skipped this month`.
 6. **Given** actual expenses have been linked to a commitment, **when** the story is rendered, **then** those expenses can be shown as historical/payment context but are not added to `fullIntendedCommitment` a second time and do not imply a bill was definitely paid.
+7. **Given** a captured transaction has the same category/subcategory as one or more active commitments but cannot be safely linked by the saved merchant/reference, **when** the Monthly Commitment story is opened, **then** it opens a story-scoped review sheet with the eligible commitment choices and `This is not a commitment`; capture itself asks no follow-up question.
+8. **Given** the user resolves a review item in that sheet, **when** they choose a commitment or reject it, **then** the transaction stores `MATCHED` or `NOT_LINKED` respectively, the item leaves the review sheet, and current/next commitment snapshots refresh.
 
 ### Snapshot and story design
 

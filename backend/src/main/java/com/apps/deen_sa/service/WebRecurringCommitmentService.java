@@ -71,6 +71,7 @@ public class WebRecurringCommitmentService {
         if (creating && value.getLinkedTransactions().size() == 1) {
             FinancialTransactionEntity tx = value.getLinkedTransactions().getFirst();
             if (r.category() == null) value.setCategory(tx.getCategory()); if (r.subcategory() == null) value.setSubcategory(tx.getSubcategory()); if (value.getLabel() == null) value.setLabel(tx.getMerchant() == null ? tx.getCategory() : tx.getMerchant().getCanonicalName());
+            value.setMerchant(tx.getMerchant());
         }
         if (value.getAmountMode() == CommitmentAmountMode.RECENT_BILL_ESTIMATE) {
             if (value.getLinkedTransactions().size() < 2) throw invalid("Link at least two payments for a recent-bill estimate");
