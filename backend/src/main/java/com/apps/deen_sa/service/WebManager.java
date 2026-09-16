@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import java.time.*;
 import java.util.List;
 
-/** Cross-stack API façade for FIN-EPIC-002 through FIN-EPIC-005. See docs/jira/personal-expense/. */
+/**
+ * Cross-stack API façade for FIN-EPIC-002 through FIN-EPIC-005. See docs/jira/personal-expense/.
+ */
 @Service
 public class WebManager {
     private final WebAuthenticationService authentication;
@@ -30,6 +32,7 @@ public class WebManager {
     private final WebStockService stocks;
     private final StockMarketDataAdapter stockMarketData;
     private final ActionManagementService actions;
+    private final WebIncomeService income;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -39,7 +42,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
                       WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi,
-                      ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData) {
+                      ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData, WebIncomeService income) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -57,9 +60,12 @@ public class WebManager {
         this.actions = actions;
         this.stocks = stocks;
         this.stockMarketData = stockMarketData;
+        this.income = income;
     }
 
-    /** Retained for focused web-controller tests that do not exercise loans. */
+    /**
+     * Retained for focused web-controller tests that do not exercise loans.
+     */
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
                       WebExpenseTaxonomyService taxonomy, WebUserReferencePreferenceService referencePreferences,
                       WebReferenceMergeService referenceMerges, MonthlyFinancialTransactionService monthlyTransactions,
@@ -67,17 +73,29 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
         loginRequests.request(phoneNumber, clientAddress);
     }
 
-    public WebAuthenticationService.SessionGrant exchange(String token) { return authentication.exchange(token); }
-    public void validateSession(String token) { authentication.authenticate(token); }
-    public void logout(String token) { authentication.logout(token); }
-    public WebAuthenticationService.DemoProfile demoProfile(String token) { return authentication.demoProfile(token); }
+    public WebAuthenticationService.SessionGrant exchange(String token) {
+        return authentication.exchange(token);
+    }
+
+    public void validateSession(String token) {
+        authentication.authenticate(token);
+    }
+
+    public void logout(String token) {
+        authentication.logout(token);
+    }
+
+    public WebAuthenticationService.DemoProfile demoProfile(String token) {
+        return authentication.demoProfile(token);
+    }
+
     public WebAuthenticationService.DemoProfile setDemoMode(String token, boolean enabled) {
         return authentication.setDemoMode(token, enabled);
     }
@@ -197,18 +215,26 @@ public class WebManager {
     }
 
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,
-                                                                           WebMutualFundService.LumpSumRequest request) {
+                                                                         WebMutualFundService.LumpSumRequest request) {
         return mutualFunds.addLumpSum(authentication.authenticate(token), id, request);
     }
 
     public WebMutualFundService.TransactionResponse confirmMutualFundSip(String token, Long id, YearMonth month,
-                                                                           WebMutualFundService.LumpSumRequest request) {
+                                                                         WebMutualFundService.LumpSumRequest request) {
         return mutualFunds.confirmSip(authentication.authenticate(token), id, month, request);
     }
 
     public PendingActionContextService.ContextResponse createPendingActionContext(
             String token, PendingActionContextService.ContextRequest request) {
         return actionContexts.create(authentication.authenticate(token).getId(), request);
+    }
+
+    public WebIncomeService.OutlookResponse incomeOutlook(String token) {
+        return income.outlook(authentication.authenticate(token));
+    }
+
+    public WebIncomeService.ProfileResponse saveIncomeProfile(String token, WebIncomeService.ProfileRequest request) {
+        return income.saveProfile(authentication.authenticate(token), request);
     }
 
     private YearMonth parseCalendarMonth(String value) {
@@ -224,10 +250,21 @@ public class WebManager {
         return new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_MONTH", "month must use YYYY-MM format");
     }
 
-    public record LoginLinkRequest(String phoneNumber) { }
-    public record LoginLinkResponse(String message) { }
-    public record MagicLinkRequest(String token) { }
-    public record AuthResponse(boolean authenticated, Instant expiresAt) { }
-    public record DemoModeRequest(boolean enabled) { }
-    public record UserReferenceEntityTypesResponse(List<UserReferenceEntityType> entityTypes) { }
+    public record LoginLinkRequest(String phoneNumber) {
+    }
+
+    public record LoginLinkResponse(String message) {
+    }
+
+    public record MagicLinkRequest(String token) {
+    }
+
+    public record AuthResponse(boolean authenticated, Instant expiresAt) {
+    }
+
+    public record DemoModeRequest(boolean enabled) {
+    }
+
+    public record UserReferenceEntityTypesResponse(List<UserReferenceEntityType> entityTypes) {
+    }
 }

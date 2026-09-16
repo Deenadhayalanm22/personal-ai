@@ -20,3 +20,14 @@ Loans are user-entered planning records, separate from conversational expense ca
 | `POST /api/web/actions/{id}/complete` | Marks owned open action complete and returns it. | Completion control, then reloads actions and loans. |
 
 Actions are domain workflows, not general-purpose user tasks.
+
+## Private income outlook
+
+This is a voluntary planning input. It is never treated as a bank balance, an income transaction, or evidence for a spending story. The salary prompt begins with a range; exact salary is an optional alternative.
+
+| Endpoint | Contract |
+| --- | --- |
+| `GET /api/web/income-outlook` | `{ salary }`; salary may be empty. |
+| `PUT /api/web/income-outlook/salary` | `{ salaryVisibility: RANGE|EXACT|SKIPPED, salaryRange?, exactMonthlySalary?, salaryFrequency }`. A range is required for `RANGE`, and a positive amount for `EXACT`. |
+
+Ranges are `UNDER_25000`, `FROM_25000_TO_50000`, `FROM_50000_TO_100000`, `FROM_100000_TO_200000`, or `OVER_200000`. Validation failure is `400 INVALID_INCOME_OUTLOOK`.

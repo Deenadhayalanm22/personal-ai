@@ -67,6 +67,8 @@ export const confirmSipOccurrence = (id, month, investment) => request(`/api/web
 export const searchStocks = (query) => request(`/api/web/stocks/search?q=${encodeURIComponent(query)}`);
 export const getStocks = () => request('/api/web/stocks');
 export const createStock = (stock) => request('/api/web/stocks', { method: 'POST', body: JSON.stringify(stock) });
+export const getIncomeOutlook = () => request('/api/web/income-outlook');
+export const saveIncomeProfile = (profile) => request('/api/web/income-outlook/salary', { method: 'PUT', body: JSON.stringify(profile) });
 
 let referenceEntityTypesCache = null;
 let referenceEntityTypesRequest = null;

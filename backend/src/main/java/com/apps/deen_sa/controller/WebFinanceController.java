@@ -59,7 +59,9 @@ public class WebFinanceController {
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie("", Duration.ZERO).toString());
     }
 
-    /** Returns only mode state; real and demo profile identifiers are never sent to the browser. */
+    /**
+     * Returns only mode state; real and demo profile identifiers are never sent to the browser.
+     */
     @GetMapping("/auth/demo-profile")
     public WebAuthenticationService.DemoProfile demoProfile(
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
@@ -176,6 +178,17 @@ public class WebFinanceController {
             @PathVariable Long id,
             @RequestBody WebLoanService.LoanUpdateRequest request) {
         return webManager.updateLoan(token, id, request);
+    }
+
+    @GetMapping("/income-outlook")
+    public WebIncomeService.OutlookResponse incomeOutlook(@CookieValue(name = SESSION_COOKIE, required = false) String token) {
+        return webManager.incomeOutlook(token);
+    }
+
+    @PutMapping("/income-outlook/salary")
+    public WebIncomeService.ProfileResponse saveIncomeProfile(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+                                                              @RequestBody WebIncomeService.ProfileRequest request) {
+        return webManager.saveIncomeProfile(token, request);
     }
 
     @GetMapping("/actions")
