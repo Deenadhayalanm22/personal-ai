@@ -33,6 +33,8 @@ class MonthlyCommitmentStoryServiceTest {
 
         when(copy.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(2));
+        when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
         var story = new MonthlyCommitmentStoryService(snapshots, copy,
                 Clock.fixed(Instant.parse("2026-10-10T00:00:00Z"), ZoneId.of("Asia/Kolkata"))).currentFor(user);
 

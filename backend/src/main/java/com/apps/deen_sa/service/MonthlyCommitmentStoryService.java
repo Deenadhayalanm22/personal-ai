@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -60,16 +61,24 @@ public class MonthlyCommitmentStoryService {
                 + "/month is free from " + monthLabel(YearMonth.parse(soonest.freesFromMonth())) + ".";
         var fallback = new MoneyStoryCopyGenerator.Copy("🎬 Payment squad", "warm", "WARM_NOTICE",
                 monthLabel(month) + " · One update", fallbackTitle, fallbackBody, "", "");
-        var copy = copyGenerator.generate(MoneyStoryType.MONTHLY_COMMITMENT, Map.of("month", monthLabel(month), "total", value,
+        var nextFallback = nextFallback(nextSnapshot, currency);
+        Map<String, String> copyFacts = new HashMap<>(Map.of("month", monthLabel(month), "total", value,
                 "debtRepayments", MoneyStoryRenderer.money(emiTotal, currency), "plannedInvesting", MoneyStoryRenderer.money(sipTotal, currency),
                 "loanPayoffFacts", payoffFacts, "soonestPayoff", soonest == null ? "None" : soonest.label() + " frees "
-                        + MoneyStoryRenderer.money(soonest.plannedAmount(), currency) + "/month from " + soonest.freesFromMonth()), fallback);
+                        + MoneyStoryRenderer.money(soonest.plannedAmount(), currency) + "/month from " + soonest.freesFromMonth()));
+        copyFacts.put("nextMonth", monthLabel(YearMonth.parse(nextSnapshot.month())));
+        copyFacts.put("nextTotal", MoneyStoryRenderer.money(nextSnapshot.fullIntendedCommitment(), currency));
+        copyFacts.put("nextDebtRepayments", bucketAmount(nextSnapshot, "DEBT_REPAYMENTS", currency));
+        copyFacts.put("nextPlannedInvesting", bucketAmount(nextSnapshot, "PLANNED_INVESTING", currency));
+        var runwayCopy = copyGenerator.generateCommitmentRunway(copyFacts,
+                new MoneyStoryCopyGenerator.CommitmentRunwayCopy(fallback, nextFallback));
+        var copy = runwayCopy.current();
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = evidenceRows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
         var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
                 copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
-        var nextCard = nextMonthCard(nextSnapshot, currency);
+        var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next());
         var period = new MoneyStoriesService.PeriodDto("MONTH", month.atDay(1), month.atEndOfMonth(), monthLabel(month));
         var face = new MoneyStoriesService.CardFace(copy.heading(), value, copy.faceTheme());
         var evidence = new MoneyStoriesService.EvidenceDto("Commitment sources for the selected month", evidenceRows.size(),
@@ -80,19 +89,29 @@ public class MonthlyCommitmentStoryService {
                 "monthly-commitment", 1, null, null);
     }
 
-    private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
-        YearMonth month = YearMonth.parse(snapshot.month());
-        List<MoneyStoriesService.Component> components = components(snapshot, currency);
+    private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency,
+                                                        MoneyStoryCopyGenerator.Copy copy) {
         List<MoneyStoriesService.EvidenceTransaction> rows = evidenceRows(snapshot, currency);
+        List<MoneyStoriesService.Action> actions = rows.isEmpty() ? List.of()
+                : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View " + monthLabel(YearMonth.parse(snapshot.month())) + " commitments"));
+        return new MoneyStoriesService.CardDto("next-commitment", 2, "COMMITMENT", copy.theme(),
+                copy.eyebrow(), copy.title(), copy.body(), components(snapshot, currency), actions);
+    }
+
+    private MoneyStoryCopyGenerator.Copy nextFallback(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
+        YearMonth month = YearMonth.parse(snapshot.month());
         String total = MoneyStoryRenderer.money(snapshot.fullIntendedCommitment(), currency);
         String title = snapshot.fullIntendedCommitment().signum() > 0 ? "Next month is queued" : "A clear runway ahead";
         String body = snapshot.fullIntendedCommitment().signum() > 0
                 ? total + " is already planned for " + monthLabel(month) + ". Keep it ready before the month begins."
                 : "No known loan EMI or SIP is planned for " + monthLabel(month) + " yet.";
-        List<MoneyStoriesService.Action> actions = rows.isEmpty() ? List.of()
-                : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View " + monthLabel(month) + " commitments"));
-        return new MoneyStoriesService.CardDto("next-commitment", 2, "COMMITMENT", "warm",
-                "NEXT MONTH · READY", title, body, components, actions);
+        return new MoneyStoryCopyGenerator.Copy("🎬 Payment squad", "warm", "WARM_NOTICE",
+                "NEXT MONTH · READY", title, body, "", "");
+    }
+
+    private String bucketAmount(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String key, String currency) {
+        return snapshot.commitmentBuckets().stream().filter(bucket -> key.equals(bucket.key())).findFirst()
+                .map(bucket -> MoneyStoryRenderer.money(bucket.plannedAmount(), currency)).orElse(MoneyStoryRenderer.money(BigDecimal.ZERO, currency));
     }
 
     private List<MoneyStoriesService.Component> components(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {
