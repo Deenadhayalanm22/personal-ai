@@ -1,6 +1,7 @@
 export const API_URL = (import.meta.env.VITE_API_BASE || 'http://localhost:8080').replace(/\/$/, '');
 const HEALTH_PATH = import.meta.env.VITE_HEALTH_PATH || '/health';
 const HEALTH_TIMEOUT_MS = Number(import.meta.env.VITE_HEALTH_TIMEOUT_MS || 8000);
+let unauthorizedNotified = false;
 
 export class ApiError extends Error {
   constructor(message, status, data = null) { super(message); this.name = 'ApiError'; this.status = status; this.data = data; }
@@ -19,7 +20,12 @@ async function request(path, options = {}, authenticated = true) {
   const data = await parseResponse(response);
   if (!response.ok) {
     const fallback = response.status === 401 ? 'Your session has expired.' : response.status === 409 ? 'This expense changed after you opened it.' : 'Something went wrong. Please try again.';
-    if (response.status === 401 && authenticated) window.dispatchEvent(new CustomEvent('app:unauthorized'));
+    // Several requests can fail together when a session expires. One redirect is
+    // enough; suppressing the rest avoids a burst of navigation attempts.
+    if (response.status === 401 && authenticated && !unauthorizedNotified) {
+      unauthorizedNotified = true;
+      window.dispatchEvent(new CustomEvent('app:unauthorized'));
+    }
     throw new ApiError(data?.message || data?.error || fallback, response.status, data);
   }
   return data;

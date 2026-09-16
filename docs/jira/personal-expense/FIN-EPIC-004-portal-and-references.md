@@ -14,12 +14,14 @@
 2. **Given** a valid one-time link, **when** exchanged, **then** it creates an HttpOnly, scoped web session; expired/used links return `401`.
 3. **Given** a session logout, **when** completed, **then** the server invalidates it and clears the browser cookie.
 4. **Given** an unauthenticated API request, **when** made, **then** no domain data is returned and the browser redirects to portal sign-in.
+5. **Given** an expired session on a dashboard URL, **when** the portal starts, **then** it must not mount dashboard features or make protected feature calls before redirecting to portal sign-in.
 
 ### Integration-test scenarios
 
 - Request links for registered/unregistered numbers and assert indistinguishable status/body.
 - Exchange a token twice; assert first session works and second fails.
 - Call a protected endpoint after logout and assert `401`.
+- Load a dashboard URL with an expired session and assert the actions queue is not requested before the sign-in redirect.
 
 ## FIN-013 — Switch presentation profile without leakage
 

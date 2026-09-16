@@ -1,6 +1,6 @@
 # Authentication and session
 
-All `/api/web/**` endpoints use the `WEB_SESSION` cookie, except public login-link and magic-link exchange. The cookie is `HttpOnly`, scoped to `/api/web`, uses configured SameSite policy, and is `Secure` when `app.web.secure-cookies=true`. A `401` from an authenticated browser call dispatches `app:unauthorized`; `App.svelte` redirects to `/portal`.
+All `/api/web/**` endpoints use the `WEB_SESSION` cookie, except public login-link and magic-link exchange. The cookie is `HttpOnly`, scoped to `/api/web`, uses configured SameSite policy, and is `Secure` when `app.web.secure-cookies=true`. A `401` from an authenticated browser call dispatches `app:unauthorized`; `App.svelte` redirects to `/portal`. On a protected route, `App.svelte` keeps dashboard features unmounted until the authenticated demo-profile check succeeds, so an expired session cannot trigger feature requests during sign-in redirection; simultaneous `401`s emit only one redirect event.
 
 | Endpoint | Contract | Frontend owner |
 | --- | --- | --- |

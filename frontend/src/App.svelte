@@ -7,7 +7,9 @@
   const CACHE_KEY = 'money-stories.dashboard-cache.v1';
   const initialPath = location.pathname.replace(/\/$/, '') || '/', isPrivacyPage = initialPath === '/privacy-policy';
   const now = new Date(), currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  let view = isPrivacyPage ? 'privacy' : 'dashboard', selectedMonth = monthFromUrl();
+  // Do not mount Home until the session/profile request has succeeded. Home loads
+  // protected data on mount, including the actions queue.
+  let view = isPrivacyPage ? 'privacy' : 'initializing', selectedMonth = monthFromUrl();
   let calendarSection = state(), recentSection = state(), storiesSection = state(), connectionStatus = 'checking', cacheUpdatedAt = null;
   let connectionRequest = 0;
   let demoMode = false;
@@ -56,8 +58,13 @@
     if (initialPath === '/access') { const token = new URLSearchParams(location.search).get('token'); if (!token) { view = 'invalid-link'; return; } view = 'magic-loading'; try { await exchangeMagicLink(token); const next = sessionStorage.getItem('portal-next') || '/dashboard'; sessionStorage.removeItem('portal-next'); location.replace(next); } catch (cause) { view = cause instanceof ApiError && cause.status === 401 ? 'invalid-link' : (!navigator.onLine ? 'magic-offline' : 'magic-error'); } return; }
     if (initialPath === '/portal') { const next = new URLSearchParams(location.search).get('next'); if (next?.startsWith('/')) sessionStorage.setItem('portal-next', next); view = 'login'; return; }
     // Resolve the active profile before reading a cache so presentation mode can never expose real cached data.
+    try { demoMode = (await getDemoMode()).demoMode; } catch (cause) {
+      // request() has already notified the app and started the sign-in redirect.
+      // Keeping the loading view here prevents Home from issuing protected calls
+      // while the browser changes pages.
+      if (cause instanceof ApiError && cause.status === 401) return;
+    }
     view = 'dashboard';
-    try { demoMode = (await getDemoMode()).demoMode; } catch (cause) { if (cause instanceof ApiError && cause.status === 401) return; }
     if (!readCache()) emptyFirstRun(); await refreshWhenOnline();
   }
   onMount(() => { const auth = () => unauthorized(), pop = () => changeMonth(monthFromUrl(), false), online = () => refreshWhenOnline(), offline = () => { connectionRequest += 1; connectionStatus = 'offline'; }; addEventListener('app:unauthorized', auth); addEventListener('popstate', pop); addEventListener('online', online); addEventListener('offline', offline); initialize(); return () => { removeEventListener('app:unauthorized', auth); removeEventListener('popstate', pop); removeEventListener('online', online); removeEventListener('offline', offline); }; });
