@@ -94,6 +94,25 @@ public class WebMutualFundService {
         return response;
     }
 
+    /** A confirmation is an allocation fact, and may be corrected from the Mutual Funds section. */
+    @Transactional
+    public TransactionResponse updateSip(AppUserEntity user, Long investmentId, YearMonth month, LumpSumRequest request) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        if (month == null || request == null) throw invalid("SIP month and allocation details are required");
+        InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
+                        investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
+                .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "SIP_OCCURRENCE_NOT_FOUND", "SIP occurrence not found"));
+        if (tx.getStatus() != InvestmentTransactionStatus.CONFIRMED) throw invalid("Confirm this SIP before editing its allocation");
+        InvestmentTransactionEntity corrected = confirmed(investment, InvestmentTransactionKind.SIP, request.amount(),
+                request.transactionDate(), request.nav(), request.units(), request.calculationSource());
+        tx.setAmount(corrected.getAmount()); tx.setTransactionDate(corrected.getTransactionDate());
+        tx.setUnitPrice(corrected.getUnitPrice()); tx.setUnits(corrected.getUnits()); tx.setCalculationSource(corrected.getCalculationSource());
+        tx.setUpdatedAt(Instant.now());
+        TransactionResponse response = TransactionResponse.from(transactions.save(tx));
+        if (snapshots != null) snapshots.refreshCurrent(user);
+        return response;
+    }
+
     @Transactional
     public void createCurrentSipOccurrences() {
         YearMonth current = YearMonth.now(clock);
@@ -189,8 +208,11 @@ public class WebMutualFundService {
                 : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(holding.invested(), 2, RoundingMode.HALF_UP);
         ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
                 ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth())) : null;
+        SipOccurrence currentSip = activeSip == null ? null : transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
+                        investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock).atDay(1))
+                .map(SipOccurrence::from).orElse(null);
         return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
-                holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip);
+                holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip, currentSip);
     }
 
     private Holding holding(UserInvestmentEntity investment) {
@@ -226,8 +248,16 @@ public class WebMutualFundService {
     }
     public record MutualFundResponse(Long id, String schemeCode, String schemeName, BigDecimal invested,
                                      BigDecimal currentValue, BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
-                                     BigDecimal latestNav, ActiveSip activeSip) { }
+                                     BigDecimal latestNav, ActiveSip activeSip, SipOccurrence currentSip) { }
     public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth) { }
+    public record SipOccurrence(String scheduledMonth, String status, BigDecimal amount, LocalDate transactionDate,
+                                BigDecimal nav, BigDecimal units, String calculationSource) {
+        static SipOccurrence from(InvestmentTransactionEntity value) {
+            return new SipOccurrence(value.getScheduledMonth().toString().substring(0, 7), value.getStatus().name(),
+                    value.getAmount(), value.getTransactionDate(), value.getUnitPrice(), value.getUnits(),
+                    value.getCalculationSource() == null ? null : value.getCalculationSource().name());
+        }
+    }
     public record MutualFundDetailResponse(Long id, String schemeName, BigDecimal invested, BigDecimal currentValue,
                                            BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
                                            BigDecimal averageNav, BigDecimal currentNav, BigDecimal units) { }

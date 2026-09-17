@@ -33,6 +33,8 @@
 3. **Given** a SIP or lump-sum confirmation with positive amount/date and NAV or units, **when** saved, **then** missing NAV/units are calculated and the transaction is `CONFIRMED` with recorded calculation source.
 4. **Given** a due SIP already confirmed or skipped, **when** confirmation is retried, **then** it is rejected and no second investment transaction is created.
 5. **Given** confirmed holdings but unavailable latest NAV, **when** listed, **then** invested value remains available while current value and P&L are `null` rather than guessed.
+6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions.
+7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** it shows their completed allocation amount as read-only progress and links to Mutual Funds; it does not offer allocation controls or change the intended commitment total.
 
 ### Integration-test scenarios
 

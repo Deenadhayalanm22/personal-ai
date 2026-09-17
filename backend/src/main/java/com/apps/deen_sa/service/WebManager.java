@@ -238,6 +238,11 @@ public class WebManager {
         return mutualFunds.confirmSip(authentication.authenticate(token), id, month, request);
     }
 
+    public WebMutualFundService.TransactionResponse updateMutualFundSip(String token, Long id, YearMonth month,
+                                                                         WebMutualFundService.LumpSumRequest request) {
+        return mutualFunds.updateSip(authentication.authenticate(token), id, month, request);
+    }
+
     public PendingActionContextService.ContextResponse createPendingActionContext(
             String token, PendingActionContextService.ContextRequest request) {
         return actionContexts.create(authentication.authenticate(token).getId(), request);

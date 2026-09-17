@@ -4,6 +4,9 @@ import com.apps.deen_sa.domain.MoneyStoryLevel;
 import com.apps.deen_sa.domain.MoneyStoryType;
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
+import com.apps.deen_sa.repository.InvestmentTransactionRepository;
+import com.apps.deen_sa.domain.InvestmentTransactionKind;
+import com.apps.deen_sa.domain.InvestmentTransactionStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,18 +32,21 @@ public class MonthlyCommitmentStoryService {
     private final Clock clock;
     private final StoryEnrichmentPipeline enrichment;
     private final FinancialTransactionRepository transactions;
+    private final InvestmentTransactionRepository investmentTransactions;
 
     /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock) {
-        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()), null);
+        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()), null, null);
     }
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
-                                         StoryEnrichmentPipeline enrichment) { this(snapshots, copyGenerator, clock, enrichment, null); }
+                                         StoryEnrichmentPipeline enrichment) { this(snapshots, copyGenerator, clock, enrichment, null, null); }
 
     @Autowired
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
-                                         StoryEnrichmentPipeline enrichment, FinancialTransactionRepository transactions) {
-        this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment; this.transactions = transactions;
+                                         StoryEnrichmentPipeline enrichment, FinancialTransactionRepository transactions,
+                                         InvestmentTransactionRepository investmentTransactions) {
+        this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment;
+        this.transactions = transactions; this.investmentTransactions = investmentTransactions;
     }
 
     @Transactional(readOnly = true)
@@ -57,6 +63,8 @@ public class MonthlyCommitmentStoryService {
         if (emiTotal.signum() > 0) components.add(component("Debt repayments", emiTotal, currency));
         if (sipTotal.signum() > 0) components.add(component("Planned investing", sipTotal, currency));
         if (cardBillTotal.signum() > 0) components.add(component("Credit-card bills", cardBillTotal, currency));
+        BigDecimal completedSipTotal = completedSipTotal(investing, month);
+        if (completedSipTotal.signum() > 0) components.add(component("SIP allocations complete", completedSipTotal, currency));
 
         String title = total.signum() > 0 ? "Your known monthly commitment" : "Your monthly commitment starts here";
         String body = total.signum() > 0
@@ -89,6 +97,7 @@ public class MonthlyCommitmentStoryService {
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = new ArrayList<>();
         if (!evidenceRows.isEmpty()) actions.add(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
+        if (sipTotal.signum() > 0 && investmentTransactions != null) actions.add(new MoneyStoriesService.Action("OPEN_SALARY_OUTLOOK", "Review investments"));
         int candidates = transactions == null ? 0 : transactions.findCommitmentCandidates(user.getId(), month.atDay(1), month.plusMonths(1).atDay(1)).size();
         if (candidates > 0) actions.add(new MoneyStoriesService.Action("OPEN_COMMITMENT_REVIEW", candidates == 1 ? "Review 1 payment" : "Review " + candidates + " payments"));
         StoryContext context = enrichment.enrich(new StoryEnrichmentRequest(user, MoneyStoryType.MONTHLY_COMMITMENT, month,
@@ -154,6 +163,17 @@ public class MonthlyCommitmentStoryService {
     private String bucketAmount(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String key, String currency) {
         return snapshot.commitmentBuckets().stream().filter(bucket -> key.equals(bucket.key())).findFirst()
                 .map(bucket -> MoneyStoryRenderer.money(bucket.plannedAmount(), currency)).orElse(MoneyStoryRenderer.money(BigDecimal.ZERO, currency));
+    }
+
+    /** Portfolio progress is derived from confirmed SIP allocations; planned totals remain snapshot-owned. */
+    private BigDecimal completedSipTotal(MonthlyFinancialSnapshotService.Bucket investing, YearMonth month) {
+        if (investmentTransactions == null) return BigDecimal.ZERO;
+        List<Long> ids = investing.sources().stream().filter(source -> "MUTUAL_FUND_SIP".equals(source.sourceType()))
+                .map(source -> Long.valueOf(source.sourceId())).toList();
+        if (ids.isEmpty()) return BigDecimal.ZERO;
+        return investmentTransactions.findByInvestmentIdInAndTransactionKindAndScheduledMonthAndStatus(ids,
+                        InvestmentTransactionKind.SIP, month.atDay(1), InvestmentTransactionStatus.CONFIRMED).stream()
+                .map(tx -> tx.getAmount()).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<MoneyStoriesService.Component> components(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {

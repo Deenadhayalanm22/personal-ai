@@ -2,6 +2,10 @@ package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.UserIncomeProfileEntity;
+import com.apps.deen_sa.entity.InvestmentTransactionEntity;
+import com.apps.deen_sa.domain.InvestmentTransactionKind;
+import com.apps.deen_sa.domain.InvestmentTransactionStatus;
+import com.apps.deen_sa.repository.InvestmentTransactionRepository;
 import com.apps.deen_sa.repository.UserIncomeProfileRepository;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 class MonthlyCommitmentStoryServiceTest {
     @Test
@@ -88,6 +93,33 @@ class MonthlyCommitmentStoryServiceTest {
         assertThat(story.cards().get(1).components()).filteredOn(component -> component.label().equals("Of monthly salary"))
                 .extracting(component -> component.displayValue()).containsExactly("134.4%");
         assertThat(story.cards()).extracting(card -> card.cardId()).doesNotContain("commitment-income");
+    }
+
+    @Test
+    void showsConfirmedSipAllocationsAsReadOnlyProgressAndLinksToInvestments() {
+        MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
+        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
+        InvestmentTransactionRepository investmentTransactions = mock(InvestmentTransactionRepository.class);
+        AppUserEntity user = new AppUserEntity(); user.setId(7L); user.setCurrency("INR");
+        var month = new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-09", "INR", 1, new BigDecimal("10000"), List.of(
+                new MonthlyFinancialSnapshotService.Bucket("DEBT_REPAYMENTS", "Debt repayments", BigDecimal.ZERO, List.of()),
+                new MonthlyFinancialSnapshotService.Bucket("PLANNED_INVESTING", "Planned investing", new BigDecimal("10000"), List.of(
+                        new MonthlyFinancialSnapshotService.Source("MUTUAL_FUND_SIP", "2", "Fund", new BigDecimal("10000"), null, "Mutual fund SIP", "Active SIP", null, null, null))),
+                new MonthlyFinancialSnapshotService.Bucket("ESSENTIAL_LIVING", "Essential living", BigDecimal.ZERO, List.of()),
+                new MonthlyFinancialSnapshotService.Bucket("CREDIT_CARD_BILLS", "Credit-card bills", BigDecimal.ZERO, List.of())));
+        InvestmentTransactionEntity confirmed = new InvestmentTransactionEntity(); confirmed.setAmount(new BigDecimal("10000"));
+        when(snapshots.current(user)).thenReturn(month); when(snapshots.next(user)).thenReturn(month);
+        when(investmentTransactions.findByInvestmentIdInAndTransactionKindAndScheduledMonthAndStatus(eq(List.of(2L)),
+                eq(InvestmentTransactionKind.SIP), eq(java.time.LocalDate.of(2026, 9, 1)), eq(InvestmentTransactionStatus.CONFIRMED))).thenReturn(List.of(confirmed));
+        when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+
+        var story = new MonthlyCommitmentStoryService(snapshots, copy, Clock.fixed(Instant.parse("2026-09-16T00:00:00Z"), ZoneId.of("Asia/Kolkata")),
+                new StoryEnrichmentPipeline(List.of(), List.of()), null, investmentTransactions).currentFor(user);
+
+        assertThat(story.cards().getFirst().components()).filteredOn(component -> component.label().equals("SIP allocations complete"))
+                .extracting(component -> component.displayValue()).containsExactly("₹10,000.00");
+        assertThat(story.cards().getFirst().actions()).extracting(action -> action.label()).contains("Review investments");
     }
 
     private MonthlyFinancialSnapshotService.MonthlySnapshot snapshot(String month, BigDecimal total) {
