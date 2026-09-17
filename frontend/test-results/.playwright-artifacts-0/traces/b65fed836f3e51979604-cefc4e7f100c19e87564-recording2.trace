@@ -1,0 +1,28 @@
+{"version":9,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1789675601223,"monotonicTime":15832.816,"sdkLanguage":"javascript","title":"loan-commitment.spec.js:3 › real API: mark a due loan EMI paid and refresh Monthly Commitment progress"}
+{"type":"before","callId":"call@16","startTime":15838.961,"class":"APIRequestContext","method":"fetch","params":{"url":"http://localhost:8080/test/e2e/session","method":"POST"},"stepId":"pw:api@39"}
+{"type":"log","callId":"call@16","time":15869.201,"message":"→ POST http://localhost:8080/test/e2e/session"}
+{"type":"log","callId":"call@16","time":15869.234,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@16","time":15869.252,"message":"  accept: */*"}
+{"type":"log","callId":"call@16","time":15869.263,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@16","time":16120.359,"message":"← 200 "}
+{"type":"log","callId":"call@16","time":16120.393,"message":"  vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers"}
+{"type":"log","callId":"call@16","time":16120.4,"message":"  content-type: application/json"}
+{"type":"log","callId":"call@16","time":16120.406,"message":"  transfer-encoding: chunked"}
+{"type":"log","callId":"call@16","time":16120.416,"message":"  date: Thu, 17 Sep 2026 20:06:41 GMT"}
+{"type":"log","callId":"call@16","time":16120.427,"message":"  keep-alive: timeout=60"}
+{"type":"log","callId":"call@16","time":16120.434,"message":"  connection: keep-alive"}
+{"type":"after","callId":"call@16","endTime":16123.16,"result":{"response":{"url":"http://localhost:8080/test/e2e/session","status":200,"statusText":"","headers":[{"name":"Vary","value":"Origin"},{"name":"Vary","value":"Access-Control-Request-Method"},{"name":"Vary","value":"Access-Control-Request-Headers"},{"name":"Content-Type","value":"application/json"},{"name":"Transfer-Encoding","value":"chunked"},{"name":"Date","value":"Thu, 17 Sep 2026 20:06:41 GMT"},{"name":"Keep-Alive","value":"timeout=60"},{"name":"Connection","value":"keep-alive"}],"serverAddr":{"ipAddress":"::1","port":8080},"timing":{"startTime":1789675601232,"domainLookupStart":0,"domainLookupEnd":29.248999999999796,"connectStart":29.248999999999796,"secureConnectionStart":-1,"connectEnd":38.03900000000067,"requestStart":38.03900000000067,"responseStart":277.5159999999996},"responseEndTiming":278.53800000000047,"fetchUid":"3282e7a67a72f643ab01253b44cdacf3"}}}
+{"type":"before","callId":"call@21","startTime":16138.201,"class":"APIRequestContext","method":"fetch","params":{"url":"http://localhost:8080/test/e2e/clock","method":"POST","jsonData":"{\"instant\":\"2026-04-15T09:00:00Z\"}"},"stepId":"pw:api@42"}
+{"type":"log","callId":"call@21","time":16144.6,"message":"→ POST http://localhost:8080/test/e2e/clock"}
+{"type":"log","callId":"call@21","time":16144.628,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@21","time":16144.632,"message":"  accept: */*"}
+{"type":"log","callId":"call@21","time":16144.635,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@21","time":16144.643,"message":"  content-type: application/json"}
+{"type":"log","callId":"call@21","time":16144.646,"message":"  content-length: 34"}
+{"type":"log","callId":"call@21","time":16257.248,"message":"← 200 "}
+{"type":"log","callId":"call@21","time":16257.256,"message":"  vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers"}
+{"type":"log","callId":"call@21","time":16257.261,"message":"  content-length: 0"}
+{"type":"log","callId":"call@21","time":16257.264,"message":"  date: Thu, 17 Sep 2026 20:06:41 GMT"}
+{"type":"log","callId":"call@21","time":16257.266,"message":"  keep-alive: timeout=60"}
+{"type":"log","callId":"call@21","time":16257.269,"message":"  connection: keep-alive"}
+{"type":"after","callId":"call@21","endTime":16257.351,"result":{"response":{"url":"http://localhost:8080/test/e2e/clock","status":200,"statusText":"","headers":[{"name":"Vary","value":"Origin"},{"name":"Vary","value":"Access-Control-Request-Method"},{"name":"Vary","value":"Access-Control-Request-Headers"},{"name":"Content-Length","value":"0"},{"name":"Date","value":"Thu, 17 Sep 2026 20:06:41 GMT"},{"name":"Keep-Alive","value":"timeout=60"},{"name":"Connection","value":"keep-alive"}],"serverAddr":{"ipAddress":"::1","port":8080},"timing":{"startTime":1789675601529,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":-1,"secureConnectionStart":-1,"connectEnd":-1,"requestStart":5.709000000000742,"responseStart":117.15800000000127},"responseEndTiming":117.59100000000035,"fetchUid":"32ac5ba6c1be051e7ae208f8c32d9ea8"}}}

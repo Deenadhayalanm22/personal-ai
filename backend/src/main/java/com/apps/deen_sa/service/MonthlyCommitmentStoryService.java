@@ -5,6 +5,9 @@ import com.apps.deen_sa.domain.MoneyStoryType;
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.repository.InvestmentTransactionRepository;
+import com.apps.deen_sa.repository.LoanEmiOccurrenceRepository;
+import com.apps.deen_sa.domain.LoanEmiOccurrenceStatus;
+import com.apps.deen_sa.repository.UserActionItemRepository;
 import com.apps.deen_sa.domain.InvestmentTransactionKind;
 import com.apps.deen_sa.domain.InvestmentTransactionStatus;
 import org.springframework.stereotype.Service;
@@ -33,20 +36,29 @@ public class MonthlyCommitmentStoryService {
     private final StoryEnrichmentPipeline enrichment;
     private final FinancialTransactionRepository transactions;
     private final InvestmentTransactionRepository investmentTransactions;
+    private final LoanEmiOccurrenceRepository loanOccurrences;
 
     /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock) {
-        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()), null, null);
+        this(snapshots, copyGenerator, clock, new StoryEnrichmentPipeline(List.of(), List.of()), null, null, null, null);
     }
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
-                                         StoryEnrichmentPipeline enrichment) { this(snapshots, copyGenerator, clock, enrichment, null, null); }
+                                         StoryEnrichmentPipeline enrichment) { this(snapshots, copyGenerator, clock, enrichment, null, null, null, null); }
+    /** Compatibility constructor for focused tests with optional transaction repositories. */
+    public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
+                                         StoryEnrichmentPipeline enrichment, FinancialTransactionRepository transactions,
+                                         InvestmentTransactionRepository investmentTransactions) {
+        this(snapshots, copyGenerator, clock, enrichment, transactions, investmentTransactions, null, null);
+    }
 
     @Autowired
     public MonthlyCommitmentStoryService(MonthlyFinancialSnapshotService snapshots, MoneyStoryCopyGenerator copyGenerator, Clock clock,
                                          StoryEnrichmentPipeline enrichment, FinancialTransactionRepository transactions,
-                                         InvestmentTransactionRepository investmentTransactions) {
+                                         InvestmentTransactionRepository investmentTransactions, UserActionItemRepository userActions,
+                                         LoanEmiOccurrenceRepository loanOccurrences) {
         this.snapshots = snapshots; this.copyGenerator = copyGenerator; this.clock = clock; this.enrichment = enrichment;
         this.transactions = transactions; this.investmentTransactions = investmentTransactions;
+        this.loanOccurrences = loanOccurrences;
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +77,16 @@ public class MonthlyCommitmentStoryService {
         if (cardBillTotal.signum() > 0) components.add(component("Credit-card bills", cardBillTotal, currency));
         BigDecimal completedSipTotal = completedSipTotal(investing, month);
         if (completedSipTotal.signum() > 0) components.add(component("SIP allocations complete", completedSipTotal, currency));
+        BigDecimal completedLoanTotal = completedLoanTotal(debt, month);
+        if (emiTotal.signum() > 0) {
+            BigDecimal remainingLoanTotal = emiTotal.subtract(completedLoanTotal);
+            String progress = completedLoanTotal.multiply(BigDecimal.valueOf(100)).divide(emiTotal, 0, java.math.RoundingMode.HALF_UP) + "%";
+            components.add(new MoneyStoriesService.Component("MONEY", "Loan payment progress", null, currency,
+                    MoneyStoryRenderer.money(completedLoanTotal, currency) + " paid of " + MoneyStoryRenderer.money(emiTotal, currency)
+                            + " · " + MoneyStoryRenderer.money(remainingLoanTotal, currency) + " left · " + progress));
+            components.add(new MoneyStoriesService.Component("TEXT", "This month", null, null,
+                    completedLoanTotal.compareTo(emiTotal) >= 0 ? "Paid · nothing due" : "Due · payment needed"));
+        }
 
         String title = total.signum() > 0 ? "Your known monthly commitment" : "Your monthly commitment starts here";
         String body = total.signum() > 0
@@ -126,6 +148,7 @@ public class MonthlyCommitmentStoryService {
                 "monthly-commitment", 1, null, null);
     }
 
+
     private MoneyStoriesService.CardDto nextMonthCard(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency,
                                                         MoneyStoryCopyGenerator.Copy copy, StoryInsight salaryInsight) {
         List<MoneyStoriesService.EvidenceTransaction> rows = evidenceRows(snapshot, currency);
@@ -174,6 +197,13 @@ public class MonthlyCommitmentStoryService {
         return investmentTransactions.findByInvestmentIdInAndTransactionKindAndScheduledMonthAndStatus(ids,
                         InvestmentTransactionKind.SIP, month.atDay(1), InvestmentTransactionStatus.CONFIRMED).stream()
                 .map(tx -> tx.getAmount()).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    private BigDecimal completedLoanTotal(MonthlyFinancialSnapshotService.Bucket debt, YearMonth month) {
+        if (loanOccurrences == null) return BigDecimal.ZERO;
+        return debt.sources().stream().filter(source -> "LOAN".equals(source.sourceType()))
+                .map(source -> loanOccurrences.findByLoanIdAndDueMonth(Long.valueOf(source.sourceId()), month.atDay(1))
+                        .filter(value -> value.getStatus() == LoanEmiOccurrenceStatus.PAID).map(value -> value.getPaidAmount()).orElse(BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<MoneyStoriesService.Component> components(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {

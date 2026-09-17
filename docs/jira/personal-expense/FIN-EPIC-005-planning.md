@@ -70,6 +70,13 @@
 3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
 4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the current and next-month runway reflect current source records without waiting for the money-story snapshot scheduler.
 5. **Given** a loan or SIP source write, **when** it commits, **then** the current and next month's canonical `monthly_financial_snapshot` rows are rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads those snapshots rather than recalculating source records on every request.
+6. **Given** the Monthly Commitment story includes one or more loan sources, **when** the user opens it, **then** they can follow `Review loans` to the Loans section without manually searching for it.
+7. **Given** a server-generated final-EMI closure action is due, **when** the user opens the Monthly Commitment story, **then** that story alone exposes `Review final EMI`; it opens and highlights that loan and asks for confirmation that the final EMI was paid before marking the loan closed. It must not silently mark an EMI paid or show a separate home-screen action queue.
+8. **Given** an active loan EMI is due in the selected month, **when** the user opens Monthly Commitment, **then** it shows server-calculated planned, completed, remaining, and percentage progress. `View included commitments` takes the user to the due loan row, where they can mark that month’s EMI paid; the same story refreshes immediately without changing the planned amount. Each monthly occurrence remains independently explainable.
+
+### Integration-test scenarios
+
+- Create a six-month Home loan on 15 April; assert April history and the May runway, mark the due May occurrence paid on 5 May, and assert its persisted payment facts and refreshed 100% Monthly Commitment progress. Advance to June and assert the June occurrence is independently due while May remains paid.
 
 ## FIN-019 — Private income outlook
 

@@ -198,6 +198,13 @@ public class WebFinanceController {
         return webManager.updateLoan(token, id, request);
     }
 
+    @PostMapping("/loans/{id}/emi-occurrences/{month}/paid")
+    public WebLoanService.LoanResponse markLoanEmiPaid(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @PathVariable YearMonth month) {
+        return webManager.markLoanEmiPaid(token, id, month);
+    }
+
     @GetMapping("/income-outlook")
     public WebIncomeService.OutlookResponse incomeOutlook(@CookieValue(name = SESSION_COOKIE, required = false) String token) {
         return webManager.incomeOutlook(token);

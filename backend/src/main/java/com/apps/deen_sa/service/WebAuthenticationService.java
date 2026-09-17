@@ -30,9 +30,9 @@ public class WebAuthenticationService {
 
     @Autowired
     public WebAuthenticationService(MagicLinkRepository magicLinks, WebSessionRepository sessions,
-            AppUserRepository users, @Value("${app.web.session-expiry:10d}") String sessionExpiry) {
+            AppUserRepository users, @Value("${app.web.session-expiry:10d}") String sessionExpiry, Clock clock) {
         this(magicLinks, sessions, users, DurationStyle.detectAndParse(sessionExpiry),
-                new SecureRandom(), Clock.systemUTC());
+                new SecureRandom(), clock);
     }
 
     WebAuthenticationService(MagicLinkRepository magicLinks, WebSessionRepository sessions,
