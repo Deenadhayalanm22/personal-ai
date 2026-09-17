@@ -62,6 +62,9 @@ export const createRecurringCommitment = (commitment) => request('/api/web/recur
 export const updateRecurringCommitment = (id, commitment) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(commitment) });
 export const getCommitmentReview = (month) => request(`/api/web/recurring-commitments/review?month=${encodeURIComponent(month)}`);
 export const resolveCommitmentReview = (transactionId, commitmentId) => request(`/api/web/recurring-commitments/review/${encodeURIComponent(transactionId)}`, { method: 'POST', body: JSON.stringify({ commitmentId }) });
+export const getCreditCards = () => request('/api/web/credit-cards');
+export const createCreditCard = (card) => request('/api/web/credit-cards', { method: 'POST', body: JSON.stringify(card) });
+export const updateCreditCard = (id, card) => request(`/api/web/credit-cards/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(card) });
 
 export const getLoans = () => request('/api/web/loans');
 export const createLoan = (loan) => request('/api/web/loans', { method: 'POST', body: JSON.stringify(loan) });

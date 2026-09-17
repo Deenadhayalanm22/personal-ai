@@ -169,6 +169,13 @@ public class WebFinanceController {
     @PostMapping("/recurring-commitments/review/{transactionId}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resolveCommitmentReview(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long transactionId, @RequestBody WebRecurringCommitmentService.ResolveRequest request) { webManager.resolveCommitmentReview(token, transactionId, request); }
 
+    @GetMapping("/credit-cards")
+    public WebCreditCardService.CardListResponse creditCards(@CookieValue(name = SESSION_COOKIE, required = false) String token) { return webManager.creditCards(token); }
+    @PostMapping("/credit-cards") @ResponseStatus(HttpStatus.CREATED)
+    public WebCreditCardService.CardResponse createCreditCard(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestBody WebCreditCardService.CardRequest request) { return webManager.createCreditCard(token, request); }
+    @PatchMapping("/credit-cards/{id}")
+    public WebCreditCardService.CardResponse updateCreditCard(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebCreditCardService.CardRequest request) { return webManager.updateCreditCard(token, id, request); }
+
     @PostMapping("/loans")
     @ResponseStatus(HttpStatus.CREATED)
     public WebLoanService.LoanResponse createLoan(

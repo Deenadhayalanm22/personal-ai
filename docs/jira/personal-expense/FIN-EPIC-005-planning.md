@@ -90,6 +90,19 @@ The initial release is deliberately limited to salary context. It uses “privat
 - Save an exact salary after explicitly choosing that option; verify two-decimal storage and rejection of zero or invalid input.
 - Read and save a shared salary; verify that neither response exposes the range, exact amount, or frequency and that the response contains only the masked marker.
 
+## FIN-022 — Project credit-card bills from captured spending
+
+**Status:** In Progress · **Priority:** P1
+
+### Acceptance criteria
+
+1. **Given** an account reference created by normal expense capture, **when** the user configures that account as a credit card with a card name, issuer, statement-generation day, and payment due day, **then** the setup is private to that user and validates each day as 1–28.
+2. **Given** an active configured card, **when** a monthly snapshot is built for its due month, **then** it includes exactly the visible transactions recorded against that card's account reference between the previous statement cut-off and the statement cut-off preceding that due date.
+3. **Given** a card spending transaction is captured, edited, or deleted, **when** the change commits, **then** current and next-month snapshots are refreshed so a qualifying upcoming bill is current without a scheduler wait.
+4. **Given** a credit-card bill source is shown in commitment evidence, **when** the user opens it, **then** it identifies the card, issuer, statement period, projected due date, and aggregate amount. It is a due-bill projection, not a second expense or payment confirmation.
+
+The due-month mapping is deterministic: if the due day is after the statement day, the statement closes in the due month; otherwise it closes in the previous month. Its billing period begins the day after the previous statement day and ends on that statement day. This avoids asking the user to manually calculate an ambiguous billing-period range.
+
 ## Story enrichment architecture
 
 The planned way to use voluntary salary context and future planning modules in stories is documented in [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). Salary is an independent optional lens, not a required progression step or a change to commitment accounting.
@@ -104,6 +117,7 @@ The v1 payload contains `fullIntendedCommitment` and two semantic buckets:
 | --- | --- | --- |
 | `DEBT_REPAYMENTS` | Active loan EMIs whose tenure includes the snapshot month | Required debt repayment plan. |
 | `PLANNED_INVESTING` | Active mutual-fund SIPs whose start month has arrived | User-selected investing plan. |
+| `CREDIT_CARD_BILLS` | Visible captured expenses for each configured card's closing statement period | Aggregate bill due in the snapshot month; it is not a duplicate expense. |
 
 The pinned `MONTHLY_COMMITMENT` story reads these snapshots and is always returned first in the existing monthly Stories response. It contains a current-month card followed by a next-month runway card, each with its own evidence list. When the user has shared an exact monthly salary, each of those two cards adds its own deterministic commitment-to-salary percentage; salary never becomes a standalone card or exposes the salary amount. A shared range is shown only as private qualitative context, without a fabricated percentage. One AI request writes the two cards together from verified facts, so the next card continues the current-card thought without a second AI round-trip; all amounts, payoff facts, and source inclusion remain deterministic. Its evidence lists the source loan/SIP rows, amounts, due dates, and labels. Each row also carries a deterministic, playful status tag: a loan nearing payoff gets its exact end month, a longer loan is marked as a long-game member, and an SIP is a future-you contribution. This keeps the detail sheet useful without adding a second AI request per row. The story does not include stock holdings, cash balances, or ordinary recorded expenses in v1.
 

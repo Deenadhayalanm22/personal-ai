@@ -34,6 +34,7 @@ public class WebManager {
     private final ActionManagementService actions;
     private final WebIncomeService income;
     private final WebRecurringCommitmentService commitments;
+    private final WebCreditCardService creditCards;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -44,7 +45,7 @@ public class WebManager {
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts,
                       WebLoanService loans, WebMutualFundService mutualFunds, MfApiService mfApi,
                       ActionManagementService actions, WebStockService stocks, StockMarketDataAdapter stockMarketData, WebIncomeService income,
-                      WebRecurringCommitmentService commitments) {
+                      WebRecurringCommitmentService commitments, WebCreditCardService creditCards) {
         this.authentication = authentication;
         this.loginRequests = loginRequests;
         this.taxonomy = taxonomy;
@@ -64,6 +65,7 @@ public class WebManager {
         this.stockMarketData = stockMarketData;
         this.income = income;
         this.commitments = commitments;
+        this.creditCards = creditCards;
     }
 
     /**
@@ -76,7 +78,7 @@ public class WebManager {
                       FinancialTransactionCalendarService transactionCalendar, ExpenseEditOptionsService editOptions,
                       FinancialTransactionEditService transactionEditor, PendingActionContextService actionContexts) {
         this(authentication, loginRequests, taxonomy, referencePreferences, referenceMerges, monthlyTransactions,
-                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null, null, null);
+                transactionList, transactionCalendar, editOptions, transactionEditor, actionContexts, null, null, null, null, null, null, null, null, null);
     }
 
     public void requestLoginLink(String phoneNumber, String clientAddress) {
@@ -171,6 +173,9 @@ public class WebManager {
     public WebRecurringCommitmentService.CommitmentResponse updateCommitment(String token, Long id, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.update(authentication.authenticate(token), id, request); }
     public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(String token, YearMonth month) { return commitments.review(authentication.authenticate(token), month == null ? null : month.toString()); }
     public void resolveCommitmentReview(String token, Long id, WebRecurringCommitmentService.ResolveRequest request) { commitments.resolve(authentication.authenticate(token), id, request); }
+    public WebCreditCardService.CardListResponse creditCards(String token) { return creditCards.list(authentication.authenticate(token)); }
+    public WebCreditCardService.CardResponse createCreditCard(String token, WebCreditCardService.CardRequest request) { return creditCards.create(authentication.authenticate(token), request); }
+    public WebCreditCardService.CardResponse updateCreditCard(String token, Long id, WebCreditCardService.CardRequest request) { return creditCards.update(authentication.authenticate(token), id, request); }
 
     public WebLoanService.LoanResponse createLoan(String token, WebLoanService.LoanCreateRequest request) {
         return loans.create(authentication.authenticate(token), request);

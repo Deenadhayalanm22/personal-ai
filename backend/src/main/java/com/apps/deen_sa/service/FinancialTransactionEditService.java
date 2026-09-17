@@ -24,19 +24,21 @@ public class FinancialTransactionEditService {
     private final UserReferenceEntityRepository references;
     private final ExpenseTaxonomyRegistry taxonomy;
     private final MoneyStoryChangeService storyChanges;
+    private final MonthlyFinancialSnapshotService snapshots;
 
     public FinancialTransactionEditService(FinancialTransactionRepository transactions,
                                            UserReferenceEntityRepository references,
                                            ExpenseTaxonomyRegistry taxonomy) {
-        this(transactions, references, taxonomy, null);
+        this(transactions, references, taxonomy, null, null);
     }
     @Autowired
     public FinancialTransactionEditService(FinancialTransactionRepository transactions,
                                            UserReferenceEntityRepository references,
                                            ExpenseTaxonomyRegistry taxonomy,
-                                           MoneyStoryChangeService storyChanges) {
+                                           MoneyStoryChangeService storyChanges, MonthlyFinancialSnapshotService snapshots) {
         this.transactions = transactions; this.references = references; this.taxonomy = taxonomy;
         this.storyChanges = storyChanges;
+        this.snapshots = snapshots;
     }
 
     @Transactional
@@ -89,6 +91,7 @@ public class FinancialTransactionEditService {
             storyChanges.changed(user, previousDate);
             if (!previousDate.equals(saved.getOccurredAt())) storyChanges.changed(user, saved.getOccurredAt());
         }
+        if (snapshots != null) snapshots.refreshCurrent(user);
         return FinancialTransactionListService.ExpenseItem.from(saved, user);
     }
 
@@ -104,6 +107,7 @@ public class FinancialTransactionEditService {
         transaction.setUpdatedAt(now);
         transactions.saveAndFlush(transaction);
         if (storyChanges != null) storyChanges.changed(user, transaction.getOccurredAt());
+        if (snapshots != null) snapshots.refreshCurrent(user);
     }
 
     private void updateClassification(

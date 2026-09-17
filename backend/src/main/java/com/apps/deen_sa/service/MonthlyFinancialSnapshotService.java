@@ -11,6 +11,8 @@ import com.apps.deen_sa.repository.MonthlyFinancialSnapshotRepository;
 import com.apps.deen_sa.repository.UserInvestmentRepository;
 import com.apps.deen_sa.repository.UserLoanRepository;
 import com.apps.deen_sa.repository.UserRecurringCommitmentRepository;
+import com.apps.deen_sa.repository.UserCreditCardRepository;
+import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.stereotype.Service;
@@ -34,23 +36,26 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 3;
+    private static final int CALCULATION_VERSION = 4;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
     private final UserRecurringCommitmentRepository recurringCommitments;
+    private final UserCreditCardRepository creditCards;
+    private final FinancialTransactionRepository transactions;
     private final Clock clock;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     public MonthlyFinancialSnapshotService(MonthlyFinancialSnapshotRepository snapshots, UserLoanRepository loans,
-                                           UserInvestmentRepository investments, UserRecurringCommitmentRepository recurringCommitments, Clock clock) {
-        this.snapshots = snapshots; this.loans = loans; this.investments = investments; this.recurringCommitments = recurringCommitments; this.clock = clock;
+                                           UserInvestmentRepository investments, UserRecurringCommitmentRepository recurringCommitments,
+                                           UserCreditCardRepository creditCards, FinancialTransactionRepository transactions, Clock clock) {
+        this.snapshots = snapshots; this.loans = loans; this.investments = investments; this.recurringCommitments = recurringCommitments; this.creditCards = creditCards; this.transactions = transactions; this.clock = clock;
     }
     /** Compatibility constructor for focused unit tests predating FIN-020. */
     public MonthlyFinancialSnapshotService(MonthlyFinancialSnapshotRepository snapshots, UserLoanRepository loans,
                                            UserInvestmentRepository investments, Clock clock) {
-        this(snapshots, loans, investments, null, clock);
+        this(snapshots, loans, investments, null, null, null, clock);
     }
 
     /** FIN-018: a missing legacy snapshot is built once; subsequent story reads perform one snapshot lookup. */
@@ -93,11 +98,14 @@ public class MonthlyFinancialSnapshotService {
                         commitment.getDueDay() == null ? null : month.atDay(Math.min(commitment.getDueDay(), month.lengthOfMonth())),
                         commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
                         commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount", null, null, null)).toList();
+        List<Source> cardBills = (creditCards == null || transactions == null ? List.<com.apps.deen_sa.entity.UserCreditCardEntity>of() : creditCards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId())).stream()
+                .map(card -> creditCardSource(user, card, month)).filter(source -> source.plannedAmount().signum() > 0).toList();
         Bucket debtBucket = bucket("DEBT_REPAYMENTS", "Debt repayments", debt);
         Bucket investingBucket = bucket("PLANNED_INVESTING", "Planned investing", investing);
         Bucket essentialBucket = bucket("ESSENTIAL_LIVING", "Essential living", essential);
+        Bucket cardBucket = bucket("CREDIT_CARD_BILLS", "Credit-card bills", cardBills);
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
-                debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket));
+                debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()).add(cardBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket, cardBucket));
         String payload = write(value);
         String fingerprint = fingerprint(payload);
         MonthlyFinancialSnapshotEntity entity = snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1)).orElseGet(() -> {
@@ -127,6 +135,15 @@ public class MonthlyFinancialSnapshotService {
     private boolean hasSipIn(UserInvestmentEntity investment, YearMonth month) {
         return investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
                 && investment.getSipAmount() != null && investment.getSipStartMonth() != null && !month.isBefore(YearMonth.from(investment.getSipStartMonth()));
+    }
+    /** A due-month projection is the statement ending before that due date; transaction rows remain actual spending, never another expense. */
+    private Source creditCardSource(AppUserEntity user, com.apps.deen_sa.entity.UserCreditCardEntity card, YearMonth dueMonth) {
+        YearMonth statementMonth = card.getDueDay() > card.getStatementDay() ? dueMonth : dueMonth.minusMonths(1);
+        LocalDate statementEnd = statementMonth.atDay(card.getStatementDay());
+        LocalDate periodStart = statementMonth.minusMonths(1).atDay(card.getStatementDay()).plusDays(1);
+        BigDecimal amount = transactions.sumVisibleByAccountAndPeriod(user.getId(), card.getAccountReference().getId(), periodStart, statementEnd.plusDays(1));
+        return new Source("CREDIT_CARD_BILL", String.valueOf(card.getId()), card.getCardName(), amount,
+                dueMonth.atDay(card.getDueDay()), "Credit-card bill", card.getIssuerName() + " · statement " + statementEnd + " · " + periodStart + " to " + statementEnd, null, null, null);
     }
     private YearMonth currentMonth(AppUserEntity user) { return YearMonth.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))); }
     private String write(MonthlySnapshot value) { try { return mapper.writeValueAsString(value); } catch (Exception e) { throw new IllegalStateException("Could not save monthly financial snapshot", e); } }

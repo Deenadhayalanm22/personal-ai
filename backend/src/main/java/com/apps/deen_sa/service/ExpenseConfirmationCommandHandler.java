@@ -8,7 +8,7 @@ import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.TransactionDraftEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.repository.TransactionDraftExtractionRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,12 +17,12 @@ import java.time.Instant;
 
 /** FIN-EPIC-001 — Conversational expense capture. See docs/jira/personal-expense/FIN-EPIC-001-capture.md. */
 @Service
-@RequiredArgsConstructor
 public class ExpenseConfirmationCommandHandler {
     private final TransactionDraftExtractionRepository extractionRepository;
     private final ConfirmedReferenceWriter referenceWriter;
     private final FinancialTransactionWriter transactionWriter;
     private final MissingTransactionDateContextService dateContexts;
+    private final MonthlyFinancialSnapshotService snapshots;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public RecordedExpense handle(ExpenseConfirmationCommand command) {
@@ -45,6 +45,7 @@ public class ExpenseConfirmationCommandHandler {
             var sourceAccount = referenceWriter.save(
                     extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName());
             transactionWriter.save(extraction, merchant, sourceAccount);
+            if (snapshots != null) snapshots.refreshCurrent(draft.getUser());
             dateContexts.consumeForConfirmedDraft(draft);
             draft.setUpdatedAt(Instant.now());
             return new RecordedExpense(
@@ -63,6 +64,11 @@ public class ExpenseConfirmationCommandHandler {
         draft.setUpdatedAt(Instant.now());
         return null;
     }
+
+    /** Compatibility constructor retained for the focused confirmation tests. */
+    public ExpenseConfirmationCommandHandler(TransactionDraftExtractionRepository extractionRepository, ConfirmedReferenceWriter referenceWriter, FinancialTransactionWriter transactionWriter, MissingTransactionDateContextService dateContexts) { this(extractionRepository, referenceWriter, transactionWriter, dateContexts, null); }
+    @Autowired
+    public ExpenseConfirmationCommandHandler(TransactionDraftExtractionRepository extractionRepository, ConfirmedReferenceWriter referenceWriter, FinancialTransactionWriter transactionWriter, MissingTransactionDateContextService dateContexts, MonthlyFinancialSnapshotService snapshots) { this.extractionRepository = extractionRepository; this.referenceWriter = referenceWriter; this.transactionWriter = transactionWriter; this.dateContexts = dateContexts; this.snapshots = snapshots; }
 
     private void requireActive(TransactionDraftExtractionEntity extraction) {
         if (extraction.getStatus() != TransactionDraftExtractionStatus.ACTIVE) {
