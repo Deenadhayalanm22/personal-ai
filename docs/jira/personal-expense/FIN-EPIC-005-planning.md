@@ -33,14 +33,15 @@
 3. **Given** a SIP or lump-sum confirmation with positive amount/date and NAV or units, **when** saved, **then** missing NAV/units are calculated and the transaction is `CONFIRMED` with recorded calculation source.
 4. **Given** a due SIP already confirmed or skipped, **when** confirmation is retried, **then** it is rejected and no second investment transaction is created.
 5. **Given** confirmed holdings but unavailable latest NAV, **when** listed, **then** invested value remains available while current value and P&L are `null` rather than guessed.
-6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions.
-7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** it shows their completed allocation amount as read-only progress and links to Mutual Funds; it does not offer allocation controls or change the intended commitment total.
+6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions. A just-confirmed allocation acknowledgement is shown only for the current Money session; after returning, the fund card stays clean. Fund details shows an edit wrench on every recorded opening holding, SIP, and lump-sum row, so the user corrects the exact investment; each correction recalculates holdings without changing the SIP plan. A SIP becomes due on its configured local SIP day; before that day it remains upcoming. A due SIP surfaced from Monthly Commitment is visually distinct and opens its owning Mutual Funds view, while an already confirmed occurrence cannot be confirmed again.
+7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** it shows their completed allocation amount as read-only progress and links to Mutual Funds; a previously red due SIP evidence row and its review control become green after confirmation. It does not offer allocation controls or change the intended commitment total.
 
 ### Integration-test scenarios
 
 - Create SIP with opening holding, confirm occurrence, and assert invested/units/average NAV include only confirmed rows.
 - Create a fund twice and assert conflict; confirm same SIP twice and assert transaction count is one.
 - Stub missing MFAPI NAV and assert detail/list expose null valuation fields.
+- Create three April-start SIPs of ₹10,000 on the 1st, ₹20,000 on the 5th, and ₹30,000 on the 10th, each with an opening holding. Assert the April and May ₹60,000 SIP projection; on 1 May only the first SIP is due and visually highlighted, on 12 May the two unconfirmed later SIPs are due, and each can be confirmed only once through its Mutual Funds view. Add a lump sum on 21 May; assert it changes holdings but not the ₹60,000 SIP plan, and all three SIPs appear as June runway sources.
 
 ## FIN-017 — Add and view listed stock holdings
 
@@ -70,13 +71,18 @@
 3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
 4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the current and next-month runway reflect current source records without waiting for the money-story snapshot scheduler.
 5. **Given** a loan or SIP source write, **when** it commits, **then** the current and next month's canonical `monthly_financial_snapshot` rows are rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads those snapshots rather than recalculating source records on every request.
-6. **Given** the Monthly Commitment story includes one or more loan sources, **when** the user opens it, **then** they can follow `Review loans` to the Loans section without manually searching for it.
+6. **Given** the Monthly Commitment story includes one or more sources, **when** the user opens `View included commitments`, **then** they see the story-scoped source list before choosing whether to review a source in its owning section.
 7. **Given** a server-generated final-EMI closure action is due, **when** the user opens the Monthly Commitment story, **then** that story alone exposes `Review final EMI`; it opens and highlights that loan and asks for confirmation that the final EMI was paid before marking the loan closed. It must not silently mark an EMI paid or show a separate home-screen action queue.
-8. **Given** an active loan EMI is due in the selected month, **when** the user opens Monthly Commitment, **then** it shows server-calculated planned, completed, remaining, and percentage progress. `View included commitments` takes the user to the due loan row, where they can mark that month’s EMI paid; the same story refreshes immediately without changing the planned amount. Each monthly occurrence remains independently explainable.
+8. **Given** an active loan EMI is due in the selected month, **when** the user opens Monthly Commitment, **then** it shows compact server-calculated loan-payment progress: paid of planned, remaining, and percentage. `View included commitments` opens a story-scoped list of every included commitment; a due loan is visually highlighted and its explicit `Review loan` control opens the Loans section, where the user can mark that month’s EMI paid. The same story refreshes immediately without changing the planned amount. Each monthly occurrence remains independently explainable.
 
 ### Integration-test scenarios
 
-- Create a six-month Home loan on 15 April; assert April history and the May runway, mark the due May occurrence paid on 5 May, and assert its persisted payment facts and refreshed 100% Monthly Commitment progress. Advance to June and assert the June occurrence is independently due while May remains paid.
+- Create a six-month Home loan on 15 April; assert the compact current/next EMI window and May runway, review and pay the due May EMI on 5 May, and assert its persisted payment facts and refreshed 100% Monthly Commitment progress. Advance to June and assert the June occurrence is independently due while May remains paid.
+- Create three staggered mutual-fund SIPs with opening holdings on 15 April; assert the ₹60,000 April and May planned-investing projection, the 1 May red due state for only the first SIP, the 12 May due state for the two outstanding SIPs, persisted one-time confirmations, and a 21 May lump sum that changes holdings without changing the May/June SIP projection.
+
+### Browser Gherkin specification
+
+- [Monthly Commitment loan EMI progress](../../../frontend/e2e/features/loan-commitment.feature) and [Monthly Commitment mutual-fund SIP progress](../../../frontend/e2e/features/mutual-fund-commitment.feature) are readable Given/When/Then companions to their separate Playwright regressions.
 
 ## FIN-019 — Private income outlook
 

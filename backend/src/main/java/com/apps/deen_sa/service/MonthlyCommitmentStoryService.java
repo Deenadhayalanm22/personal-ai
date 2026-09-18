@@ -119,7 +119,6 @@ public class MonthlyCommitmentStoryService {
         List<MoneyStoriesService.EvidenceTransaction> evidenceRows = evidenceRows(snapshot, currency);
         List<MoneyStoriesService.Action> actions = new ArrayList<>();
         if (!evidenceRows.isEmpty()) actions.add(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View included commitments"));
-        if (sipTotal.signum() > 0 && investmentTransactions != null) actions.add(new MoneyStoriesService.Action("OPEN_SALARY_OUTLOOK", "Review investments"));
         int candidates = transactions == null ? 0 : transactions.findCommitmentCandidates(user.getId(), month.atDay(1), month.plusMonths(1).atDay(1)).size();
         if (candidates > 0) actions.add(new MoneyStoriesService.Action("OPEN_COMMITMENT_REVIEW", candidates == 1 ? "Review 1 payment" : "Review " + candidates + " payments"));
         StoryContext context = enrichment.enrich(new StoryEnrichmentRequest(user, MoneyStoryType.MONTHLY_COMMITMENT, month,

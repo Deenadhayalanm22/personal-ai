@@ -46,6 +46,6 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The suite resets only the repository's disposable Podman Compose PostgreSQL volume, then starts Spring Boot in the `e2e` profile and the Vite frontend. It uses real API calls, Flyway migrations, and persisted data; it does not intercept or mock backend requests. The initial scenario covers a protected portal journey for a due monthly loan EMI: the Monthly Commitment story opens the included loan occurrence, an explicit **Mark May EMI paid** persists that occurrence, and the story refreshes its progress without changing the planned commitment.
+The suite resets only the repository's disposable Podman Compose PostgreSQL volume, then starts Spring Boot in the `e2e` profile and the Vite frontend. It uses real API calls, Flyway migrations, and persisted data; it does not intercept or mock backend requests. The initial scenario covers a protected portal journey for a due monthly loan EMI: the Monthly Commitment story opens an included-commitments list, the user explicitly reviews the due loan and marks its May EMI paid, and the story refreshes its progress without changing the planned commitment.
 
 Every run retains a screenshot, video, and trace, including passing runs. Open the visual HTML report with `npm run test:e2e:report`; use `npm run test:e2e:debug` to pause and step through the browser actions interactively.

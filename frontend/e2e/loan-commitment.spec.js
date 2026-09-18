@@ -42,7 +42,9 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await page.getByRole('button', { name: '← Back to stories' }).click();
 
   expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-05-05T09:00:00Z' } })).ok()).toBeTruthy();
+  const mayStories = page.waitForResponse(response => response.url().includes('/api/web/expenses/monthly?month=2026-04') && response.status() === 200);
   await page.reload();
+  await mayStories;
 
   // May is due with a zero-progress commitment story and one route to its source row.
   await page.locator('.story-carousel-card').first().click();

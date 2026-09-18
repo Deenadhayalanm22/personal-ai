@@ -80,6 +80,7 @@ export const createMutualFund = (fund) => request('/api/web/mutual-funds', { met
 export const createMutualFundLumpSum = (id, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/lump-sums`, { method: 'POST', body: JSON.stringify(investment) });
 export const confirmSipOccurrence = (id, month, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip-occurrences/${encodeURIComponent(month)}/confirm`, { method: 'POST', body: JSON.stringify(investment) });
 export const updateSipOccurrence = (id, month, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip-occurrences/${encodeURIComponent(month)}`, { method: 'PATCH', body: JSON.stringify(investment) });
+export const updateMutualFundTransaction = (id, transactionId, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/transactions/${encodeURIComponent(transactionId)}`, { method: 'PATCH', body: JSON.stringify(investment) });
 export const searchStocks = (query) => request(`/api/web/stocks/search?q=${encodeURIComponent(query)}`);
 export const getStocks = () => request('/api/web/stocks');
 export const createStock = (stock) => request('/api/web/stocks', { method: 'POST', body: JSON.stringify(stock) });

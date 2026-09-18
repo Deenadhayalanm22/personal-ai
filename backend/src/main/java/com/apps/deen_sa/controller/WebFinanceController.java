@@ -296,6 +296,13 @@ public class WebFinanceController {
         return webManager.updateMutualFundSip(token, id, month, request);
     }
 
+    @PatchMapping("/mutual-funds/{id}/transactions/{transactionId}")
+    public WebMutualFundService.TransactionResponse updateMutualFundTransaction(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @PathVariable Long transactionId, @RequestBody WebMutualFundService.LumpSumRequest request) {
+        return webManager.updateMutualFundTransaction(token, id, transactionId, request);
+    }
+
     @PostMapping("/expenses/calendar/context")
     @ResponseStatus(HttpStatus.CREATED)
     public PendingActionContextService.ContextResponse createPendingActionContext(
