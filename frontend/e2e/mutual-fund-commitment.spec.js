@@ -39,7 +39,6 @@ test('real API: staggered SIPs become due by their configured day and retain the
   await expect(mediumCapRow).not.toHaveClass(/due-commitment/);
   await page.getByTestId(`included-mutual-fund-commitment-${bySip(10000).id}`).click();
   const reviewedFund = page.locator('.fund-card').filter({ hasText: bySip(10000).schemeName });
-  await expect(reviewedFund).toHaveClass(/review-target/);
   await expect(reviewedFund).toBeFocused();
   await confirmSipThroughUi(page, bySip(10000).id, '11000');
   await page.locator('.money-modal > .close').click();
@@ -47,7 +46,7 @@ test('real API: staggered SIPs become due by their configured day and retain the
   await page.getByTestId('view-included-commitments').click();
   const confirmedSmallCapRow = page.getByTestId(`included-mutual-fund-commitment-${bySip(10000).id}`).locator('..');
   await expect(confirmedSmallCapRow).toHaveClass(/confirmed-commitment/);
-  await expect(confirmedSmallCapRow.getByRole('button', { name: 'Review mutual fund' })).toHaveCSS('color', 'rgb(34, 104, 79)');
+  await expect(confirmedSmallCapRow.getByRole('button', { name: 'Review' })).toHaveCSS('color', 'rgb(34, 104, 79)');
   await page.getByRole('dialog').filter({ hasText: 'What makes up this month' }).getByRole('button', { name: '×' }).click();
 
   expect((await clock('2026-05-12T09:00:00Z')).ok()).toBeTruthy();

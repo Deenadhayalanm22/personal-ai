@@ -6,7 +6,7 @@ These `.feature` files are readable Gherkin specifications for the Playwright br
 - Keep its scenario steps aligned with the paired Playwright spec.
 - The files are documentation only; Playwright executes the corresponding `.spec.js` test.
 
-| Gherkin feature | Playwright test |
-| --- | --- |
-| `loan-commitment.feature` | `../loan-commitment.spec.js` |
-| `mutual-fund-commitment.feature` | `../mutual-fund-commitment.spec.js` |
+| Gherkin feature | Playwright test | Product documentation |
+| --- | --- | --- |
+| `loan-commitment.feature` | `../loan-commitment.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) |
+| `mutual-fund-commitment.feature` | `../mutual-fund-commitment.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) · [`mutual-funds` contract](../../../docs/contracts/mutual-funds.md) |

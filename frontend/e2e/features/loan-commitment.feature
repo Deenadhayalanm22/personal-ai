@@ -20,8 +20,8 @@ Feature: Monthly Commitment loan EMI progress
     And the user reloads Monthly Commitment
     Then the May loan occurrence is marked DUE
     And the Monthly Commitment shows loan payment progress of ₹0 paid of ₹100,000, ₹100,000 left, and 0%
-    When the user selects View included commitments and Review loan
-    Then the user is taken to the Loans section
+    When the user selects View included commitments and Review
+    Then the user is taken to, scrolled to, and focused on the owning loan row
     And the user sees Mark May EMI paid
     When the user marks May EMI paid
     Then the real backend persists a PAID May occurrence with paid amount ₹100,000 and paid date 5 May 2026
