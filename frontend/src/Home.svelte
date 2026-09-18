@@ -1,7 +1,7 @@
 <!-- FIN-EPIC-002, FIN-EPIC-003, and FIN-EPIC-005: see docs/jira/personal-expense/FIN-EPIC-002-correctness.md, FIN-EPIC-003-insights.md, and FIN-EPIC-005-planning.md -->
 <script>
   import './commitment.css';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { ApiError, completeAction, confirmSipOccurrence, createCreditCard, createLoan, createMissingDateContext, createMutualFund, createMutualFundLumpSum, createStock, createRecurringCommitment, deleteExpense, getActions, getCommitmentReview, getCreditCards, getExpenseOptions, getExpensesForDate, getIncomeOutlook, getLoans, getMutualFund, getMutualFunds, getRecurringCommitments, getStocks, logout, markLoanEmiPaid, resolveCommitmentReview, saveIncomeProfile, searchMutualFunds, searchStocks, updateCreditCard, updateExpense, updateLoan, updateSipOccurrence, updateMutualFundTransaction } from './lib/api.js';
   import SectionState from './SectionState.svelte';
   import Normalization from './Normalization.svelte';
@@ -79,17 +79,19 @@
   async function loadStocks(){stockStatus=stocks.length?'refreshing':'loading';stockError='';try{const result=await getStocks();stocks=result.stocks||[];stockStatus='ready';saveMoneyModulesCache();}catch(cause){if(stocks.length){stockStatus='ready';return;}stockStatus='error';stockError=cause?.message||'Could not load stocks.';}}
   async function loadActions(){actionsStatus=actions.length?'refreshing':'loading';actionsError='';try{const result=await getActions();actions=result.actions||[];actionsStatus='ready';}catch(cause){actionsStatus='error';actionsError=cause?.message||'Could not load actions.';}}
   async function completeOpenAction(action){if(completingActionId!==null)return;completingActionId=action.id;actionsError='';try{await completeAction(action.id);actions=actions.filter(item=>item.id!==action.id);await Promise.all([loadLoans(),loadActions()]);}catch(cause){actionsError=cause?.message||'Could not complete this action.';}finally{completingActionId=null;}}
-  async function openLoanDueAction(action){highlightedLoanId=action.referenceId;showMoney=true;await Promise.all([loadLoans(),loadActions()]);}
+  function moneyReviewTarget(type,id){if(type==='loan'){const loan=loans.find(item=>String(item.id)===String(id));return loan&&[...document.querySelectorAll('[data-testid="loans-section"] .loan-row')].find(row=>row.querySelector('.loan-name')?.textContent.trim()===loan.loanName);}const fund=fundSummary(id);return fund&&[...document.querySelectorAll('.mutual-funds-module:not(.stocks-module) .fund-card')].find(card=>card.getAttribute('aria-label')===`Open ${fund.schemeName} details`);}
+  async function focusMoneyTarget(type,id){await tick();await new Promise(resolve=>requestAnimationFrame(resolve));const target=moneyReviewTarget(type,id);if(!target)return;document.querySelectorAll('.review-target').forEach(item=>item.classList.remove('review-target'));target.classList.add('review-target');target.tabIndex=-1;target.scrollIntoView({behavior:'smooth',block:'center'});target.focus({preventScroll:true});}
+  async function openLoanDueAction(action){highlightedLoanId=action.referenceId;showMoney=true;await Promise.all([loadLoans(),loadActions()]);await focusMoneyTarget('loan',action.referenceId);}
   async function openCommitmentSources(){showStoryEvidence=true;await loadMutualFunds();}
-  async function openIncludedLoan(){showStoryEvidence=false;openedStory=null;await openMoney();}
-  async function openIncludedMutualFund(item){highlightedFundId=item.sourceId;showStoryEvidence=false;openedStory=null;await openMoney();}
+  async function openIncludedLoan(event){const loanItems=evidenceItems.filter(item=>/loan/i.test(item.category));const buttons=[...document.querySelectorAll('[data-testid="included-loan-commitment"]')];const item=loanItems[buttons.indexOf(event.currentTarget)];if(!item)return;highlightedLoanId=item.sourceId;showStoryEvidence=false;openedStory=null;await openMoney();await focusMoneyTarget('loan',item.sourceId);}
+  async function openIncludedMutualFund(item){highlightedFundId=item.sourceId;showStoryEvidence=false;openedStory=null;await openMoney();await focusMoneyTarget('fund',item.sourceId);}
   function sipIsDue(item){return mutualFunds.find(fund=>String(fund.id)===String(item.sourceId))?.currentSip?.status==='DUE';}
   function sipIsConfirmed(item){return mutualFunds.find(fund=>String(fund.id)===String(item.sourceId))?.currentSip?.status==='CONFIRMED';}
   function currentCommitmentIsDue(){const card=openedStory?.cards?.slice().sort((a,b)=>(a.sequence||0)-(b.sequence||0))[storySlide];return card?.components?.some(component=>component.label==='This month'&&component.displayValue?.startsWith('Due'));}
   const incomeRangeLabel=value=>({UNDER_25000:'Under ₹25k',FROM_25000_TO_50000:'₹25k–₹50k',FROM_50000_TO_100000:'₹50k–₹1L',FROM_100000_TO_200000:'₹1L–₹2L',OVER_200000:'Over ₹2L'})[value]||'Not shared';
   async function loadIncomeOutlook(){incomeStatus='loading';incomeError='';try{incomeOutlook=await getIncomeOutlook();incomeStatus='ready';}catch(cause){incomeStatus='error';incomeError=cause?.message||'Could not load your income outlook.';}}
   async function openMoney(){showMoney=true;readMoneyModulesCache();await Promise.all([loadLoans(),loadMutualFunds(),loadStocks(),loadIncomeOutlook(),loadCommitments(),loadCreditCards(),loadExpenseOptions()]);}
-  function closeMoney(){showMoney=false;sessionConfirmedSips=new Set();}
+  function closeMoney(){showMoney=false;highlightedLoanId=null;highlightedFundId=null;sessionConfirmedSips=new Set();}
   const sipSessionKey=(fund,occurrence)=>`${fund.id}:${occurrence.scheduledMonth}`;
   const fundSummary=id=>mutualFunds.find(fund=>String(fund.id)===String(id));
   async function loadCreditCards(){creditCardStatus='loading';creditCardError='';try{const result=await getCreditCards();creditCards=result.cards||[];creditCardStatus='ready';}catch(cause){creditCardStatus='error';creditCardError=cause?.message||'Could not load credit cards.';}}

@@ -38,6 +38,9 @@ test('real API: staggered SIPs become due by their configured day and retain the
   const mediumCapRow = page.getByTestId(`included-mutual-fund-commitment-${bySip(20000).id}`).locator('..');
   await expect(mediumCapRow).not.toHaveClass(/due-commitment/);
   await page.getByTestId(`included-mutual-fund-commitment-${bySip(10000).id}`).click();
+  const reviewedFund = page.locator('.fund-card').filter({ hasText: bySip(10000).schemeName });
+  await expect(reviewedFund).toHaveClass(/review-target/);
+  await expect(reviewedFund).toBeFocused();
   await confirmSipThroughUi(page, bySip(10000).id, '11000');
   await page.locator('.money-modal > .close').click();
   await page.locator('.story-carousel-card').first().click();

@@ -58,6 +58,9 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await expect(page.getByTestId('included-loan-commitment')).toBeVisible();
   await page.getByTestId('included-loan-commitment').click();
   await expect(loans).toContainText('Home loan');
+  const reviewedLoan = loans.locator('.loan-row', { hasText: 'Home loan' });
+  await expect(reviewedLoan).toHaveClass(/review-target/);
+  await expect(reviewedLoan).toBeFocused();
   const mayEmi = loans.getByTestId('loan-emi-2026-05');
   await expect(mayEmi).toHaveClass(/due/);
   await expect(mayEmi).toContainText('DUE');
