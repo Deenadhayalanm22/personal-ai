@@ -198,6 +198,14 @@ public class WebFinanceController {
         return webManager.updateLoan(token, id, request);
     }
 
+    @DeleteMapping("/loans/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLoan(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id) {
+        webManager.deleteLoan(token, id);
+    }
+
     @PostMapping("/loans/{id}/emi-occurrences/{month}/paid")
     public WebLoanService.LoanResponse markLoanEmiPaid(
             @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,

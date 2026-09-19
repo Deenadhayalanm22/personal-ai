@@ -31,3 +31,9 @@ Feature: Monthly Commitment loan EMI progress
     And Monthly Commitment reloads
     Then the June EMI becomes DUE independently
     And May remains PAID
+    When the user marks June EMI paid
+    And the backend clock moves to 1 Jul 2026
+    And Monthly Commitment reloads
+    Then the final June payment closes the loan
+    And July has no loan EMI or included loan commitment
+    And the Loans section has no active loan and lists Home loan under Closed loans

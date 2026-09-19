@@ -6,11 +6,17 @@ import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.UserLoanEntity;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.UserLoanRepository;
+import com.apps.deen_sa.repository.LoanEmiOccurrenceRepository;
+import com.apps.deen_sa.repository.UserActionItemRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,6 +83,31 @@ class WebLoanServiceTest {
         verify(repository).findByIdAndUserId(8L, 42L);
         assertThat(updated.monthlyEmiAmount()).isEqualByComparingTo("12000.00");
         assertThat(updated.status()).isEqualTo(LoanStatus.ACTIVE);
+    }
+
+    @Test
+    void marksFinalScheduledEmiPaidAndClosesTheLoan() {
+        UserLoanRepository repository = mock(UserLoanRepository.class);
+        LoanEmiOccurrenceRepository occurrences = mock(LoanEmiOccurrenceRepository.class);
+        UserActionItemRepository actions = mock(UserActionItemRepository.class);
+        AppUserEntity user = user();
+        user.setTimezone("Asia/Kolkata");
+        UserLoanEntity loan = loan(user);
+        loan.setTotalTenureMonths(1);
+        loan.setFirstEmiDueDate(LocalDate.of(2026, 6, 1));
+        when(repository.findByIdAndUserId(8L, 42L)).thenReturn(Optional.of(loan));
+        when(occurrences.findByLoanIdAndDueMonth(8L, LocalDate.of(2026, 6, 1))).thenReturn(Optional.empty());
+        when(occurrences.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.save(loan)).thenReturn(loan);
+        WebLoanService service = new WebLoanService(repository, null,
+                Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneId.of("Asia/Kolkata")), occurrences, actions);
+
+        var result = service.markPaid(user, 8L, YearMonth.of(2026, 6));
+
+        assertThat(result.status()).isEqualTo(LoanStatus.CLOSED);
+        assertThat(result.completedEmiCount()).isEqualTo(1);
+        assertThat(result.remainingEmiCount()).isZero();
+        verify(actions).deleteByUserIdAndReferenceTypeAndReferenceId(42L, "LOAN", 8L);
     }
 
     private AppUserEntity user() {

@@ -69,6 +69,7 @@ export const updateCreditCard = (id, card) => request(`/api/web/credit-cards/${e
 export const getLoans = () => request('/api/web/loans');
 export const createLoan = (loan) => request('/api/web/loans', { method: 'POST', body: JSON.stringify(loan) });
 export const updateLoan = (id, changes) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
+export const deleteLoan = (id) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const markLoanEmiPaid = (id, month) => request(`/api/web/loans/${encodeURIComponent(id)}/emi-occurrences/${encodeURIComponent(month)}/paid`, { method: 'POST' });
 export const getActions = () => request('/api/web/actions');
 export const completeAction = (id) => request(`/api/web/actions/${encodeURIComponent(id)}/complete`, { method: 'POST' });

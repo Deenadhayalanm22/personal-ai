@@ -11,7 +11,7 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-15T09:00:00Z' } })).ok()).toBeTruthy();
   await page.goto('/dashboard?month=2026-04');
   await page.getByRole('button', { name: /Your money/ }).click();
-  await expect(page.getByTestId('loans-section')).toContainText('No loans added yet.');
+  await expect(page.getByTestId('loans-section')).toContainText('No active loans.');
   await page.getByRole('button', { name: /Add another loan/ }).click();
   await page.getByLabel('Loan name').fill('Home loan');
   await page.getByLabel('Loan type').selectOption('HOME');
@@ -65,6 +65,7 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await expect(mayEmi).toContainText('DUE');
   await expect(mayEmi).toContainText(/(?:1 May|May 1),? 2026/);
   await expect(mayEmi).toContainText(/₹1,?00,000/);
+  await expect(mayEmi.locator('.due-reminder')).toContainText('Due now');
   await expect(mayEmi.getByRole('button', { name: 'Mark May EMI paid' })).toBeVisible();
 
   await mayEmi.getByRole('button', { name: 'Mark May EMI paid' }).click();
@@ -97,5 +98,59 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await page.getByTestId('view-included-commitments').click();
   await page.getByTestId('included-loan-commitment').click();
   await expect(loans.getByTestId('loan-emi-2026-05')).toContainText('PAID');
-  await expect(loans.getByTestId('loan-emi-2026-06')).toContainText('DUE');
+  const juneEmi = loans.getByTestId('loan-emi-2026-06');
+  await expect(juneEmi).toContainText('DUE');
+  await juneEmi.getByRole('button', { name: 'Mark June EMI paid' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await expect(loans).toContainText('No active loans.');
+  await page.getByTestId('closed-loans-toggle').click();
+  const closedLoan = loans.getByTestId(/closed-loan-/);
+  await expect(closedLoan).toContainText('Home loan');
+  await expect(closedLoan).toContainText('CLOSED');
+  await page.locator('.money-modal > .close').click();
+
+  // June is the sixth and final scheduled month. The active record remains available
+  // for payment history, but its tenure cannot create a July EMI or commitment.
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-07-01T09:00:00Z' } })).ok()).toBeTruthy();
+  const julyStories = page.waitForResponse(response => response.url().includes('/api/web/expenses/monthly?month=2026-04') && response.status() === 200);
+  await page.reload();
+  await julyStories;
+  await page.locator('.story-carousel-card').first().click();
+  const julyStory = page.getByRole('dialog');
+  await expect(julyStory).toContainText('July');
+  await expect(julyStory).not.toContainText('₹100,000');
+  await expect(page.getByTestId('view-included-commitments')).toHaveCount(0);
+});
+
+test('real API: delete a mistakenly created loan from its loan section', async ({ page, request }) => {
+  const fixture = await request.post('http://localhost:8080/test/e2e/session');
+  expect(fixture.ok()).toBeTruthy();
+  const { sessionToken } = await fixture.json();
+  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
+
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-15T09:00:00Z' } })).ok()).toBeTruthy();
+  await page.goto('/dashboard?month=2026-04');
+  await page.getByRole('button', { name: /Your money/ }).click();
+  const loans = page.getByTestId('loans-section');
+  await page.getByRole('button', { name: /Add another loan/ }).click();
+  await page.getByLabel('Loan name').fill('Mistaken personal loan');
+  await page.getByLabel('Loan type').selectOption('PERSONAL');
+  await page.getByLabel('Original loan principal').fill('30000');
+  await page.getByLabel('Monthly EMI amount').fill('5000');
+  await page.getByLabel('Total tenure in months').fill('6');
+  await page.getByLabel('First EMI due date').fill('2026-05-01');
+  await page.getByLabel('Bank / lender').fill('Example Bank');
+  await page.getByRole('button', { name: 'Add loan' }).click();
+  await expect(loans).toContainText('Mistaken personal loan');
+
+  const deleteResponse = page.waitForResponse(response => response.url().includes('/api/web/loans/') && response.request().method() === 'DELETE');
+  await loans.getByRole('button', { name: 'Delete Mistaken personal loan' }).click();
+  expect((await deleteResponse).status()).toBe(204);
+  await expect(loans).not.toContainText('Mistaken personal loan');
+  await expect(loans).toContainText('No active loans.');
+
+  await page.reload();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await expect(page.getByTestId('loans-section')).toContainText('No active loans.');
 });

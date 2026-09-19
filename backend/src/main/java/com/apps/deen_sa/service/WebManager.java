@@ -189,6 +189,9 @@ public class WebManager {
             String token, Long id, WebLoanService.LoanUpdateRequest request) {
         return loans.update(authentication.authenticate(token), id, request);
     }
+    public void deleteLoan(String token, Long id) {
+        loans.delete(authentication.authenticate(token), id);
+    }
     public WebLoanService.LoanResponse markLoanEmiPaid(String token, Long id, YearMonth month) {
         return loans.markPaid(authentication.authenticate(token), id, month);
     }

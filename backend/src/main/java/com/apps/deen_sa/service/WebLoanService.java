@@ -7,6 +7,7 @@ import com.apps.deen_sa.entity.UserLoanEntity;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.UserLoanRepository;
 import com.apps.deen_sa.repository.LoanEmiOccurrenceRepository;
+import com.apps.deen_sa.repository.UserActionItemRepository;
 import com.apps.deen_sa.entity.LoanEmiOccurrenceEntity;
 import com.apps.deen_sa.domain.LoanEmiOccurrenceStatus;
 import org.springframework.http.HttpStatus;
@@ -29,16 +30,17 @@ public class WebLoanService {
     private final MonthlyFinancialSnapshotService snapshots;
     private final Clock clock;
     private final LoanEmiOccurrenceRepository occurrences;
+    private final UserActionItemRepository actions;
 
     public WebLoanService(UserLoanRepository loans) {
-        this(loans, null, Clock.systemUTC(), null);
+        this(loans, null, Clock.systemUTC(), null, null);
     }
     public WebLoanService(UserLoanRepository loans, MonthlyFinancialSnapshotService snapshots, Clock clock) {
-        this(loans, snapshots, clock, null);
+        this(loans, snapshots, clock, null, null);
     }
     @Autowired
-    public WebLoanService(UserLoanRepository loans, MonthlyFinancialSnapshotService snapshots, Clock clock, LoanEmiOccurrenceRepository occurrences) {
-        this.loans = loans; this.snapshots = snapshots; this.clock = clock; this.occurrences = occurrences;
+    public WebLoanService(UserLoanRepository loans, MonthlyFinancialSnapshotService snapshots, Clock clock, LoanEmiOccurrenceRepository occurrences, UserActionItemRepository actions) {
+        this.loans = loans; this.snapshots = snapshots; this.clock = clock; this.occurrences = occurrences; this.actions = actions;
     }
 
     @Transactional
@@ -82,15 +84,38 @@ public class WebLoanService {
     }
 
     @Transactional
+    public void delete(AppUserEntity user, Long loanId) {
+        UserLoanEntity loan = loans.findByIdAndUserId(loanId, user.getId())
+                .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found"));
+        if (occurrences != null) occurrences.deleteByLoanId(loan.getId());
+        if (actions != null) actions.deleteByUserIdAndReferenceTypeAndReferenceId(user.getId(), "LOAN", loan.getId());
+        loans.delete(loan);
+        if (snapshots != null) snapshots.refreshCurrent(user);
+    }
+
+    @Transactional
     public LoanResponse markPaid(AppUserEntity user, Long loanId, java.time.YearMonth month) {
         UserLoanEntity loan = loans.findByIdAndUserId(loanId, user.getId()).orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found"));
         LocalDate dueMonth = month.atDay(1);
+        if (!isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this loan's tenure");
         LoanEmiOccurrenceEntity occurrence = occurrence(loan, dueMonth);
         if (occurrence.getStatus() == LoanEmiOccurrenceStatus.PAID) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_PAID", "This EMI has already been paid");
         occurrence.setStatus(LoanEmiOccurrenceStatus.PAID); occurrence.setPaidAmount(loan.getMonthlyEmiAmount());
         occurrence.setPaidAt(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())))); occurrence.setUpdatedAt(Instant.now(clock)); occurrences.save(occurrence);
+        if (dueMonth.equals(loan.getFirstEmiDueDate().plusMonths(loan.getTotalTenureMonths() - 1L).withDayOfMonth(1))) {
+            loan.setStatus(LoanStatus.CLOSED);
+            loan.setUpdatedAt(Instant.now(clock));
+            loans.save(loan);
+            if (actions != null) actions.deleteByUserIdAndReferenceTypeAndReferenceId(user.getId(), "LOAN", loan.getId());
+        }
         if (snapshots != null) snapshots.refreshCurrent(user);
         return response(loan);
+    }
+
+    private boolean isScheduledMonth(UserLoanEntity loan, LocalDate month) {
+        LocalDate first = loan.getFirstEmiDueDate().withDayOfMonth(1);
+        LocalDate last = first.plusMonths(loan.getTotalTenureMonths() - 1L);
+        return !month.isBefore(first) && !month.isAfter(last);
     }
 
     private LoanResponse response(UserLoanEntity loan) { return LoanResponse.from(loan, clock, visibleOccurrences(occurrenceResponses(loan))); }

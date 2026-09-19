@@ -9,11 +9,12 @@ Loans are user-entered planning records, separate from conversational expense ca
 | `GET /api/web/loans` | `{ loans }`, newest first. | Money view loan list. |
 | `POST /api/web/loans` | `{ loanName, loanType, lenderName, originalPrincipal, monthlyEmiAmount, totalTenureMonths, firstEmiDueDate, status?, notes? }`; returns loan with `201`; missing status means `ACTIVE`. | Add-loan form. |
 | `PATCH /api/web/loans/{id}` | One or more mutable create fields except status; returns updated loan. | Edit-loan form. |
+| `DELETE /api/web/loans/{id}` | Deletes the authenticated user's loan and its EMI occurrences; returns `204`. Any associated open loan action is removed and current commitment snapshots are refreshed. | Per-loan delete icon. |
 | `POST /api/web/loans/{id}/emi-occurrences/{month}/paid` | Marks the owned `YYYY-MM` occurrence paid using the server date and EMI amount; returns the loan with occurrences. A paid occurrence returns `409 EMI_ALREADY_PAID`. | Due-EMI control. |
 
-`loanType`: `HOME`, `VEHICLE`, `PERSONAL`, `EDUCATION`, `CREDIT_CARD_EMI`, `OTHER`. `status`: `ACTIVE` or `CLOSED`. Each response also contains server-calculated `completedEmiCount` and `remainingEmiCount`, using the active profile timezone and application clock; the frontend must render those values rather than its device clock. Amounts and tenure must be positive; name/lender are required and max 255 characters. Failures: `400 INVALID_LOAN`, `404 LOAN_NOT_FOUND`.
+`loanType`: `HOME`, `VEHICLE`, `PERSONAL`, `EDUCATION`, `CREDIT_CARD_EMI`, `OTHER`. `status`: `ACTIVE` or `CLOSED`. Each response also contains server-calculated `completedEmiCount` and `remainingEmiCount`, using the active profile timezone and application clock; the frontend must render those values rather than its device clock. Amounts and tenure must be positive; name/lender are required and max 255 characters. Failures: `400 INVALID_LOAN`, `404 LOAN_NOT_FOUND`. Delete never exposes or removes another user's loan.
 
-Monthly EMI occurrences are separate from the loan definition. A due occurrence has its own `UPCOMING`, `DUE`, `PAID`, or `SKIPPED` state, planned amount, due date, and optional paid amount/date. Marking an occurrence paid updates only that month and refreshes the Monthly Commitment progress; it does not close the loan unless it is the final EMI.
+Monthly EMI occurrences are separate from the loan definition. A due occurrence has its own `UPCOMING`, `DUE`, `PAID`, or `SKIPPED` state, planned amount, due date, and optional paid amount/date. Marking an occurrence paid updates only that month and refreshes the Monthly Commitment progress; marking the final scheduled EMI also sets the loan to `CLOSED`, removes any open closure action, and prevents later-month commitments. A month outside the loan's tenure is rejected with `400 INVALID_LOAN`.
 
 ## Actions
 

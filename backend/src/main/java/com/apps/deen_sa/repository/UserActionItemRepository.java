@@ -14,4 +14,5 @@ public interface UserActionItemRepository extends JpaRepository<UserActionItemEn
     boolean existsByUserIdAndActionTypeAndReferenceTypeAndReferenceIdAndStatus(
             Long userId, UserActionItemType actionType, String referenceType, Long referenceId,
             UserActionItemStatus status);
+    void deleteByUserIdAndReferenceTypeAndReferenceId(Long userId, String referenceType, Long referenceId);
 }

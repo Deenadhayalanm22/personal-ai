@@ -107,6 +107,7 @@ async function addFundThroughUi(page, query, amount, sipDay) {
 
 async function confirmSipThroughUi(page, fundId, allocationAmount) {
   const sip = page.getByTestId(`mutual-fund-sip-${fundId}`);
+  await expect(sip.locator('.due-reminder')).toBeVisible();
   await expect(sip).toContainText('Due now');
   await sip.getByRole('button', { name: 'Confirm allocation' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Was this SIP processed?' });
