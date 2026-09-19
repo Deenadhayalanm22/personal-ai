@@ -38,6 +38,7 @@
 5. **Given** confirmed holdings but unavailable latest NAV, **when** listed, **then** invested value remains available while current value and P&L are `null` rather than guessed.
 6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions. A just-confirmed allocation acknowledgement is shown only for the current Money session; after returning, the fund card stays clean. Fund details shows an edit wrench on every recorded opening holding, SIP, and lump-sum row, so the user corrects the exact investment; each correction recalculates holdings without changing the SIP plan. A SIP becomes due on its configured local SIP day; before that day it remains upcoming. A due SIP surfaced from Monthly Commitment is visually distinct and opens, scrolls to, and focuses its owning Mutual Funds row, while an already confirmed occurrence cannot be confirmed again.
 7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** it shows their completed allocation amount as read-only progress and links to Mutual Funds; a previously red due SIP evidence row and its review control become green after confirmation. It does not offer allocation controls or change the intended commitment total.
+8. **Given** a mistakenly created mutual fund, **when** the user selects its delete icon on the fund card, **then** only that user's fund and its associated investment records are removed, its commitment snapshot refreshes, and the fund remains absent after reload.
 
 ### Integration-test scenarios
 
@@ -45,6 +46,7 @@
 - Create a fund twice and assert conflict; confirm same SIP twice and assert transaction count is one.
 - Stub missing MFAPI NAV and assert detail/list expose null valuation fields.
 - Browser regression: [mutual-fund-commitment.spec.js](../../../frontend/e2e/mutual-fund-commitment.spec.js) creates three April-entered SIPs and opening holdings through the UI. It verifies the first occurrence begins in May, the 1 May red due state and focused review journey, editable confirmation, the return-to-story green confirmed state, the two further SIPs due on 12 May, the 21 May lump sum, and Fund-detail history. It also verifies a correction to an opening-holding history row persists, recalculates the holding, and leaves the ₹60,000 SIP runway unchanged.
+- Browser regression also creates and deletes a mistakenly added mutual fund, then verifies the card is absent immediately and after reload.
 
 ## FIN-017 — Add and view listed stock holdings
 

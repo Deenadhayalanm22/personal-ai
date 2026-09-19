@@ -15,4 +15,5 @@ public interface InvestmentTransactionRepository extends JpaRepository<Investmen
     List<InvestmentTransactionEntity> findByInvestmentIdInAndTransactionKindAndScheduledMonthAndStatus(
             List<Long> investmentIds, InvestmentTransactionKind transactionKind, LocalDate scheduledMonth,
             InvestmentTransactionStatus status);
+    void deleteByInvestmentId(Long investmentId);
 }

@@ -163,6 +163,14 @@ public class WebMutualFundService {
                         .map(InvestmentHistoryItem::from).toList());
     }
 
+    @Transactional
+    public void delete(AppUserEntity user, Long investmentId) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        transactions.deleteByInvestmentId(investment.getId());
+        investments.delete(investment);
+        if (snapshots != null) snapshots.refreshCurrent(user);
+    }
+
     private void createOpeningBalance(UserInvestmentEntity investment, ExistingHoldingRequest opening) {
         BigDecimal amount = amount(opening.totalInvestedAmount(), "totalInvestedAmount");
         BigDecimal units = positive(opening.currentUnits(), "currentUnits", 6);

@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,6 +112,17 @@ final class MutualFundScenarioDriver {
                 .andExpect(jsonPath("$.averageNav").value(85.940581))
                 .andExpect(jsonPath("$.currentNav").value(200))
                 .andExpect(jsonPath("$.units").value(814.516253));
+    }
+
+    void deleteFund() throws Exception {
+        mockMvc.perform(delete("/api/web/mutual-funds/{id}", investmentId).cookie(session))
+                .andExpect(status().isNoContent());
+    }
+
+    void assertFundAndTransactionsAreDeleted() throws Exception {
+        assertThat(investments.findById(investmentId)).isEmpty();
+        assertThat(transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId)).isEmpty();
+        portfolio().andExpect(jsonPath("$.mutualFunds").isEmpty());
     }
 
     private org.springframework.test.web.servlet.ResultActions portfolio() throws Exception {

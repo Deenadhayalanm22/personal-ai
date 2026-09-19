@@ -44,4 +44,14 @@ class MutualFundIntegrationIT {
         scenario.assertCombinedHoldingIsAccurate();
         scenario.assertFundCardShowsReturnsAndHoldingMetrics();
     }
+
+    @Test
+    void it_mutual_fund_002_deletesAMistakenlyCreatedFundAndItsTransactions() throws Exception {
+        MutualFundScenarioDriver scenario = new MutualFundScenarioDriver(mockMvc, users, investments, transactions, authentication, mfApi);
+        scenario.startUser();
+        scenario.addFundWithMonthlySipAndOpeningHolding();
+
+        scenario.deleteFund();
+        scenario.assertFundAndTransactionsAreDeleted();
+    }
 }

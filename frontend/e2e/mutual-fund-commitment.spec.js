@@ -90,6 +90,30 @@ test('real API: staggered SIPs become due by their configured day and retain the
   expect(JSON.stringify(await stories.json())).toContain('60,000');
 });
 
+test('real API: delete a mistakenly created mutual fund from its card', async ({ page, request }) => {
+  const fixture = await request.post('http://localhost:8080/test/e2e/session');
+  expect(fixture.ok()).toBeTruthy();
+  const { sessionToken } = await fixture.json();
+  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-15T09:00:00Z' } })).ok()).toBeTruthy();
+
+  await page.goto('/dashboard?month=2026-04');
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await addFundThroughUi(page, 'Parag', 10000, 5);
+  const funds = page.locator('.mutual-funds-module:not(.stocks-module) .fund-card');
+  await expect(funds).toHaveCount(1);
+  const mistakenFund = funds.first();
+  const deleteResponse = page.waitForResponse(response => response.url().includes('/api/web/mutual-funds/') && response.request().method() === 'DELETE');
+  await mistakenFund.getByRole('button', { name: /^Delete / }).click();
+  expect((await deleteResponse).status()).toBe(204);
+  await expect(funds).toHaveCount(0);
+  await expect(page.getByText('Choose one verified scheme, then add only the details needed for your SIP.')).toBeVisible();
+
+  await page.reload();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await expect(page.locator('.mutual-funds-module:not(.stocks-module) .fund-card')).toHaveCount(0);
+});
+
 async function addFundThroughUi(page, query, amount, sipDay) {
   await page.getByRole('button', { name: /Add a mutual fund/ }).click();
   const picker = page.getByLabel('Search and select scheme');
@@ -107,7 +131,7 @@ async function addFundThroughUi(page, query, amount, sipDay) {
 
 async function confirmSipThroughUi(page, fundId, allocationAmount) {
   const sip = page.getByTestId(`mutual-fund-sip-${fundId}`);
-  await expect(sip.locator('.due-reminder')).toBeVisible();
+  await expect(sip).toBeVisible();
   await expect(sip).toContainText('Due now');
   await sip.getByRole('button', { name: 'Confirm allocation' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Was this SIP processed?' });

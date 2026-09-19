@@ -221,6 +221,10 @@ public class WebManager {
         return mutualFunds.detail(authentication.authenticate(token), id);
     }
 
+    public void deleteMutualFund(String token, Long id) {
+        mutualFunds.delete(authentication.authenticate(token), id);
+    }
+
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(String token, String query) {
         authentication.authenticate(token);
         return stockMarketData.search(query);

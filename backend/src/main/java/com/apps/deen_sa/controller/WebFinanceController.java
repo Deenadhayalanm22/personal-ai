@@ -262,6 +262,13 @@ public class WebFinanceController {
         return webManager.mutualFund(token, id);
     }
 
+    @DeleteMapping("/mutual-funds/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMutualFund(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) {
+        webManager.deleteMutualFund(token, id);
+    }
+
     @GetMapping("/stocks/search")
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(
             @CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam("q") String query) {
