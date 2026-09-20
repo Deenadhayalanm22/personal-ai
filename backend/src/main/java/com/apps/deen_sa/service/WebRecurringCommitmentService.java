@@ -5,9 +5,12 @@ import com.apps.deen_sa.domain.RecurringCommitmentStatus;
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.UserRecurringCommitmentEntity;
+import com.apps.deen_sa.entity.RecurringCommitmentOccurrenceEntity;
+import com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus;
 import com.apps.deen_sa.exception.WebApiException;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.repository.UserRecurringCommitmentRepository;
+import com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,20 +27,48 @@ public class WebRecurringCommitmentService {
     private final UserRecurringCommitmentRepository commitments;
     private final FinancialTransactionRepository transactions;
     private final MonthlyFinancialSnapshotService snapshots;
+    private final RecurringCommitmentOccurrenceRepository occurrences;
+    private final java.time.Clock clock;
     public WebRecurringCommitmentService(UserRecurringCommitmentRepository commitments, FinancialTransactionRepository transactions,
-                                         MonthlyFinancialSnapshotService snapshots) {
-        this.commitments = commitments; this.transactions = transactions; this.snapshots = snapshots;
+                                         MonthlyFinancialSnapshotService snapshots, RecurringCommitmentOccurrenceRepository occurrences,
+                                         java.time.Clock clock) {
+        this.commitments = commitments; this.transactions = transactions; this.snapshots = snapshots; this.occurrences = occurrences; this.clock = clock;
     }
     @Transactional(readOnly = true)
-    public CommitmentListResponse list(AppUserEntity user) { return new CommitmentListResponse(commitments.findAllOwned(user.getId()).stream().map(this::response).toList()); }
+    public CommitmentListResponse list(AppUserEntity user) { return new CommitmentListResponse(commitments.findAllOwned(user.getId()).stream().map(value -> response(value, user)).toList()); }
     @Transactional
     public CommitmentResponse create(AppUserEntity user, CommitmentRequest request) {
         UserRecurringCommitmentEntity value = new UserRecurringCommitmentEntity(); value.setUser(user); apply(user, value, request, true);
-        commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value);
+        commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value, user);
     }
     @Transactional
     public CommitmentResponse update(AppUserEntity user, Long id, CommitmentRequest request) {
-        UserRecurringCommitmentEntity value = owned(user, id); apply(user, value, request, false); commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value);
+        UserRecurringCommitmentEntity value = owned(user, id); apply(user, value, request, false); commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value, user);
+    }
+    @Transactional
+    public void delete(AppUserEntity user, Long id) {
+        UserRecurringCommitmentEntity value = owned(user, id);
+        transactions.findByRecurringCommitmentId(value.getId()).forEach(transaction -> {
+            transaction.setRecurringCommitment(null);
+            transaction.setCommitmentMatchStatus(com.apps.deen_sa.domain.CommitmentMatchStatus.NOT_LINKED);
+        });
+        value.setLinkedTransactions(List.of());
+        occurrences.deleteByCommitmentId(value.getId());
+        commitments.delete(value);
+        snapshots.refreshCurrent(user);
+    }
+    @Transactional
+    public OccurrenceResponse markDone(AppUserEntity user, Long id, String month) {
+        UserRecurringCommitmentEntity commitment = owned(user, id);
+        YearMonth scheduled = parseMonth(month);
+        LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
+        LocalDate dueDate = commitment.getDueDay() == null ? null : scheduled.atDay(Math.min(commitment.getDueDay(), scheduled.lengthOfMonth()));
+        if (commitment.getStatus() != RecurringCommitmentStatus.ACTIVE || scheduled.atDay(1).isBefore(commitment.getEffectiveMonth())
+                || dueDate == null || !scheduled.equals(YearMonth.from(today)) || today.isBefore(dueDate)) throw invalid("Commitment is not due this month");
+        RecurringCommitmentOccurrenceEntity occurrence = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), scheduled.atDay(1)).orElseGet(RecurringCommitmentOccurrenceEntity::new);
+        occurrence.setCommitment(commitment); occurrence.setScheduledMonth(scheduled.atDay(1)); occurrence.setStatus(RecurringCommitmentOccurrenceStatus.COMPLETED);
+        occurrence.setCompletedAt(today); occurrence.setUpdatedAt(java.time.Instant.now(clock)); occurrences.saveAndFlush(occurrence);
+        return occurrenceResponse(commitment, scheduled, today);
     }
     @Transactional(readOnly = true)
     public CommitmentReviewResponse review(AppUserEntity user, String month) {
@@ -92,10 +123,24 @@ public class WebRecurringCommitmentService {
         return estimate.setScale(2, RoundingMode.HALF_UP);
     }
     private CommitmentResponse response(UserRecurringCommitmentEntity c) { return new CommitmentResponse(c.getId(), c.getLabel(), c.getAmountMode().name(), c.getPlanningAmount(), c.getDueDay(), c.getEffectiveMonth().toString().substring(0, 7), c.getStatus().name(), c.getCategory(), c.getSubcategory(), c.getLinkedTransactions().stream().map(FinancialTransactionEntity::getId).toList()); }
+    private CommitmentResponse response(UserRecurringCommitmentEntity c, AppUserEntity user) {
+        LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
+        return new CommitmentResponse(c.getId(), c.getLabel(), c.getAmountMode().name(), c.getPlanningAmount(), c.getDueDay(), c.getEffectiveMonth().toString().substring(0, 7), c.getStatus().name(), c.getCategory(), c.getSubcategory(), c.getLinkedTransactions().stream().map(FinancialTransactionEntity::getId).toList(), occurrenceResponse(c, YearMonth.from(today), today));
+    }
+    private OccurrenceResponse occurrenceResponse(UserRecurringCommitmentEntity c, YearMonth month, LocalDate today) {
+        LocalDate dueDate = c.getDueDay() == null ? null : month.atDay(Math.min(c.getDueDay(), month.lengthOfMonth()));
+        var saved = occurrences.findByCommitmentIdAndScheduledMonth(c.getId(), month.atDay(1)).orElse(null);
+        String status = saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED ? "COMPLETED"
+                : dueDate != null && !today.isBefore(dueDate) ? "DUE" : "UPCOMING";
+        return new OccurrenceResponse(month.toString(), dueDate, status, saved == null ? null : saved.getCompletedAt());
+    }
     public record CommitmentRequest(String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, Long sourceTransactionId, List<Long> transactionIds) { }
-    public record CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds) { }
+    public record CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds, OccurrenceResponse currentOccurrence) {
+        public CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds) { this(id, label, amountMode, planningAmount, dueDay, effectiveMonth, status, category, subcategory, transactionIds, null); }
+    }
     public record CommitmentListResponse(List<CommitmentResponse> items) { }
     public record CandidateResponse(Long transactionId, BigDecimal amount, LocalDate transactionDate, String category, String subcategory, List<CommitmentResponse> choices) { }
     public record CommitmentReviewResponse(List<CandidateResponse> items) { }
     public record ResolveRequest(Long commitmentId) { }
+    public record OccurrenceResponse(String month, LocalDate dueDate, String status, LocalDate completedAt) { }
 }

@@ -164,6 +164,10 @@ public class WebFinanceController {
     public WebRecurringCommitmentService.CommitmentResponse createCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestBody WebRecurringCommitmentService.CommitmentRequest request) { return webManager.createCommitment(token, request); }
     @PatchMapping("/recurring-commitments/{id}")
     public WebRecurringCommitmentService.CommitmentResponse updateCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebRecurringCommitmentService.CommitmentRequest request) { return webManager.updateCommitment(token, id, request); }
+    @DeleteMapping("/recurring-commitments/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { webManager.deleteCommitment(token, id); }
+    @PostMapping("/recurring-commitments/{id}/occurrences/{month}/done")
+    public WebRecurringCommitmentService.OccurrenceResponse completeCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @PathVariable YearMonth month) { return webManager.completeCommitment(token, id, month); }
     @GetMapping("/recurring-commitments/review")
     public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam(required = false) YearMonth month) { return webManager.commitmentReview(token, month); }
     @PostMapping("/recurring-commitments/review/{transactionId}") @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -38,6 +38,8 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 4. **Given** an active commitment, **when** the user edits its label, due day, projection method, category/reference context, or future default amount, **then** the change affects the selected effective month and later months only; previously stored snapshot projections remain historically explainable.
 5. **Given** an active commitment, **when** the user pauses it, ends it, skips a selected month, or supplies a one-month amount override, **then** the action has the stated scope and is visible in Manage commitments and story evidence. `Skip this month` does not end the commitment; `Pause` excludes it until resumed; `End` excludes it from its end month onward.
 6. **Given** another user's commitment, source transaction, or reference ID, **when** it is read or mutated, **then** it is not visible or changed and the API returns the appropriate ownership-safe `4xx` response.
+7. **Given** a user created a commitment by mistake, **when** they select Delete from Manage commitments, **then** the rule is removed, current and next projections refresh, and any transaction match is unlinked without deleting the transaction or rewriting historical snapshots.
+8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this is a user acknowledgement, leaves the planned total unchanged, and is visibly completed in both places.
 
 ### Commitment projection choices
 
@@ -60,6 +62,8 @@ When a new matching payment is recorded, the product may show a non-blocking sug
 - Change Rent from ₹15,000 effective October to ₹16,000; assert September retains ₹15,000 and October/current-or-next projections use ₹16,000 as appropriate.
 - Skip Electricity for one month, then assert it is excluded only from that month's projection and returns in the following month.
 - Attempt create/read/update against another user's transaction or commitment; assert no disclosure or change.
+- Edit a fixed commitment from ₹15,000 to ₹16,000 and delete it; assert the edited projection refreshes, deletion removes it from Manage commitments and the current story, and its original transaction remains.
+- Advance the clock past an active commitment’s due day; assert the story shows it as due, Review focuses the commitment, and marking it done refreshes the same occurrence as completed while preserving its planned amount.
 
 ## FIN-021 — Include commitments in Monthly Commitment stories
 

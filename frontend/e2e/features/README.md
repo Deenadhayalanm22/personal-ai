@@ -11,4 +11,5 @@ These `.feature` files are readable Gherkin specifications for the Playwright br
 | `loan-commitment.feature` | `../loan-commitment.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) |
 | `mutual-fund-commitment.feature` | `../mutual-fund-commitment.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) · [`mutual-funds` contract](../../../docs/contracts/mutual-funds.md) |
 | `etf-monthly-plan.feature` | `../stocks.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) · [`stocks` contract](../../../docs/contracts/stocks.md) |
+| `recurring-commitments.feature` | `../recurring-commitments.spec.js` | [`FIN-EPIC-006` recurring commitments](../../../docs/jira/personal-expense/FIN-EPIC-006-essential-commitments.md) · [`recurring commitments` contract](../../../docs/contracts/recurring-commitments.md) |
 | `stocks.feature` | `../stocks.spec.js` | [`FIN-EPIC-005` planning](../../../docs/jira/personal-expense/FIN-EPIC-005-planning.md) · [`stocks` contract](../../../docs/contracts/stocks.md) |

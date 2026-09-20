@@ -7,6 +7,8 @@ Recurring commitments are user-managed planning rules for repeatable obligations
 | `GET /api/web/recurring-commitments` | Returns `{ items }`. |
 | `POST /api/web/recurring-commitments` | Creates and returns a commitment with `201`. |
 | `PATCH /api/web/recurring-commitments/{id}` | Updates supplied fields and returns the commitment. |
+| `DELETE /api/web/recurring-commitments/{id}` | Deletes an owned commitment and returns `204`. Any transaction match to it is unlinked; past stored snapshots remain unchanged. |
+| `POST /api/web/recurring-commitments/{id}/occurrences/{YYYY-MM}/done` | Marks an owned, due current-month occurrence as done and returns its `{ month, dueDate, status, completedAt }`. It preserves the planned commitment amount. |
 | `GET /api/web/recurring-commitments/review?month=YYYY-MM` | Returns unresolved category/subcategory commitment candidates and eligible user-owned choices. |
 | `POST /api/web/recurring-commitments/review/{transactionId}` | Body `{ commitmentId }` links the candidate; `{ commitmentId: null }` records `NOT_LINKED`. Returns `204`. |
 
