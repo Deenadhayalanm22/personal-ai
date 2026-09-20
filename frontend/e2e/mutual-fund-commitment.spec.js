@@ -107,11 +107,73 @@ test('real API: delete a mistakenly created mutual fund from its card', async ({
   await mistakenFund.getByRole('button', { name: /^Delete / }).click();
   expect((await deleteResponse).status()).toBe(204);
   await expect(funds).toHaveCount(0);
-  await expect(page.getByText('Choose one verified scheme, then add only the details needed for your SIP.')).toBeVisible();
+  await expect(page.getByText('Choose one verified scheme, then add its existing holding, an SIP, or occasional lump sums whenever you need.')).toBeVisible();
 
   await page.reload();
   await page.getByRole('button', { name: /Your money/ }).click();
   await expect(page.locator('.mutual-funds-module:not(.stocks-module) .fund-card')).toHaveCount(0);
+});
+
+test('real API: a lump-sum-only fund stays out of commitments until its SIP is set from the bell', async ({ page, request }) => {
+  const fixture = await request.post('http://localhost:8080/test/e2e/session');
+  expect(fixture.ok()).toBeTruthy();
+  const { sessionToken } = await fixture.json();
+  const headers = { Cookie: `WEB_SESSION=${sessionToken}` };
+  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
+  const clock = instant => request.post('http://localhost:8080/test/e2e/clock', { data: { instant } });
+  expect((await clock('2026-04-15T09:00:00Z')).ok()).toBeTruthy();
+
+  await page.goto('/dashboard?month=2026-04');
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await page.getByRole('button', { name: /Add a mutual fund/ }).click();
+  await page.getByLabel('Search and select scheme').fill('Parag');
+  await page.locator('.scheme-menu button').first().click();
+  await page.locator('fieldset').filter({ hasText: 'Do you have an actual SIP' }).getByLabel('No').check();
+  await page.locator('fieldset').filter({ hasText: 'Do you already hold this fund' }).getByLabel('No').check();
+  await page.getByRole('button', { name: 'Add mutual fund' }).click();
+  await expect(page.getByText('Your fund is ready', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Done' }).click();
+  const fund = page.locator('.mutual-funds-module:not(.stocks-module) .fund-card').first();
+  await expect(fund).toContainText('No active SIP');
+
+  await page.locator('.money-modal > .close').click();
+  const aprilStories = await request.get('http://localhost:8080/api/web/expenses/monthly?month=2026-04', { headers });
+  expect(aprilStories.ok()).toBeTruthy();
+  expect(JSON.stringify(await aprilStories.json())).not.toContain('Parag Parikh');
+  await page.locator('.story-carousel-card').first().click();
+  await expect(page.getByTestId('view-included-commitments')).toHaveCount(0);
+  await page.getByRole('button', { name: /Back to stories/ }).click();
+
+  // Five days later the user decides to automate this fund; the first planned SIP is May.
+  expect((await clock('2026-04-20T09:00:00Z')).ok()).toBeTruthy();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await fund.getByRole('button', { name: /Set SIP for/ }).click();
+  const sipDialog = page.getByRole('dialog').filter({ hasText: 'Set up SIP for' });
+  await sipDialog.getByLabel('Monthly amount').fill('5000');
+  await sipDialog.getByLabel('SIP date').fill('5');
+  await sipDialog.getByLabel('Start month').fill('2026-05');
+  await sipDialog.getByRole('button', { name: 'Save SIP' }).click();
+  await expect(sipDialog).toHaveCount(0);
+  await expect(fund).toContainText(/1 SIP · ₹5K/);
+
+  expect((await clock('2026-05-05T09:00:00Z')).ok()).toBeTruthy();
+  await page.reload();
+  await page.locator('.story-carousel-card').first().click();
+  await page.getByTestId('view-included-commitments').click();
+  const response = await request.get('http://localhost:8080/api/web/mutual-funds', { headers });
+  const { mutualFunds } = await response.json();
+  const plannedFund = mutualFunds.find(item => Number(item.activeSip?.amount) === 5000);
+  const commitment = page.getByTestId(`included-mutual-fund-commitment-${plannedFund.id}`).locator('..');
+  await expect(commitment).toHaveClass(/due-commitment/);
+  await page.getByTestId(`included-mutual-fund-commitment-${plannedFund.id}`).click();
+  await confirmSipThroughUi(page, plannedFund.id, '5000');
+  const confirmed = await request.get('http://localhost:8080/api/web/mutual-funds', { headers });
+  expect(confirmed.ok()).toBeTruthy();
+  const { mutualFunds: confirmedFunds } = await confirmed.json();
+  expect(confirmedFunds.find(item => item.id === plannedFund.id).currentSip.status).toBe('CONFIRMED');
+  await page.reload();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await expect(page.getByTestId(`mutual-fund-sip-${plannedFund.id}`)).toHaveCount(0);
 });
 
 async function addFundThroughUi(page, query, amount, sipDay) {
@@ -124,7 +186,7 @@ async function addFundThroughUi(page, query, amount, sipDay) {
   await page.getByLabel('Start month').fill('2026-04');
   await page.getByLabel('Current units').fill('10');
   await page.getByLabel('Total amount invested').fill('1000');
-  await page.getByRole('button', { name: 'Create SIP plan' }).click();
+  await page.getByRole('button', { name: 'Add mutual fund' }).click();
   await expect(page.getByText('Your SIP is set up', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
 }

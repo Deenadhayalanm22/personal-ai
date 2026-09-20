@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -47,7 +48,7 @@ final class MutualFundScenarioDriver {
 
     void startUser() {
         owner = new AppUserEntity();
-        owner.setChannel("WHATSAPP"); owner.setExternalUserId("mutual-fund-owner"); owner.setCreatedAt(Instant.now());
+        owner.setChannel("WHATSAPP"); owner.setExternalUserId("mutual-fund-owner-" + UUID.randomUUID()); owner.setCreatedAt(Instant.now());
         owner = users.saveAndFlush(owner);
         when(authentication.authenticate("mutual-fund-session")).thenReturn(owner);
         when(mfApi.latestNav(anyString())).thenReturn(Optional.of(new BigDecimal("200.00")));
@@ -64,6 +65,26 @@ final class MutualFundScenarioDriver {
                 .andExpect(jsonPath("$.schemeCode").value("122639"))
                 .andExpect(jsonPath("$.schemeName").value("Parag Parikh Flexi Cap Fund - Direct Plan - Growth"));
         investmentId = investments.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getId();
+    }
+
+    void addFundWithoutSip() throws Exception {
+        mockMvc.perform(post("/api/web/mutual-funds").cookie(session).contentType(MediaType.APPLICATION_JSON).content("""
+                {"schemeCode":"122639","schemeName":"Parag Parikh Flexi Cap Fund - Direct Plan - Growth"}
+                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.activeSip").doesNotExist());
+        investmentId = investments.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getId();
+    }
+
+    void addSipToExistingFund() throws Exception {
+        mockMvc.perform(post("/api/web/mutual-funds/{id}/sip", investmentId).cookie(session)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"amount":25000,"day":5,"startMonth":"2026-10"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeSip.amount").value(25000))
+                .andExpect(jsonPath("$.activeSip.day").value(5));
+        assertThat(transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId)).hasSize(1);
     }
 
     void assertOpeningHoldingAndDueSip() throws Exception {

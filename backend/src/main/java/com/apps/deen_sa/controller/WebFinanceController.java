@@ -269,6 +269,13 @@ public class WebFinanceController {
         webManager.deleteMutualFund(token, id);
     }
 
+    @PostMapping("/mutual-funds/{id}/sip")
+    public WebMutualFundService.MutualFundResponse createMutualFundSip(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @RequestBody WebMutualFundService.SipPlanRequest request) {
+        return webManager.createMutualFundSip(token, id, request);
+    }
+
     @GetMapping("/stocks/search")
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(
             @CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam("q") String query) {
@@ -288,6 +295,27 @@ public class WebFinanceController {
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
         return webManager.stocks(token);
     }
+
+    @GetMapping("/stocks/{id}")
+    public WebStockService.StockDetailResponse stock(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) {
+        return webManager.stock(token, id);
+    }
+
+    @DeleteMapping("/stocks/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteStock(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) {
+        webManager.deleteStock(token, id);
+    }
+
+    @PostMapping("/stocks/{id}/monthly-plan")
+    public WebStockService.StockResponse createStockMonthlyPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id, @RequestBody WebStockService.MonthlyPlanRequest request) { return webManager.createStockMonthlyPlan(token, id, request); }
+
+    @PostMapping("/stocks/{id}/monthly-plan-occurrences/{month}/confirm")
+    public WebStockService.MonthlyPlanOccurrenceResponse confirmStockMonthlyPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id, @PathVariable YearMonth month, @RequestBody WebStockService.MonthlyPlanConfirmation request) { return webManager.confirmStockMonthlyPlan(token, id, month, request); }
 
     @PostMapping("/mutual-funds/{id}/lump-sums")
     @ResponseStatus(HttpStatus.CREATED)

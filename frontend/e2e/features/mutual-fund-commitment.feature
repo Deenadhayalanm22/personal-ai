@@ -36,3 +36,15 @@ Feature: Monthly Commitment mutual-fund SIP progress
     When the user corrects a historical investment amount
     Then that fund's holding recalculates without changing the ₹60,000 monthly SIP commitment
     And the June runway shows all three SIPs as UPCOMING for ₹60,000 in total
+
+  Scenario: Add a lump-sum-only fund and set up its first SIP later
+    Given the backend clock is 15 Apr 2026
+    When the user adds a verified mutual fund and answers No to having an actual SIP
+    Then the fund accepts occasional lump sums but is absent from Monthly Commitment
+
+    When the backend clock moves forward five days
+    And the user selects the fund's SIP bell and schedules ₹5,000 for 5 May
+    Then the new SIP is included in the May Monthly Commitment runway
+    When the backend clock moves to 5 May 2026
+    Then Monthly Commitment marks the SIP due as a reminder
+    And the user can confirm the investment from the owning fund's due action

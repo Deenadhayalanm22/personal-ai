@@ -51,7 +51,7 @@ public class WebMutualFundService {
         investment.setExternalInstrumentId(requiredText(request.schemeCode(), "schemeCode"));
         investment.setDisplayNameSnapshot(requiredText(request.schemeName(), "schemeName"));
         investment.setIsinSnapshot(optionalText(request.isin()));
-        applySip(investment, request.monthlySipAmount(), request.sipDay(), request.startMonth());
+        applySipIfPresent(investment, request.monthlySipAmount(), request.sipDay(), request.startMonth());
         try {
             investment = investments.save(investment);
         } catch (org.springframework.dao.DataIntegrityViolationException duplicate) {
@@ -62,6 +62,19 @@ public class WebMutualFundService {
         MutualFundResponse response = response(investment);
         if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh the monthly financial snapshot atomically with its investment source.
         return response;
+    }
+
+    /** Adds a monthly SIP to an already tracked lump-sum-only fund. */
+    @Transactional
+    public MutualFundResponse createSip(AppUserEntity user, Long investmentId, SipPlanRequest request) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        if (request == null) throw invalid("SIP details are required");
+        if (investment.getSipStatus() == InvestmentSipStatus.ACTIVE) throw invalid("A SIP is already configured for this mutual fund");
+        applySip(investment, request.amount(), request.day(), request.startMonth());
+        investments.save(investment);
+        createInitialSipOccurrenceIfNeeded(investment);
+        if (snapshots != null) snapshots.refreshCurrent(user);
+        return response(investment);
     }
 
     @Transactional
@@ -233,6 +246,11 @@ public class WebMutualFundService {
         investment.setSipStatus(InvestmentSipStatus.ACTIVE);
     }
 
+    private void applySipIfPresent(UserInvestmentEntity investment, BigDecimal amount, Integer day, YearMonth startMonth) {
+        if (amount == null && day == null && startMonth == null) return;
+        applySip(investment, amount, day, startMonth);
+    }
+
     private InvestmentTransactionEntity confirmed(UserInvestmentEntity investment, InvestmentTransactionKind kind,
                                                    BigDecimal rawAmount, LocalDate date, BigDecimal rawNav,
                                                    BigDecimal rawUnits, InvestmentCalculationSource source) {
@@ -292,6 +310,7 @@ public class WebMutualFundService {
     public record MutualFundCreateRequest(String schemeCode, String schemeName, String isin, BigDecimal monthlySipAmount,
                                           Integer sipDay, YearMonth startMonth,
                                           ExistingHoldingRequest existingHolding) { }
+    public record SipPlanRequest(BigDecimal amount, Integer day, YearMonth startMonth) { }
     public record ExistingHoldingRequest(BigDecimal currentUnits, BigDecimal totalInvestedAmount) { }
     public record LumpSumRequest(BigDecimal amount, LocalDate transactionDate, BigDecimal nav, BigDecimal units,
                                  InvestmentCalculationSource calculationSource) { }

@@ -87,10 +87,10 @@ public class MonthlyFinancialSnapshotService {
     private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {
         List<Source> debt = loans.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(loan -> hasEmiIn(loan, month))
                 .map(loan -> loanSource(loan, month)).toList();
-        List<Source> investing = investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(investment -> hasSipIn(investment, month))
-                .map(investment -> new Source("MUTUAL_FUND_SIP", String.valueOf(investment.getId()), investment.getDisplayNameSnapshot(), investment.getSipAmount(),
+        List<Source> investing = investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(investment -> hasRecurringInvestmentIn(investment, month))
+                .map(investment -> new Source(investment.getAssetType() == InvestmentAssetType.STOCK ? "STOCK_MONTHLY_PLAN" : "MUTUAL_FUND_SIP", String.valueOf(investment.getId()), investment.getDisplayNameSnapshot(), investment.getSipAmount(),
                         investment.getSipDay() == null ? null : month.atDay(Math.min(investment.getSipDay(), month.lengthOfMonth())),
-                        "Mutual fund SIP", "Active SIP", null, null, null)).toList();
+                        investment.getAssetType() == InvestmentAssetType.STOCK ? "ETF monthly plan" : "Mutual fund SIP", "Active recurring investment", null, null, null)).toList();
         List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
                                 && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
@@ -132,8 +132,8 @@ public class MonthlyFinancialSnapshotService {
         YearMonth first = YearMonth.from(loan.getFirstEmiDueDate());
         return !month.isBefore(first) && !month.isAfter(first.plusMonths(loan.getTotalTenureMonths() - 1L));
     }
-    private boolean hasSipIn(UserInvestmentEntity investment, YearMonth month) {
-        return investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
+    private boolean hasRecurringInvestmentIn(UserInvestmentEntity investment, YearMonth month) {
+        return (investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND || investment.getAssetType() == InvestmentAssetType.STOCK) && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
                 && investment.getSipAmount() != null && investment.getSipStartMonth() != null && !month.isBefore(YearMonth.from(investment.getSipStartMonth()));
     }
     /** A due-month projection is the statement ending before that due date; transaction rows remain actual spending, never another expense. */

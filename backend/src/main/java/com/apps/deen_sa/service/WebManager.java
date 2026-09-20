@@ -225,6 +225,11 @@ public class WebManager {
         mutualFunds.delete(authentication.authenticate(token), id);
     }
 
+    public WebMutualFundService.MutualFundResponse createMutualFundSip(String token, Long id,
+                                                                         WebMutualFundService.SipPlanRequest request) {
+        return mutualFunds.createSip(authentication.authenticate(token), id, request);
+    }
+
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(String token, String query) {
         authentication.authenticate(token);
         return stockMarketData.search(query);
@@ -237,6 +242,13 @@ public class WebManager {
     public WebStockService.StockListResponse stocks(String token) {
         return stocks.list(authentication.authenticate(token));
     }
+    public WebStockService.StockDetailResponse stock(String token, Long id) { return stocks.detail(authentication.authenticate(token), id); }
+
+    public void deleteStock(String token, Long id) {
+        stocks.delete(authentication.authenticate(token), id);
+    }
+    public WebStockService.StockResponse createStockMonthlyPlan(String token, Long id, WebStockService.MonthlyPlanRequest request) { return stocks.createMonthlyPlan(authentication.authenticate(token), id, request); }
+    public WebStockService.MonthlyPlanOccurrenceResponse confirmStockMonthlyPlan(String token, Long id, java.time.YearMonth month, WebStockService.MonthlyPlanConfirmation request) { return stocks.confirmMonthlyPlan(authentication.authenticate(token), id, month, request); }
 
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,
                                                                          WebMutualFundService.LumpSumRequest request) {

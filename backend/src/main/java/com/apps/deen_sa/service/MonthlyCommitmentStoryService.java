@@ -190,7 +190,7 @@ public class MonthlyCommitmentStoryService {
     /** Portfolio progress is derived from confirmed SIP allocations; planned totals remain snapshot-owned. */
     private BigDecimal completedSipTotal(MonthlyFinancialSnapshotService.Bucket investing, YearMonth month) {
         if (investmentTransactions == null) return BigDecimal.ZERO;
-        List<Long> ids = investing.sources().stream().filter(source -> "MUTUAL_FUND_SIP".equals(source.sourceType()))
+        List<Long> ids = investing.sources().stream().filter(source -> "MUTUAL_FUND_SIP".equals(source.sourceType()) || "STOCK_MONTHLY_PLAN".equals(source.sourceType()))
                 .map(source -> Long.valueOf(source.sourceId())).toList();
         if (ids.isEmpty()) return BigDecimal.ZERO;
         return investmentTransactions.findByInvestmentIdInAndTransactionKindAndScheduledMonthAndStatus(ids,

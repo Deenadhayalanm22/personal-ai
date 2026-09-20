@@ -31,7 +31,7 @@
 
 ### Acceptance criteria
 
-1. **Given** a scheme chosen from search, **when** a fund is created, **then** scheme code/name are stored and a duplicate scheme for the user is rejected with `409 INVESTMENT_EXISTS`.
+1. **Given** a scheme chosen from search, **when** a fund is created with or without a SIP, **then** scheme code/name are stored and a duplicate scheme for the user is rejected with `409 INVESTMENT_EXISTS`. A fund without a SIP supports occasional lump sums and exposes a later SIP-setup action.
 2. **Given** a configured SIP, **when** it has amount, day 1–28, and start month, **then** creation yields an initial scheduled/due occurrence and the scheduler avoids duplicate current-month occurrences.
 3. **Given** a SIP or lump-sum confirmation with positive amount/date and NAV or units, **when** saved, **then** missing NAV/units are calculated and the transaction is `CONFIRMED` with recorded calculation source.
 4. **Given** a due SIP already confirmed or skipped, **when** confirmation is retried, **then** it is rejected and no second investment transaction is created.
@@ -47,6 +47,7 @@
 - Stub missing MFAPI NAV and assert detail/list expose null valuation fields.
 - Browser regression: [mutual-fund-commitment.spec.js](../../../frontend/e2e/mutual-fund-commitment.spec.js) creates three April-entered SIPs and opening holdings through the UI. It verifies the first occurrence begins in May, the 1 May red due state and focused review journey, editable confirmation, the return-to-story green confirmed state, the two further SIPs due on 12 May, the 21 May lump sum, and Fund-detail history. It also verifies a correction to an opening-holding history row persists, recalculates the holding, and leaves the ₹60,000 SIP runway unchanged.
 - Browser regression also creates and deletes a mistakenly added mutual fund, then verifies the card is absent immediately and after reload.
+- Browser regression creates a fund with No SIP, verifies that it is absent from Monthly Commitment, then configures a ₹5,000 SIP from its bell five days later and confirms the resulting due reminder from the fund card.
 
 ## FIN-017 — Add and view listed stock holdings
 
@@ -57,13 +58,31 @@
 1. **Given** a signed-in user searches at least two characters, **when** matching listed equities are returned, **then** the browser can select a symbol/name/exchange from the stock-search response.
 2. **Given** a selected stock with positive share quantity and total invested amount, **when** created, **then** it is stored as the user's opening holding; a duplicate symbol is rejected with `409 STOCK_EXISTS`.
 3. **Given** a tracked stock, **when** it is listed, **then** its current value and P&L use the latest market price; if price lookup is unavailable, invested value remains visible and valuation fields are `null`.
-4. **Given** the initial stock release, **when** a holding is viewed, **then** the portal supports add and view only—there are no edit, delete, buy, or sell operations.
+4. **Given** a mistakenly added stock, **when** the user selects its delete icon, **then** only that user's holding and opening transaction are removed, and the portfolio refreshes immediately and remains absent after reload. The portal does not support edit, buy, or sell operations.
 5. **Given** a market-data provider change, **when** the replacement is implemented, **then** portfolio services remain dependent on `StockMarketDataAdapter`, not a Yahoo-specific client.
 
 ### Integration-test scenarios
 
 - Search, create, and list a stock; assert quantity, invested value, current value, P&L, and duplicate handling.
 - Stub an unavailable price and assert that the holding remains listed with null valuation fields.
+
+- Browser regression: [stocks.spec.js](../../../frontend/e2e/stocks.spec.js) adds ITC and Reliance through the stock picker, then verifies each latest market price and the ₹11,755 combined portfolio value.
+- Browser regression also deletes a mistakenly added stock and verifies it is absent immediately and after reload.
+
+## FIN-023 — Schedule ETF monthly investments
+
+**Status:** In Progress · **Priority:** P1
+
+### Acceptance criteria
+
+1. **Given** an existing stock/ETF holding, **when** the user saves a positive monthly amount, day 1–28, and start month, **then** an active monthly ETF plan is persisted and contributes once to Planned investing from its start month.
+2. **Given** the plan's configured local day arrives, **when** the user opens Stocks or Monthly Commitment, **then** its current occurrence is due and can be reviewed from either view.
+3. **Given** a due occurrence, **when** the user confirms amount and executed market price, **then** units are calculated when absent, the occurrence becomes confirmed, the holding valuation is recalculated, and Monthly Commitment reports the allocation as completed without changing its intended total.
+4. **Given** a stock holding with confirmed investments, **when** the user selects `View details`, **then** the stock-details window lists its opening holding and confirmed monthly ETF purchases with their date, amount, execution price, and units.
+
+### Browser test scenario
+
+- [ETF monthly-plan browser regression](../../../frontend/e2e/stocks.spec.js): add an ETF holding on 15 April, verify its monthly-plan bell, configure ₹5,000 for 1 May, review the red due commitment from Monthly Commitment, confirm the actual amount and price, and verify the completed commitment plus stock investment history.
 
 ## FIN-018 — Pin the live monthly commitment story
 
@@ -73,7 +92,7 @@
 
 1. **Given** any signed-in profile, **when** its existing monthly Stories endpoint is read, **then** `MONTHLY_COMMITMENT` is the first story, including when no generated expense-story snapshot exists.
 2. **Given** an active loan whose EMI tenure includes the current month, **when** the story is read, **then** its EMI is included once in the live monthly commitment total; closed, future, and elapsed-tenure loans are excluded.
-3. **Given** an active mutual-fund SIP whose start month has arrived, **when** the story is read, **then** its SIP amount is included once; stock holdings are not included.
+3. **Given** an active mutual-fund SIP or ETF monthly plan whose start month has arrived, **when** the story is read, **then** its planned amount is included once; ordinary stock holdings are not included.
 4. **Given** a loan or SIP is added, changed, or confirmed, **when** Stories is reloaded, **then** the current and next-month runway reflect current source records without waiting for the money-story snapshot scheduler.
 5. **Given** a loan or SIP source write, **when** it commits, **then** the current and next month's canonical `monthly_financial_snapshot` rows are rebuilt in the same transaction with semantic commitment buckets and source evidence; the story reads those snapshots rather than recalculating source records on every request.
 6. **Given** the Monthly Commitment story includes one or more sources, **when** the user opens `View included commitments`, **then** they see the story-scoped source list before choosing whether to review a source in its owning section.

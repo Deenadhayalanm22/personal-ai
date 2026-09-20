@@ -78,6 +78,7 @@ export const searchMutualFunds = (query) => request(`/api/web/mutual-funds/searc
 export const getMutualFunds = () => request('/api/web/mutual-funds');
 export const getMutualFund = (id) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}`);
 export const createMutualFund = (fund) => request('/api/web/mutual-funds', { method: 'POST', body: JSON.stringify(fund) });
+export const createMutualFundSip = (id, plan) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip`, { method: 'POST', body: JSON.stringify(plan) });
 export const deleteMutualFund = (id) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const createMutualFundLumpSum = (id, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/lump-sums`, { method: 'POST', body: JSON.stringify(investment) });
 export const confirmSipOccurrence = (id, month, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip-occurrences/${encodeURIComponent(month)}/confirm`, { method: 'POST', body: JSON.stringify(investment) });
@@ -85,7 +86,11 @@ export const updateSipOccurrence = (id, month, investment) => request(`/api/web/
 export const updateMutualFundTransaction = (id, transactionId, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/transactions/${encodeURIComponent(transactionId)}`, { method: 'PATCH', body: JSON.stringify(investment) });
 export const searchStocks = (query) => request(`/api/web/stocks/search?q=${encodeURIComponent(query)}`);
 export const getStocks = () => request('/api/web/stocks');
+export const getStock = (id) => request(`/api/web/stocks/${encodeURIComponent(id)}`);
 export const createStock = (stock) => request('/api/web/stocks', { method: 'POST', body: JSON.stringify(stock) });
+export const deleteStock = (id) => request(`/api/web/stocks/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const createStockMonthlyPlan = (id, plan) => request(`/api/web/stocks/${encodeURIComponent(id)}/monthly-plan`, { method: 'POST', body: JSON.stringify(plan) });
+export const confirmStockMonthlyPlan = (id, month, confirmation) => request(`/api/web/stocks/${encodeURIComponent(id)}/monthly-plan-occurrences/${encodeURIComponent(month)}/confirm`, { method: 'POST', body: JSON.stringify(confirmation) });
 export const getIncomeOutlook = () => request('/api/web/income-outlook');
 export const saveIncomeProfile = (profile) => request('/api/web/income-outlook/salary', { method: 'PUT', body: JSON.stringify(profile) });
 

@@ -5,6 +5,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -15,6 +16,7 @@ import java.util.Optional;
 
 /** Yahoo Finance implementation of the replaceable stock market-data adapter. */
 @Service
+@Profile("!e2e")
 public class YahooFinanceStockMarketDataAdapter implements StockMarketDataAdapter {
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     private final RestTemplate http;

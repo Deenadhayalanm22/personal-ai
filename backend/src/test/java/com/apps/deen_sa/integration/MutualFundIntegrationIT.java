@@ -54,4 +54,13 @@ class MutualFundIntegrationIT {
         scenario.deleteFund();
         scenario.assertFundAndTransactionsAreDeleted();
     }
+
+    @Test
+    void it_mutual_fund_003_tracksLumpSumOnlyFundBeforeItsSipIsConfigured() throws Exception {
+        MutualFundScenarioDriver scenario = new MutualFundScenarioDriver(mockMvc, users, investments, transactions, authentication, mfApi);
+        scenario.startUser();
+
+        scenario.addFundWithoutSip();
+        scenario.addSipToExistingFund();
+    }
 }
