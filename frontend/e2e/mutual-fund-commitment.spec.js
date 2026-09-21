@@ -45,8 +45,8 @@ test('real API: staggered SIPs become due by their configured day and retain the
   await page.locator('.story-carousel-card').first().click();
   await page.getByTestId('view-included-commitments').click();
   const confirmedSmallCapRow = page.getByTestId(`included-mutual-fund-commitment-${bySip(10000).id}`).locator('..');
-  await expect(confirmedSmallCapRow).toHaveClass(/confirmed-commitment/);
-  await expect(confirmedSmallCapRow.getByRole('button', { name: 'Review' })).toHaveCSS('color', 'rgb(34, 104, 79)');
+  await expect(confirmedSmallCapRow).not.toHaveClass(/due-commitment/);
+  await expect(confirmedSmallCapRow.getByRole('button', { name: 'Review' })).toHaveCSS('color', 'rgb(38, 114, 184)');
   await page.getByRole('dialog').filter({ hasText: 'What makes up this month' }).getByRole('button', { name: '×' }).click();
 
   expect((await clock('2026-05-12T09:00:00Z')).ok()).toBeTruthy();

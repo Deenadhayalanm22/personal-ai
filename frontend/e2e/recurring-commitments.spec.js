@@ -83,5 +83,60 @@ test('real API: a due commitment is red in the story and can be marked done', as
   await page.locator('.money-modal > .close').click();
   await page.locator('.story-carousel-card').first().click();
   await page.getByTestId('view-included-commitments').click();
-  await expect(page.getByTestId(/included-recurring-commitment-/).locator('..')).toHaveClass(/confirmed-commitment/);
+  await expect(page.getByTestId(/included-recurring-commitment-/).locator('..')).not.toHaveClass(/due-commitment/);
+});
+
+test('real API: commitments added after a due date wait until their next monthly occurrence', async ({ page, request }) => {
+  const fixture = await request.post('http://localhost:8080/test/e2e/session');
+  expect(fixture.ok()).toBeTruthy();
+  const { sessionToken } = await fixture.json();
+  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-15T09:00:00Z' } })).ok()).toBeTruthy();
+  await page.goto('/dashboard?month=2026-04');
+  await page.getByRole('button', { name: /Your money/ }).click();
+  const commitments = page.getByTestId('monthly-commitments-section');
+
+  for (const [label, dueDay] of [['First-day bill', '1'], ['Tenth-day bill', '10'], ['Twenty-fifth bill', '25']]) {
+    await commitments.getByRole('button', { name: '＋ Add a monthly commitment' }).click();
+    await page.getByLabel('Name').fill(label);
+    await page.getByLabel('Monthly planning amount').fill('100');
+    await page.getByLabel('Expected day Optional').fill(dueDay);
+    await page.getByRole('button', { name: 'Add commitment' }).click();
+  }
+  await expect(commitments).toContainText('Twenty-fifth bill');
+
+  async function openCurrentEvidence() {
+    const storiesResponse = page.waitForResponse(response => response.url().includes('/api/web/expenses/monthly?month=2026-04') && response.status() === 200);
+    await page.reload();
+    await storiesResponse;
+    await page.locator('.story-carousel-card').first().click();
+    await page.getByTestId('view-included-commitments').click();
+  }
+
+  await page.locator('.money-modal > .close').click();
+  await openCurrentEvidence();
+  await expect(page.locator('.evidence-row.due-commitment')).toHaveCount(0);
+
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-25T09:00:00Z' } })).ok()).toBeTruthy();
+  await openCurrentEvidence();
+  const aprilDue = page.locator('.evidence-row.due-commitment');
+  await expect(aprilDue).toHaveCount(1);
+  await expect(aprilDue).toContainText('Twenty-fifth bill');
+  await aprilDue.getByRole('button', { name: 'Review' }).click();
+  await page.getByRole('button', { name: 'Mark commitment done' }).click();
+  await page.locator('.money-modal > .close').click();
+
+  // April has 30 days. At the month end, the two past-at-creation commitments remain non-due.
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-30T09:00:00Z' } })).ok()).toBeTruthy();
+  await openCurrentEvidence();
+  await expect(page.locator('.evidence-row.due-commitment')).toHaveCount(0);
+
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-05-01T09:00:00Z' } })).ok()).toBeTruthy();
+  await openCurrentEvidence();
+  const mayDue = page.locator('.evidence-row.due-commitment');
+  await expect(mayDue).toHaveCount(1);
+  await expect(mayDue).toContainText('First-day bill');
+  await mayDue.getByRole('button', { name: 'Review' }).click();
+  await page.getByRole('button', { name: 'Mark commitment done' }).click();
+  await expect(commitments.locator('.loan-row', { hasText: 'First-day bill' })).toContainText('done');
 });

@@ -20,7 +20,7 @@ Feature: Monthly Commitment mutual-fund SIP progress
     Then the user is taken to, scrolled to, and focused on the owning mutual-fund card
     When the user confirms its May allocation with an editable amount, date, and NAV
     Then the May Small cap SIP is persisted as CONFIRMED
-    And returning to View included commitments shows its row and Review control in green
+    And returning to View included commitments removes the red due highlight and keeps the row neutral
 
     When the backend clock moves to 12 May 2026
     And the user opens Monthly Commitment

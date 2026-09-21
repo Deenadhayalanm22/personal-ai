@@ -14,3 +14,13 @@ Feature: Manage monthly commitments
     Then Internet bill is red in the included commitments list
     When the user reviews it and marks the commitment done
     Then the Manage commitments row and story evidence show it as completed
+
+  Scenario: Do not create a retroactive due reminder
+    Given it is 15 April and the user adds commitments due on the 1st, 10th, and 25th
+    Then none of those commitments is due immediately
+    When the date reaches 25 April
+    Then only the 25th commitment is due and can be completed
+    When the date reaches 30 April
+    Then no commitment is due
+    When the date reaches 1 May
+    Then only the first-day commitment is due and can be completed

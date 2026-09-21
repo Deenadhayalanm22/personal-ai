@@ -39,7 +39,8 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 5. **Given** an active commitment, **when** the user pauses it, ends it, skips a selected month, or supplies a one-month amount override, **then** the action has the stated scope and is visible in Manage commitments and story evidence. `Skip this month` does not end the commitment; `Pause` excludes it until resumed; `End` excludes it from its end month onward.
 6. **Given** another user's commitment, source transaction, or reference ID, **when** it is read or mutated, **then** it is not visible or changed and the API returns the appropriate ownership-safe `4xx` response.
 7. **Given** a user created a commitment by mistake, **when** they select Delete from Manage commitments, **then** the rule is removed, current and next projections refresh, and any transaction match is unlinked without deleting the transaction or rewriting historical snapshots.
-8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this is a user acknowledgement, leaves the planned total unchanged, and is visibly completed in both places.
+8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this acknowledgement leaves the planned total unchanged and removes the due highlight without applying a separate completion colour.
+9. **Given** a user creates a commitment after its configured due day in the current month, **when** they open Monthly Commitment, **then** it remains a planning projection but is never shown as a retroactive current-month due reminder. Its first due reminder is on that due day in the next month.
 
 ### Commitment projection choices
 
@@ -64,6 +65,7 @@ When a new matching payment is recorded, the product may show a non-blocking sug
 - Attempt create/read/update against another user's transaction or commitment; assert no disclosure or change.
 - Edit a fixed commitment from ₹15,000 to ₹16,000 and delete it; assert the edited projection refreshes, deletion removes it from Manage commitments and the current story, and its original transaction remains.
 - Advance the clock past an active commitment’s due day; assert the story shows it as due, Review focuses the commitment, and marking it done refreshes the same occurrence as completed while preserving its planned amount.
+- On 15 April, add commitments due on the 1st, 10th, and 25th; assert none are retroactively due. Advance to the 25th and complete only that occurrence, then to 30 April and assert no due reminder remains. Advance to 1 May and assert only the first-day commitment is due and can be completed.
 
 ## FIN-021 — Include commitments in Monthly Commitment stories
 

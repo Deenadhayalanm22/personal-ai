@@ -39,6 +39,7 @@ public class WebRecurringCommitmentService {
     @Transactional
     public CommitmentResponse create(AppUserEntity user, CommitmentRequest request) {
         UserRecurringCommitmentEntity value = new UserRecurringCommitmentEntity(); value.setUser(user); apply(user, value, request, true);
+        value.setCreatedAt(java.time.Instant.now(clock));
         commitments.saveAndFlush(value); snapshots.refreshCurrent(user); return response(value, user);
     }
     @Transactional
@@ -64,11 +65,11 @@ public class WebRecurringCommitmentService {
         LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
         LocalDate dueDate = commitment.getDueDay() == null ? null : scheduled.atDay(Math.min(commitment.getDueDay(), scheduled.lengthOfMonth()));
         if (commitment.getStatus() != RecurringCommitmentStatus.ACTIVE || scheduled.atDay(1).isBefore(commitment.getEffectiveMonth())
-                || dueDate == null || !scheduled.equals(YearMonth.from(today)) || today.isBefore(dueDate)) throw invalid("Commitment is not due this month");
+                || dueDate == null || !scheduled.equals(YearMonth.from(today)) || today.isBefore(dueDate) || createdAfterDueDate(user, commitment, scheduled, dueDate)) throw invalid("Commitment is not due this month");
         RecurringCommitmentOccurrenceEntity occurrence = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), scheduled.atDay(1)).orElseGet(RecurringCommitmentOccurrenceEntity::new);
         occurrence.setCommitment(commitment); occurrence.setScheduledMonth(scheduled.atDay(1)); occurrence.setStatus(RecurringCommitmentOccurrenceStatus.COMPLETED);
         occurrence.setCompletedAt(today); occurrence.setUpdatedAt(java.time.Instant.now(clock)); occurrences.saveAndFlush(occurrence);
-        return occurrenceResponse(commitment, scheduled, today);
+        return occurrenceResponse(user, commitment, scheduled, today);
     }
     @Transactional(readOnly = true)
     public CommitmentReviewResponse review(AppUserEntity user, String month) {
@@ -125,14 +126,19 @@ public class WebRecurringCommitmentService {
     private CommitmentResponse response(UserRecurringCommitmentEntity c) { return new CommitmentResponse(c.getId(), c.getLabel(), c.getAmountMode().name(), c.getPlanningAmount(), c.getDueDay(), c.getEffectiveMonth().toString().substring(0, 7), c.getStatus().name(), c.getCategory(), c.getSubcategory(), c.getLinkedTransactions().stream().map(FinancialTransactionEntity::getId).toList()); }
     private CommitmentResponse response(UserRecurringCommitmentEntity c, AppUserEntity user) {
         LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
-        return new CommitmentResponse(c.getId(), c.getLabel(), c.getAmountMode().name(), c.getPlanningAmount(), c.getDueDay(), c.getEffectiveMonth().toString().substring(0, 7), c.getStatus().name(), c.getCategory(), c.getSubcategory(), c.getLinkedTransactions().stream().map(FinancialTransactionEntity::getId).toList(), occurrenceResponse(c, YearMonth.from(today), today));
+        return new CommitmentResponse(c.getId(), c.getLabel(), c.getAmountMode().name(), c.getPlanningAmount(), c.getDueDay(), c.getEffectiveMonth().toString().substring(0, 7), c.getStatus().name(), c.getCategory(), c.getSubcategory(), c.getLinkedTransactions().stream().map(FinancialTransactionEntity::getId).toList(), occurrenceResponse(user, c, YearMonth.from(today), today));
     }
-    private OccurrenceResponse occurrenceResponse(UserRecurringCommitmentEntity c, YearMonth month, LocalDate today) {
+    private OccurrenceResponse occurrenceResponse(AppUserEntity user, UserRecurringCommitmentEntity c, YearMonth month, LocalDate today) {
         LocalDate dueDate = c.getDueDay() == null ? null : month.atDay(Math.min(c.getDueDay(), month.lengthOfMonth()));
         var saved = occurrences.findByCommitmentIdAndScheduledMonth(c.getId(), month.atDay(1)).orElse(null);
         String status = saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED ? "COMPLETED"
-                : dueDate != null && !today.isBefore(dueDate) ? "DUE" : "UPCOMING";
+                : dueDate != null && !today.isBefore(dueDate) && !createdAfterDueDate(user, c, month, dueDate) ? "DUE" : "UPCOMING";
         return new OccurrenceResponse(month.toString(), dueDate, status, saved == null ? null : saved.getCompletedAt());
+    }
+    private boolean createdAfterDueDate(AppUserEntity user, UserRecurringCommitmentEntity commitment, YearMonth scheduled, LocalDate dueDate) {
+        java.time.ZoneId userZone = java.time.ZoneId.of(user.getTimezone());
+        return YearMonth.from(commitment.getCreatedAt().atZone(userZone)).equals(scheduled)
+                && commitment.getCreatedAt().atZone(userZone).toLocalDate().isAfter(dueDate);
     }
     public record CommitmentRequest(String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, Long sourceTransactionId, List<Long> transactionIds) { }
     public record CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds, OccurrenceResponse currentOccurrence) {
