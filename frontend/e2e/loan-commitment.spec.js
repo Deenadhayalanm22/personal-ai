@@ -29,7 +29,10 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await expect(loanDetailsLink).toHaveClass(/view-details-link/);
   expect(await loanDetailsLink.evaluate(element => {
     const row = element.closest('.loan-row');
-    return !!row && element.getBoundingClientRect().right <= row.getBoundingClientRect().right;
+    if (!row) return false;
+    const link = element.getBoundingClientRect();
+    const rowBounds = row.getBoundingClientRect();
+    return link.left >= rowBounds.left && link.right <= rowBounds.right;
   })).toBe(true);
   await loanDetailsLink.click();
   const initialLoanHistory = page.locator('.fund-detail').filter({ hasText: 'EMI timeline' });
