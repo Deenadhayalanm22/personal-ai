@@ -25,8 +25,13 @@ test('real API: mark a due loan EMI paid and refresh Monthly Commitment progress
   await expect(loans).toContainText('Home loan');
   await expect(loans).toContainText('4 of 6 historical EMI months completed');
   await expect(loans).not.toContainText('April EMI');
-  await loans.getByRole('button', { name: 'View details' }).click();
-  await expect(loans.getByRole('button', { name: 'View details' })).toHaveClass(/view-details-link/);
+  const loanDetailsLink = loans.getByRole('button', { name: 'View details' });
+  await expect(loanDetailsLink).toHaveClass(/view-details-link/);
+  expect(await loanDetailsLink.evaluate(element => {
+    const row = element.closest('.loan-row');
+    return !!row && element.getBoundingClientRect().right <= row.getBoundingClientRect().right;
+  })).toBe(true);
+  await loanDetailsLink.click();
   const initialLoanHistory = page.locator('.fund-detail').filter({ hasText: 'EMI timeline' });
   await expect(initialLoanHistory.locator('.investment-history')).toBeVisible();
   await expect(initialLoanHistory).toContainText('April 2026 EMI');
