@@ -2,6 +2,7 @@ package com.apps.deen_sa.entity;
 
 import com.apps.deen_sa.domain.CommitmentAmountMode;
 import com.apps.deen_sa.domain.RecurringCommitmentStatus;
+import com.apps.deen_sa.domain.CommitmentRecurrenceUnit;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,10 @@ public class UserRecurringCommitmentEntity {
     @Enumerated(EnumType.STRING) @Column(name = "amount_mode", nullable = false, length = 30) private CommitmentAmountMode amountMode;
     @Column(name = "planning_amount", nullable = false, precision = 19, scale = 2) private BigDecimal planningAmount;
     @Column(name = "due_day") private Integer dueDay;
+    @Enumerated(EnumType.STRING) @Column(name = "recurrence_unit", nullable = false, length = 12) private CommitmentRecurrenceUnit recurrenceUnit = CommitmentRecurrenceUnit.MONTH;
+    @Column(name = "recurrence_interval", nullable = false) private Integer recurrenceInterval = 1;
+    @Column(name = "next_expected_date") private LocalDate nextExpectedDate;
+    @Column(name = "flexible_schedule", nullable = false) private boolean flexibleSchedule;
     @Column(name = "effective_month", nullable = false) private LocalDate effectiveMonth;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private RecurringCommitmentStatus status = RecurringCommitmentStatus.ACTIVE;
     @Column(length = 100) private String category;

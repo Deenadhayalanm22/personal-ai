@@ -93,9 +93,11 @@ public class MonthlyFinancialSnapshotService {
                         investment.getAssetType() == InvestmentAssetType.STOCK ? "ETF monthly plan" : "Mutual fund SIP", "Active recurring investment", null, null, null)).toList();
         List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
-                                && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
+                                && !month.atDay(1).isBefore(commitment.getEffectiveMonth())
+                                && commitment.getNextExpectedDate() != null
+                                && YearMonth.from(commitment.getNextExpectedDate()).equals(month))
                 .map(commitment -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
-                        commitment.getDueDay() == null ? null : month.atDay(Math.min(commitment.getDueDay(), month.lengthOfMonth())),
+                        commitment.getNextExpectedDate(),
                         commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
                         commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount", null, null, null)).toList();
         List<Source> cardBills = (creditCards == null || transactions == null ? List.<com.apps.deen_sa.entity.UserCreditCardEntity>of() : creditCards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId())).stream()

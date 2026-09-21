@@ -1,0 +1,4 @@
+{
+  "request": { "method": "GET", "urlPath": "/mf/search", "queryParameters": { "q": { "matches": "(?i)hdfc" } } },
+  "response": { "status": 200, "headers": { "Content-Type": "application/json" }, "jsonBody": [{ "schemeCode": 119551, "schemeName": "HDFC Mid-Cap Opportunities Fund - Direct Growth" }] }
+}

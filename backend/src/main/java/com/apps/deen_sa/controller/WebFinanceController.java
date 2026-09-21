@@ -170,6 +170,8 @@ public class WebFinanceController {
     public void deleteCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { webManager.deleteCommitment(token, id); }
     @PostMapping("/recurring-commitments/{id}/occurrences/{month}/done")
     public WebRecurringCommitmentService.OccurrenceResponse completeCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @PathVariable YearMonth month) { return webManager.completeCommitment(token, id, month); }
+    @PostMapping("/recurring-commitments/{id}/occurrences/complete")
+    public WebRecurringCommitmentService.OccurrenceResponse completeCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebRecurringCommitmentService.CompletionRequest request) { return webManager.completeCommitment(token, id, request); }
     @GetMapping("/recurring-commitments/review")
     public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam(required = false) YearMonth month) { return webManager.commitmentReview(token, month); }
     @PostMapping("/recurring-commitments/review/{transactionId}") @ResponseStatus(HttpStatus.NO_CONTENT)

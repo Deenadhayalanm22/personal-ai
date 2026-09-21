@@ -1,0 +1,4 @@
+{
+  "request": { "method": "GET", "urlPathPattern": "/mf/[0-9]+/latest" },
+  "response": { "status": 200, "headers": { "Content-Type": "application/json" }, "jsonBody": { "data": [{ "nav": "100.00" }] } }
+}

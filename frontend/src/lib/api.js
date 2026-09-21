@@ -63,6 +63,7 @@ export const createRecurringCommitment = (commitment) => request('/api/web/recur
 export const updateRecurringCommitment = (id, commitment) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(commitment) });
 export const deleteRecurringCommitment = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const completeRecurringCommitment = (id, month) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(month)}/done`, { method: 'POST' });
+export const recordRecurringCommitmentCompletion = (id, completion) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/complete`, { method: 'POST', body: JSON.stringify(completion) });
 export const getCommitmentReview = (month) => request(`/api/web/recurring-commitments/review?month=${encodeURIComponent(month)}`);
 export const resolveCommitmentReview = (transactionId, commitmentId) => request(`/api/web/recurring-commitments/review/${encodeURIComponent(transactionId)}`, { method: 'POST', body: JSON.stringify({ commitmentId }) });
 export const getCreditCards = () => request('/api/web/credit-cards');
