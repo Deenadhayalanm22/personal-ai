@@ -169,6 +169,7 @@ public class WebManager {
     }
 
     public WebRecurringCommitmentService.CommitmentListResponse commitments(String token) { return commitments.list(authentication.authenticate(token)); }
+    public WebRecurringCommitmentService.CommitmentHistoryResponse commitmentHistory(String token, Long id) { return commitments.history(authentication.authenticate(token), id); }
     public WebRecurringCommitmentService.CommitmentResponse createCommitment(String token, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.create(authentication.authenticate(token), request); }
     public WebRecurringCommitmentService.CommitmentResponse updateCommitment(String token, Long id, WebRecurringCommitmentService.CommitmentRequest request) { return commitments.update(authentication.authenticate(token), id, request); }
     public void deleteCommitment(String token, Long id) { commitments.delete(authentication.authenticate(token), id); }
@@ -186,6 +187,7 @@ public class WebManager {
     public WebLoanService.LoanListResponse loans(String token) {
         return loans.list(authentication.authenticate(token));
     }
+    public WebLoanService.LoanHistoryResponse loanHistory(String token, Long id) { return loans.history(authentication.authenticate(token), id); }
 
     public WebLoanService.LoanResponse updateLoan(
             String token, Long id, WebLoanService.LoanUpdateRequest request) {

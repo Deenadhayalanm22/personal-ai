@@ -80,6 +80,8 @@ test('real API: confirm a due ETF monthly plan and refresh its commitment and ho
   const { stocks: dueStocks } = await stocksResponse.json();
   expect(dueStocks.find(stock => stock.name === 'ITC Limited').currentMonthlyPlan.status).toBe('DUE');
   await expect(page.getByTestId(/stock-monthly-plan-/)).toContainText('Due now');
+  await expect(page.getByTestId(/stock-monthly-plan-/)).toHaveCSS('background-color', 'rgb(255, 244, 241)');
+  await expect(stockCard).not.toHaveCSS('outline-style', 'solid');
   await page.locator('.money-modal > .close').click();
   await page.locator('.story-carousel-card').first().click();
   await page.getByTestId('view-included-commitments').click();
@@ -101,8 +103,10 @@ test('real API: confirm a due ETF monthly plan and refresh its commitment and ho
   await page.getByRole('button', { name: '← Back to stories' }).click();
   await page.getByRole('button', { name: /Your money/ }).click();
   await stockCard.getByRole('button', { name: /View details/ }).click();
+  await expect(stockCard.getByRole('button', { name: /View details/ })).toHaveClass(/view-details-link/);
   const detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ITC Limited' }) });
   await expect(detail.getByText('Investment history', { exact: true })).toBeVisible();
+  await expect(detail.locator('.investment-history')).toBeVisible();
   await expect(detail).toContainText('Opening holding');
   await expect(detail).toContainText('Monthly ETF purchase');
   await expect(detail).toContainText('₹5,000');

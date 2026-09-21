@@ -18,12 +18,14 @@
 4. **Given** an open loan-closure action, **when** completed, **then** it leaves the open-action list and the portal reloads relevant planning data.
 5. **Given** a mistakenly created loan, **when** the user selects its delete icon in the Loans section, **then** only that user's loan and its EMI occurrences are removed, its commitment snapshot refreshes, and the section immediately shows the remaining loans (or the empty state).
 6. **Given** a user marks the final scheduled EMI paid, **when** that payment succeeds, **then** the loan becomes `CLOSED`, disappears from active commitments, and is retained in a collapsed Closed loans group as muted history.
+7. **Given** a loan is shown, **when** the user selects `View details`, **then** the existing details-sheet presentation lists its paid, current, and upcoming EMIs with their due date, amount, status, and paid date where recorded; the loan card itself remains a compact summary.
 
 ### Integration-test scenarios
 
 - Create/list/update a loan and assert ownership, two-decimal money values, and required-field validation.
 - Attempt cross-user update and action completion; assert no visible or persisted change.
 - Delete an owned loan and assert its occurrences and any open loan action are removed; attempt a cross-user delete and assert no row is changed.
+- Browser regression: after recording a due EMI, open View details and assert its persisted payment row.
 
 ## FIN-016 — Track a mutual fund and scheduled SIPs
 

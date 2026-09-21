@@ -43,7 +43,7 @@ test('real API: edit and delete a monthly commitment from Your money', async ({ 
   await expect(page.getByTestId('monthly-commitments-section')).toContainText('No recurring commitments yet.');
 });
 
-test('real API: a due commitment is red in the story and can be marked done', async ({ page, request }) => {
+test('real API: a due commitment uses its shared Due now strip and can be marked done', async ({ page, request }) => {
   const fixture = await request.post('http://localhost:8080/test/e2e/session');
   expect(fixture.ok()).toBeTruthy();
   const { sessionToken } = await fixture.json();
@@ -75,11 +75,21 @@ test('real API: a due commitment is red in the story and can be marked done', as
   const dueCommitment = commitments.locator('.loan-row', { hasText: 'Internet bill' });
   await expect(dueCommitment).toBeFocused();
   await expect(dueCommitment).toHaveClass(/due-recurring/);
+  await expect(dueCommitment.locator('.due-reminder')).toBeVisible();
+  await expect(dueCommitment.locator('.due-reminder')).toHaveCSS('background-color', 'rgb(255, 244, 241)');
+  await expect(dueCommitment).not.toHaveCSS('background-color', 'rgb(255, 244, 241)');
 
   const doneResponse = page.waitForResponse(response => response.url().includes('/recurring-commitments/') && response.url().includes('/done') && response.request().method() === 'POST');
   await dueCommitment.getByRole('button', { name: 'Mark commitment done' }).click();
   expect((await doneResponse).status()).toBe(200);
   await expect(dueCommitment).toContainText('done');
+  await dueCommitment.getByRole('button', { name: 'View details' }).click();
+  const commitmentHistory = page.locator('.fund-detail').filter({ hasText: 'Payment history' });
+  await expect(commitmentHistory).toHaveClass(/fund-detail/);
+  await expect(commitmentHistory.locator('.investment-history')).toBeVisible();
+  await expect(commitmentHistory).toContainText('April 2026 payment');
+  await expect(commitmentHistory).toContainText('Done on');
+  await commitmentHistory.getByRole('button', { name: '×' }).click();
   await page.locator('.money-modal > .close').click();
   await page.locator('.story-carousel-card').first().click();
   await page.getByTestId('view-included-commitments').click();

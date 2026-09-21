@@ -41,6 +41,7 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 7. **Given** a user created a commitment by mistake, **when** they select Delete from Manage commitments, **then** the rule is removed, current and next projections refresh, and any transaction match is unlinked without deleting the transaction or rewriting historical snapshots.
 8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this acknowledgement leaves the planned total unchanged and removes the due highlight without applying a separate completion colour.
 9. **Given** a user creates a commitment after its configured due day in the current month, **when** they open Monthly Commitment, **then** it remains a planning projection but is never shown as a retroactive current-month due reminder. Its first due reminder is on that due day in the next month.
+10. **Given** a commitment occurrence was marked done, **when** the user selects `View details`, **then** the existing details-sheet presentation lists the completed payment with its due and completion dates.
 
 ### Commitment projection choices
 
@@ -66,6 +67,7 @@ When a new matching payment is recorded, the product may show a non-blocking sug
 - Edit a fixed commitment from ₹15,000 to ₹16,000 and delete it; assert the edited projection refreshes, deletion removes it from Manage commitments and the current story, and its original transaction remains.
 - Advance the clock past an active commitment’s due day; assert the story shows it as due, Review focuses the commitment, and marking it done refreshes the same occurrence as completed while preserving its planned amount.
 - On 15 April, add commitments due on the 1st, 10th, and 25th; assert none are retroactively due. Advance to the 25th and complete only that occurrence, then to 30 April and assert no due reminder remains. Advance to 1 May and assert only the first-day commitment is due and can be completed.
+- Browser regression: mark a due commitment done, open View details, and assert the completed occurrence is retained in payment history.
 
 ## FIN-021 — Include commitments in Monthly Commitment stories
 

@@ -160,6 +160,8 @@ public class WebFinanceController {
 
     @GetMapping("/recurring-commitments")
     public WebRecurringCommitmentService.CommitmentListResponse commitments(@CookieValue(name = SESSION_COOKIE, required = false) String token) { return webManager.commitments(token); }
+    @GetMapping("/recurring-commitments/{id}/history")
+    public WebRecurringCommitmentService.CommitmentHistoryResponse commitmentHistory(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { return webManager.commitmentHistory(token, id); }
     @PostMapping("/recurring-commitments") @ResponseStatus(HttpStatus.CREATED)
     public WebRecurringCommitmentService.CommitmentResponse createCommitment(@CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestBody WebRecurringCommitmentService.CommitmentRequest request) { return webManager.createCommitment(token, request); }
     @PatchMapping("/recurring-commitments/{id}")
@@ -193,6 +195,8 @@ public class WebFinanceController {
             @CookieValue(name = SESSION_COOKIE, required = false) String token) {
         return webManager.loans(token);
     }
+    @GetMapping("/loans/{id}/history")
+    public WebLoanService.LoanHistoryResponse loanHistory(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { return webManager.loanHistory(token, id); }
 
     @PatchMapping("/loans/{id}")
     public WebLoanService.LoanResponse updateLoan(

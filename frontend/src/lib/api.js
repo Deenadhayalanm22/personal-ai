@@ -58,6 +58,7 @@ export const getExpensesForDate = (month, date, limit = 50) => request(`/api/web
 export const updateExpense = (id, changes) => request(`/api/web/expenses/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteExpense = (id) => request(`/api/web/expenses/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const getRecurringCommitments = () => request('/api/web/recurring-commitments');
+export const getRecurringCommitmentHistory = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/history`);
 export const createRecurringCommitment = (commitment) => request('/api/web/recurring-commitments', { method: 'POST', body: JSON.stringify(commitment) });
 export const updateRecurringCommitment = (id, commitment) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(commitment) });
 export const deleteRecurringCommitment = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -69,6 +70,7 @@ export const createCreditCard = (card) => request('/api/web/credit-cards', { met
 export const updateCreditCard = (id, card) => request(`/api/web/credit-cards/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(card) });
 
 export const getLoans = () => request('/api/web/loans');
+export const getLoanHistory = (id) => request(`/api/web/loans/${encodeURIComponent(id)}/history`);
 export const createLoan = (loan) => request('/api/web/loans', { method: 'POST', body: JSON.stringify(loan) });
 export const updateLoan = (id, changes) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteLoan = (id) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'DELETE' });

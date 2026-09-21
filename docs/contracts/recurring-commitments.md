@@ -5,6 +5,7 @@ Recurring commitments are user-managed planning rules for repeatable obligations
 | Endpoint | Contract |
 | --- | --- |
 | `GET /api/web/recurring-commitments` | Returns `{ items }`. |
+| `GET /api/web/recurring-commitments/{id}/history` | Returns the owned commitment's `{ id, label, planningAmount, history }`; history contains completed occurrences with due and completion dates. |
 | `POST /api/web/recurring-commitments` | Creates and returns a commitment with `201`. |
 | `PATCH /api/web/recurring-commitments/{id}` | Updates supplied fields and returns the commitment. |
 | `DELETE /api/web/recurring-commitments/{id}` | Deletes an owned commitment and returns `204`. Any transaction match to it is unlinked; past stored snapshots remain unchanged. |

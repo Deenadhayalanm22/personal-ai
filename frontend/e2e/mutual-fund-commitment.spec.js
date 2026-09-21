@@ -72,7 +72,9 @@ test('real API: staggered SIPs become due by their configured day and retain the
   await expect(lumpSumDialog).toHaveCount(0);
   await page.getByRole('button', { name: `Open ${bySip(10000).schemeName} details` }).click();
   const detail = page.locator('.fund-detail');
+  await expect(detail).toHaveClass(/fund-detail/);
   await expect(detail.getByText('Investment history', { exact: true })).toBeVisible();
+  await expect(detail.locator('.investment-history')).toBeVisible();
   const historyEdits = detail.getByRole('button', { name: 'Edit this investment' });
   await expect(historyEdits).toHaveCount(3);
   await historyEdits.first().click();
@@ -195,6 +197,7 @@ async function confirmSipThroughUi(page, fundId, allocationAmount) {
   const sip = page.getByTestId(`mutual-fund-sip-${fundId}`);
   await expect(sip).toBeVisible();
   await expect(sip).toContainText('Due now');
+  await expect(sip).toHaveCSS('background-color', 'rgb(255, 244, 241)');
   await sip.getByRole('button', { name: 'Confirm allocation' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Was this SIP processed?' });
   const amount = dialog.getByLabel('Amount invested');

@@ -1,0 +1,14 @@
+/* Shared View details sheet and history-list template. */
+.fund-form-backdrop:has(.fund-detail){align-items:center;padding:18px}
+.fund-detail{width:min(100%,420px);max-height:calc(100vh - 36px);padding:26px;overflow-y:auto;border:1px solid rgba(255,255,255,.72);border-radius:22px;background:var(--paper);box-shadow:0 30px 100px rgba(10,20,14,.45)}
+.fund-detail>.micro-label{margin:0 36px 7px 0;color:var(--green);font-size:9px;font-weight:800;letter-spacing:.12em}
+.fund-detail>h2{margin:0;padding-right:32px;font:800 21px/1.25 Manrope;letter-spacing:-.025em}
+.fund-detail>.close{top:16px;right:17px;width:28px;height:28px;border-radius:8px;font-size:22px;line-height:1}.fund-detail>.close:hover,.fund-detail>.close:focus-visible{background:var(--wash);outline:none}
+.fund-detail>.detail-grid,.fund-detail>.detail-value,.fund-detail>.detail-pnl{margin-top:18px}
+.investment-history{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.investment-history h3{margin:0 0 4px;color:var(--ink);font:800 12px Manrope}
+.investment-history-row{position:relative;grid-template-columns:64px minmax(0,1fr) auto;gap:4px 9px;padding:12px 0;border-top:1px solid var(--line);font-size:10px}
+.investment-history-row:first-of-type{border-top:0}.investment-history-row strong{line-height:1.35}.investment-history-row small{line-height:1.4}.investment-history-row .history-amount b{color:var(--ink);font:800 11px Manrope}
+.investment-history-row.due{margin-top:5px;padding:12px;border:1px solid #e4a49c;border-radius:10px;background:#fffefa}.investment-history-row.due small{color:var(--red)}
+.loan-history-action{margin-top:3px}.loan-history-action .due-reminder{margin-top:4px}
+@media(max-width:520px){.fund-form-backdrop:has(.fund-detail){align-items:end;padding:0}.fund-detail{max-height:92vh;border-radius:22px 22px 0 0}}

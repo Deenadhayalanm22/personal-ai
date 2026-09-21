@@ -36,6 +36,16 @@ public class WebRecurringCommitmentService {
     }
     @Transactional(readOnly = true)
     public CommitmentListResponse list(AppUserEntity user) { return new CommitmentListResponse(commitments.findAllOwned(user.getId()).stream().map(value -> response(value, user)).toList()); }
+    @Transactional(readOnly = true)
+    public CommitmentHistoryResponse history(AppUserEntity user, Long id) {
+        UserRecurringCommitmentEntity commitment = owned(user, id);
+        return new CommitmentHistoryResponse(commitment.getId(), commitment.getLabel(), commitment.getPlanningAmount(),
+                occurrences.findByCommitmentIdOrderByScheduledMonthDesc(commitment.getId()).stream()
+                        .filter(item -> item.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED)
+                        .map(item -> new OccurrenceResponse(item.getScheduledMonth().toString().substring(0, 7),
+                                item.getScheduledMonth().withDayOfMonth(Math.min(commitment.getDueDay(), item.getScheduledMonth().lengthOfMonth())),
+                                item.getStatus().name(), item.getCompletedAt())).toList());
+    }
     @Transactional
     public CommitmentResponse create(AppUserEntity user, CommitmentRequest request) {
         UserRecurringCommitmentEntity value = new UserRecurringCommitmentEntity(); value.setUser(user); apply(user, value, request, true);
@@ -145,6 +155,7 @@ public class WebRecurringCommitmentService {
         public CommitmentResponse(Long id, String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, List<Long> transactionIds) { this(id, label, amountMode, planningAmount, dueDay, effectiveMonth, status, category, subcategory, transactionIds, null); }
     }
     public record CommitmentListResponse(List<CommitmentResponse> items) { }
+    public record CommitmentHistoryResponse(Long id, String label, BigDecimal planningAmount, List<OccurrenceResponse> history) { }
     public record CandidateResponse(Long transactionId, BigDecimal amount, LocalDate transactionDate, String category, String subcategory, List<CommitmentResponse> choices) { }
     public record CommitmentReviewResponse(List<CandidateResponse> items) { }
     public record ResolveRequest(Long commitmentId) { }

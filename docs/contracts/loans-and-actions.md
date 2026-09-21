@@ -7,6 +7,7 @@ Loans are user-entered planning records, separate from conversational expense ca
 | Endpoint | Request and response | Frontend owner |
 | --- | --- | --- |
 | `GET /api/web/loans` | `{ loans }`, newest first. | Money view loan list. |
+| `GET /api/web/loans/{id}/history` | Owned loan's `{ id, loanName, history }`; history contains every scheduled EMI with status, due date, planned amount, and paid facts when recorded. | Shared View details sheet. |
 | `POST /api/web/loans` | `{ loanName, loanType, lenderName, originalPrincipal, monthlyEmiAmount, totalTenureMonths, firstEmiDueDate, status?, notes? }`; returns loan with `201`; missing status means `ACTIVE`. | Add-loan form. |
 | `PATCH /api/web/loans/{id}` | One or more mutable create fields except status; returns updated loan. | Edit-loan form. |
 | `DELETE /api/web/loans/{id}` | Deletes the authenticated user's loan and its EMI occurrences; returns `204`. Any associated open loan action is removed and current commitment snapshots are refreshed. | Per-loan delete icon. |

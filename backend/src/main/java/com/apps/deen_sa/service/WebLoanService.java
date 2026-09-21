@@ -62,6 +62,13 @@ public class WebLoanService {
                 .map(this::response).toList());
     }
 
+    @Transactional(readOnly = true)
+    public LoanHistoryResponse history(AppUserEntity user, Long loanId) {
+        UserLoanEntity loan = loans.findByIdAndUserId(loanId, user.getId())
+                .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found"));
+        return new LoanHistoryResponse(loan.getId(), loan.getLoanName(), occurrenceResponses(loan));
+    }
+
     @Transactional
     public LoanResponse update(AppUserEntity user, Long loanId, LoanUpdateRequest request) {
         if (request == null || request.hasNoChanges()) throw invalid("Provide at least one value to update");
@@ -222,6 +229,8 @@ public class WebLoanService {
         }
     }
     public record EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt) { }
+
+    public record LoanHistoryResponse(Long id, String loanName, List<EmiOccurrenceResponse> history) { }
 
     public record LoanListResponse(List<LoanResponse> loans) { }
 }
