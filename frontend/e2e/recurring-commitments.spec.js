@@ -146,10 +146,15 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
     const dueCommitment = commitments.locator('.loan-row', { hasText: 'Internet bill' });
     await expect(dueCommitment).toBeFocused();
     await expect(dueCommitment).toHaveClass(/due-recurring/);
-    await expect(dueCommitment).toHaveCSS('border-top-color', 'rgb(228, 164, 156)');
-    await expect(dueCommitment.locator('.loan-details-area')).toContainText('Due now');
+    await expect(dueCommitment).not.toHaveCSS('border-top-color', 'rgb(228, 164, 156)');
+    const dueActions = dueCommitment.locator('.loan-details-area');
+    await expect(dueActions).toContainText('Due now');
+    await expect(dueActions).toHaveCSS('border-top-color', 'rgb(228, 164, 156)');
     const cardBounds = await dueCommitment.boundingBox();
+    const actionBounds = await dueActions.boundingBox();
     const detailsBounds = await dueCommitment.getByRole('button', { name: 'View details' }).boundingBox();
+    expect(actionBounds.width).toBeLessThan(cardBounds.width / 2);
+    expect(actionBounds.x).toBeGreaterThan(cardBounds.x + cardBounds.width / 2);
     expect(detailsBounds.x).toBeGreaterThan(cardBounds.x + cardBounds.width / 2);
     expect(detailsBounds.x + detailsBounds.width).toBeLessThanOrEqual(cardBounds.x + cardBounds.width);
 
@@ -161,6 +166,7 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
     expect((await doneResponse).status()).toBe(200);
     await expect(dueCommitment).toContainText('Completed');
     await expect(dueCommitment).not.toHaveClass(/due-recurring/);
+    await expect(dueActions).not.toHaveClass(/due/);
     await dueCommitment.getByRole('button', { name: 'View details' }).click();
     const commitmentHistory = page.locator('.fund-detail').filter({ hasText: 'Payment history' });
     await expect(commitmentHistory).toHaveClass(/fund-detail/);

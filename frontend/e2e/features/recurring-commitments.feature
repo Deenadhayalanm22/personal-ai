@@ -32,7 +32,7 @@ Feature: Manage commitments
 
   Scenario: Due presentation clears after an outcome
     Given Family support is due in the current month
-    Then its Money card contains a red border with Due now and View details on the right
+    Then its Money card contains a compact red border around only Due now and View details on the right
     And its Monthly Commitment source is bordered red
     When the user pays or skips the occurrence in details
     Then the red due presentation clears

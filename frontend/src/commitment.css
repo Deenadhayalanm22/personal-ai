@@ -43,13 +43,11 @@
 .stock-detail-backdrop{z-index:141}.stock-action-backdrop{z-index:142}
 
 .modal-backdrop .evidence-row.due-stock-commitment{margin-inline:-8px;padding:12px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}.modal-backdrop .evidence-row.due-stock-commitment strong,.modal-backdrop .evidence-row.due-stock-commitment b{color:var(--red)}
-/* Keep commitment actions inside their row and show the same due treatment as loans. */
+/* Keep the due treatment around only the two actions, as on investment cards. */
 .commitment-row{grid-template-columns:29px minmax(0,1fr) auto;min-width:0}
 .commitment-row>div:nth-child(3){grid-column:3;grid-row:1;min-width:0;text-align:right}
-.commitment-row>.loan-details-area{grid-column:2/-1;grid-row:2;display:grid;grid-template-columns:minmax(0,1fr) auto;min-width:0}
-.commitment-row>.loan-details-area>.view-details-link{grid-column:2;justify-self:end}
-.loan-row.commitment-row.due-recurring{margin-inline:-6px;padding:10px 6px 6px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}
-.loan-row.commitment-row.due-recurring>span{background:#f9d9d4;color:var(--red)}
+.commitment-row>.loan-details-area{grid-column:2/-1;grid-row:2;display:flex;align-items:center;justify-self:end;gap:10px;width:max-content;max-width:100%;min-width:0}
+.commitment-row>.loan-details-area>.view-details-link{justify-self:auto}
 .modal-backdrop .evidence-row.due-commitment.due-recurring-commitment{margin-inline:-8px;padding:12px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}
 .modal-backdrop .evidence-row.due-recurring-commitment strong,.modal-backdrop .evidence-row.due-recurring-commitment b{color:var(--red)}
 .commitment-extra-action{display:flex;justify-content:flex-end;margin-top:12px}

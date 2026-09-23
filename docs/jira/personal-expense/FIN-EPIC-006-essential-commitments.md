@@ -47,7 +47,7 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 13. **Given** a commitment card in Money, **when** the user views it, **then** the card offers only View details; edit, delete, Paid, and Skip actions appear in the details sheet, with payment history below the current occurrence.
 14. **Given** an active current-month occurrence, **when** the user skips it in details, **then** only that month is marked Skipped in history and the usual recurring rule remains active.
 15. **Given** a paid commitment occurrence, **when** the user adds a positive extra amount (for example ₹2,000 beyond ₹10,000 family support), **then** history shows the paid amount and extra separately, while the usual planning amount remains ₹10,000. An unpaid or skipped occurrence cannot receive an extra amount.
-16. **Given** a commitment is due, **when** it appears in Money or the Monthly Commitment included-sources sheet, **then** its row has a red border; the Money row keeps `Due now` and `View details` together inside the card. After Paid or Skip, the due treatment clears.
+16. **Given** a commitment is due, **when** it appears in Money or the Monthly Commitment included-sources sheet, **then** the included-source row has a red border and the Money card has a compact red border around only `Due now` and `View details` on the right. After Paid or Skip, the due treatment clears.
 17. **Given** a paid month, **when** the user selects `Add extra` above the current occurrence, **then** a popup collects the paid month, positive amount, and required reason. Each extra is saved separately and its amount and reason appear in payment history.
 
 ### Commitment projection choices
