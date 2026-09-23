@@ -175,6 +175,8 @@ public class WebManager {
     public void deleteCommitment(String token, Long id) { commitments.delete(authentication.authenticate(token), id); }
     public WebRecurringCommitmentService.OccurrenceResponse completeCommitment(String token, Long id, YearMonth month) { return commitments.markDone(authentication.authenticate(token), id, month.toString()); }
     public WebRecurringCommitmentService.OccurrenceResponse completeCommitment(String token, Long id, WebRecurringCommitmentService.CompletionRequest request) { return commitments.complete(authentication.authenticate(token), id, request); }
+    public WebRecurringCommitmentService.OccurrenceResponse skipCommitment(String token, Long id, YearMonth month) { return commitments.skip(authentication.authenticate(token), id, month.toString()); }
+    public WebRecurringCommitmentService.OccurrenceResponse addCommitmentExtra(String token, Long id, YearMonth month, WebRecurringCommitmentService.ExtraRequest request) { return commitments.addExtra(authentication.authenticate(token), id, month.toString(), request); }
     public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(String token, YearMonth month) { return commitments.review(authentication.authenticate(token), month == null ? null : month.toString()); }
     public void resolveCommitmentReview(String token, Long id, WebRecurringCommitmentService.ResolveRequest request) { commitments.resolve(authentication.authenticate(token), id, request); }
     public WebCreditCardService.CardListResponse creditCards(String token) { return creditCards.list(authentication.authenticate(token)); }

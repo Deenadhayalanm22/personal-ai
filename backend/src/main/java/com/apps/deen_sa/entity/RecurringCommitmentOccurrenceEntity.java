@@ -18,6 +18,7 @@ public class RecurringCommitmentOccurrenceEntity {
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private RecurringCommitmentOccurrenceStatus status;
     private LocalDate completedAt;
     @Column(name = "actual_amount", precision = 19, scale = 2) private BigDecimal actualAmount;
+    @Column(name = "extra_amount", precision = 19, scale = 2) private BigDecimal extraAmount;
     @Column(nullable = false, updatable = false) private Instant createdAt = Instant.now();
     @Column(nullable = false) private Instant updatedAt = Instant.now();
 }

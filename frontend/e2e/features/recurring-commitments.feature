@@ -3,17 +3,39 @@ Feature: Manage commitments
 
   Scenario: Edit and delete a manually created monthly commitment
     Given the user has created a ₹15,000 Home rent monthly commitment due on the 5th
-    When the user edits its amount to ₹16,000 and due day to the 7th
+    Then its card offers only View details
+    When the user opens View details and edits its amount to ₹16,000 and due day to the 7th
     Then Manage commitments shows the updated amount and due day
-  When the user deletes Home rent
-  Then it no longer appears in Manage commitments or the refreshed current projection
+    When the user opens View details and deletes Home rent
+    Then it no longer appears in Manage commitments or the refreshed current projection
 
   Scenario: Review and complete a due commitment
     Given Internet bill is due on the 5th of the current month
     When the date reaches the 5th and the user opens Monthly Commitment
     Then Internet bill is red in the included commitments list
-    When the user reviews it and marks the commitment done
+    When the user reviews its details and marks the commitment paid
     Then the Manage commitments row and story evidence show it as completed
+
+  Scenario: Skip one month and retain the recurring rule
+    Given Family support is an active ₹10,000 monthly commitment
+    When the user opens View details and skips the current month
+    Then the current occurrence and history show Skipped
+    And Family support remains active at ₹10,000
+
+  Scenario: Add a one-time extra payment
+    Given Family support is an active ₹10,000 monthly commitment
+    When the user opens View details and records this month paid
+    And opens Add extra above Current occurrence
+    And adds ₹2,000 extra with the reason "Birthday support" in the popup
+    Then history shows the paid amount, ₹2,000 extra, and "Birthday support" separately
+    And the usual planning amount remains ₹10,000
+
+  Scenario: Due presentation clears after an outcome
+    Given Family support is due in the current month
+    Then its Money card contains a red border with Due now and View details on the right
+    And its Monthly Commitment source is bordered red
+    When the user pays or skips the occurrence in details
+    Then the red due presentation clears
 
   Scenario: Do not create a retroactive due reminder
     Given it is 15 April and the user adds commitments due on the 1st, 10th, and 25th

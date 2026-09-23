@@ -45,6 +45,7 @@ public class MonthlyFinancialSnapshotService {
     private final FinancialTransactionRepository transactions;
     private final Clock clock;
     @Autowired(required = false) private com.apps.deen_sa.repository.LoanEmiOccurrenceRepository loanOccurrences;
+    @Autowired(required = false) private com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository commitmentOccurrences;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
@@ -96,7 +97,9 @@ public class MonthlyFinancialSnapshotService {
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
                                 && !month.atDay(1).isBefore(commitment.getEffectiveMonth())
                                 && commitment.getNextExpectedDate() != null
-                                && YearMonth.from(commitment.getNextExpectedDate()).equals(month))
+                                && YearMonth.from(commitment.getNextExpectedDate()).equals(month)
+                                && (commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), month.atDay(1))
+                                        .map(occurrence -> occurrence.getStatus() != com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.SKIPPED).orElse(true)))
                 .map(commitment -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
                         commitment.getNextExpectedDate(),
                         commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),

@@ -44,6 +44,11 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 10. **Given** a commitment occurrence was marked done, **when** the user selects `View details`, **then** the existing details-sheet presentation lists the completed payment with its due and completion dates.
 11. **Given** a user has a flexible commitment such as bike service, **when** they complete it before its expected date, **then** they can record the actual amount and completion date and explicitly set the next expected date without changing the planning estimate or usual recurrence.
 12. **Given** a user has a flexible commitment such as an internet recharge that is usually every three months, **when** an offer leads them to recharge after two months, **then** they can record that actual payment and choose the next expected date; the usual recurrence remains available as a future suggestion rather than being silently overwritten.
+13. **Given** a commitment card in Money, **when** the user views it, **then** the card offers only View details; edit, delete, Paid, and Skip actions appear in the details sheet, with payment history below the current occurrence.
+14. **Given** an active current-month occurrence, **when** the user skips it in details, **then** only that month is marked Skipped in history and the usual recurring rule remains active.
+15. **Given** a paid commitment occurrence, **when** the user adds a positive extra amount (for example ₹2,000 beyond ₹10,000 family support), **then** history shows the paid amount and extra separately, while the usual planning amount remains ₹10,000. An unpaid or skipped occurrence cannot receive an extra amount.
+16. **Given** a commitment is due, **when** it appears in Money or the Monthly Commitment included-sources sheet, **then** its row has a red border; the Money row keeps `Due now` and `View details` together inside the card. After Paid or Skip, the due treatment clears.
+17. **Given** a paid month, **when** the user selects `Add extra` above the current occurrence, **then** a popup collects the paid month, positive amount, and required reason. Each extra is saved separately and its amount and reason appear in payment history.
 
 ### Commitment projection choices
 
