@@ -35,23 +35,25 @@
 
 ### Acceptance criteria
 
-1. **Given** a scheme chosen from search, **when** a fund is created with or without a SIP, **then** scheme code/name are stored and a duplicate scheme for the user is rejected with `409 INVESTMENT_EXISTS`. A fund without a SIP supports occasional lump sums and exposes a later SIP-setup action.
+1. **Given** a scheme chosen from search, **when** a fund is created with or without a SIP, **then** scheme code/name are stored and a duplicate scheme for the user is rejected with `409 INVESTMENT_EXISTS`. A fund without a SIP still requires positive opening units and invested amount, supports occasional lump sums and exposes a later SIP-setup action in Fund details, leaving the compact fund card free of that setup control.
 2. **Given** a configured SIP, **when** it has amount, day 1–28, and start month, **then** creation yields an initial scheduled/due occurrence and the scheduler avoids duplicate current-month occurrences.
-3. **Given** a SIP or lump-sum confirmation with positive amount/date and NAV or units, **when** saved, **then** missing NAV/units are calculated and the transaction is `CONFIRMED` with recorded calculation source.
+3. **Given** a SIP payment or lump sum with positive amount, date, and units received, **when** saved from Fund details, **then** NAV is calculated from amount divided by units and the transaction is `CONFIRMED` with user-entered units as its calculation source. Fund details reloads after SIP payment, clears the red due state, and shows the paid transaction immediately.
 4. **Given** a due SIP already confirmed or skipped, **when** confirmation is retried, **then** it is rejected and no second investment transaction is created.
 5. **Given** confirmed holdings but unavailable latest NAV, **when** listed, **then** invested value remains available while current value and P&L are `null` rather than guessed.
 6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions. A just-confirmed allocation acknowledgement is shown only for the current Money session; after returning, the fund card stays clean. Fund details shows an edit wrench on every recorded opening holding, SIP, and lump-sum row, so the user corrects the exact investment; each correction recalculates holdings without changing the SIP plan. A SIP becomes due on its configured local SIP day; before that day it remains upcoming. A due SIP surfaced from Monthly Commitment is visually distinct and opens, scrolls to, and focuses its owning Mutual Funds row, while an already confirmed occurrence cannot be confirmed again.
 7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** the due highlight is removed and the evidence row returns to the standard neutral presentation while retaining its Review link. It does not offer allocation controls or change the intended commitment total.
 8. **Given** a mistakenly created mutual fund, **when** the user selects its delete icon on the fund card, **then** only that user's fund and its associated investment records are removed, its commitment snapshot refreshes, and the fund remains absent after reload.
 
+### Frozen mutual-fund commitment journey
+
+The acceptance source is [`mutual-fund-commitment.feature`](../../../frontend/e2e/features/mutual-fund-commitment.feature). Fund details owns immutable scheme identity, edit/delete actions, the next payable SIP, Pay and Skip decisions, and full payment history. A skipped SIP retains its planned amount and due date but no paid investment facts or penalty. Actual SIP payment can differ from the planned amount; a paid or skipped occurrence cannot be decided twice. A frequency edit effective June changes only future occurrences, so a May payment and lump sum stay fixed and a monthly May 1 SIP changed to quarterly next occurs on August 1. User supplied current NAV values the existing units without rewriting past NAVs. Compact cards retain their normal border and show a small red due strip with Due now beside View details when a SIP is due, with no payment, edit, or lump-sum controls. The included-commitment row uses the same red due treatment as a loan; Review scrolls to and focuses the fund card without a visible outline. Fund details places a themed lump-sum action to the right of Total P&L, aligns Pay and Skip to the right of the red due SIP section, and shows full payment history automatically.
+
 ### Integration-test scenarios
 
 - Create SIP with opening holding, confirm occurrence, and assert invested/units/average NAV include only confirmed rows.
 - Create a fund twice and assert conflict; confirm same SIP twice and assert transaction count is one.
 - Stub missing MFAPI NAV and assert detail/list expose null valuation fields.
-- Browser regression: [mutual-fund-commitment.spec.js](../../../frontend/e2e/mutual-fund-commitment.spec.js) creates three April-entered SIPs and opening holdings through the UI. It verifies the first occurrence begins in May, the 1 May red due state and focused review journey, editable confirmation, the return-to-story neutral state, the two further SIPs due on 12 May, the 21 May lump sum, and Fund-detail history. It also verifies a correction to an opening-holding history row persists, recalculates the holding, and leaves the ₹60,000 SIP runway unchanged.
-- Browser regression also creates and deletes a mistakenly added mutual fund, then verifies the card is absent immediately and after reload.
-- Browser regression creates a fund with No SIP, verifies that it is absent from Monthly Commitment, then configures a ₹5,000 SIP from its bell five days later and confirms the resulting due reminder from the fund card.
+- Browser regression: [mutual-fund-commitment.spec.js](../../../frontend/e2e/mutual-fund-commitment.spec.js) runs one home-page timeline. It deletes a mistaken fund, creates two SIPs and a fund without an SIP in April, adds that fund's ₹20,000 SIP through Fund details while asserting the card has no setup control, and verifies the ₹60,000 May runway. It checks the red due and focused Review journey on 1 May and 5 May, neutral styling after confirmation, the remaining due SIP on 12 May, and the 21 May lump sum and editable Fund-detail history. Correcting an opening-holding row recalculates holdings without changing the SIP plan.
 
 ## FIN-017 — Add and view listed stock holdings
 
@@ -106,7 +108,7 @@
 ### Integration-test scenarios
 
 - Create a six-month Home loan on 15 April; assert the compact current/next EMI window and May runway, review and pay the due May EMI on 5 May, and assert its persisted payment facts and refreshed 100% Monthly Commitment progress. Advance to June and assert the June occurrence is independently due while May remains paid; pay that final June EMI and assert July has neither a loan EMI nor an included loan commitment.
-- [Mutual-fund commitment browser regression](../../../frontend/e2e/mutual-fund-commitment.spec.js): create three staggered SIPs and opening holdings in April through the UI; assert first occurrence is May, May 1 red due/review/focus and neutral post-confirmation story state, May 12 remaining due SIPs, May 21 lump sum, editable opening/SIP/lump-sum history rows, and unchanged ₹60,000 SIP runway.
+- [Mutual-fund commitment browser regression](../../../frontend/e2e/mutual-fund-commitment.spec.js): follow one home-page journey through mistaken-fund deletion, two April SIPs, a later SIP set from Fund details, May 1 and May 5 due/review/focus and neutral post-confirmation story states, the May 12 remaining due SIP, the May 21 lump sum, editable opening/SIP/lump-sum history rows, and the unchanged ₹60,000 SIP runway.
 
 ### Browser Gherkin specification
 

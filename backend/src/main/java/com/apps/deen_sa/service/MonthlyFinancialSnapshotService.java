@@ -138,7 +138,10 @@ public class MonthlyFinancialSnapshotService {
     }
     private boolean hasRecurringInvestmentIn(UserInvestmentEntity investment, YearMonth month) {
         return (investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND || investment.getAssetType() == InvestmentAssetType.STOCK) && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
-                && investment.getSipAmount() != null && investment.getSipStartMonth() != null && !month.isBefore(YearMonth.from(investment.getSipStartMonth()));
+                && investment.getSipAmount() != null && investment.getSipStartMonth() != null && !month.isBefore(YearMonth.from(investment.getSipStartMonth()))
+                && (investment.getAssetType() != InvestmentAssetType.MUTUAL_FUND || !"QUARTERLY".equals(investment.getSipFrequency())
+                    || month.isBefore(YearMonth.from(investment.getSipAnchorMonth()))
+                    || java.time.temporal.ChronoUnit.MONTHS.between(YearMonth.from(investment.getSipAnchorMonth()), month) % 3 == 0);
     }
     /** A due-month projection is the statement ending before that due date; transaction rows remain actual spending, never another expense. */
     private Source creditCardSource(AppUserEntity user, com.apps.deen_sa.entity.UserCreditCardEntity card, YearMonth dueMonth) {

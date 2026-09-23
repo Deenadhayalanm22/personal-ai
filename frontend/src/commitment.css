@@ -14,3 +14,26 @@
 .investment-history-row .history-amount{display:flex;align-items:center;justify-content:flex-end;gap:5px}.investment-history-row .history-amount b{font-size:11px}.history-edit{display:grid;place-items:center;width:18px;height:18px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--green);font-size:10px;line-height:1;cursor:pointer}.history-edit:hover,.history-edit:focus-visible{background:#dceca7;outline:none}.history-recorded{color:var(--muted);font-size:8px;font-weight:700}
 .loan-history-action{grid-column:1/-1}.loan-history-action .due-reminder{margin-top:4px}
 .fund-card footer .fund-actions{flex-direction:column;align-items:flex-end;gap:20px;transform:translateY(-23px);margin-bottom:-27px}
+/* Due fund reminders use the same red treatment as due loan rows. */
+.modal-backdrop .evidence-row.due-fund-commitment{margin-inline:-8px;padding:12px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}
+.modal-backdrop .evidence-row.due-fund-commitment strong,.modal-backdrop .evidence-row.due-fund-commitment b{color:var(--red)}
+.fund-card footer .fund-actions{flex-direction:row;align-items:center;gap:12px;transform:none;margin-bottom:0}
+.fund-card footer .fund-actions .fund-due-label{color:var(--red);font-weight:800}
+.fund-card footer .fund-actions.due{padding:7px 9px;border:1px solid #e4a49c;border-radius:8px;background:#fff4f1}
+.fund-card.review-focus:focus,.fund-card.review-focus:focus-visible{outline:none}
+.detail-pnl-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+.detail-pnl-row .detail-pnl{flex-wrap:wrap;margin-top:0;min-width:0}
+.detail-pnl-row .detail-pnl span{flex-basis:100%}
+.detail-pnl-row .fund-detail-lump-sum{flex:none;min-height:36px;margin:0;padding:8px 12px;border:1px solid #cbdcc1;border-radius:9px;background:#edf4e8;color:var(--green);font:800 10px Manrope}
+.detail-pnl-row .fund-detail-lump-sum:hover{background:#dfead8}
+.fund-sip-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fund-sip-copy{min-width:0}
+.fund-sip-copy strong,.fund-sip-copy small{display:block}
+.fund-sip-copy strong{font:800 11px/1.4 Manrope}
+.fund-sip-copy small{margin-top:4px;font-size:9px}
+.fund-sip-actions{display:flex;flex:none;justify-content:flex-end;gap:6px;margin-left:auto}
+.fund-sip-actions button{padding:8px 10px;border:0;border-radius:8px;font:800 9px Manrope;white-space:nowrap}
+.fund-sip-actions.future{margin-top:8px}
+@media(max-width:380px){.fund-sip-row{align-items:flex-start;flex-direction:column}.fund-sip-actions{width:100%}}
+.fund-detail .investment-history-row.due-sip{margin-inline:-8px;padding:10px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}
+.fund-detail .investment-history-row.due-sip strong,.fund-detail .investment-history-row.due-sip small{color:var(--red)}

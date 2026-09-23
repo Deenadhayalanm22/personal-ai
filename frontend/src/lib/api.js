@@ -87,6 +87,8 @@ export const getMutualFunds = () => request('/api/web/mutual-funds');
 export const getMutualFund = (id) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}`);
 export const createMutualFund = (fund) => request('/api/web/mutual-funds', { method: 'POST', body: JSON.stringify(fund) });
 export const createMutualFundSip = (id, plan) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip`, { method: 'POST', body: JSON.stringify(plan) });
+export const updateMutualFundPlan = (id, plan) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/plan`, { method: 'PATCH', body: JSON.stringify(plan) });
+export const skipMutualFundSip = (id, month) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip-occurrences/${encodeURIComponent(month)}/skip`, { method: 'POST' });
 export const deleteMutualFund = (id) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const createMutualFundLumpSum = (id, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/lump-sums`, { method: 'POST', body: JSON.stringify(investment) });
 export const confirmSipOccurrence = (id, month, investment) => request(`/api/web/mutual-funds/${encodeURIComponent(id)}/sip-occurrences/${encodeURIComponent(month)}/confirm`, { method: 'POST', body: JSON.stringify(investment) });

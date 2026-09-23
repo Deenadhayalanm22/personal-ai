@@ -238,6 +238,13 @@ public class WebManager {
         return mutualFunds.createSip(authentication.authenticate(token), id, request);
     }
 
+    public WebMutualFundService.MutualFundResponse updateMutualFundPlan(String token, Long id, WebMutualFundService.PlanUpdateRequest request) {
+        return mutualFunds.updatePlan(authentication.authenticate(token), id, request);
+    }
+    public WebMutualFundService.TransactionResponse skipMutualFundSip(String token, Long id, YearMonth month) {
+        return mutualFunds.skipSip(authentication.authenticate(token), id, month);
+    }
+
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(String token, String query) {
         authentication.authenticate(token);
         return stockMarketData.search(query);

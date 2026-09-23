@@ -60,6 +60,7 @@ class MutualFundIntegrationIT {
         MutualFundScenarioDriver scenario = new MutualFundScenarioDriver(mockMvc, users, investments, transactions, authentication, mfApi);
         scenario.startUser();
 
+        scenario.rejectFundWithoutOpeningHolding();
         scenario.addFundWithoutSip();
         scenario.addSipToExistingFund();
     }

@@ -292,6 +292,19 @@ public class WebFinanceController {
         return webManager.createMutualFundSip(token, id, request);
     }
 
+    @PatchMapping("/mutual-funds/{id}/plan")
+    public WebMutualFundService.MutualFundResponse updateMutualFundPlan(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id,
+            @RequestBody WebMutualFundService.PlanUpdateRequest request) {
+        return webManager.updateMutualFundPlan(token, id, request);
+    }
+
+    @PostMapping("/mutual-funds/{id}/sip-occurrences/{month}/skip")
+    public WebMutualFundService.TransactionResponse skipMutualFundSip(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @PathVariable YearMonth month) {
+        return webManager.skipMutualFundSip(token, id, month);
+    }
+
     @GetMapping("/stocks/search")
     public java.util.List<StockMarketDataAdapter.StockSearchResult> searchStocks(
             @CookieValue(name = SESSION_COOKIE, required = false) String token, @RequestParam("q") String query) {

@@ -44,6 +44,7 @@ public class WebMutualFundService {
     @Transactional
     public MutualFundResponse create(AppUserEntity user, MutualFundCreateRequest request) {
         if (request == null) throw invalid("Mutual fund details are required");
+        if (request.existingHolding() == null) throw invalid("An opening holding is required");
         UserInvestmentEntity investment = new UserInvestmentEntity();
         investment.setUser(user);
         investment.setAssetType(InvestmentAssetType.MUTUAL_FUND);
@@ -57,7 +58,7 @@ public class WebMutualFundService {
         } catch (org.springframework.dao.DataIntegrityViolationException duplicate) {
             throw new WebApiException(HttpStatus.CONFLICT, "INVESTMENT_EXISTS", "This mutual fund is already tracked");
         }
-        if (request.existingHolding() != null) createOpeningBalance(investment, request.existingHolding());
+        createOpeningBalance(investment, request.existingHolding());
         createInitialSipOccurrenceIfNeeded(investment);
         MutualFundResponse response = response(investment);
         if (snapshots != null) snapshots.refreshCurrent(user); // FIN-018: refresh the monthly financial snapshot atomically with its investment source.
@@ -78,6 +79,37 @@ public class WebMutualFundService {
     }
 
     @Transactional
+    public MutualFundResponse updatePlan(AppUserEntity user, Long id, PlanUpdateRequest request) {
+        UserInvestmentEntity investment = owned(user, id);
+        if (request == null || (request.frequency() == null && request.currentNav() == null)) throw invalid("Provide frequency or current NAV");
+        if (request.currentNav() != null) investment.setCurrentNavOverride(positive(request.currentNav(), "currentNav", 6));
+        if (request.frequency() != null) {
+            if (!request.frequency().equals("MONTHLY") && !request.frequency().equals("QUARTERLY")) throw invalid("frequency must be MONTHLY or QUARTERLY");
+            if (investment.getSipStatus() != InvestmentSipStatus.ACTIVE) throw invalid("Set up a SIP before changing frequency");
+            YearMonth effective = request.effectiveMonth();
+            if (effective == null || !effective.isAfter(YearMonth.now(clock))) throw invalid("effectiveMonth must be a future month");
+            investment.setSipFrequency(request.frequency());
+            investment.setSipAnchorMonth(effective.minusMonths(1).atDay(1));
+        }
+        investments.save(investment);
+        if (snapshots != null) snapshots.refreshCurrent(user);
+        return summary(investment);
+    }
+
+    @Transactional
+    public TransactionResponse skipSip(AppUserEntity user, Long id, YearMonth month) {
+        UserInvestmentEntity investment = owned(user, id);
+        InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(id, InvestmentTransactionKind.SIP, month.atDay(1))
+                .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "SIP_OCCURRENCE_NOT_FOUND", "SIP occurrence not found"));
+        if (tx.getStatus() != InvestmentTransactionStatus.DUE || LocalDate.now(clock).isBefore(month.atDay(investment.getSipDay()))) throw invalid("Only a due SIP can be skipped");
+        tx.setStatus(InvestmentTransactionStatus.SKIPPED);
+        tx.setTransactionDate(LocalDate.now(clock));
+        TransactionResponse response = TransactionResponse.from(transactions.save(tx));
+        if (snapshots != null) snapshots.refreshCurrent(user);
+        return response;
+    }
+
+    @Transactional
     public TransactionResponse addLumpSum(AppUserEntity user, Long investmentId, LumpSumRequest request) {
         UserInvestmentEntity investment = owned(user, investmentId);
         if (request == null) throw invalid("Lump sum details are required");
@@ -95,7 +127,7 @@ public class WebMutualFundService {
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
                         investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "SIP_OCCURRENCE_NOT_FOUND", "SIP occurrence not found"));
-        if (tx.getStatus() == InvestmentTransactionStatus.CONFIRMED || tx.getStatus() == InvestmentTransactionStatus.SKIPPED) {
+        if (tx.getStatus() != InvestmentTransactionStatus.DUE || LocalDate.now(clock).isBefore(month.atDay(investment.getSipDay()))) {
             throw invalid("This SIP occurrence can no longer be confirmed");
         }
         InvestmentTransactionEntity confirmed = confirmed(investment, InvestmentTransactionKind.SIP, request.amount(),
@@ -164,7 +196,7 @@ public class WebMutualFundService {
     public MutualFundDetailResponse detail(AppUserEntity user, Long investmentId) {
         UserInvestmentEntity investment = owned(user, investmentId);
         Holding holding = holding(investment);
-        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
+        BigDecimal latestNav = investment.getCurrentNavOverride() != null ? investment.getCurrentNavOverride() : mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
         BigDecimal currentValue = latestNav == null ? null : holding.units().multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
         BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(holding.invested()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal profitOrLossPercent = profitOrLoss == null || holding.invested().signum() == 0 ? null
@@ -172,7 +204,7 @@ public class WebMutualFundService {
         return new MutualFundDetailResponse(investment.getId(), investment.getDisplayNameSnapshot(), holding.invested(),
                 currentValue, profitOrLoss, profitOrLossPercent, holding.averagePurchaseCost(), latestNav, holding.units(),
                 transactions.findByInvestmentIdOrderByCreatedAtAsc(investment.getId()).stream()
-                        .filter(tx -> tx.getStatus() == InvestmentTransactionStatus.CONFIRMED)
+                        .filter(tx -> tx.getStatus() == InvestmentTransactionStatus.CONFIRMED || tx.getStatus() == InvestmentTransactionStatus.SKIPPED)
                         .map(InvestmentHistoryItem::from).toList());
     }
 
@@ -204,7 +236,7 @@ public class WebMutualFundService {
     private void ensureCurrentSipOccurrence(UserInvestmentEntity investment) {
         if (investment.getSipStatus() != InvestmentSipStatus.ACTIVE) return;
         YearMonth current = YearMonth.now(clock);
-        if (YearMonth.from(investment.getSipStartMonth()).isAfter(current)) return;
+        if (!hasSipIn(investment, current)) return;
         var existing = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, current.atDay(1));
         if (existing.isEmpty()) {
             createSipOccurrence(investment, current, statusFor(investment, current));
@@ -212,6 +244,14 @@ public class WebMutualFundService {
             existing.get().setStatus(InvestmentTransactionStatus.DUE);
             transactions.save(existing.get());
         }
+    }
+
+    private boolean hasSipIn(UserInvestmentEntity investment, YearMonth month) {
+        YearMonth start = YearMonth.from(investment.getSipStartMonth());
+        if (month.isBefore(start)) return false;
+        YearMonth anchor = investment.getSipAnchorMonth() == null ? start : YearMonth.from(investment.getSipAnchorMonth());
+        if (month.isBefore(anchor)) return true;
+        return !"QUARTERLY".equals(investment.getSipFrequency()) || java.time.temporal.ChronoUnit.MONTHS.between(anchor, month) % 3 == 0;
     }
 
     private InvestmentTransactionStatus statusFor(UserInvestmentEntity investment, YearMonth month) {
@@ -244,6 +284,8 @@ public class WebMutualFundService {
         YearMonth current = YearMonth.now(clock);
         investment.setSipStartMonth((!requested.isAfter(current) ? current.plusMonths(1) : requested).atDay(1));
         investment.setSipStatus(InvestmentSipStatus.ACTIVE);
+        investment.setSipFrequency("MONTHLY");
+        investment.setSipAnchorMonth(investment.getSipStartMonth());
     }
 
     private void applySipIfPresent(UserInvestmentEntity investment, BigDecimal amount, Integer day, YearMonth startMonth) {
@@ -274,18 +316,32 @@ public class WebMutualFundService {
 
     private MutualFundResponse summary(UserInvestmentEntity investment) {
         Holding holding = holding(investment);
-        BigDecimal latestNav = mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
+        BigDecimal latestNav = investment.getCurrentNavOverride() != null ? investment.getCurrentNavOverride() : mfApi.latestNav(investment.getExternalInstrumentId()).orElse(null);
         BigDecimal currentValue = latestNav == null ? null : holding.units().multiply(latestNav).setScale(2, RoundingMode.HALF_UP);
         BigDecimal profitOrLoss = currentValue == null ? null : currentValue.subtract(holding.invested()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal profitOrLossPercent = profitOrLoss == null || holding.invested().signum() == 0 ? null
                 : profitOrLoss.multiply(BigDecimal.valueOf(100)).divide(holding.invested(), 2, RoundingMode.HALF_UP);
         ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
-                ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth())) : null;
+                ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth()), investment.getSipFrequency(), nextSipDate(investment)) : null;
         SipOccurrence currentSip = activeSip == null ? null : transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
                         investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock).atDay(1))
                 .map(SipOccurrence::from).orElse(null);
         return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
                 holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip, currentSip);
+    }
+
+    private LocalDate nextSipDate(UserInvestmentEntity investment) {
+        YearMonth now = YearMonth.now(clock);
+        for (int offset = 0; offset < 36; offset++) {
+            YearMonth month = now.plusMonths(offset);
+            if (!hasSipIn(investment, month)) continue;
+            if (offset == 0) {
+                var current = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, month.atDay(1));
+                if (current.isPresent() && (current.get().getStatus() == InvestmentTransactionStatus.CONFIRMED || current.get().getStatus() == InvestmentTransactionStatus.SKIPPED)) continue;
+            }
+            return month.atDay(investment.getSipDay());
+        }
+        return null;
     }
 
     private Holding holding(UserInvestmentEntity investment) {
@@ -323,7 +379,8 @@ public class WebMutualFundService {
     public record MutualFundResponse(Long id, String schemeCode, String schemeName, BigDecimal invested,
                                      BigDecimal currentValue, BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
                                      BigDecimal latestNav, ActiveSip activeSip, SipOccurrence currentSip) { }
-    public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth) { }
+    public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth, String frequency, LocalDate nextDueDate) { }
+    public record PlanUpdateRequest(String frequency, YearMonth effectiveMonth, BigDecimal currentNav) { }
     public record SipOccurrence(String scheduledMonth, String status, BigDecimal amount, LocalDate transactionDate,
                                 BigDecimal nav, BigDecimal units, String calculationSource) {
         static SipOccurrence from(InvestmentTransactionEntity value) {
@@ -337,11 +394,12 @@ public class WebMutualFundService {
                                            BigDecimal averageNav, BigDecimal currentNav, BigDecimal units,
                                            List<InvestmentHistoryItem> history) { }
     public record InvestmentHistoryItem(Long id, InvestmentTransactionKind kind, YearMonth scheduledMonth, LocalDate transactionDate,
-                                        BigDecimal amount, BigDecimal nav, BigDecimal units, InvestmentCalculationSource calculationSource) {
+                                        BigDecimal amount, BigDecimal nav, BigDecimal units, InvestmentCalculationSource calculationSource, InvestmentTransactionStatus status, LocalDate dueDate) {
         static InvestmentHistoryItem from(InvestmentTransactionEntity tx) {
             return new InvestmentHistoryItem(tx.getId(), tx.getTransactionKind(),
                     tx.getScheduledMonth() == null ? null : YearMonth.from(tx.getScheduledMonth()),
-                    tx.getTransactionDate(), tx.getAmount(), tx.getUnitPrice(), tx.getUnits(), tx.getCalculationSource());
+                    tx.getTransactionDate(), tx.getAmount(), tx.getUnitPrice(), tx.getUnits(), tx.getCalculationSource(), tx.getStatus(),
+                    tx.getScheduledMonth() == null ? null : tx.getScheduledMonth().withDayOfMonth(tx.getInvestment().getSipDay()));
         }
     }
     public record MutualFundListResponse(List<MutualFundResponse> mutualFunds) { }

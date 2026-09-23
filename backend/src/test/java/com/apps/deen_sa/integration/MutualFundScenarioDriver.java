@@ -67,12 +67,23 @@ final class MutualFundScenarioDriver {
         investmentId = investments.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getId();
     }
 
+    void rejectFundWithoutOpeningHolding() throws Exception {
+        mockMvc.perform(post("/api/web/mutual-funds").cookie(session).contentType(MediaType.APPLICATION_JSON).content("""
+                {"schemeCode":"missing-holding-probe","schemeName":"Missing Holding Probe Fund"}
+                """))
+                .andExpect(status().isBadRequest());
+        assertThat(investments.findByUserIdOrderByCreatedAtDesc(owner.getId())).isEmpty();
+    }
+
     void addFundWithoutSip() throws Exception {
         mockMvc.perform(post("/api/web/mutual-funds").cookie(session).contentType(MediaType.APPLICATION_JSON).content("""
-                {"schemeCode":"122639","schemeName":"Parag Parikh Flexi Cap Fund - Direct Plan - Growth"}
+                {"schemeCode":"122639","schemeName":"Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+                 "existingHolding":{"currentUnits":10,"totalInvestedAmount":1000}}
                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.activeSip").doesNotExist());
+                .andExpect(jsonPath("$.activeSip").doesNotExist())
+                .andExpect(jsonPath("$.invested").value(1000))
+                .andExpect(jsonPath("$.currentValue").value(2000));
         investmentId = investments.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getId();
     }
 
@@ -84,7 +95,7 @@ final class MutualFundScenarioDriver {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activeSip.amount").value(25000))
                 .andExpect(jsonPath("$.activeSip.day").value(5));
-        assertThat(transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId)).hasSize(1);
+        assertThat(transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId)).hasSize(2);
     }
 
     void assertOpeningHoldingAndDueSip() throws Exception {

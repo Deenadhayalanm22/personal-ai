@@ -28,6 +28,9 @@ public class UserInvestmentEntity {
     @Column(name = "sip_start_month") private LocalDate sipStartMonth;
     @Enumerated(EnumType.STRING) @Column(name = "sip_status", length = 20)
     private InvestmentSipStatus sipStatus;
+    @Column(name = "sip_frequency", nullable = false, length = 12) private String sipFrequency = "MONTHLY";
+    @Column(name = "sip_anchor_month") private LocalDate sipAnchorMonth;
+    @Column(name = "current_nav_override", precision = 19, scale = 6) private BigDecimal currentNavOverride;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt = Instant.now();
     @Column(name = "updated_at", nullable = false) private Instant updatedAt = Instant.now();
 }
