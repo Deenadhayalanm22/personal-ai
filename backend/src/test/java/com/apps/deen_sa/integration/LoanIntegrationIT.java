@@ -42,7 +42,7 @@ class LoanIntegrationIT {
     @MockBean private WebAuthenticationService authentication;
 
     @Test
-    void it_loan_001_createsListsAndEditsOnlyTheAuthenticatedUsersLoan() throws Exception {
+    void it_loan_001_managesLoanLifecycle() throws Exception {
         AppUserEntity owner = createUser("loan-owner");
         AppUserEntity otherUser = createUser("loan-other-user");
         when(authentication.authenticate("loan-owner-session")).thenReturn(owner);
@@ -109,15 +109,12 @@ class LoanIntegrationIT {
                         .content("{" + "\"loanName\":\"Not allowed\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LOAN_NOT_FOUND"));
-    }
+        {
+        AppUserEntity closureOwner = createUser("loan-closure-owner");
+        when(authentication.authenticate("loan-closure-session")).thenReturn(closureOwner);
+        var closureCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-closure-session");
 
-    @Test
-    void it_loan_002_createsAndResolvesAClosureReminder() throws Exception {
-        AppUserEntity owner = createUser("loan-closure-owner");
-        when(authentication.authenticate("loan-closure-session")).thenReturn(owner);
-        var cookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-closure-session");
-
-        mockMvc.perform(post("/api/web/loans").cookie(cookie).contentType(MediaType.APPLICATION_JSON).content("""
+        mockMvc.perform(post("/api/web/loans").cookie(closureCookie).contentType(MediaType.APPLICATION_JSON).content("""
                 {
                   "loanName": "Completed credit card EMI",
                   "loanType": "CREDIT_CARD_EMI",
@@ -131,38 +128,36 @@ class LoanIntegrationIT {
                 .andExpect(status().isCreated());
 
         closureReminders.createDueReminders();
-        UserLoanEntity loan = loans.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst();
+        UserLoanEntity closureLoan = loans.findByUserIdOrderByCreatedAtDesc(closureOwner.getId()).getFirst();
         var action = actions.findByUserIdAndStatusOrderByCreatedAtDesc(
-                owner.getId(), com.apps.deen_sa.domain.UserActionItemStatus.OPEN).getFirst();
+                closureOwner.getId(), com.apps.deen_sa.domain.UserActionItemStatus.OPEN).getFirst();
 
-        mockMvc.perform(get("/api/web/actions").cookie(cookie))
+        mockMvc.perform(get("/api/web/actions").cookie(closureCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actions.length()").value(1))
                 .andExpect(jsonPath("$.actions[0].id").value(action.getId()))
-                .andExpect(jsonPath("$.actions[0].referenceId").value(loan.getId()))
+                .andExpect(jsonPath("$.actions[0].referenceId").value(closureLoan.getId()))
                 .andExpect(jsonPath("$.actions[0].actionType").value("LOAN_CLOSURE_CONFIRMATION"));
 
-        mockMvc.perform(post("/api/web/actions/{id}/complete", action.getId()).cookie(cookie))
+        mockMvc.perform(post("/api/web/actions/{id}/complete", action.getId()).cookie(closureCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(action.getId()));
 
-        assertThat(loans.findById(loan.getId()).orElseThrow().getStatus())
+        assertThat(loans.findById(closureLoan.getId()).orElseThrow().getStatus())
                 .isEqualTo(com.apps.deen_sa.domain.LoanStatus.CLOSED);
-        mockMvc.perform(get("/api/web/actions").cookie(cookie))
+        mockMvc.perform(get("/api/web/actions").cookie(closureCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actions").isEmpty());
-    }
+        }
+        {
+        AppUserEntity deleteOwner = createUser("loan-delete-owner");
+        AppUserEntity deleteOtherUser = createUser("loan-delete-other-user");
+        when(authentication.authenticate("loan-delete-owner-session")).thenReturn(deleteOwner);
+        when(authentication.authenticate("loan-delete-other-session")).thenReturn(deleteOtherUser);
+        var deleteOwnerCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-delete-owner-session");
+        var deleteOtherCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-delete-other-session");
 
-    @Test
-    void it_loan_003_deletesOnlyTheAuthenticatedUsersLoan() throws Exception {
-        AppUserEntity owner = createUser("loan-delete-owner");
-        AppUserEntity otherUser = createUser("loan-delete-other-user");
-        when(authentication.authenticate("loan-delete-owner-session")).thenReturn(owner);
-        when(authentication.authenticate("loan-delete-other-session")).thenReturn(otherUser);
-        var ownerCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-delete-owner-session");
-        var otherCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-delete-other-session");
-
-        mockMvc.perform(post("/api/web/loans").cookie(ownerCookie).contentType(MediaType.APPLICATION_JSON).content("""
+        mockMvc.perform(post("/api/web/loans").cookie(deleteOwnerCookie).contentType(MediaType.APPLICATION_JSON).content("""
                 {
                   "loanName": "Mistaken loan",
                   "loanType": "PERSONAL",
@@ -175,24 +170,22 @@ class LoanIntegrationIT {
                 """))
                 .andExpect(status().isCreated());
 
-        UserLoanEntity loan = loans.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst();
-        mockMvc.perform(delete("/api/web/loans/{id}", loan.getId()).cookie(otherCookie))
+        UserLoanEntity deleteLoan = loans.findByUserIdOrderByCreatedAtDesc(deleteOwner.getId()).getFirst();
+        mockMvc.perform(delete("/api/web/loans/{id}", deleteLoan.getId()).cookie(deleteOtherCookie))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LOAN_NOT_FOUND"));
-        assertThat(loans.findById(loan.getId())).isPresent();
+        assertThat(loans.findById(deleteLoan.getId())).isPresent();
 
-        mockMvc.perform(delete("/api/web/loans/{id}", loan.getId()).cookie(ownerCookie))
+        mockMvc.perform(delete("/api/web/loans/{id}", deleteLoan.getId()).cookie(deleteOwnerCookie))
                 .andExpect(status().isNoContent());
-        assertThat(loans.findById(loan.getId())).isEmpty();
-    }
+        assertThat(loans.findById(deleteLoan.getId())).isEmpty();
+        }
+        {
+        AppUserEntity finalEmiOwner = createUser("loan-final-emi-owner");
+        when(authentication.authenticate("loan-final-emi-session")).thenReturn(finalEmiOwner);
+        var finalEmiCookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-final-emi-session");
 
-    @Test
-    void it_loan_004_marksTheFinalScheduledEmiPaidAndClosesTheLoan() throws Exception {
-        AppUserEntity owner = createUser("loan-final-emi-owner");
-        when(authentication.authenticate("loan-final-emi-session")).thenReturn(owner);
-        var cookie = new jakarta.servlet.http.Cookie("WEB_SESSION", "loan-final-emi-session");
-
-        mockMvc.perform(post("/api/web/loans").cookie(cookie).contentType(MediaType.APPLICATION_JSON).content("""
+        mockMvc.perform(post("/api/web/loans").cookie(finalEmiCookie).contentType(MediaType.APPLICATION_JSON).content("""
                 {
                   "loanName": "Final EMI loan",
                   "loanType": "PERSONAL",
@@ -205,15 +198,16 @@ class LoanIntegrationIT {
                 """))
                 .andExpect(status().isCreated());
 
-        UserLoanEntity loan = loans.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst();
-        mockMvc.perform(post("/api/web/loans/{id}/emi-occurrences/{month}/paid", loan.getId(), "2099-01").cookie(cookie))
+        UserLoanEntity finalEmiLoan = loans.findByUserIdOrderByCreatedAtDesc(finalEmiOwner.getId()).getFirst();
+        mockMvc.perform(post("/api/web/loans/{id}/emi-occurrences/{month}/paid", finalEmiLoan.getId(), "2099-01").cookie(finalEmiCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CLOSED"))
                 .andExpect(jsonPath("$.completedEmiCount").value(1))
                 .andExpect(jsonPath("$.remainingEmiCount").value(0));
 
-        assertThat(loans.findById(loan.getId()).orElseThrow().getStatus())
+        assertThat(loans.findById(finalEmiLoan.getId()).orElseThrow().getStatus())
                 .isEqualTo(com.apps.deen_sa.domain.LoanStatus.CLOSED);
+        }
     }
 
     private AppUserEntity createUser(String externalUserId) {

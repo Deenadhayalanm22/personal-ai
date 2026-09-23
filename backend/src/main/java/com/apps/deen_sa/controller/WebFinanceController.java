@@ -222,6 +222,12 @@ public class WebFinanceController {
             @PathVariable YearMonth month) {
         return webManager.markLoanEmiPaid(token, id, month);
     }
+    @PostMapping("/loans/{id}/emi-occurrences/{month}/skipped")
+    public WebLoanService.LoanResponse skipLoanEmi(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @PathVariable YearMonth month, @RequestBody(required = false) WebLoanService.SkipRequest request) { return webManager.skipLoanEmi(token, id, month, request); }
+    @PostMapping("/loans/{id}/pre-close")
+    public WebLoanService.LoanResponse preCloseLoan(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebLoanService.PreCloseRequest request) { return webManager.preCloseLoan(token, id, request); }
+    @PostMapping("/loans/{id}/restructures")
+    public WebLoanService.LoanResponse restructureLoan(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody WebLoanService.RestructureRequest request) { return webManager.restructureLoan(token, id, request); }
 
     @GetMapping("/income-outlook")
     public WebIncomeService.OutlookResponse incomeOutlook(@CookieValue(name = SESSION_COOKIE, required = false) String token) {

@@ -76,6 +76,9 @@ export const createLoan = (loan) => request('/api/web/loans', { method: 'POST', 
 export const updateLoan = (id, changes) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteLoan = (id) => request(`/api/web/loans/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const markLoanEmiPaid = (id, month) => request(`/api/web/loans/${encodeURIComponent(id)}/emi-occurrences/${encodeURIComponent(month)}/paid`, { method: 'POST' });
+export const skipLoanEmi = (id, month, bankPenaltyAmount = null) => request(`/api/web/loans/${encodeURIComponent(id)}/emi-occurrences/${encodeURIComponent(month)}/skipped`, { method: 'POST', body: JSON.stringify({ bankPenaltyAmount }) });
+export const preCloseLoan = (id, settlementAmount) => request(`/api/web/loans/${encodeURIComponent(id)}/pre-close`, { method: 'POST', body: JSON.stringify({ settlementAmount }) });
+export const restructureLoan = (id, plan) => request(`/api/web/loans/${encodeURIComponent(id)}/restructures`, { method: 'POST', body: JSON.stringify(plan) });
 export const getActions = () => request('/api/web/actions');
 export const completeAction = (id) => request(`/api/web/actions/${encodeURIComponent(id)}/complete`, { method: 'POST' });
 

@@ -200,6 +200,9 @@ public class WebManager {
     public WebLoanService.LoanResponse markLoanEmiPaid(String token, Long id, YearMonth month) {
         return loans.markPaid(authentication.authenticate(token), id, month);
     }
+    public WebLoanService.LoanResponse skipLoanEmi(String token, Long id, YearMonth month, WebLoanService.SkipRequest request) { return loans.skip(authentication.authenticate(token), id, month, request); }
+    public WebLoanService.LoanResponse preCloseLoan(String token, Long id, WebLoanService.PreCloseRequest request) { return loans.preClose(authentication.authenticate(token), id, request); }
+    public WebLoanService.LoanResponse restructureLoan(String token, Long id, WebLoanService.RestructureRequest request) { return loans.restructure(authentication.authenticate(token), id, request); }
 
     public ActionManagementService.ActionListResponse actions(String token) {
         return actions.openActions(authentication.authenticate(token));

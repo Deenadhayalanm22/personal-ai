@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.YearMonth;
 import java.util.List;
 
 /** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
@@ -74,6 +75,7 @@ public class WebLoanService {
         if (request == null || request.hasNoChanges()) throw invalid("Provide at least one value to update");
         UserLoanEntity loan = loans.findByIdAndUserId(loanId, user.getId())
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found"));
+        if (hasRecordedOutcome(loan) && (request.originalPrincipal() != null || request.monthlyEmiAmount() != null || request.totalTenureMonths() != null || request.firstEmiDueDate() != null)) throw invalid("Payment history cannot be changed; restructure remaining loan instead");
         apply(loan,
                 request.loanName() == null ? loan.getLoanName() : request.loanName(),
                 request.loanType() == null ? loan.getLoanType() : request.loanType(),
@@ -104,10 +106,12 @@ public class WebLoanService {
     public LoanResponse markPaid(AppUserEntity user, Long loanId, java.time.YearMonth month) {
         UserLoanEntity loan = loans.findByIdAndUserId(loanId, user.getId()).orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found"));
         LocalDate dueMonth = month.atDay(1);
-        if (!isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this loan's tenure");
+        if (loan.getStatus() != LoanStatus.ACTIVE || !isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this active loan's tenure");
         LoanEmiOccurrenceEntity occurrence = occurrence(loan, dueMonth);
+        if (occurrence.getDueDate().isAfter(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
+        if (occurrence.getStatus() == LoanEmiOccurrenceStatus.SKIPPED) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_RECORDED", "This EMI was skipped");
         if (occurrence.getStatus() == LoanEmiOccurrenceStatus.PAID) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_PAID", "This EMI has already been paid");
-        occurrence.setStatus(LoanEmiOccurrenceStatus.PAID); occurrence.setPaidAmount(loan.getMonthlyEmiAmount());
+        occurrence.setStatus(LoanEmiOccurrenceStatus.PAID); occurrence.setPlannedAmount(loan.getMonthlyEmiAmount()); occurrence.setPaidAmount(loan.getMonthlyEmiAmount());
         occurrence.setPaidAt(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())))); occurrence.setUpdatedAt(Instant.now(clock)); occurrences.save(occurrence);
         if (dueMonth.equals(loan.getFirstEmiDueDate().plusMonths(loan.getTotalTenureMonths() - 1L).withDayOfMonth(1))) {
             loan.setStatus(LoanStatus.CLOSED);
@@ -119,15 +123,56 @@ public class WebLoanService {
         return response(loan);
     }
 
+    @Transactional
+    public LoanResponse skip(AppUserEntity user, Long loanId, java.time.YearMonth month, SkipRequest request) {
+        UserLoanEntity loan = owned(user, loanId); LocalDate dueMonth = month.atDay(1);
+        if (loan.getStatus() != LoanStatus.ACTIVE || !isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this active loan's tenure");
+        LoanEmiOccurrenceEntity occurrence = occurrence(loan, dueMonth);
+        if (occurrence.getDueDate().isAfter(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
+        if (occurrence.getStatus() == LoanEmiOccurrenceStatus.PAID || occurrence.getStatus() == LoanEmiOccurrenceStatus.SKIPPED) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_RECORDED", "This EMI already has an outcome");
+        if (request != null && request.bankPenaltyAmount() != null) occurrence.setBankPenaltyAmount(positiveAmount(request.bankPenaltyAmount(), "bankPenaltyAmount"));
+        occurrence.setPlannedAmount(loan.getMonthlyEmiAmount()); occurrence.setStatus(LoanEmiOccurrenceStatus.SKIPPED); occurrence.setUpdatedAt(Instant.now(clock)); occurrences.save(occurrence);
+        loan.setTotalTenureMonths(loan.getTotalTenureMonths() + 1); loan.setUpdatedAt(Instant.now(clock)); loans.save(loan);
+        if (snapshots != null) snapshots.refreshCurrent(user); return response(loan);
+    }
+
+    @Transactional
+    public LoanResponse preClose(AppUserEntity user, Long loanId, PreCloseRequest request) {
+        if (request == null || request.settlementAmount() == null || request.settlementAmount().signum() <= 0) throw invalid("settlementAmount must be greater than zero");
+        UserLoanEntity loan = owned(user, loanId); LocalDate month = LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))).withDayOfMonth(1);
+        if (loan.getStatus() != LoanStatus.ACTIVE || !isScheduledMonth(loan, month)) throw invalid("Loan has no payable EMI this month");
+        LoanEmiOccurrenceEntity occurrence = occurrence(loan, month); occurrence.setStatus(LoanEmiOccurrenceStatus.PAID); occurrence.setPlannedAmount(loan.getMonthlyEmiAmount()); occurrence.setPaidAmount(request.settlementAmount().setScale(2, RoundingMode.HALF_UP)); occurrence.setPaidAt(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())))); occurrence.setPreClosureSettlement(true); occurrences.save(occurrence);
+        occurrences.deleteByLoanIdAndDueMonthGreaterThanEqual(loan.getId(), month.plusMonths(1));
+        loan.setTotalTenureMonths((int) java.time.temporal.ChronoUnit.MONTHS.between(loan.getFirstEmiDueDate().withDayOfMonth(1), month) + 1); loan.setStatus(LoanStatus.CLOSED); loans.save(loan);
+        if (actions != null) actions.deleteByUserIdAndReferenceTypeAndReferenceId(user.getId(), "LOAN", loan.getId()); if (snapshots != null) snapshots.refreshCurrent(user); return response(loan);
+    }
+
+    @Transactional
+    public LoanResponse restructure(AppUserEntity user, Long loanId, RestructureRequest request) {
+        if (request == null || request.effectiveMonth() == null || request.monthlyEmiAmount() == null || request.monthlyEmiAmount().signum() <= 0 || request.remainingTenureMonths() == null || request.remainingTenureMonths() <= 0) throw invalid("Valid restructure details are required");
+        UserLoanEntity loan = owned(user, loanId); LocalDate effective = request.effectiveMonth().atDay(1);
+        if (loan.getStatus() != LoanStatus.ACTIVE || !hasRecordedOutcome(loan) || !isScheduledMonth(loan, effective) || effective.isBefore(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))).withDayOfMonth(1))) throw invalid("Restructure must start in a future unpaid loan month");
+        if (occurrences.findByLoanIdOrderByDueMonthAsc(loan.getId()).stream().anyMatch(value -> !value.getDueMonth().isBefore(effective) && (value.getStatus() == LoanEmiOccurrenceStatus.PAID || value.getStatus() == LoanEmiOccurrenceStatus.SKIPPED))) throw invalid("Restructure cannot change recorded outcomes");
+        occurrences.deleteByLoanIdAndDueMonthGreaterThanEqual(loan.getId(), effective); loan.setRestructuredFrom(effective); loan.setMonthlyEmiAmount(request.monthlyEmiAmount().setScale(2, RoundingMode.HALF_UP));
+        loan.setTotalTenureMonths((int) java.time.temporal.ChronoUnit.MONTHS.between(loan.getFirstEmiDueDate().withDayOfMonth(1), effective) + request.remainingTenureMonths()); loans.save(loan);
+        if (snapshots != null) snapshots.refreshCurrent(user); return response(loan);
+    }
+
+    private UserLoanEntity owned(AppUserEntity user, Long id) { return loans.findByIdAndUserId(id, user.getId()).orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "LOAN_NOT_FOUND", "Loan not found")); }
+    private boolean hasRecordedOutcome(UserLoanEntity loan) { return occurrences != null && occurrences.findByLoanIdOrderByDueMonthAsc(loan.getId()).stream().anyMatch(value -> value.getStatus() == LoanEmiOccurrenceStatus.PAID || value.getStatus() == LoanEmiOccurrenceStatus.SKIPPED); }
+
     private boolean isScheduledMonth(UserLoanEntity loan, LocalDate month) {
         LocalDate first = loan.getFirstEmiDueDate().withDayOfMonth(1);
         LocalDate last = first.plusMonths(loan.getTotalTenureMonths() - 1L);
         return !month.isBefore(first) && !month.isAfter(last);
     }
 
-    private LoanResponse response(UserLoanEntity loan) { return LoanResponse.from(loan, clock, visibleOccurrences(occurrenceResponses(loan))); }
+    private LoanResponse response(UserLoanEntity loan) {
+        List<EmiOccurrenceResponse> allOccurrences = occurrenceResponses(loan);
+        return LoanResponse.from(loan, visibleOccurrences(allOccurrences), allOccurrences, hasRecordedOutcome(loan));
+    }
     private List<EmiOccurrenceResponse> visibleOccurrences(List<EmiOccurrenceResponse> values) {
-        int next = java.util.stream.IntStream.range(0, values.size()).filter(index -> values.get(index).status() != LoanEmiOccurrenceStatus.PAID).findFirst().orElse(-1);
+        int next = java.util.stream.IntStream.range(0, values.size()).filter(index -> values.get(index).status() != LoanEmiOccurrenceStatus.PAID && values.get(index).status() != LoanEmiOccurrenceStatus.SKIPPED).findFirst().orElse(-1);
         return next < 0 ? values.stream().skip(Math.max(0, values.size() - 1L)).toList() : values.subList(Math.max(0, next - 1), Math.min(values.size(), next + 1));
     }
     private List<EmiOccurrenceResponse> occurrenceResponses(UserLoanEntity loan) {
@@ -136,14 +181,14 @@ public class WebLoanService {
         java.util.Map<LocalDate, LoanEmiOccurrenceEntity> saved = occurrences.findByLoanIdOrderByDueMonthAsc(loan.getId()).stream().collect(java.util.stream.Collectors.toMap(LoanEmiOccurrenceEntity::getDueMonth, value -> value));
         return java.util.stream.IntStream.range(0, loan.getTotalTenureMonths()).mapToObj(index -> {
             LocalDate due = loan.getFirstEmiDueDate().plusMonths(index); LocalDate month = due.withDayOfMonth(1); LoanEmiOccurrenceEntity entity = saved.get(month);
-            LoanEmiOccurrenceStatus status = entity == null ? (month.isBefore(today.withDayOfMonth(1)) ? LoanEmiOccurrenceStatus.PAID : month.equals(today.withDayOfMonth(1)) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
-            return new EmiOccurrenceResponse(month.toString().substring(0, 7), due, status, loan.getMonthlyEmiAmount(), entity == null ? (status == LoanEmiOccurrenceStatus.PAID ? loan.getMonthlyEmiAmount() : null) : entity.getPaidAmount(), entity == null ? (status == LoanEmiOccurrenceStatus.PAID ? due : null) : entity.getPaidAt());
+            LoanEmiOccurrenceStatus status = entity == null ? (!due.isAfter(today) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
+            return new EmiOccurrenceResponse(month.toString().substring(0, 7), due, status, entity != null && entity.getPlannedAmount() != null ? entity.getPlannedAmount() : loan.getMonthlyEmiAmount(), entity == null ? null : entity.getPaidAmount(), entity == null ? null : entity.getPaidAt(), entity == null ? null : entity.getBankPenaltyAmount(), entity != null && entity.isPreClosureSettlement());
         }).toList();
     }
     private void seedHistoricalOccurrences(UserLoanEntity loan) {
         if (occurrences == null) return;
         LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(loan.getUser().getTimezone())));
-        for (int index = 0; index < loan.getTotalTenureMonths(); index++) { LocalDate due = loan.getFirstEmiDueDate().plusMonths(index); if (due.isAfter(today)) break; LoanEmiOccurrenceEntity value = new LoanEmiOccurrenceEntity(); value.setLoan(loan); value.setDueMonth(due.withDayOfMonth(1)); value.setDueDate(due); value.setStatus(LoanEmiOccurrenceStatus.PAID); value.setPaidAmount(loan.getMonthlyEmiAmount()); value.setPaidAt(due); occurrences.save(value); }
+        for (int index = 0; index < loan.getTotalTenureMonths(); index++) { LocalDate due = loan.getFirstEmiDueDate().plusMonths(index); if (!due.isBefore(today)) break; LoanEmiOccurrenceEntity value = new LoanEmiOccurrenceEntity(); value.setLoan(loan); value.setDueMonth(due.withDayOfMonth(1)); value.setDueDate(due); value.setStatus(LoanEmiOccurrenceStatus.PAID); value.setPlannedAmount(loan.getMonthlyEmiAmount()); value.setPaidAmount(loan.getMonthlyEmiAmount()); value.setPaidAt(due); occurrences.save(value); }
     }
     private LoanEmiOccurrenceEntity occurrence(UserLoanEntity loan, LocalDate month) {
         if (occurrences == null) throw new IllegalStateException("Loan EMI occurrences are unavailable");
@@ -216,19 +261,20 @@ public class WebLoanService {
     public record LoanResponse(Long id, String loanName, LoanType loanType, String lenderName,
                                BigDecimal originalPrincipal, BigDecimal monthlyEmiAmount,
                                Integer totalTenureMonths, LocalDate firstEmiDueDate,
-                               LoanStatus status, String notes, int completedEmiCount, int remainingEmiCount, List<EmiOccurrenceResponse> emiOccurrences) {
-        static LoanResponse from(UserLoanEntity loan, Clock clock, List<EmiOccurrenceResponse> occurrences) {
-            LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(loan.getUser().getTimezone())));
-            int completed = loan.getStatus() == LoanStatus.CLOSED ? loan.getTotalTenureMonths()
-                    : Math.max(0, Math.min(loan.getTotalTenureMonths(),
-                    (int) java.time.temporal.ChronoUnit.MONTHS.between(loan.getFirstEmiDueDate().withDayOfMonth(1), today.withDayOfMonth(1))
-                            + (today.getDayOfMonth() >= loan.getFirstEmiDueDate().getDayOfMonth() ? 1 : 0)));
+                               LoanStatus status, String notes, int completedEmiCount, int remainingEmiCount, List<EmiOccurrenceResponse> emiOccurrences, boolean hasRecordedOutcome, LocalDate restructuredFrom) {
+        static LoanResponse from(UserLoanEntity loan, List<EmiOccurrenceResponse> occurrences,
+                                 List<EmiOccurrenceResponse> allOccurrences, boolean hasRecordedOutcome) {
+            int completed = (int) allOccurrences.stream().filter(value -> value.status() == LoanEmiOccurrenceStatus.PAID).count();
             return new LoanResponse(loan.getId(), loan.getLoanName(), loan.getLoanType(), loan.getLenderName(),
                     loan.getOriginalPrincipal(), loan.getMonthlyEmiAmount(), loan.getTotalTenureMonths(),
-                    loan.getFirstEmiDueDate(), loan.getStatus(), loan.getNotes(), completed, loan.getTotalTenureMonths() - completed, occurrences);
+                    loan.getFirstEmiDueDate(), loan.getStatus(), loan.getNotes(), completed, loan.getTotalTenureMonths() - completed, occurrences, hasRecordedOutcome, loan.getRestructuredFrom());
         }
     }
-    public record EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt) { }
+    public record EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt, BigDecimal bankPenaltyAmount, boolean preClosureSettlement) { }
+
+    public record SkipRequest(BigDecimal bankPenaltyAmount) { }
+    public record PreCloseRequest(BigDecimal settlementAmount) { }
+    public record RestructureRequest(YearMonth effectiveMonth, BigDecimal monthlyEmiAmount, Integer remainingTenureMonths) { }
 
     public record LoanHistoryResponse(Long id, String loanName, List<EmiOccurrenceResponse> history) { }
 

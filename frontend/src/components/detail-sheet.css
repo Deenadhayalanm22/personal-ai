@@ -12,3 +12,7 @@
 .investment-history-row.due{margin-top:5px;padding:12px;border:1px solid #e4a49c;border-radius:10px;background:#fffefa}.investment-history-row.due small{color:var(--red)}
 .loan-history-action{margin-top:3px}.loan-history-action .due-reminder{margin-top:4px}
 @media(max-width:520px){.fund-form-backdrop:has(.fund-detail){align-items:end;padding:0}.fund-detail{max-height:92vh;border-radius:22px 22px 0 0}}
+
+.fund-detail>.modal-actions{margin:8px 0 14px;flex-wrap:wrap}.fund-detail>.modal-actions button{padding:6px 8px;font-size:10px}.loan-history-action{display:flex;gap:8px}.loan-history-action button{padding:8px 10px;border:0;border-radius:8px;font-size:10px;font-weight:800}.loan-history-action button:disabled{opacity:.48;cursor:not-allowed}
+.loan-restructure-action{display:block;width:100%;margin-top:15px;padding:11px 13px;border:1px solid #b9d6b4;border-radius:10px;background:#f5f9ef;color:var(--green);font:800 11px 'DM Sans',sans-serif;text-align:left;cursor:pointer}
+.loan-restructure-action:hover{background:#e9f3df}.loan-restructure-action:focus-visible{outline:2px solid #4e9d8d;outline-offset:2px}

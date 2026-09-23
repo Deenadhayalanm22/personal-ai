@@ -44,6 +44,7 @@ public class MonthlyFinancialSnapshotService {
     private final UserCreditCardRepository creditCards;
     private final FinancialTransactionRepository transactions;
     private final Clock clock;
+    @Autowired(required = false) private com.apps.deen_sa.repository.LoanEmiOccurrenceRepository loanOccurrences;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
@@ -131,6 +132,7 @@ public class MonthlyFinancialSnapshotService {
     }
     private boolean hasEmiIn(UserLoanEntity loan, YearMonth month) {
         if (loan.getStatus() != LoanStatus.ACTIVE) return false;
+        if (loanOccurrences != null && loanOccurrences.findByLoanIdAndDueMonth(loan.getId(), month.atDay(1)).map(value -> value.getStatus() == com.apps.deen_sa.domain.LoanEmiOccurrenceStatus.SKIPPED).orElse(false)) return false;
         YearMonth first = YearMonth.from(loan.getFirstEmiDueDate());
         return !month.isBefore(first) && !month.isAfter(first.plusMonths(loan.getTotalTenureMonths() - 1L));
     }
