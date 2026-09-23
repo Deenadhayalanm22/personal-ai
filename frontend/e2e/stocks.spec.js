@@ -1,124 +1,110 @@
 import { expect, test } from '@playwright/test';
+const api = 'http://localhost:8080';
 
-test('real API: add two stocks and show their latest prices and total portfolio value', async ({ page, request }) => {
-  const fixture = await request.post('http://localhost:8080/test/e2e/session');
-  expect(fixture.ok()).toBeTruthy();
-  const { sessionToken } = await fixture.json();
+test('stock details own plan, due decision, purchase, correction and delete', async ({ page, request }) => {
+  test.setTimeout(90000);
+  const session = await request.post(`${api}/test/e2e/session`);
+  const { sessionToken } = await session.json();
+  const headers = { Cookie: `WEB_SESSION=${sessionToken}` };
   await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
-
+  await request.post(`${api}/test/e2e/clock`, { data: { instant: '2026-04-15T09:00:00Z' } });
+  const created = await request.post(`${api}/api/web/stocks`, { headers, data: { symbol: 'ITC.NS', name: 'ITC Limited', quantity: 10, totalInvestedAmount: 4000 } });
+  expect(created.ok()).toBeTruthy();
+  const stock = await created.json();
+  const relianceCreated = await request.post(`${api}/api/web/stocks`, { headers, data: { symbol: 'RELIANCE.NS', name: 'Reliance Industries', quantity: 5, totalInvestedAmount: 6000 } });
+  expect(relianceCreated.ok()).toBeTruthy();
+  const reliance = await relianceCreated.json();
   await page.goto('/dashboard?month=2026-04');
   await page.getByRole('button', { name: /Your money/ }).click();
-  const stocks = page.locator('.stocks-module');
-  await expect(stocks).toContainText('Search a listed stock');
-
-  await addStockThroughUi(page, 'ITC', 'ITC Limited', 10, 4000);
-  await addStockThroughUi(page, 'Reliance', 'Reliance Industries', 5, 6000);
-
-  await expect(stocks.locator('.fund-card')).toHaveCount(2);
-  await expect(stocks).toContainText('Total stock value');
-  await expect(stocks).toContainText('₹11,755');
-  await expect(stocks).toContainText('+₹1,755 overall P&L');
-
-  const itc = stocks.locator('.fund-card', { hasText: 'ITC Limited' });
-  await expect(itc).toContainText('Latest price ₹425.50');
-
-  const reliance = stocks.locator('.fund-card', { hasText: 'Reliance Industries' });
-  await expect(reliance).toContainText('Latest price ₹1,500.00');
-});
-
-test('real API: delete a mistakenly added stock from its card', async ({ page, request }) => {
-  const fixture = await request.post('http://localhost:8080/test/e2e/session');
-  expect(fixture.ok()).toBeTruthy();
-  const { sessionToken } = await fixture.json();
-  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
-
-  await page.goto('/dashboard?month=2026-04');
-  await page.getByRole('button', { name: /Your money/ }).click();
-  const stocks = page.locator('.stocks-module');
-  await addStockThroughUi(page, 'ITC', 'ITC Limited', 10, 4000);
-  await expect(stocks.locator('.fund-card')).toHaveCount(1);
-
-  const deleteResponse = page.waitForResponse(response => response.url().includes('/api/web/stocks/') && response.request().method() === 'DELETE');
-  await stocks.getByRole('button', { name: 'Delete ITC Limited' }).click();
-  expect((await deleteResponse).status()).toBe(204);
-  await expect(stocks.locator('.fund-card')).toHaveCount(0);
-  await expect(stocks).toContainText('Search a listed stock');
-
-  await page.reload();
-  await page.getByRole('button', { name: /Your money/ }).click();
-  await expect(page.locator('.stocks-module .fund-card')).toHaveCount(0);
-});
-
-test('real API: confirm a due ETF monthly plan and refresh its commitment and holding', async ({ page, request }) => {
-  const fixture = await request.post('http://localhost:8080/test/e2e/session');
-  expect(fixture.ok()).toBeTruthy();
-  const { sessionToken } = await fixture.json();
-  await page.context().addCookies([{ name: 'WEB_SESSION', value: sessionToken, domain: 'localhost', path: '/', httpOnly: true }]);
-
-  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-15T09:00:00Z' } })).ok()).toBeTruthy();
-  await page.goto('/dashboard?month=2026-04');
-  await page.getByRole('button', { name: /Your money/ }).click();
-  await addStockThroughUi(page, 'ITC', 'ITC Limited', 10, 4000);
-  const stockCard = page.locator('.stocks-module .fund-card', { hasText: 'ITC Limited' });
-  await expect(stockCard.getByRole('button', { name: 'Set monthly recurring plan for ITC Limited' })).toBeVisible();
-  await page.getByRole('button', { name: 'Set monthly recurring plan for ITC Limited' }).click();
+  const card = page.getByTestId(`stock-card-${stock.id}`);
+  await expect(page.locator('.stocks-module')).toContainText('₹11,755');
+  await expect(page.locator('.stocks-module')).toContainText('+₹1,755 overall P&L');
+  await expect(card.getByRole('button', { name: /Delete|Set monthly recurring plan/ })).toHaveCount(0);
+  await card.getByRole('button', { name: /View details/ }).click();
+  let detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ITC Limited' }) });
+  await expect(detail.getByRole('button', { name: 'Delete stock' })).toBeVisible();
+  await expect(detail.getByRole('button', { name: 'Edit stock' })).toBeVisible();
+  await expect(detail).toContainText('Opening holding');
+  await expect(detail.getByRole('button', { name: 'Edit investment' })).toHaveCount(0);
+  const titleBox = await detail.getByRole('heading', { name: 'ITC Limited' }).boundingBox();
+  const actionsBox = await detail.getByRole('button', { name: 'Edit stock' }).boundingBox();
+  expect(actionsBox.y).toBeGreaterThan(titleBox.y);
+  await detail.getByRole('button', { name: /Set monthly plan/ }).click();
   const plan = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Plan ITC Limited' }) });
   await plan.getByLabel('Monthly amount').fill('5000');
   await plan.getByLabel('Investment day').fill('1');
   await plan.getByLabel('Start month').fill('2026-05');
   await plan.getByRole('button', { name: 'Save monthly plan' }).click();
-  await expect(plan).toHaveCount(0);
+  await expect(detail.getByRole('button', { name: 'Confirm allocation' })).toBeDisabled();
+  await expect(detail.getByRole('button', { name: 'Skip purchase' })).toBeDisabled();
+  await detail.getByRole('button', { name: '×' }).click();
   await page.locator('.money-modal > .close').click();
-
-  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-05-01T09:00:00Z' } })).ok()).toBeTruthy();
+  await request.post(`${api}/test/e2e/clock`, { data: { instant: '2026-05-01T09:00:00Z' } });
   await page.reload();
-  // Opening Stocks is the user-facing read that materializes and promotes the current monthly occurrence.
-  const stocksLoaded = page.waitForResponse(response => response.url().includes('/api/web/stocks') && response.request().method() === 'GET');
-  await page.getByRole('button', { name: /Your money/ }).click();
-  const stocksResponse = await stocksLoaded;
-  expect(stocksResponse.status()).toBe(200);
-  const { stocks: dueStocks } = await stocksResponse.json();
-  expect(dueStocks.find(stock => stock.name === 'ITC Limited').currentMonthlyPlan.status).toBe('DUE');
-  await expect(page.getByTestId(/stock-monthly-plan-/)).toContainText('Due now');
-  await expect(page.getByTestId(/stock-monthly-plan-/)).toHaveCSS('background-color', 'rgb(255, 244, 241)');
-  await expect(stockCard).not.toHaveCSS('outline-style', 'solid');
-  await page.locator('.money-modal > .close').click();
   await page.locator('.story-carousel-card').first().click();
   await page.getByTestId('view-included-commitments').click();
-  const includedPlan = page.getByTestId(/included-stock-commitment-/).locator('..');
-  await expect(includedPlan).toHaveClass(/due-commitment/);
-  await page.getByTestId(/included-stock-commitment-/).click();
-  await expect(stockCard).toBeFocused();
-  await expect(page.getByTestId(/stock-monthly-plan-/)).toContainText('Due now');
-  await page.getByRole('button', { name: 'Confirm allocation' }).click();
+  const included = page.getByTestId(`included-stock-commitment-${stock.id}`);
+  await expect(included.locator('..')).toHaveClass(/due-stock-commitment/);
+  await expect(included.locator('..')).toHaveCSS('background-color', 'rgb(255, 244, 241)');
+  await included.click();
+  await expect(card).toBeFocused();
+  await expect(card.locator('footer .fund-actions')).toHaveCSS('background-color', 'rgb(255, 244, 241)');
+  await expect(card.locator('footer .fund-actions')).toContainText('Due now');
+  await expect(card.locator('footer .fund-actions')).toContainText('View details');
+  await expect(card.getByTestId(`stock-monthly-plan-${stock.id}`)).toContainText('Due now');
+  await card.getByRole('button', { name: /View details/ }).click();
+  detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ITC Limited' }) });
+  await expect(detail.getByRole('button', { name: 'Confirm allocation' })).toBeEnabled();
+  await detail.getByRole('button', { name: 'Confirm allocation' }).click();
   const confirmation = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Was this investment processed?' }) });
-  await confirmation.getByLabel('Amount invested').fill('5000');
+  await confirmation.getByLabel('Amount invested').fill('5500');
   await confirmation.getByLabel('Executed market price').fill('425.5');
   await confirmation.getByRole('button', { name: 'Confirm investment' }).click();
-  await expect(confirmation).toHaveCount(0);
-  await expect(page.locator('.stocks-module')).toContainText('₹9K');
+  await expect(detail).toContainText('Monthly stock purchase');
+  await expect(detail.getByRole('button', { name: 'Confirm allocation' })).toBeDisabled();
+  const paid = await request.get(`${api}/api/web/stocks/${stock.id}`, { headers });
+  expect((await paid.json()).stock.currentMonthlyPlan.status).toBe('CONFIRMED');
+  await detail.getByRole('button', { name: '＋ Add stock purchase' }).click();
+  const purchase = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Add stock purchase' }) });
+  await purchase.getByLabel('Amount invested').fill('1000');
+  await purchase.getByLabel('Transaction date').fill('2026-05-02');
+  await purchase.getByLabel('Shares received').fill('2');
+  await purchase.getByRole('button', { name: 'Save investment' }).click();
+  await expect(detail.locator('.investment-history-row', { hasText: 'Manual purchase' })).toContainText('₹1,000');
+  await expect(detail.getByRole('button', { name: 'Edit investment' })).toHaveCount(0);
+  const addBox = await detail.getByRole('button', { name: '＋ Add stock purchase' }).boundingBox();
+  const pnlBox = await detail.locator('.detail-pnl').boundingBox();
+  expect(addBox.x).toBeGreaterThan(pnlBox.x);
+  expect(Math.abs(addBox.y - pnlBox.y)).toBeLessThan(25);
+  await detail.getByRole('button', { name: 'Edit stock' }).click();
+  const edit = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Edit stock', exact: true }) });
+  await edit.getByLabel('Amount invested').fill('4200');
+  await edit.getByRole('button', { name: 'Save investment' }).click();
+  await expect(detail.locator('.investment-history-row', { hasText: 'Opening holding' })).toContainText('₹4,200');
+  await detail.getByRole('button', { name: '×' }).click();
+  await page.getByTestId(`stock-card-${reliance.id}`).getByRole('button', { name: /View details/ }).click();
+  let relianceDetail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Reliance Industries' }) });
+  await relianceDetail.getByRole('button', { name: /Set monthly plan/ }).click();
+  const reliancePlan = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Plan Reliance Industries' }) });
+  await reliancePlan.getByLabel('Monthly amount').fill('2000');
+  await reliancePlan.getByLabel('Investment day').fill('5');
+  await reliancePlan.getByLabel('Start month').fill('2026-06');
+  await reliancePlan.getByRole('button', { name: 'Save monthly plan' }).click();
+  await expect(relianceDetail.getByRole('button', { name: 'Skip purchase' })).toBeDisabled();
+  await relianceDetail.getByRole('button', { name: '×' }).click();
   await page.locator('.money-modal > .close').click();
-  await page.locator('.story-carousel-card').first().click();
-  await expect(page.getByRole('dialog')).toContainText('₹5,000');
-  await page.getByRole('button', { name: '← Back to stories' }).click();
+  await request.post(`${api}/test/e2e/clock`, { data: { instant: '2026-06-05T09:00:00Z' } });
+  await page.goto('/dashboard?month=2026-06');
   await page.getByRole('button', { name: /Your money/ }).click();
-  await stockCard.getByRole('button', { name: /View details/ }).click();
-  await expect(stockCard.getByRole('button', { name: /View details/ })).toHaveClass(/view-details-link/);
-  const detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ITC Limited' }) });
-  await expect(detail.getByText('Investment history', { exact: true })).toBeVisible();
-  await expect(detail.locator('.investment-history')).toBeVisible();
-  await expect(detail).toContainText('Opening holding');
-  await expect(detail).toContainText('Monthly ETF purchase');
-  await expect(detail).toContainText('₹5,000');
+  await page.getByTestId(`stock-card-${reliance.id}`).getByRole('button', { name: /View details/ }).click();
+  relianceDetail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Reliance Industries' }) });
+  await relianceDetail.getByRole('button', { name: 'Skip purchase' }).click();
+  await page.getByRole('dialog').filter({ hasText: 'Skip this monthly purchase?' }).getByRole('button', { name: 'Confirm skip' }).click();
+  await expect(relianceDetail).toContainText('SKIPPED');
+  await expect(relianceDetail.getByRole('button', { name: 'Confirm allocation' })).toBeDisabled();
+  await relianceDetail.getByRole('button', { name: '×' }).click();
+  await card.getByRole('button', { name: /View details/ }).click();
+  detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ITC Limited' }) });
+  await detail.getByRole('button', { name: 'Delete stock' }).click();
+  await expect(card).toHaveCount(0);
 });
-
-async function addStockThroughUi(page, query, expectedName, quantity, invested) {
-  await page.getByRole('button', { name: '＋ Add a stock' }).click();
-  const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Add a stock' }) });
-  await dialog.getByLabel('Search and select stock').fill(query);
-  await dialog.locator('.scheme-menu button').filter({ hasText: expectedName }).click();
-  await dialog.getByLabel('Shares held').fill(String(quantity));
-  await dialog.getByLabel('Total amount invested').fill(String(invested));
-  await dialog.getByRole('button', { name: 'Add stock' }).click();
-  await expect(dialog).toHaveCount(0);
-}

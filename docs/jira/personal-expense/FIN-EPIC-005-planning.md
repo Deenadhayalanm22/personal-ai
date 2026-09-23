@@ -42,7 +42,7 @@
 5. **Given** confirmed holdings but unavailable latest NAV, **when** listed, **then** invested value remains available while current value and P&L are `null` rather than guessed.
 6. **Given** a current-month SIP is due or confirmed, **when** the user opens Mutual Funds, **then** they can confirm its allocation or correct its saved allocation there; corrections recalculate holdings from confirmed transactions. A just-confirmed allocation acknowledgement is shown only for the current Money session; after returning, the fund card stays clean. Fund details shows an edit wrench on every recorded opening holding, SIP, and lump-sum row, so the user corrects the exact investment; each correction recalculates holdings without changing the SIP plan. A SIP becomes due on its configured local SIP day; before that day it remains upcoming. A due SIP surfaced from Monthly Commitment is visually distinct and opens, scrolls to, and focuses its owning Mutual Funds row, while an already confirmed occurrence cannot be confirmed again.
 7. **Given** one or more current-month SIP allocations are confirmed, **when** the Monthly Commitment story is read, **then** the due highlight is removed and the evidence row returns to the standard neutral presentation while retaining its Review link. It does not offer allocation controls or change the intended commitment total.
-8. **Given** a mistakenly created mutual fund, **when** the user selects its delete icon on the fund card, **then** only that user's fund and its associated investment records are removed, its commitment snapshot refreshes, and the fund remains absent after reload.
+8. **Given** a mistakenly created mutual fund, **when** the user selects Delete stock in View details on the fund card, **then** only that user's fund and its associated investment records are removed, its commitment snapshot refreshes, and the fund remains absent after reload.
 
 ### Frozen mutual-fund commitment journey
 
@@ -64,7 +64,7 @@ The acceptance source is [`mutual-fund-commitment.feature`](../../../frontend/e2
 1. **Given** a signed-in user searches at least two characters, **when** matching listed equities are returned, **then** the browser can select a symbol/name/exchange from the stock-search response.
 2. **Given** a selected stock with positive share quantity and total invested amount, **when** created, **then** it is stored as the user's opening holding; a duplicate symbol is rejected with `409 STOCK_EXISTS`.
 3. **Given** a tracked stock, **when** it is listed, **then** its current value and P&L use the latest market price; if price lookup is unavailable, invested value remains visible and valuation fields are `null`.
-4. **Given** a mistakenly added stock, **when** the user selects its delete icon, **then** only that user's holding and opening transaction are removed, and the portfolio refreshes immediately and remains absent after reload. The portal does not support edit, buy, or sell operations.
+4. **Given** a mistakenly added stock, **when** the user selects Delete stock in View details, **then** only that user's holding and its investment history are removed, and the portfolio refreshes immediately and remains absent after reload. The portal supports manual purchases and corrections to recorded investments. Selling is not supported.
 5. **Given** a market-data provider change, **when** the replacement is implemented, **then** portfolio services remain dependent on `StockMarketDataAdapter`, not a Yahoo-specific client.
 
 ### Integration-test scenarios
@@ -73,7 +73,7 @@ The acceptance source is [`mutual-fund-commitment.feature`](../../../frontend/e2
 - Stub an unavailable price and assert that the holding remains listed with null valuation fields.
 
 - Browser regression: [stocks.spec.js](../../../frontend/e2e/stocks.spec.js) adds ITC and Reliance through the stock picker, then verifies each latest market price and the ₹11,755 combined portfolio value.
-- Browser regression also deletes a mistakenly added stock and verifies it is absent immediately and after reload.
+- Browser regression covers a single stock lifecycle, including deletion from View details.
 
 ## FIN-023 — Schedule ETF monthly investments
 
@@ -84,11 +84,13 @@ The acceptance source is [`mutual-fund-commitment.feature`](../../../frontend/e2
 1. **Given** an existing stock/ETF holding, **when** the user saves a positive monthly amount, day 1–28, and start month, **then** an active monthly ETF plan is persisted and contributes once to Planned investing from its start month.
 2. **Given** the plan's configured local day arrives, **when** the user opens Stocks or Monthly Commitment, **then** its current occurrence is due and can be reviewed from either view.
 3. **Given** a due occurrence, **when** the user confirms amount and executed market price, **then** units are calculated when absent, the occurrence becomes confirmed, the holding valuation is recalculated, and Monthly Commitment reports the allocation as completed without changing its intended total.
-4. **Given** a stock holding with confirmed investments, **when** the user selects `View details`, **then** the stock-details window lists its opening holding and confirmed monthly ETF purchases with their date, amount, execution price, and units.
+4. **Given** a stock holding, **when** the user selects `View details`, **then** the stock name heads the detail window, with Edit stock and Delete stock aligned below it on the right. The detail window also owns the plan bell, due confirmation and skip actions, manual purchase beside total P&L, and direct investment history. Confirm and skip remain disabled until due and after a decision.
+5. **Given** an owned confirmed investment, **when** the user selects Edit stock and corrects its opening amount, date, or shares in View details, **then** the execution price and holding totals recalculate without changing the monthly plan. A manual purchase also adds shares without changing the plan. Individual history rows do not expose Edit investment.
+6. **Given** a due monthly purchase, **when** it is skipped, **then** the occurrence remains skipped in history without invested shares and the next month remains scheduled.
 
 ### Browser test scenario
 
-- [ETF monthly-plan browser regression](../../../frontend/e2e/stocks.spec.js): add an ETF holding on 15 April, verify its monthly-plan bell, configure ₹5,000 for 1 May, review the red due commitment from Monthly Commitment, confirm the actual amount and price, and verify the completed commitment plus stock investment history.
+- [ETF monthly-plan browser regression](../../../frontend/e2e/stocks.spec.js): add a stock holding, configure its plan in View details, verify pre-due disabled actions, confirm an ITC occurrence, skip a Reliance occurrence, correct the opening holding from Edit stock, and delete ITC from View details.
 
 ## FIN-018 — Pin the live monthly commitment story
 

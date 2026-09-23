@@ -80,8 +80,8 @@ public class WebStockService {
         UserInvestmentEntity investment = owned(user, investmentId);
         StockResponse summary = summary(investment);
         List<StockHistoryEntry> history = transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId).stream()
-                .filter(tx -> tx.getStatus() == InvestmentTransactionStatus.CONFIRMED)
-                .map(tx -> new StockHistoryEntry(tx.getTransactionKind().name(), tx.getTransactionDate(), tx.getAmount(), tx.getUnitPrice(), tx.getUnits()))
+                .filter(tx -> tx.getStatus() == InvestmentTransactionStatus.CONFIRMED || tx.getStatus() == InvestmentTransactionStatus.SKIPPED)
+                .map(tx -> new StockHistoryEntry(tx.getId(), tx.getTransactionKind().name(), tx.getStatus().name(), tx.getScheduledMonth(), tx.getTransactionDate(), tx.getAmount(), tx.getUnitPrice(), tx.getUnits()))
                 .toList();
         return new StockDetailResponse(summary, history);
     }
@@ -106,14 +106,54 @@ public class WebStockService {
         if (month == null || request == null) throw invalid("Monthly plan confirmation details are required");
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_MONTHLY_PLAN_OCCURRENCE_NOT_FOUND", "Monthly plan occurrence not found"));
-        if (tx.getStatus() == InvestmentTransactionStatus.CONFIRMED || tx.getStatus() == InvestmentTransactionStatus.SKIPPED) throw invalid("This monthly plan occurrence can no longer be confirmed");
+        if (tx.getStatus() != InvestmentTransactionStatus.DUE) throw invalid("This monthly plan occurrence can no longer be confirmed");
         BigDecimal amount = positive(request.amount(), "amount", 2);
+        if (request.transactionDate() != null && request.transactionDate().isBefore(tx.getScheduledMonth().withDayOfMonth(investment.getSipDay()))) throw invalid("Payment date must be on or after the due date");
         BigDecimal price = positive(request.executionPrice(), "executionPrice", 6);
         BigDecimal units = request.units() == null ? amount.divide(price, 6, RoundingMode.HALF_UP) : positive(request.units(), "units", 6);
         tx.setStatus(InvestmentTransactionStatus.CONFIRMED); tx.setAmount(amount); tx.setTransactionDate(request.transactionDate() == null ? LocalDate.now(clock) : request.transactionDate());
         tx.setUnitPrice(price); tx.setUnits(units); tx.setCalculationSource(InvestmentCalculationSource.USER_ENTERED); transactions.save(tx);
         if (snapshots != null) snapshots.refreshCurrent(user);
         return MonthlyPlanOccurrenceResponse.from(tx);
+    }
+
+    @Transactional
+    public MonthlyPlanOccurrenceResponse skipMonthlyPlan(AppUserEntity user, Long investmentId, YearMonth month) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
+                .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_MONTHLY_PLAN_OCCURRENCE_NOT_FOUND", "Monthly plan occurrence not found"));
+        if (tx.getStatus() != InvestmentTransactionStatus.DUE) throw invalid("Only a due monthly plan can be skipped");
+        tx.setStatus(InvestmentTransactionStatus.SKIPPED); tx.setTransactionDate(LocalDate.now(clock)); transactions.save(tx);
+        if (snapshots != null) snapshots.refreshCurrent(user);
+        return MonthlyPlanOccurrenceResponse.from(tx);
+    }
+
+    @Transactional
+    public StockDetailResponse addPurchase(AppUserEntity user, Long investmentId, StockPurchaseRequest request) {
+        UserInvestmentEntity investment = owned(user, investmentId);
+        if (request == null || request.transactionDate() == null) throw invalid("Purchase date is required");
+        BigDecimal amount = positive(request.amount(), "amount", 2);
+        BigDecimal units = positive(request.units(), "units", 6);
+        InvestmentTransactionEntity tx = new InvestmentTransactionEntity();
+        tx.setInvestment(investment); tx.setTransactionKind(InvestmentTransactionKind.BUY);
+        tx.setStatus(InvestmentTransactionStatus.CONFIRMED); tx.setTransactionDate(request.transactionDate());
+        tx.setAmount(amount); tx.setUnits(units); tx.setUnitPrice(amount.divide(units, 6, RoundingMode.HALF_UP));
+        tx.setCalculationSource(InvestmentCalculationSource.USER_ENTERED); transactions.save(tx);
+        return detail(user, investmentId);
+    }
+
+    @Transactional
+    public StockDetailResponse updateTransaction(AppUserEntity user, Long investmentId, Long transactionId, StockPurchaseRequest request) {
+        owned(user, investmentId);
+        if (request == null || request.transactionDate() == null) throw invalid("Transaction date is required");
+        InvestmentTransactionEntity tx = transactions.findByInvestmentIdOrderByCreatedAtAsc(investmentId).stream()
+                .filter(item -> item.getId().equals(transactionId) && item.getStatus() == InvestmentTransactionStatus.CONFIRMED)
+                .findFirst().orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_TRANSACTION_NOT_FOUND", "Stock transaction not found"));
+        BigDecimal amount = positive(request.amount(), "amount", 2);
+        BigDecimal units = positive(request.units(), "units", 6);
+        tx.setAmount(amount); tx.setUnits(units); tx.setTransactionDate(request.transactionDate());
+        tx.setUnitPrice(amount.divide(units, 6, RoundingMode.HALF_UP)); transactions.save(tx);
+        return detail(user, investmentId);
     }
 
     @Transactional
@@ -161,7 +201,8 @@ public class WebStockService {
                                 MonthlyPlanResponse activeMonthlyPlan, MonthlyPlanOccurrenceResponse currentMonthlyPlan) { }
     public record StockListResponse(List<StockResponse> stocks) { }
     public record StockDetailResponse(StockResponse stock, List<StockHistoryEntry> history) { }
-    public record StockHistoryEntry(String kind, LocalDate transactionDate, BigDecimal amount, BigDecimal executionPrice, BigDecimal units) { }
+    public record StockHistoryEntry(Long id, String kind, String status, LocalDate scheduledMonth, LocalDate transactionDate, BigDecimal amount, BigDecimal executionPrice, BigDecimal units) { }
+    public record StockPurchaseRequest(BigDecimal amount, LocalDate transactionDate, BigDecimal units) { }
     public record MonthlyPlanRequest(BigDecimal amount, Integer day, YearMonth startMonth) { }
     public record MonthlyPlanConfirmation(BigDecimal amount, LocalDate transactionDate, BigDecimal executionPrice, BigDecimal units) { }
     public record MonthlyPlanResponse(BigDecimal amount, Integer day, YearMonth startMonth, String status) { }

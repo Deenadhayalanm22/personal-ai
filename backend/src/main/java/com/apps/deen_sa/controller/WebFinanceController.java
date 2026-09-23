@@ -342,6 +342,18 @@ public class WebFinanceController {
     public WebStockService.StockResponse createStockMonthlyPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token,
             @PathVariable Long id, @RequestBody WebStockService.MonthlyPlanRequest request) { return webManager.createStockMonthlyPlan(token, id, request); }
 
+    @PostMapping("/stocks/{id}/monthly-plan-occurrences/{month}/skip")
+    public WebStockService.MonthlyPlanOccurrenceResponse skipStockMonthlyPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id, @PathVariable YearMonth month) { return webManager.skipStockMonthlyPlan(token, id, month); }
+
+    @PostMapping("/stocks/{id}/purchases")
+    public WebStockService.StockDetailResponse addStockPurchase(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id, @RequestBody WebStockService.StockPurchaseRequest request) { return webManager.addStockPurchase(token, id, request); }
+
+    @PatchMapping("/stocks/{id}/transactions/{transactionId}")
+    public WebStockService.StockDetailResponse updateStockTransaction(@CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @PathVariable Long id, @PathVariable Long transactionId, @RequestBody WebStockService.StockPurchaseRequest request) { return webManager.updateStockTransaction(token, id, transactionId, request); }
+
     @PostMapping("/stocks/{id}/monthly-plan-occurrences/{month}/confirm")
     public WebStockService.MonthlyPlanOccurrenceResponse confirmStockMonthlyPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token,
             @PathVariable Long id, @PathVariable YearMonth month, @RequestBody WebStockService.MonthlyPlanConfirmation request) { return webManager.confirmStockMonthlyPlan(token, id, month, request); }

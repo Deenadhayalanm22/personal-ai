@@ -37,3 +37,9 @@
 @media(max-width:380px){.fund-sip-row{align-items:flex-start;flex-direction:column}.fund-sip-actions{width:100%}}
 .fund-detail .investment-history-row.due-sip{margin-inline:-8px;padding:10px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}
 .fund-detail .investment-history-row.due-sip strong,.fund-detail .investment-history-row.due-sip small{color:var(--red)}
+.stocks-module .due-sip,.fund-detail [data-testid^="stock-detail-plan-"].due-sip{border:1px solid #e4a49c;background:#fff4f1;color:var(--red)}
+.stock-detail .stock-detail-actions,.stock-detail .stock-plan-actions{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 0}.stock-detail .stock-plan-actions{margin-top:6px}.stock-detail .detail-pnl-row .fund-detail-lump-sum{font:800 10px Manrope}.fund-detail .stock-detail-actions button{font-size:10px}
+
+.stock-detail-backdrop{z-index:141}.stock-action-backdrop{z-index:142}
+
+.modal-backdrop .evidence-row.due-stock-commitment{margin-inline:-8px;padding:12px 8px;border:1px solid #e4a49c;border-radius:10px;background:#fff4f1}.modal-backdrop .evidence-row.due-stock-commitment strong,.modal-backdrop .evidence-row.due-stock-commitment b{color:var(--red)}

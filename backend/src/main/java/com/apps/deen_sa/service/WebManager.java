@@ -264,6 +264,9 @@ public class WebManager {
     }
     public WebStockService.StockResponse createStockMonthlyPlan(String token, Long id, WebStockService.MonthlyPlanRequest request) { return stocks.createMonthlyPlan(authentication.authenticate(token), id, request); }
     public WebStockService.MonthlyPlanOccurrenceResponse confirmStockMonthlyPlan(String token, Long id, java.time.YearMonth month, WebStockService.MonthlyPlanConfirmation request) { return stocks.confirmMonthlyPlan(authentication.authenticate(token), id, month, request); }
+    public WebStockService.MonthlyPlanOccurrenceResponse skipStockMonthlyPlan(String token, Long id, java.time.YearMonth month) { return stocks.skipMonthlyPlan(authentication.authenticate(token), id, month); }
+    public WebStockService.StockDetailResponse addStockPurchase(String token, Long id, WebStockService.StockPurchaseRequest request) { return stocks.addPurchase(authentication.authenticate(token), id, request); }
+    public WebStockService.StockDetailResponse updateStockTransaction(String token, Long id, Long transactionId, WebStockService.StockPurchaseRequest request) { return stocks.updateTransaction(authentication.authenticate(token), id, transactionId, request); }
 
     public WebMutualFundService.TransactionResponse addMutualFundLumpSum(String token, Long id,
                                                                          WebMutualFundService.LumpSumRequest request) {
