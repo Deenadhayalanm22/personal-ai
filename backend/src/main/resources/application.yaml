@@ -1,6 +1,9 @@
 spring:
   application:
     name: deen-sa
+  flyway:
+    # V22 shipped after V27/V28; existing databases must still apply it.
+    out-of-order: true
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

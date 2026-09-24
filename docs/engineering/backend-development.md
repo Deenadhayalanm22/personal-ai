@@ -53,3 +53,24 @@ on Render's assigned `PORT` automatically (falling back to `8080` locally).
 Set the required production environment variables in Render, including `DB_URL`, `DB_USERNAME`,
 `DB_PASSWORD`, `APP_WEB_BASE_URL`, `APP_MAGIC_LINK_EXPIRY`, `APP_WEB_SESSION_EXPIRY`, and
 `APP_WEB_SECURE_COOKIES`. Add the WhatsApp and OpenAI variables when those integrations are enabled.
+
+### Flyway upgrade ordering
+
+Migration `V22__add_commitment_extra_amount.sql` shipped after V27 and V28. Databases that
+already applied those versions fail startup with `Detected resolved migration not applied to
+database: 22` under Flyway's default ordering. The application enables `spring.flyway.out-of-order`
+so the missing migration runs while checksum validation remains enabled. V22 changes commitment
+tables created by V16/V20; V27 and V28 change separate loan and investment tables.
+
+Redeploy with this configuration. For an existing build, set `SPRING_FLYWAY_OUT_OF_ORDER=true`
+in Render and redeploy. Check the startup log for successful application of V22 and the health
+endpoint for successful startup. Do not ignore V22, disable validation, or rename an already
+released migration: the application needs its column and table, and other databases may already
+have recorded its version/checksum. Allocate future migration numbers above the highest released
+version and check dependencies before introducing any further out-of-order migration.
+
+`FlywayUpgradeIT` covers a fresh install, the V28-to-late-V22 upgrade, and repeat startup.
+Run it against local test PostgreSQL with `./mvnw -Dtest=FlywayUpgradeIT test`. It uses unique
+temporary schemas and drops only those schemas afterwards. Connection overrides are
+`-Dmigration.test.url=...`, `-Dmigration.test.username=...`, and `-Dmigration.test.password=...`;
+defaults match the local integration database on port 5433.
