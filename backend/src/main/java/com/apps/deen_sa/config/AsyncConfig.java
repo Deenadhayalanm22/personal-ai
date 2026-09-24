@@ -21,4 +21,15 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean
+    public Executor aggregationExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(1);
+        executor.setThreadNamePrefix("daily-aggregation-");
+        executor.initialize();
+        return executor;
+    }
 }

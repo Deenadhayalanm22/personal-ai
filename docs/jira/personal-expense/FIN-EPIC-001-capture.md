@@ -9,7 +9,7 @@
 
 ## Functional boundary
 
-The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive confirmation replies are processed first. Text/audio messages may be handled as an administrative aggregate-backfill command; all other messages are persisted as idempotent drafts and passed to normalization. A successful confirmation produces a financial transaction and an outbound acknowledgement. The portal does not create raw expenses; it only displays and corrects captured ones.
+The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive confirmation replies are processed first. Text messages are persisted as idempotent drafts and passed to normalization. Audio messages are persisted as drafts, transcribed, and shown to the sender for word-level confirmation or discard before expense extraction. Confirmed words follow the ordinary expense extraction and confirmation flow; discarded audio never creates a transaction. Text/audio messages may be handled as an administrative aggregate-backfill command. The first newly routed text or audio message each day starts background aggregation for missed dates and the previous day, followed by daily action evaluation. A failed background run is retried on the next message. A successful expense confirmation produces a financial transaction and an outbound acknowledgement. The portal does not create raw expenses; it only displays and corrects captured ones.
 
 ## Cross-stack ownership
 
@@ -31,12 +31,17 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 3. **Given** a recognized interactive confirmation, **when** received, **then** it is handled before ordinary normalization and a successful record is acknowledged.
 4. **Given** a supported aggregate-backfill command, **when** received, **then** it is handled without normal expense normalization.
 5. **Given** an ordinary routed message, **when** captured, **then** original evidence and source identity remain available through the draft/transaction relationship.
+6. **Given** the first newly routed WhatsApp text or audio message of a day in the aggregation timezone, **when** captured, **then** missed daily aggregates and yesterday's aggregates are rebuilt asynchronously and daily actions are evaluated once; a failed run can retry on a later message.
+7. **Given** a newly routed audio message, **when** it is transcribed, **then** the staged draft retains the recognized words and sends them for review without extracting or recording an expense.
+8. **Given** the owner confirms the recognized words, **when** the audio review reply arrives, **then** those words enter the existing expense extraction and confirmation flow. Discard cancels the draft; repeated or foreign replies cannot create a transaction.
 
 ### Integration-test scenarios
 
 - POST a text payload and assert the draft/normalization path executes once.
 - Replay the payload and assert it has no second transaction effect.
 - POST an interactive confirmation and assert it precedes the ordinary-message route.
+- Route two new messages on the same day and assert one background aggregation; fail that work and assert a later message can retry it.
+- Route audio, confirm its words, and assert the resulting extraction still requires the usual expense confirmation. Discard audio and assert no extraction or transaction.
 
 ## FIN-002 — Normalize and confirm an expense
 

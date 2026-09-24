@@ -7,7 +7,10 @@ import com.apps.deen_sa.whatsapp.WhatsAppInboundMessageMapper;
 import com.apps.deen_sa.whatsapp.WhatsAppExpenseConfirmationCommandMapper;
 import com.apps.deen_sa.service.ExpenseConfirmationCommandHandler;
 import com.apps.deen_sa.service.WhatsAppAggregateBackfillCommandHandler;
+import com.apps.deen_sa.service.FirstWhatsAppMessageAggregationTrigger;
 import com.apps.deen_sa.whatsapp.WhatsAppExpenseRecordedNotifier;
+import com.apps.deen_sa.whatsapp.WhatsAppAudioReviewHandler;
+import com.apps.deen_sa.domain.InputType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,8 @@ public class WhatsAppIngestionOrchestrator {
     private final ExpenseConfirmationCommandHandler confirmationCommandHandler;
     private final WhatsAppExpenseRecordedNotifier recordedNotifier;
     private final WhatsAppAggregateBackfillCommandHandler aggregateBackfillCommandHandler;
+    private final FirstWhatsAppMessageAggregationTrigger firstMessageAggregationTrigger;
+    private final WhatsAppAudioReviewHandler audioReviewHandler;
 
     public void ingest(WhatsAppWebhookPayload payload) {
         var confirmationCommands = confirmationCommandMapper.map(payload);
@@ -32,6 +37,7 @@ public class WhatsAppIngestionOrchestrator {
         log.info("Starting WhatsApp ingestion: confirmationCommands={}, messages={}",
                 confirmationCommands.size(), messages.size());
 
+        if (payload != null) payload.messages().forEach(audioReviewHandler::handleReply);
         confirmationCommands.stream()
                 .map(confirmationCommandHandler::handle)
                 .filter(java.util.Objects::nonNull)
@@ -45,9 +51,11 @@ public class WhatsAppIngestionOrchestrator {
             log.info("Processing WhatsApp message: messageId={}, inputType={}",
                     message.sourceMessageId(), message.inputType());
             var committedDraft = draftWriter.routeAndCommit(message);
+            if (committedDraft.created()) firstMessageAggregationTrigger.triggerIfNeeded();
             log.info("WhatsApp message routed: messageId={}, draftId={}, created={}",
                     message.sourceMessageId(), committedDraft.draftId(), committedDraft.created());
-            normalizationHandler.handle(committedDraft, message);
+            if (message.inputType() == InputType.AUDIO) audioReviewHandler.stage(committedDraft, message);
+            else normalizationHandler.handle(committedDraft, message);
         });
         log.info("Completed WhatsApp ingestion: confirmationCommands={}, messages={}",
                 confirmationCommands.size(), messages.size());
