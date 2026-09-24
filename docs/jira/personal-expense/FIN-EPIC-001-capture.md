@@ -34,6 +34,8 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 6. **Given** the first newly routed WhatsApp text or audio message of a day in the aggregation timezone, **when** captured, **then** missed daily aggregates and yesterday's aggregates are rebuilt asynchronously and daily actions are evaluated once; a failed run can retry on a later message.
 7. **Given** a newly routed audio message, **when** it is transcribed, **then** the staged draft retains the recognized words and sends them for review without extracting or recording an expense.
 8. **Given** the owner confirms the recognized words, **when** the audio review reply arrives, **then** those words enter the existing expense extraction and confirmation flow. Discard cancels the draft; repeated or foreign replies cannot create a transaction.
+9. **Given** transcription renders a spoken amount with a currency label or English number words, **when** the review text is staged, **then** the amount is shown as digits without an inferred currency label; the reviewed wording is also used for expense extraction.
+10. **Given** audio spoken in another language or in mixed transliteration such as Tanglish, **when** transcribed, **then** its natural-language wording is retained in the draft and review message. After approval, expense extraction maps category and subcategory to the configured English taxonomy labels.
 
 ### Integration-test scenarios
 
@@ -42,6 +44,7 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 - POST an interactive confirmation and assert it precedes the ordinary-message route.
 - Route two new messages on the same day and assert one background aggregation; fail that work and assert a later message can retry it.
 - Route audio, confirm its words, and assert the resulting extraction still requires the usual expense confirmation. Discard audio and assert no extraction or transaction.
+- Transcribe mixed-language audio and assert its original wording is staged and reviewed, while extraction produces configured English classification labels.
 
 ## FIN-002 — Normalize and confirm an expense
 

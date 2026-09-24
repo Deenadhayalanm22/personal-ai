@@ -31,7 +31,8 @@ class WhatsAppAudioTranscriberTest {
         server.expect(requestTo("https://api.openai.com/v1/audio/transcriptions"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer openai-key"))
-                .andRespond(withSuccess("{\"text\":\"Spent 250 at Swiggy\"}", MediaType.APPLICATION_JSON));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("natural language")))
+                .andRespond(withSuccess("{\"text\":\"Spent $250 at Swiggy\"}", MediaType.APPLICATION_JSON));
 
         assertThat(new WhatsAppAudioTranscriber(http, properties).transcribe("12345"))
                 .isEqualTo("Spent 250 at Swiggy");

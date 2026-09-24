@@ -164,6 +164,11 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
 
                 Rules:
                 - Extract only facts supported by the user's message.
+                - The message may be in any language or a transliterated mix such as Tanglish.
+                  Understand the original wording, but return classification labels in English
+                  exactly as written in the configured taxonomy below.
+                - Keep merchant and account proper names recognizable; use Latin script for
+                  names written in another script when no matching preferred reference exists.
                 - When no date is stated, transactionDate must be today's date.
                 - Category and subcategory must be selected only from the taxonomy below.
                 - The subcategory must belong to the selected category.

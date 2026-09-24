@@ -37,6 +37,19 @@ class WhatsAppAudioReviewHandlerTest {
     }
 
     @Test
+    void stagesMixedLanguageSpeechWithoutTranslation() {
+        when(transcriber.transcribe("12345")).thenReturn("naan KK shop la irupathainthu kuduthen");
+        when(drafts.stage(42L, "naan KK shop la irupathainthu kuduthen")).thenReturn(true);
+
+        handler.stage(new DraftWriteResult(42L, true), new InboundMessage(
+                "9198", "wamid.audio", InputType.AUDIO, MessageSource.WHATSAPP,
+                "media_id=12345;mime_type=audio/ogg"));
+
+        verify(drafts).stage(42L, "naan KK shop la irupathainthu kuduthen");
+        verify(replies).sendInteractiveReply(eq("9198"), contains("naan KK shop la irupathainthu kuduthen"), anyList());
+    }
+
+    @Test
     void approvedWordsEnterTheExistingNormalizationFlow() {
         when(drafts.review(42L, "9198", true)).thenReturn(
                 new AudioDraftReviewStore.ApprovedTranscript(42L, "wamid.audio", "Spent 250 at Swiggy"));

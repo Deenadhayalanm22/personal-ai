@@ -65,6 +65,7 @@ public class WhatsAppAudioTranscriber {
         };
         var parts = new LinkedMultiValueMap<String, Object>();
         parts.add("model", openai.transcriptionModel());
+        parts.add("prompt", "Transcribe in the speaker's natural language. Preserve Tamil, Hindi, Tanglish, and other mixed-language wording. Write spoken expense amounts as digits, without currency symbols or currency names. Do not infer a currency or translate the speech.");
         parts.add("file", new HttpEntity<>(resource, audioHeaders));
         HttpHeaders requestHeaders = new HttpHeaders();
         requestHeaders.setBearerAuth(openai.apiKey());
@@ -73,7 +74,7 @@ public class WhatsAppAudioTranscriber {
                 new HttpEntity<>(parts, requestHeaders), Transcription.class);
         if (response == null || response.text() == null || response.text().isBlank())
             throw new IllegalStateException("Audio transcription returned no words");
-        return response.text().trim();
+        return AudioTranscriptAmountFormatter.format(response.text());
     }
 
     record MediaMetadata(String url, @com.fasterxml.jackson.annotation.JsonProperty("file_size") Long fileSize) { }
