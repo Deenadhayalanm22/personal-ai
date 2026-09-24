@@ -86,6 +86,17 @@ A flexible commitment retains a usual recurrence (for example, `every 4 months` 
 
 ## FIN-021 — Include commitments in Monthly Commitment stories
 
+### Planned extension — Save for an upcoming commitment
+
+This first release is awareness and manual savings tracking inside commitment details, not standalone Goals or AI purchase advice. The planned acceptance scenarios are tagged `@planned-commitment-savings` in `frontend/e2e/features/recurring-commitments.feature`; they do not represent implemented behavior. They supersede the earlier separate goal-attachment proposal for this scope. Editing an existing savings plan is deferred.
+
+1. An active commitment recurring less frequently than monthly, with a future expected payment date and no savings plan for that payment, offers `Save for this commitment` inside View details. Monthly, due-today, overdue, and unscheduled payments do not offer it. An existing plan is shown instead of another creation action.
+2. Setup displays the inherited payment amount/date, the saving months, and the calculated monthly amount. For setup on 30 September 2026 with ₹55,000 due on 1 September 2027, the eleven opportunities are October 2026 through August 2027 at ₹5,000 each. Only explicit confirmation creates the plan; creation records no money set aside. Dismissing setup changes nothing.
+3. On 1 October, the ₹5,000 savings contribution appears as a separately labelled due savings source in Monthly Commitment with a red border and Review. Review takes the user to the owning commitment card, whose Due now/View details area reflects the savings reminder. The underlying insurance payment is still due the following September, not October.
+4. View details explains the saved plan and offers Pay or Skip for the monthly savings contribution. Pay confirms money actually set aside and increases progress; it does not record an expense, bank transfer, or insurance payment. October's ₹5,000 leaves ₹50,000 remaining. Either outcome clears that savings occurrence's red due treatment.
+5. Skipping November preserves ₹5,000 saved, ₹50,000 remaining, the ₹5,000 monthly plan, and the September target. The plan explains that following the remaining schedule would leave a ₹5,000 shortfall. It never automatically redistributes the missed amount, extends the date, or skips/completes the insurance payment.
+6. Savings sources must be distinguished from underlying bills in story evidence; saving progress never implies that the bill is partly paid. Savings use the existing canonical snapshot direction rather than an independent commitment-total calculation. API design and executable integration coverage are required when this planned behavior is implemented.
+
 **Status:** Proposed · **Priority:** P1
 
 ### Acceptance criteria
