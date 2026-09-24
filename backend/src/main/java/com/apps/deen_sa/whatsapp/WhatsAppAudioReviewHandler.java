@@ -29,16 +29,20 @@ public class WhatsAppAudioReviewHandler {
 
     public void stage(DraftWriteResult draft, InboundMessage message) {
         if (!draft.created()) return;
+        log.info("Starting WhatsApp audio review: draftId={}, messageId={}",
+                draft.draftId(), message.sourceMessageId());
         try {
             String raw = message.rawContent();
             String mediaId = raw.substring("media_id=".length(), raw.indexOf(';'));
             String words = transcriber.transcribe(mediaId);
             if (words.length() > 850) throw new IllegalArgumentException("Audio transcript is too long to review");
             if (drafts.stage(draft.draftId(), words)) {
+                log.info("Audio transcript staged: draftId={}, characters={}", draft.draftId(), words.length());
                 replies.sendInteractiveReply(message.externalUserId(),
                         "I heard:\n\n“" + words + "”\n\nAre these words correct? Confirm to review the expense details, or discard this voice note.",
                         List.of(new ResponseAction(CONFIRM + draft.draftId(), "Confirm words"),
                                 new ResponseAction(DISCARD + draft.draftId(), "Discard")));
+                log.info("Audio review reply requested: draftId={}", draft.draftId());
             }
         } catch (RuntimeException failure) {
             log.warn("Could not transcribe WhatsApp audio draft {}", draft.draftId(), failure);
