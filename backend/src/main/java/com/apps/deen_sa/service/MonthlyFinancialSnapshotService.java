@@ -97,15 +97,13 @@ public class MonthlyFinancialSnapshotService {
                         investment.getAssetType() == InvestmentAssetType.STOCK ? "ETF monthly plan" : "Mutual fund SIP", "Active recurring investment", null, null, null)).toList();
         List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
-                                && !month.atDay(1).isBefore(commitment.getEffectiveMonth())
-                                && commitment.getNextExpectedDate() != null
-                                && YearMonth.from(commitment.getNextExpectedDate()).equals(month)
-                                && (commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), month.atDay(1))
-                                        .map(occurrence -> occurrence.getStatus() != com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.SKIPPED).orElse(true)))
-                .map(commitment -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
-                        commitment.getNextExpectedDate(),
-                        commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
-                        savingsDetail(commitment), null, null, null)).toList();
+                                && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
+                .flatMap(commitment -> RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream()
+                        .filter(due -> commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), RecurringCommitmentSchedule.weekly(commitment) ? due : month.atDay(1))
+                                .map(occurrence -> occurrence.getStatus() != com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.SKIPPED).orElse(true))
+                        .map(due -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
+                                due, commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
+                                savingsDetail(commitment), null, null, null))).toList();
         List<Source> cardBills = (creditCards == null || transactions == null ? List.<com.apps.deen_sa.entity.UserCreditCardEntity>of() : creditCards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId())).stream()
                 .map(card -> creditCardSource(user, card, month)).filter(source -> source.plannedAmount().signum() > 0).toList();
         List<Source> saving = (savingsPlans == null || savingsEntries == null ? List.<com.apps.deen_sa.entity.CommitmentSavingsPlanEntity>of() : savingsPlans.findByCommitmentUserId(user.getId())).stream()
