@@ -59,6 +59,12 @@ export const updateExpense = (id, changes) => request(`/api/web/expenses/${encod
 export const deleteExpense = (id) => request(`/api/web/expenses/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const getRecurringCommitments = () => request('/api/web/recurring-commitments');
 export const getRecurringCommitmentHistory = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/history`);
+export const previewCommitmentSavings = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/savings/preview`);
+export const getCommitmentSavings = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/savings`);
+export const listCommitmentSavings = () => request('/api/web/recurring-commitments/savings');
+export const createCommitmentSavings = (id, monthlyAmount) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/savings`, { method: 'POST', body: JSON.stringify({ monthlyAmount }) });
+export const recordCommitmentSavings = (id, month, amount) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/savings/record`, { method: 'POST', body: JSON.stringify({ month, amount }) });
+export const skipCommitmentSavings = (id, month) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/savings/skip`, { method: 'POST', body: JSON.stringify({ month }) });
 export const createRecurringCommitment = (commitment) => request('/api/web/recurring-commitments', { method: 'POST', body: JSON.stringify(commitment) });
 export const updateRecurringCommitment = (id, commitment) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(commitment) });
 export const deleteRecurringCommitment = (id) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}`, { method: 'DELETE' });

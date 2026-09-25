@@ -17,7 +17,7 @@ export default defineConfig({
     launchOptions: { slowMo: process.env.PW_SLOW_MO ? Number(process.env.PW_SLOW_MO) : 0 }
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: [
+  webServer: process.env.E2E_EXTERNAL_SERVERS ? [] : [
     { command: 'cd ../backend && ./scripts/e2e-reset-db.sh && SPRING_PROFILES_ACTIVE=e2e ./mvnw spring-boot:run', url: 'http://localhost:8080/actuator/health', reuseExistingServer: false, timeout: 120000 },
     { command: 'npm run dev -- --host localhost --port 4173', url: 'http://localhost:4173', reuseExistingServer: !process.env.CI }
   ]

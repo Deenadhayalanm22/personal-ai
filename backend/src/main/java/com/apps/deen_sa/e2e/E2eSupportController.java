@@ -24,7 +24,7 @@ public class E2eSupportController {
   @PostMapping("/session") @Transactional public Grant session() {
     clock.set(Instant.parse("2026-04-15T09:00:00Z"));
     Instant now=clock.instant(); AppUserEntity user=new AppUserEntity(); user.setChannel("E2E");user.setExternalUserId(UUID.randomUUID().toString());user.setCreatedAt(now); user=users.save(user);
-    String token=UUID.randomUUID().toString(); WebSessionEntity session=new WebSessionEntity();session.setUserId(user.getId());session.setTokenHash(MagicLinkService.hash(token));session.setCreatedAt(now);session.setExpiresAt(now.plus(java.time.Duration.ofDays(365)));sessions.save(session); return new Grant(token);
+    String token=UUID.randomUUID().toString(); WebSessionEntity session=new WebSessionEntity();session.setUserId(user.getId());session.setTokenHash(MagicLinkService.hash(token));session.setCreatedAt(now);session.setExpiresAt(now.plus(java.time.Duration.ofDays(730)));sessions.save(session); return new Grant(token);
   }
   @PostMapping("/clock") public void setClock(@org.springframework.web.bind.annotation.RequestBody ClockRequest request) { clock.set(Instant.parse(request.instant())); reminders.createDueReminders(); }
   public record Grant(String sessionToken) {}

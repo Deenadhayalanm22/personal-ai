@@ -34,7 +34,9 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
       await expect(bikeService).toContainText(/Next expected:.*2027/);
 
       await bikeService.getByRole('button', { name: 'View details' }).click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Paid' }).click();
+      await expect(page.getByRole('dialog').getByRole('button', { name: 'Paid' })).toBeDisabled();
+      await expect(page.getByRole('dialog').getByRole('button', { name: 'Skip' })).toBeDisabled();
+      await page.getByRole('dialog').getByRole('button', { name: 'Record an early payment' }).click();
       await page.getByLabel('Actual amount').fill('2400');
       await page.getByLabel('Completed on').fill('2026-09-21');
       await page.getByLabel('Next expected date').fill('2027-01-21');
@@ -56,7 +58,9 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
       await expect(recharge).toContainText('Usually every 3 months');
 
       await recharge.getByRole('button', { name: 'View details' }).click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Paid' }).click();
+      await expect(page.getByRole('dialog').getByRole('button', { name: 'Paid' })).toBeDisabled();
+      await expect(page.getByRole('dialog').getByRole('button', { name: 'Skip' })).toBeDisabled();
+      await page.getByRole('dialog').getByRole('button', { name: 'Record an early payment' }).click();
       await page.getByLabel('Actual amount').fill('699');
       await page.getByLabel('Completed on').fill('2026-09-21');
       await page.getByLabel('Next expected date').fill('2026-11-21');
@@ -129,6 +133,19 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
     await page.getByLabel('Next expected date').fill('2026-04-05');
     await page.getByRole('button', { name: 'Add commitment' }).click();
     await expect(commitments).toContainText('Internet bill');
+    const upcomingBill = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Internet bill' });
+    await upcomingBill.getByRole('button', { name: 'View details' }).click();
+    const upcomingDetails = page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' });
+    await expect(upcomingDetails.getByRole('button', { name: 'Paid' })).toBeDisabled();
+    await expect(upcomingDetails.getByRole('button', { name: 'Skip' })).toBeDisabled();
+    const upcomingId = (await (await request.get('http://localhost:8080/api/web/recurring-commitments', {
+      headers: { Cookie: `WEB_SESSION=${sessionToken}` }
+    })).json()).items.find(item => item.label === 'Internet bill').id;
+    const prematureSkip = await request.post(`http://localhost:8080/api/web/recurring-commitments/${upcomingId}/occurrences/2026-04/skip`, {
+      headers: { Cookie: `WEB_SESSION=${sessionToken}` }
+    });
+    expect(prematureSkip.status()).toBe(400);
+    await upcomingDetails.getByRole('button', { name: '×' }).click();
 
     expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-05T09:00:00Z' } })).ok()).toBeTruthy();
     const refreshedStories = page.waitForResponse(response => response.url().includes('/api/web/expenses/monthly?month=2026-04') && response.status() === 200);
@@ -160,6 +177,8 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
 
     const doneResponse = page.waitForResponse(response => response.url().includes('/recurring-commitments/') && response.url().includes('/occurrences/complete') && response.request().method() === 'POST');
     await dueCommitment.getByRole('button', { name: 'View details' }).click();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Paid' })).toBeEnabled();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Skip' })).toBeEnabled();
     await page.getByRole('dialog').getByRole('button', { name: 'Paid' }).click();
     await page.getByRole('dialog').getByLabel('Completed on').fill('2026-04-05');
     await page.getByRole('dialog').getByRole('button', { name: 'Save completion' }).click();

@@ -20,19 +20,19 @@ public class WebLoginRequestService {
     private static final String LOGIN_MESSAGE =
             "Use this secure link to sign in. It can be used once and expires shortly.";
 
-    private final UserFeatureFlagService featureFlags;
+    private final UserAccessService featureFlags;
     private final MagicLinkService magicLinks;
     private final WhatsAppReplySender replies;
     private final Clock clock;
     private final Map<String, Deque<Instant>> attempts = new ConcurrentHashMap<>();
 
     @Autowired
-    public WebLoginRequestService(UserFeatureFlagService featureFlags, MagicLinkService magicLinks,
+    public WebLoginRequestService(UserAccessService featureFlags, MagicLinkService magicLinks,
                                   WhatsAppReplySender replies) {
         this(featureFlags, magicLinks, replies, Clock.systemUTC());
     }
 
-    WebLoginRequestService(UserFeatureFlagService featureFlags, MagicLinkService magicLinks,
+    WebLoginRequestService(UserAccessService featureFlags, MagicLinkService magicLinks,
                            WhatsAppReplySender replies, Clock clock) {
         this.featureFlags = featureFlags;
         this.magicLinks = magicLinks;

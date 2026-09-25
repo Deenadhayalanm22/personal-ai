@@ -1,7 +1,7 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.entity.UserFeatureFlagEntity;
-import com.apps.deen_sa.repository.UserFeatureFlagRepository;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,35 +10,34 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class UserFeatureFlagService {
+public class UserAccessService {
     public static final String USER = "USER";
     public static final String SUPER_ADMIN = "SUPER_ADMIN";
 
-    private final UserFeatureFlagRepository repository;
+    private final AppUserRepository repository;
 
     public boolean hasAnyEnabledFeature(String channel, String externalUserId) {
         if (channel == null || externalUserId == null) return false;
-        return repository.existsByChannelAndExternalUserIdAndEnabledTrue(
-                normalizeChannel(channel), normalizeExternalUserId(channel, externalUserId));
+        return find(channel, externalUserId).map(AppUserEntity::isPortalEnabled).orElse(false);
     }
 
     public boolean isSuperAdmin(String channel, String externalUserId) {
         return find(channel, externalUserId)
-                .filter(UserFeatureFlagEntity::isEnabled)
-                .map(UserFeatureFlagEntity::getRole)
+                .filter(AppUserEntity::isPortalEnabled)
+                .map(AppUserEntity::getRole)
                 .map(SUPER_ADMIN::equals)
                 .orElse(false);
     }
 
-    public UserFeatureFlagEntity grantWhatsAppAccess(String externalUserId) {
+    public AppUserEntity grantWhatsAppAccess(String externalUserId) {
         String normalized = normalizeExternalUserId("WHATSAPP", externalUserId);
         if (normalized.isBlank()) throw new IllegalArgumentException("A WhatsApp number is required.");
-        UserFeatureFlagEntity access = repository.findByChannelAndExternalUserId("WHATSAPP", normalized)
-                .orElseGet(UserFeatureFlagEntity::new);
+        AppUserEntity access = repository.findByChannelAndExternalUserId("WHATSAPP", normalized)
+                .orElseGet(AppUserEntity::new);
         access.setChannel("WHATSAPP");
         access.setExternalUserId(normalized);
         if (access.getRole() == null || access.getRole().isBlank()) access.setRole(USER);
-        access.setEnabled(true);
+        access.setPortalEnabled(true);
         return repository.save(access);
     }
 
@@ -48,13 +47,13 @@ public class UserFeatureFlagService {
                 .map(access -> {
                     if (SUPER_ADMIN.equals(access.getRole()))
                         throw new IllegalArgumentException("Super-admin access cannot be removed through WhatsApp.");
-                    access.setEnabled(false);
+                    access.setPortalEnabled(false);
                     repository.save(access);
                     return true;
                 }).orElse(false);
     }
 
-    private Optional<UserFeatureFlagEntity> find(String channel, String externalUserId) {
+    private Optional<AppUserEntity> find(String channel, String externalUserId) {
         if (channel == null || externalUserId == null) return Optional.empty();
         return repository.findByChannelAndExternalUserId(
                 normalizeChannel(channel), normalizeExternalUserId(channel, externalUserId));

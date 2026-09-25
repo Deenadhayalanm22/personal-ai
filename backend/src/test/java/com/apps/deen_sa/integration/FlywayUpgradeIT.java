@@ -1,6 +1,7 @@
 package com.apps.deen_sa.integration;
 
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.exception.FlywayValidateException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,6 +65,50 @@ class FlywayUpgradeIT {
             assertThat(fresh.migrate().migrationsExecuted).isZero();
         } finally {
             fresh.clean();
+        }
+    }
+
+    @Test
+    void movesExistingPortalAccessToAppUserWithoutChangingUserId() throws Exception {
+        Flyway initial = Flyway.configure().dataSource(url, username, password)
+                .schemas(schema).locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("1")).cleanDisabled(false).load();
+        Flyway upgrade = flyway("classpath:db/migration", applicationOutOfOrder());
+        try {
+            initial.migrate();
+            try (var connection = DriverManager.getConnection(url, username, password);
+                 var statement = connection.createStatement()) {
+                statement.execute("INSERT INTO " + schema + ".app_user (id, channel, external_user_id) "
+                        + "VALUES (9001, 'WHATSAPP', '919876543210')");
+                statement.execute("INSERT INTO " + schema + ".user_feature_flag "
+                        + "(channel, external_user_id, role, enabled) VALUES "
+                        + "('WHATSAPP', '919876543210', 'USER', TRUE), "
+                        + "('WHATSAPP', '919876543211', 'USER', FALSE)");
+            }
+            upgrade.migrate();
+            try (var connection = DriverManager.getConnection(url, username, password);
+                 var statement = connection.createStatement()) {
+                try (var rows = statement.executeQuery("SELECT id, portal_enabled, role FROM " + schema
+                        + ".app_user WHERE external_user_id = '919876543210'")) {
+                    assertThat(rows.next()).isTrue();
+                    assertThat(rows.getLong("id")).isEqualTo(9001);
+                    assertThat(rows.getBoolean("portal_enabled")).isTrue();
+                    assertThat(rows.getString("role")).isEqualTo("USER");
+                }
+                try (var rows = statement.executeQuery("SELECT portal_enabled FROM " + schema
+                        + ".app_user WHERE external_user_id = '919876543211'")) {
+                    assertThat(rows.next()).isTrue();
+                    assertThat(rows.getBoolean(1)).isFalse();
+                }
+                try (var rows = statement.executeQuery("SELECT role, portal_enabled FROM " + schema
+                        + ".app_user WHERE external_user_id = '919004656025'")) {
+                    assertThat(rows.next()).isTrue();
+                    assertThat(rows.getString("role")).isEqualTo("SUPER_ADMIN");
+                    assertThat(rows.getBoolean("portal_enabled")).isTrue();
+                }
+            }
+        } finally {
+            upgrade.clean();
         }
     }
 

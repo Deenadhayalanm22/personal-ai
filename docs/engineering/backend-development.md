@@ -4,10 +4,11 @@ This repository contains one Spring Boot application for conversational personal
 It accepts text or WhatsApp messages, records expenses, maintains payment-account balances, supports
 safe corrections, and provides expense summaries.
 
-WhatsApp access is stored once per number in `user_feature_flag`. The seeded `SUPER_ADMIN` can
-manage normal users from WhatsApp with `add user <country-code-number>` and
-`remove user <country-code-number>`. Replace the clearly marked placeholder super-admin number in
-`src/main/resources/db/migration/V1__init.sql` before starting with a fresh database.
+Portal access and role are stored on `app_user` as `portal_enabled` and `role`.
+WhatsApp capture creates an `app_user` with portal access disabled by default. To enable an
+existing user, update that row's `portal_enabled` value to `true`; use a country-code-prefixed,
+digits-only WhatsApp number. Migration V32 copies existing access records, including the seeded
+super admin, into `app_user` and removes the former access table.
 
 ### Structure
 

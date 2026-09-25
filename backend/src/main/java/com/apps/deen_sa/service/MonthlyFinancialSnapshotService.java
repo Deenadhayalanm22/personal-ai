@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 4;
+    private static final int CALCULATION_VERSION = 6;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -46,6 +46,8 @@ public class MonthlyFinancialSnapshotService {
     private final Clock clock;
     @Autowired(required = false) private com.apps.deen_sa.repository.LoanEmiOccurrenceRepository loanOccurrences;
     @Autowired(required = false) private com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository commitmentOccurrences;
+    @Autowired(required = false) private com.apps.deen_sa.repository.CommitmentSavingsPlanRepository savingsPlans;
+    @Autowired(required = false) private com.apps.deen_sa.repository.CommitmentSavingsEntryRepository savingsEntries;
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
@@ -103,15 +105,25 @@ public class MonthlyFinancialSnapshotService {
                 .map(commitment -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
                         commitment.getNextExpectedDate(),
                         commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
-                        commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount", null, null, null)).toList();
+                        savingsDetail(commitment), null, null, null)).toList();
         List<Source> cardBills = (creditCards == null || transactions == null ? List.<com.apps.deen_sa.entity.UserCreditCardEntity>of() : creditCards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId())).stream()
                 .map(card -> creditCardSource(user, card, month)).filter(source -> source.plannedAmount().signum() > 0).toList();
+        List<Source> saving = (savingsPlans == null || savingsEntries == null ? List.<com.apps.deen_sa.entity.CommitmentSavingsPlanEntity>of() : savingsPlans.findByCommitmentUserId(user.getId())).stream()
+                .filter(plan -> plan.getCommitment().getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE)
+                .filter(plan -> !month.isBefore(YearMonth.from(plan.getStartMonth())) && month.isBefore(YearMonth.from(plan.getTargetDate())))
+                .filter(plan -> savingsEntries.findByPlanIdOrderByScheduledMonthAsc(plan.getId()).stream().filter(entry -> "SAVED".equals(entry.getStatus()))
+                        .map(com.apps.deen_sa.entity.CommitmentSavingsEntryEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add).compareTo(plan.getTargetAmount()) < 0)
+                .filter(plan -> savingsEntries.findByPlanIdAndScheduledMonth(plan.getId(), month.atDay(1)).isEmpty())
+                .map(plan -> new Source("COMMITMENT_SAVINGS", String.valueOf(plan.getCommitment().getId()), plan.getCommitment().getLabel() + " savings",
+                        month.equals(YearMonth.from(plan.getTargetDate()).minusMonths(1)) ? plan.getFinalAmount() : plan.getMonthlyAmount(),
+                        month.atDay(1), "Savings for commitment", "For payment on " + plan.getTargetDate(), null, null, null)).toList();
         Bucket debtBucket = bucket("DEBT_REPAYMENTS", "Debt repayments", debt);
         Bucket investingBucket = bucket("PLANNED_INVESTING", "Planned investing", investing);
         Bucket essentialBucket = bucket("ESSENTIAL_LIVING", "Essential living", essential);
+        Bucket savingBucket = bucket("COMMITMENT_SAVINGS", "Saving for upcoming bills", saving);
         Bucket cardBucket = bucket("CREDIT_CARD_BILLS", "Credit-card bills", cardBills);
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
-                debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()).add(cardBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket, cardBucket));
+                debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()).add(cardBucket.plannedAmount()).add(savingBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket, cardBucket, savingBucket));
         String payload = write(value);
         String fingerprint = fingerprint(payload);
         MonthlyFinancialSnapshotEntity entity = snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1)).orElseGet(() -> {
@@ -132,6 +144,18 @@ public class MonthlyFinancialSnapshotService {
         return new Source("LOAN", String.valueOf(loan.getId()), loan.getLoanName(), loan.getMonthlyEmiAmount(),
                 LocalDate.of(month.getYear(), month.getMonth(), Math.min(loan.getFirstEmiDueDate().getDayOfMonth(), month.lengthOfMonth())),
                 "Loan EMI", loan.getLenderName(), remaining, end.toString(), end.plusMonths(1).toString());
+    }
+    private String savingsDetail(com.apps.deen_sa.entity.UserRecurringCommitmentEntity commitment) {
+        if (savingsPlans == null || savingsEntries == null || commitment.getNextExpectedDate() == null)
+            return commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount";
+        return savingsPlans.findByCommitmentIdAndTargetDate(commitment.getId(), commitment.getNextExpectedDate())
+                .map(plan -> {
+                    BigDecimal saved = savingsEntries.findByPlanIdOrderByScheduledMonthAsc(plan.getId()).stream()
+                            .filter(entry -> "SAVED".equals(entry.getStatus())).map(com.apps.deen_sa.entity.CommitmentSavingsEntryEntity::getAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return MoneyStoryRenderer.money(saved, commitment.getUser().getCurrency()) + " recorded as set aside · "
+                            + MoneyStoryRenderer.money(commitment.getPlanningAmount().subtract(saved).max(BigDecimal.ZERO), commitment.getUser().getCurrency()) + " still needed";
+                }).orElse(commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount");
     }
     private boolean hasEmiIn(UserLoanEntity loan, YearMonth month) {
         if (loan.getStatus() != LoanStatus.ACTIVE) return false;

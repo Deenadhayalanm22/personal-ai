@@ -1,7 +1,7 @@
 package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.service.MagicLinkService;
-import com.apps.deen_sa.service.UserFeatureFlagService;
+import com.apps.deen_sa.service.UserAccessService;
 import com.apps.deen_sa.service.WhatsAppReplySender;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 
 class WebLoginRequestServiceTest {
     private static final Instant NOW = Instant.parse("2026-08-25T10:00:00Z");
-    private final UserFeatureFlagService flags = mock(UserFeatureFlagService.class);
+    private final UserAccessService flags = mock(UserAccessService.class);
     private final MagicLinkService links = mock(MagicLinkService.class);
     private final WhatsAppReplySender replies = mock(WhatsAppReplySender.class);
     private final WebLoginRequestService service = new WebLoginRequestService(

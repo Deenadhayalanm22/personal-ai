@@ -35,6 +35,7 @@ public class WebManager {
     private final WebIncomeService income;
     private final WebRecurringCommitmentService commitments;
     private final WebCreditCardService creditCards;
+    @Autowired private CommitmentSavingsService savings;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -179,6 +180,12 @@ public class WebManager {
     public WebRecurringCommitmentService.OccurrenceResponse addCommitmentExtra(String token, Long id, YearMonth month, WebRecurringCommitmentService.ExtraRequest request) { return commitments.addExtra(authentication.authenticate(token), id, month.toString(), request); }
     public WebRecurringCommitmentService.CommitmentReviewResponse commitmentReview(String token, YearMonth month) { return commitments.review(authentication.authenticate(token), month == null ? null : month.toString()); }
     public void resolveCommitmentReview(String token, Long id, WebRecurringCommitmentService.ResolveRequest request) { commitments.resolve(authentication.authenticate(token), id, request); }
+    public CommitmentSavingsService.PlanView savingsPreview(String token, Long id) { return savings.preview(authentication.authenticate(token), id); }
+    public List<CommitmentSavingsService.PlanView> savingsPlans(String token) { return savings.list(authentication.authenticate(token)); }
+    public CommitmentSavingsService.PlanView savingsPlan(String token, Long id) { return savings.get(authentication.authenticate(token), id); }
+    public CommitmentSavingsService.PlanView createSavingsPlan(String token, Long id, CommitmentSavingsService.CreateRequest request) { return savings.create(authentication.authenticate(token), id, request); }
+    public CommitmentSavingsService.PlanView recordSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.record(authentication.authenticate(token), id, request); }
+    public CommitmentSavingsService.PlanView skipSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.skip(authentication.authenticate(token), id, request); }
     public WebCreditCardService.CardListResponse creditCards(String token) { return creditCards.list(authentication.authenticate(token)); }
     public WebCreditCardService.CardResponse createCreditCard(String token, WebCreditCardService.CardRequest request) { return creditCards.create(authentication.authenticate(token), request); }
     public WebCreditCardService.CardResponse updateCreditCard(String token, Long id, WebCreditCardService.CardRequest request) { return creditCards.update(authentication.authenticate(token), id, request); }

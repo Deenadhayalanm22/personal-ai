@@ -69,12 +69,14 @@ public class MonthlyCommitmentStoryService {
         var debt = snapshot.commitmentBuckets().stream().filter(bucket -> "DEBT_REPAYMENTS".equals(bucket.key())).findFirst().orElseThrow();
         var investing = snapshot.commitmentBuckets().stream().filter(bucket -> "PLANNED_INVESTING".equals(bucket.key())).findFirst().orElseThrow();
         BigDecimal emiTotal = debt.plannedAmount(), sipTotal = investing.plannedAmount(), cardBillTotal = snapshot.commitmentBuckets().stream().filter(bucket -> "CREDIT_CARD_BILLS".equals(bucket.key())).findFirst().map(MonthlyFinancialSnapshotService.Bucket::plannedAmount).orElse(BigDecimal.ZERO), total = snapshot.fullIntendedCommitment();
+        BigDecimal savingsTotal = snapshot.commitmentBuckets().stream().filter(bucket -> "COMMITMENT_SAVINGS".equals(bucket.key())).findFirst().map(MonthlyFinancialSnapshotService.Bucket::plannedAmount).orElse(BigDecimal.ZERO);
         String currency = user.getCurrency();
         String value = MoneyStoryRenderer.money(total, currency);
         List<MoneyStoriesService.Component> components = new ArrayList<>();
         if (emiTotal.signum() > 0) components.add(component("Debt repayments", emiTotal, currency));
         if (sipTotal.signum() > 0) components.add(component("Planned investing", sipTotal, currency));
         if (cardBillTotal.signum() > 0) components.add(component("Credit-card bills", cardBillTotal, currency));
+        if (savingsTotal.signum() > 0) components.add(component("Saving for upcoming bills", savingsTotal, currency));
         BigDecimal completedSipTotal = completedSipTotal(investing, month);
         if (completedSipTotal.signum() > 0) components.add(component("SIP allocations complete", completedSipTotal, currency));
         BigDecimal completedLoanTotal = completedLoanTotal(debt, month);
@@ -90,7 +92,7 @@ public class MonthlyCommitmentStoryService {
 
         String title = total.signum() > 0 ? "Your known monthly commitment" : "Your monthly commitment starts here";
         String body = total.signum() > 0
-                ? commitmentBody(value, emiTotal, sipTotal, cardBillTotal, currency)
+                ? commitmentBody(value, emiTotal, sipTotal, cardBillTotal, savingsTotal, currency)
                 : "Add a loan or a mutual fund SIP and it will appear here as part of your monthly commitment.";
         String payoffFacts = debt.sources().stream().filter(source -> source.remainingPayments() != null)
                 .map(source -> source.label() + ": " + source.remainingPayments() + " payments remaining, ends " + source.endsInMonth()
@@ -228,7 +230,9 @@ public class MonthlyCommitmentStoryService {
         return new MoneyStoriesService.Component("MONEY", label, amount, currency, MoneyStoryRenderer.money(amount, currency));
     }
 
-    private String commitmentBody(String total, BigDecimal debt, BigDecimal investing, BigDecimal cardBills, String currency) {
+    private String commitmentBody(String total, BigDecimal debt, BigDecimal investing, BigDecimal cardBills, BigDecimal savings, String currency) {
+        if (savings.signum() > 0) return "Your planned commitments total " + total + " this month, including "
+                + MoneyStoryRenderer.money(savings, currency) + " you chose to set aside for an upcoming payment.";
         if (cardBills.signum() > 0) return "Your full intended commitment is " + total + ", including "
                 + MoneyStoryRenderer.money(cardBills, currency) + " in credit-card bills due this month.";
         if (debt.signum() > 0 && investing.signum() > 0) {
@@ -238,7 +242,8 @@ public class MonthlyCommitmentStoryService {
         }
         if (debt.signum() > 0) return "Your required debt repayments total " + total + " this month.";
         if (investing.signum() > 0) return "Your planned investing total is " + total + " this month.";
-        return "Your credit-card bill due is " + MoneyStoryRenderer.money(cardBills, currency) + " this month.";
+        if (cardBills.signum() > 0) return "Your credit-card bill due is " + MoneyStoryRenderer.money(cardBills, currency) + " this month.";
+        return "Your known planned payments total " + total + " this month.";
     }
 
     private MoneyStoriesService.EvidenceTransaction evidence(MonthlyFinancialSnapshotService.Source source, String currency) {
@@ -249,7 +254,8 @@ public class MonthlyCommitmentStoryService {
 
     private String evidenceTag(MonthlyFinancialSnapshotService.Source source) {
         if ("CREDIT_CARD_BILL".equals(source.sourceType())) return "Statement-period total";
-        if ("RECURRING_COMMITMENT".equals(source.sourceType())) return "Recent-bill estimate".equals(source.detail()) ? "Recent-bill estimate" : "Fixed monthly amount";
+        if ("RECURRING_COMMITMENT".equals(source.sourceType())) return source.detail() != null && source.detail().contains("recorded as set aside")
+                ? source.detail() : "Recent-bill estimate".equals(source.detail()) ? "Recent-bill estimate" : "Fixed monthly amount";
         if (source.remainingPayments() == null) return "🌱 Future-you contribution";
         String end = monthLabel(YearMonth.parse(source.endsInMonth()));
         if (source.remainingPayments() <= 2) return "🚪 Final episode · exits " + end;

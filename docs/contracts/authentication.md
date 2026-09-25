@@ -12,3 +12,4 @@ All `/api/web/**` endpoints use the `WEB_SESSION` cookie, except public login-li
 | `PUT /api/web/auth/demo-profile` | Body `{ "enabled": boolean }`; returns `{ "demoMode": boolean }`. Changes profile for subsequent calls. | `ProfileSettings.svelte` through `Home.svelte`; clears caches and reloads data. |
 
 The generic login response is intentional account-enumeration protection. `VITE_API_BASE` chooses API origin and browser requests always use `credentials: 'include'`.
+Portal access is stored on `app_user.portal_enabled` (default `false`), with `app_user.role` holding `USER` or `SUPER_ADMIN`. WhatsApp capture can create an `app_user` without granting portal access. An operator can enable an existing user by setting `portal_enabled = true`; the login endpoint still returns its generic response for absent or disabled users.

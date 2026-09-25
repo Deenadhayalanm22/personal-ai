@@ -17,7 +17,7 @@ public class WhatsAppAggregateBackfillCommandHandler {
     private static final Set<String> COMMANDS = Set.of(
             "/aggregate", "/aggregate-expenses", "/backfill-aggregates", "aggregate expenses");
 
-    private final UserFeatureFlagService featureFlags;
+    private final UserAccessService featureFlags;
     private final ExpenseDailyAggregationService aggregationService;
     private final DailyUserActionScheduler actions;
     private final WhatsAppReplySender replySender;
@@ -25,7 +25,7 @@ public class WhatsAppAggregateBackfillCommandHandler {
     private final ZoneId aggregationZone;
 
     public WhatsAppAggregateBackfillCommandHandler(
-            UserFeatureFlagService featureFlags,
+            UserAccessService featureFlags,
             ExpenseDailyAggregationService aggregationService,
             DailyUserActionScheduler actions,
             WhatsAppReplySender replySender,

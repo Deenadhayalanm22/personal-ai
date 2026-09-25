@@ -181,6 +181,19 @@ public class WebFinanceController {
     @PostMapping("/recurring-commitments/review/{transactionId}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resolveCommitmentReview(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long transactionId, @RequestBody WebRecurringCommitmentService.ResolveRequest request) { webManager.resolveCommitmentReview(token, transactionId, request); }
 
+    @GetMapping("/recurring-commitments/savings")
+    public java.util.List<CommitmentSavingsService.PlanView> savingsPlans(@CookieValue(name = SESSION_COOKIE, required = false) String token) { return webManager.savingsPlans(token); }
+    @GetMapping("/recurring-commitments/{id}/savings/preview")
+    public CommitmentSavingsService.PlanView savingsPreview(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { return webManager.savingsPreview(token, id); }
+    @GetMapping("/recurring-commitments/{id}/savings")
+    public CommitmentSavingsService.PlanView savingsPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id) { return webManager.savingsPlan(token, id); }
+    @PostMapping("/recurring-commitments/{id}/savings") @ResponseStatus(HttpStatus.CREATED)
+    public CommitmentSavingsService.PlanView createSavingsPlan(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody CommitmentSavingsService.CreateRequest request) { return webManager.createSavingsPlan(token, id, request); }
+    @PostMapping("/recurring-commitments/{id}/savings/record")
+    public CommitmentSavingsService.PlanView recordSavings(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody CommitmentSavingsService.EntryRequest request) { return webManager.recordSavings(token, id, request); }
+    @PostMapping("/recurring-commitments/{id}/savings/skip")
+    public CommitmentSavingsService.PlanView skipSavings(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody CommitmentSavingsService.EntryRequest request) { return webManager.skipSavings(token, id, request); }
+
     @GetMapping("/credit-cards")
     public WebCreditCardService.CardListResponse creditCards(@CookieValue(name = SESSION_COOKIE, required = false) String token) { return webManager.creditCards(token); }
     @PostMapping("/credit-cards") @ResponseStatus(HttpStatus.CREATED)

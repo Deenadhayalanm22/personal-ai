@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 class WhatsAppAggregateBackfillCommandHandlerTest {
-    private final UserFeatureFlagService flags = mock(UserFeatureFlagService.class);
+    private final UserAccessService flags = mock(UserAccessService.class);
     private final ExpenseDailyAggregationService aggregation = mock(ExpenseDailyAggregationService.class);
     private final DailyUserActionScheduler actions = mock(DailyUserActionScheduler.class);
     private final WhatsAppReplySender replies = mock(WhatsAppReplySender.class);

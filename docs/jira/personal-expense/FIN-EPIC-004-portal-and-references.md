@@ -15,6 +15,7 @@
 3. **Given** a session logout, **when** completed, **then** the server invalidates it and clears the browser cookie.
 4. **Given** an unauthenticated API request, **when** made, **then** no domain data is returned and the browser redirects to portal sign-in.
 5. **Given** an expired session on a dashboard URL, **when** the portal starts, **then** it must not mount dashboard features or make protected feature calls before redirecting to portal sign-in.
+6. **Given** an existing WhatsApp user, **when** portal access is enabled on that user's `app_user` row, **then** a sign-in link may be sent; an absent or disabled user gets the same public response without a link. Existing enabled access and roles are migrated from the former `user_feature_flag` table.
 
 ### Integration-test scenarios
 
@@ -22,6 +23,7 @@
 - Exchange a token twice; assert first session works and second fails.
 - Call a protected endpoint after logout and assert `401`.
 - Load a dashboard URL with an expired session and assert the actions queue is not requested before the sign-in redirect.
+- Migrate enabled, disabled, and super-admin access to `app_user` while retaining existing user IDs; assert only enabled users receive login links.
 
 ## FIN-013 — Switch presentation profile without leakage
 

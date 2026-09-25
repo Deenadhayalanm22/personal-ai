@@ -19,6 +19,7 @@ public class RecurringCommitmentOccurrenceEntity {
     private LocalDate completedAt;
     @Column(name = "actual_amount", precision = 19, scale = 2) private BigDecimal actualAmount;
     @Column(name = "extra_amount", precision = 19, scale = 2) private BigDecimal extraAmount;
+    @Column(name = "savings_used", precision = 19, scale = 2) private BigDecimal savingsUsed;
     @Column(nullable = false, updatable = false) private Instant createdAt = Instant.now();
     @Column(nullable = false) private Instant updatedAt = Instant.now();
 }
