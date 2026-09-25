@@ -69,6 +69,10 @@ When a new matching payment is recorded, the product may show a non-blocking sug
 
 Commitments are renamed from **Monthly commitments** to **Commitments**. The standard recurrence picker offers daily, weekly, monthly, yearly, and a custom `Every…` interval. A monthly projection must include an occurrence only in the month it is expected; it must not annualise a non-monthly payment into an invented monthly expense.
 
+For a weekly commitment, the chosen first expected date anchors the weekday and is retained when the next expected date advances. The current and next month projections contain one full planned amount for each scheduled week in that calendar month, so a ₹2,000 weekly payment totals ₹8,000 in a four-week month and ₹10,000 in a five-week month. Each date has its own due, paid, or skipped outcome. A due week is highlighted in red in the story and commitment details; paying or skipping it advances the next expected date by the weekly interval without changing other weeks. A skipped week leaves the monthly projection, while a paid week remains part of the planned monthly total and its payment is retained in history. Weeks before the commitment was created or before its first expected date are never retroactively due.
+
+The same dated schedule applies to daily and custom intervals such as every two weeks. The Monthly Commitment story groups a short-cadence commitment into one row with its monthly total and a segmented progress bar; it does not repeat the same commitment for every date. View details uses the same segments. Green means paid, red means skipped, a warm highlight means due, and neutral means upcoming. Selecting a segment reveals that date's amount and status, with Paid and Skip available only when it is due. Selecting a story segment opens that exact date in commitment details. The underlying snapshot still keeps one source per scheduled date so the total is accurate.
+
 A flexible commitment retains a usual recurrence (for example, `every 4 months` for bike service or `usually every 3 months` for an internet recharge) and has a user-controlled next expected date. Completing it records the actual paid amount and completion date separately from its planning estimate. The completion flow then offers the usual recurrence as a next-date suggestion and also lets the user choose another date or leave it unscheduled. This preserves truthful payment history while allowing offers and usage-based maintenance to change the immediate plan.
 
 ### Integration-test scenarios
@@ -84,6 +88,8 @@ A flexible commitment retains a usual recurrence (for example, `every 4 months` 
 - Browser regression: mark a due commitment done, open View details, and assert the completed occurrence is retained in payment history.
 - Browser regression: create a ₹2,000 Bike service commitment every four months; complete it early for ₹2,400, choose a new next expected date, and assert the history retains actual facts while the planning estimate and usual recurrence remain unchanged.
 - Browser regression: create a ₹799 Internet recharge commitment usually every three months; complete it after two months for ₹699, choose the new date, and assert the history is updated without silently changing the usual recurrence.
+- Browser regression: create ₹2,000 weekly family support on 1 September 2026; assert five September sources and four October sources, the due week's red story treatment, independent Paid/Skip outcomes, and the next week becoming due without losing earlier history.
+- Browser regression: daily support shows 30 September segments in one story row; every-two-weeks support on 1 September shows three segments (1, 15, and 29 September). A tap on any story segment opens that date in details.
 
 ## FIN-021 — Include commitments in Monthly Commitment stories
 

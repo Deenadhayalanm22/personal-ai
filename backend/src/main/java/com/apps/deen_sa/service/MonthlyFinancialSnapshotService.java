@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 6;
+    private static final int CALCULATION_VERSION = 8;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -98,8 +98,13 @@ public class MonthlyFinancialSnapshotService {
         List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
                                 && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
-                .flatMap(commitment -> RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream()
-                        .filter(due -> commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), RecurringCommitmentSchedule.weekly(commitment) ? due : month.atDay(1))
+                .flatMap(commitment -> java.util.stream.Stream.concat(
+                        RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream(),
+                        RecurringCommitmentSchedule.dated(commitment) && commitmentOccurrences != null
+                                ? commitmentOccurrences.findByCommitmentIdAndScheduledMonthBetweenOrderByScheduledMonthAsc(commitment.getId(), month.atDay(1), month.atEndOfMonth()).stream()
+                                    .map(com.apps.deen_sa.entity.RecurringCommitmentOccurrenceEntity::getScheduledMonth)
+                                : java.util.stream.Stream.<LocalDate>empty()).distinct().sorted()
+                        .filter(due -> commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), RecurringCommitmentSchedule.dated(commitment) ? due : month.atDay(1))
                                 .map(occurrence -> occurrence.getStatus() != com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.SKIPPED).orElse(true))
                         .map(due -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
                                 due, commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),

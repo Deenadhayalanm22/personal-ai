@@ -27,6 +27,7 @@ public class UserRecurringCommitmentEntity {
     @Enumerated(EnumType.STRING) @Column(name = "recurrence_unit", nullable = false, length = 12) private CommitmentRecurrenceUnit recurrenceUnit = CommitmentRecurrenceUnit.MONTH;
     @Column(name = "recurrence_interval", nullable = false) private Integer recurrenceInterval = 1;
     @Column(name = "next_expected_date") private LocalDate nextExpectedDate;
+    @Column(name = "first_expected_date") private LocalDate firstExpectedDate;
     @Column(name = "flexible_schedule", nullable = false) private boolean flexibleSchedule;
     @Column(name = "effective_month", nullable = false) private LocalDate effectiveMonth;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private RecurringCommitmentStatus status = RecurringCommitmentStatus.ACTIVE;

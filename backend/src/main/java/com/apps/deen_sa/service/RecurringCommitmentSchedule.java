@@ -9,20 +9,25 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Dates in a month for a weekly commitment, anchored to its next expected payment. */
+/** Dates in a month for a daily or weekly commitment, anchored to its first payment. */
 final class RecurringCommitmentSchedule {
     private RecurringCommitmentSchedule() { }
 
-    static boolean weekly(UserRecurringCommitmentEntity commitment) {
-        return commitment.getRecurrenceUnit() == CommitmentRecurrenceUnit.WEEK;
+    static boolean dated(UserRecurringCommitmentEntity commitment) {
+        return commitment.getRecurrenceUnit() == CommitmentRecurrenceUnit.DAY || commitment.getRecurrenceUnit() == CommitmentRecurrenceUnit.WEEK;
+    }
+
+    static int intervalDays(UserRecurringCommitmentEntity commitment) {
+        return Math.max(1, commitment.getRecurrenceInterval()) * (commitment.getRecurrenceUnit() == CommitmentRecurrenceUnit.WEEK ? 7 : 1);
     }
 
     static List<LocalDate> dates(UserRecurringCommitmentEntity commitment, YearMonth month, ZoneId zone) {
         if (commitment.getNextExpectedDate() == null) return List.of();
-        if (!weekly(commitment)) return YearMonth.from(commitment.getNextExpectedDate()).equals(month)
+        if (!dated(commitment)) return YearMonth.from(commitment.getNextExpectedDate()).equals(month)
                 ? List.of(commitment.getNextExpectedDate()) : List.of();
-        int days = 7 * Math.max(1, commitment.getRecurrenceInterval());
+        int days = intervalDays(commitment);
         LocalDate firstAllowed = commitment.getEffectiveMonth();
+        if (commitment.getFirstExpectedDate() != null && commitment.getFirstExpectedDate().isAfter(firstAllowed)) firstAllowed = commitment.getFirstExpectedDate();
         if (commitment.getCreatedAt() != null) {
             LocalDate created = commitment.getCreatedAt().atZone(zone).toLocalDate();
             if (created.isAfter(firstAllowed)) firstAllowed = created;

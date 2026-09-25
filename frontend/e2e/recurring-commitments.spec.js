@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+test.use({ actionTimeout: 5000 });
 
 async function openAuthenticatedMoney(page, request, instant = '2026-09-21T09:00:00Z') {
   const fixture = await request.post('http://localhost:8080/test/e2e/session');
@@ -21,6 +22,129 @@ async function addFlexibleCommitment(page, commitments, { label, amount, interva
   if (flexible) await page.getByLabel('Flexible reminder').check();
   await page.getByRole('button', { name: 'Add commitment' }).click();
 }
+
+test('weekly family support contributes every scheduled week and each due payment can be recorded', async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const commitments = await openAuthenticatedMoney(page, request, '2026-09-01T09:00:00Z');
+  await commitments.getByRole('button', { name: '＋ Add a commitment' }).click();
+  await page.getByLabel('Name').fill('Wife family support');
+  await page.getByLabel('Planning amount').fill('2000');
+  await page.getByLabel('Frequency').selectOption('WEEK');
+  await page.getByLabel('Next expected date').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Add commitment' }).click();
+  const card = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Wife family support' });
+  await expect(card).toContainText('Due now');
+  const sessionToken = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
+  const monthly = async month => (await request.get(`http://localhost:8080/api/web/expenses/monthly?month=${month}`, { headers: { Cookie: `WEB_SESSION=${sessionToken}` } })).json();
+  const september = await monthly('2026-09');
+  const story = september.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT');
+  const rows = story.evidence.byCard.commitment.transactions.filter(item => item.transactionId.startsWith('recurring_commitment:'));
+  expect(story.evidence.byCard.commitment.totalAmount.value).toBe(10000);
+  expect(rows.map(item => item.dateLabel)).toEqual(['1 Sept', '8 Sept', '15 Sept', '22 Sept', '29 Sept']);
+  expect(rows.map(item => item.amount.value)).toEqual([2000, 2000, 2000, 2000, 2000]);
+  await card.getByRole('button', { name: 'View details' }).click();
+  const detail = page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' });
+  await expect(detail.getByTestId('cadence-progress').locator('.cadence-segment')).toHaveCount(5);
+  const first = detail.getByTestId('dated-occurrence-2026-09-01');
+  await expect(first).toHaveClass(/due-sip/);
+  await first.getByRole('button', { name: 'Paid' }).click();
+  await page.getByLabel('Completed on').fill('2026-09-01');
+  await expect(page.getByLabel('Next expected date')).toHaveValue('2026-09-08');
+  await page.getByRole('button', { name: 'Save completion' }).click();
+  const afterPayment = await monthly('2026-09');
+  expect(afterPayment.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions
+    .filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(5);
+  await card.getByRole('button', { name: 'View details' }).click();
+  await detail.getByRole('button', { name: /Sep 1 paid/ }).click();
+  await expect(detail.getByTestId('dated-occurrence-2026-09-01')).toContainText('Paid');
+  await detail.locator('.close').click();
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-09-08T09:00:00Z' } })).ok()).toBeTruthy();
+  await page.reload();
+  await page.getByRole('button', { name: /Your money/ }).click();
+  await page.locator('.money-modal > .close').click();
+  await page.locator('.story-carousel-card').first().click();
+  await page.getByTestId('view-included-commitments').click();
+  const dueStoryRow = page.locator('.cadence-evidence-row', { hasText: 'Wife family support' });
+  await expect(dueStoryRow).toHaveClass(/due-recurring-commitment/);
+  await expect(page.locator('.cadence-evidence-row')).toHaveCount(1);
+  await dueStoryRow.getByRole('button', { name: /Sep 8 due/ }).click();
+  await expect(detail.getByTestId('dated-occurrence-2026-09-08')).toHaveClass(/due-sip/);
+  await detail.getByTestId('dated-occurrence-2026-09-08').getByRole('button', { name: 'Skip' }).click();
+  await detail.getByRole('button', { name: /Sep 8 skipped/ }).click();
+  await expect(detail.getByTestId('dated-occurrence-2026-09-08')).toContainText('Skipped');
+  const afterSkip = await monthly('2026-09');
+  const remaining = afterSkip.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
+  expect(remaining.filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(4);
+  expect(afterSkip.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.totalAmount.value).toBe(8000);
+  expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-10-01T09:00:00Z' } })).ok()).toBeTruthy();
+  const october = await monthly('2026-10');
+  const nextRows = october.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
+  expect(october.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.totalAmount.value).toBe(8000);
+  expect(nextRows.filter(item => item.transactionId.startsWith('recurring_commitment:')).map(item => item.dateLabel)).toEqual(['6 Oct', '13 Oct', '20 Oct', '27 Oct']);
+});
+
+test('weekly commitment does not invent weeks before its first expected payment', async ({ page, request }) => {
+  const commitments = await openAuthenticatedMoney(page, request, '2026-09-01T09:00:00Z');
+  await commitments.getByRole('button', { name: '＋ Add a commitment' }).click();
+  await page.getByLabel('Name').fill('Future family support');
+  await page.getByLabel('Planning amount').fill('2000');
+  await page.getByLabel('Frequency').selectOption('WEEK');
+  await page.getByLabel('Next expected date').fill('2026-10-06');
+  await page.getByRole('button', { name: 'Add commitment' }).click();
+  const token = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
+  const response = await request.get('http://localhost:8080/api/web/expenses/monthly?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
+  expect(response.ok()).toBeTruthy();
+  const story = (await response.json()).stories.find(item => item.storyType === 'MONTHLY_COMMITMENT');
+  expect(story.evidence.byCard.commitment.transactions.filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(0);
+});
+
+test('daily commitment uses one compact story row and a dated progress bar', async ({ page, request }) => {
+  const commitments = await openAuthenticatedMoney(page, request, '2026-09-01T09:00:00Z');
+  await commitments.getByRole('button', { name: '＋ Add a commitment' }).click();
+  await page.getByLabel('Name').fill('Daily support');
+  await page.getByLabel('Planning amount').fill('100');
+  await page.getByLabel('Frequency').selectOption('DAY');
+  await page.getByLabel('Next expected date').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Add commitment' }).click();
+  const card = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Daily support' });
+  await card.getByRole('button', { name: 'View details' }).click();
+  const detail = page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' });
+  await expect(detail.getByTestId('cadence-progress').locator('.cadence-segment')).toHaveCount(30);
+  await detail.getByTestId('dated-occurrence-2026-09-01').getByRole('button', { name: 'Paid' }).click();
+  await page.getByLabel('Completed on').fill('2026-09-01');
+  await expect(page.getByLabel('Next expected date')).toHaveValue('2026-09-02');
+  await page.getByRole('button', { name: 'Save completion' }).click();
+  await page.locator('.money-modal > .close').click();
+  await page.locator('.story-carousel-card').first().click();
+  await page.getByTestId('view-included-commitments').click();
+  const grouped = page.locator('.cadence-evidence-row', { hasText: 'Daily support' });
+  await expect(grouped).toHaveCount(1);
+  await expect(grouped.getByTestId('cadence-progress').locator('.cadence-segment')).toHaveCount(30);
+  await grouped.getByRole('button', { name: /Sep 1 paid/ }).click();
+  await expect(detail.getByTestId('dated-occurrence-2026-09-01')).toContainText('Paid');
+});
+
+test('every two weeks creates three September contributions in one progress bar', async ({ page, request }) => {
+  const commitments = await openAuthenticatedMoney(page, request, '2026-09-01T09:00:00Z');
+  await commitments.getByRole('button', { name: '＋ Add a commitment' }).click();
+  await page.getByLabel('Name').fill('Fortnightly support');
+  await page.getByLabel('Planning amount').fill('2000');
+  await page.getByLabel('Frequency').selectOption('WEEK');
+  await page.getByLabel('Every').fill('2');
+  await page.getByLabel('Next expected date').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Add commitment' }).click();
+  const card = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Fortnightly support' });
+  await card.getByRole('button', { name: 'View details' }).click();
+  const detail = page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' });
+  await expect(detail.getByTestId('cadence-progress').locator('.cadence-segment')).toHaveCount(3);
+  await expect(detail.getByRole('button', { name: /Sep 15 upcoming/ })).toBeVisible();
+  await expect(detail.getByRole('button', { name: /Sep 29 upcoming/ })).toBeVisible();
+  const token = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
+  const response = await request.get('http://localhost:8080/api/web/expenses/monthly?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
+  expect(response.ok()).toBeTruthy();
+  const rows = (await response.json()).stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
+  expect(rows.filter(item => item.transactionId.startsWith('recurring_commitment:')).map(item => item.dateLabel)).toEqual(['1 Sept', '15 Sept', '29 Sept']);
+});
 
 
 test('recurring commitment details and payment lifecycle', async ({ page, request }) => {

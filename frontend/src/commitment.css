@@ -74,7 +74,6 @@
 .savings-row-actions button{padding:7px 8px;border-radius:7px;font-size:9px;white-space:nowrap}
 .savings-start-button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;border:1px solid #bed7c2;border-radius:11px;background:#eaf4e9;color:#245b3f;font:800 12px Manrope;cursor:pointer}
 .savings-start-button:hover{background:#dceedd}
-.savings-empty{margin:0;color:var(--muted);font-size:11px}
 .savings-setup .savings-facts{margin:16px 0 20px}
 .savings-setup .savings-facts th{width:42%}
 .savings-setup .savings-facts input{text-align:right}
@@ -97,3 +96,13 @@
 .savings-due-entry strong{font-size:11px;color:var(--ink)}
 .savings-due-entry input{box-sizing:border-box;width:110px;padding:8px;border:1px solid #bdd1c0;border-radius:8px;background:#fff;color:var(--ink);font:700 11px Manrope;text-align:right}
 @media(max-width:420px){.savings-due-entry{align-items:stretch}.savings-due-entry .savings-row-actions{flex-direction:row;width:100%}}
+.cadence-detail-summary{display:flex;justify-content:space-between;gap:12px;margin:12px 0 10px;font-size:10px}
+.cadence-detail-summary span{color:var(--muted)}
+.cadence-selected-payment{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px;padding:12px;border:1px solid #dfe8df;border-radius:11px;background:#f7faf7}
+.cadence-selected-payment>div:first-child{display:grid;gap:4px}
+.cadence-selected-payment strong{font-size:11px}
+.cadence-selected-payment span{color:var(--muted);font-size:10px}
+.cadence-selected-payment.due-sip{border-color:#e4a49c;background:#fff4f1}
+.cadence-selected-payment.due-sip strong,.cadence-selected-payment.due-sip span{color:var(--red)}
+.cadence-evidence-row .cadence-progress{grid-column:1/-1;grid-row:2}
+@media(max-width:420px){.cadence-selected-payment{align-items:flex-start;flex-direction:column}.cadence-selected-payment .fund-sip-actions{width:100%;justify-content:flex-start}}

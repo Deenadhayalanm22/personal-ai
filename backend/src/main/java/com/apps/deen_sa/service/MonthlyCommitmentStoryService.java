@@ -248,14 +248,15 @@ public class MonthlyCommitmentStoryService {
 
     private MoneyStoriesService.EvidenceTransaction evidence(MonthlyFinancialSnapshotService.Source source, String currency) {
         String date = source.dueDate() == null ? "Every month" : source.dueDate().format(java.time.format.DateTimeFormatter.ofPattern("d MMM"));
-        return new MoneyStoriesService.EvidenceTransaction(source.sourceType().toLowerCase() + ":" + source.sourceId(), date,
+        return new MoneyStoriesService.EvidenceTransaction(source.sourceType().toLowerCase() + ":" + source.sourceId()
+                + ("RECURRING_COMMITMENT".equals(source.sourceType()) && source.dueDate() != null ? ":" + source.dueDate() : ""), date,
                 source.label(), source.category() + " · " + evidenceTag(source), component("Monthly amount", source.plannedAmount(), currency), source.detail());
     }
 
     private String evidenceTag(MonthlyFinancialSnapshotService.Source source) {
         if ("CREDIT_CARD_BILL".equals(source.sourceType())) return "Statement-period total";
         if ("RECURRING_COMMITMENT".equals(source.sourceType())) return source.detail() != null && source.detail().contains("recorded as set aside")
-                ? source.detail() : "Recent-bill estimate".equals(source.detail()) ? "Recent-bill estimate" : "Fixed monthly amount";
+                ? source.detail() : "Recent-bill estimate".equals(source.detail()) ? "Recent-bill estimate" : "Scheduled payment";
         if (source.remainingPayments() == null) return "🌱 Future-you contribution";
         String end = monthLabel(YearMonth.parse(source.endsInMonth()));
         if (source.remainingPayments() <= 2) return "🚪 Final episode · exits " + end;
