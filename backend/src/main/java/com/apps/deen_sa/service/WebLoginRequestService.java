@@ -18,7 +18,8 @@ public class WebLoginRequestService {
     private static final Duration RATE_LIMIT_WINDOW = Duration.ofMinutes(15);
     private static final int MAX_REQUESTS_PER_WINDOW = 3;
     private static final String LOGIN_MESSAGE =
-            "Use this secure link to sign in. It can be used once and expires shortly.";
+            "Use this secure link to sign in. It can be used once and expires shortly."
+                    + " If WhatsApp's browser does not work, copy the link below into your browser.";
 
     private final UserAccessService featureFlags;
     private final MagicLinkService magicLinks;
@@ -48,7 +49,7 @@ public class WebLoginRequestService {
         if (!featureFlags.hasAnyEnabledFeature(CHANNEL, normalized)) return;
 
         String link = magicLinks.generateForWhatsAppUser(normalized);
-        replies.sendPortalLink(normalized, LOGIN_MESSAGE, link);
+        replies.sendPortalLink(normalized, LOGIN_MESSAGE + "\n\nSign in: " + link, link);
     }
 
     private String normalize(String phoneNumber) {

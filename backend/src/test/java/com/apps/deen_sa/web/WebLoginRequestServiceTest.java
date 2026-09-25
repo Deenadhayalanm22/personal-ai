@@ -27,7 +27,9 @@ class WebLoginRequestServiceTest {
         service.request("+91 98765 43210", "127.0.0.1");
 
         verify(replies).sendPortalLink("919876543210",
-                "Use this secure link to sign in. It can be used once and expires shortly.",
+                "Use this secure link to sign in. It can be used once and expires shortly."
+                        + " If WhatsApp's browser does not work, copy the link below into your browser."
+                        + "\n\nSign in: https://example.com/access?token=secret",
                 "https://example.com/access?token=secret");
     }
 
