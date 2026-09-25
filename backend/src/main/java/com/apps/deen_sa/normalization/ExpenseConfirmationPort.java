@@ -6,4 +6,6 @@ public interface ExpenseConfirmationPort {
     void requestConfirmation(StoredDraftExtraction extraction);
 
     void sendExpenseInstruction(String externalUserId);
+
+    void sendIncompleteExpenseInstruction(String externalUserId);
 }

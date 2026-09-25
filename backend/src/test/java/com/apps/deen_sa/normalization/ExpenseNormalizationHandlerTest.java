@@ -123,6 +123,25 @@ class ExpenseNormalizationHandlerTest {
                 org.mockito.ArgumentMatchers.any());
     }
 
+    @Test
+    void asksForRetryWhenAnExpenseHasNoConfirmableSubcategory() {
+        InboundMessage message = new InboundMessage("9198", "wamid.lunch", InputType.TEXT,
+                MessageSource.WHATSAPP, "Bought lunch for 300");
+        when(normalizer.normalize("9198", message.rawContent(), LocalDate.of(2026, 9, 2)))
+                .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(new BigDecimal("300"),
+                        "Food & Dining", null, null, null, LocalDate.of(2026, 9, 2),
+                        new BigDecimal("0.80")));
+        when(dateContexts.applyToDraft(42L, message.rawContent(), LocalDate.of(2026, 9, 2)))
+                .thenReturn(LocalDate.of(2026, 9, 2));
+
+        handler.handle(new DraftWriteResult(42L, true), message);
+
+        verify(extractionWriter).cancelWithoutExtraction(42L);
+        verify(confirmation).sendIncompleteExpenseInstruction("9198");
+        verify(extractionWriter, never()).saveActive(org.mockito.ArgumentMatchers.any());
+        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+    }
+
     private InboundMessage textMessage() {
         return new InboundMessage(
                 "9198", "wamid.1", InputType.TEXT, MessageSource.WHATSAPP, "Paid ₹250");

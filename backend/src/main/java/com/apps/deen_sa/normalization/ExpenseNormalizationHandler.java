@@ -72,6 +72,15 @@ public class ExpenseNormalizationHandler {
                 transactionDate,
                 facts.confidence());
 
+        // A confirmation for these facts would fail in FinancialTransactionWriter.
+        // Ask for a new message instead of leaving an unusable ACTIVE extraction.
+        if (facts.amount() == null || facts.amount().signum() <= 0
+                || facts.category() == null || facts.subcategory() == null) {
+            extractionWriter.cancelWithoutExtraction(draft.draftId());
+            confirmation.sendIncompleteExpenseInstruction(message.externalUserId());
+            return;
+        }
+
         var committedExtraction = extractionWriter.saveActive(normalized);
         confirmation.requestConfirmation(committedExtraction);
     }

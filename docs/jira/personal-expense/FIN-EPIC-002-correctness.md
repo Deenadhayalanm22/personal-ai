@@ -57,6 +57,7 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 2. **Given** two or more active references of one entity type, **when** merged, **then** a canonical reference retains aliases, redundant references become inactive, and merchant/account transactions are repointed.
 3. **Given** a mixed type, foreign reference, inactive reference, or fewer than two unique IDs, **when** merged, **then** it fails without a partial merge.
 4. **Given** beneficiary references, **when** merged, **then** aliases consolidate but no expense rows are changed because expenses do not link beneficiaries today.
+5. **Given** a generic `bank account` reference, including a common spelling error, **when** only one active named bank account is available, **then** it resolves to that account; with multiple possible accounts it remains unassigned rather than creating a generic or misspelled reference.
 
 ### Integration-test scenarios
 

@@ -60,6 +60,7 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 3. **Given** multiple available stories, **when** the portal shows its Home preview or Stories view, **then** it presents one active card in a horizontally swipeable, stacked card rail with a visible dot/count indicator and a partial next-card preview.
 4. **Given** an expense edit or soft deletion, **when** an affected month is re-evaluated, **then** story change tracking ensures stale insight data is not treated as final.
 5. **Given** no eligible story, **when** the endpoint is read, **then** it returns an empty `stories` array rather than invented guidance.
+6. **Given** a legacy confirmed `Food & Dining / Meat, Fish & Eggs` transaction with no spending nature, **when** the database migration backfills its deterministic `ESSENTIAL` nature, **then** current snapshots for the owner become stale so the next evaluation can rebuild stories with complete classification.
 
 ### Integration-test scenarios
 

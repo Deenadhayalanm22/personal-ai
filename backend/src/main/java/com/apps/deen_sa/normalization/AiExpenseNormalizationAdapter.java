@@ -42,6 +42,9 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
         if (hasGenericCreditCardReference(rawText)) {
             return withSourceAccount(normalized, resolveGenericCardReference(externalUserId, rawText));
         }
+        if (hasGenericBankReference(rawText)) {
+            return withSourceAccount(normalized, resolveGenericBankReference(externalUserId));
+        }
         if (normalized.sourceAccount() != null) {
             return normalized;
         }
@@ -71,6 +74,23 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
     static boolean hasGenericCreditCardReference(String rawText) {
         return rawText != null && rawText.toLowerCase(java.util.Locale.ROOT)
                 .matches(".*\\b(?:using|from|via|on)\\s+(?:my\\s+)?credit\\s+card\\b.*");
+    }
+
+    static boolean hasGenericBankReference(String rawText) {
+        if (rawText == null) return false;
+        String text = rawText.toLowerCase(java.util.Locale.ROOT);
+        // Only match generic account wording; an explicitly named bank remains distinct.
+        return text.matches(".*\\b(?:from|using|via)\\s+(?:my\\s+)?bank\\s+accou?j?nt\\b.*");
+    }
+
+    private String resolveGenericBankReference(String externalUserId) {
+        List<String> banks = referenceRepository
+                .findByUserExternalUserIdAndUserChannelAndEntityTypeAndActiveTrue(
+                        externalUserId, "WHATSAPP", UserReferenceEntityType.ACCOUNT)
+                .stream().map(reference -> reference.getCanonicalName())
+                .filter(name -> name.toLowerCase(java.util.Locale.ROOT).contains("bank account"))
+                .toList();
+        return banks.size() == 1 ? banks.getFirst() : null;
     }
 
     private boolean isCreditCard(String accountName) {
@@ -173,6 +193,14 @@ public class AiExpenseNormalizationAdapter extends BaseLLMExtractor
                 - Category and subcategory must be selected only from the taxonomy below.
                 - The subcategory must belong to the selected category.
                 - Never create a new category or subcategory.
+                - Classify what was bought, not only why or where it was bought:
+                  raw chicken for home cooking is Meat, Fish & Eggs; a prepared meal
+                  cooked or purchased as a meal is Home-Cooked Meals.
+                - Ready-to-drink rose milk is Tea, Coffee & Juice, not Milk & Dairy.
+                  Hair-colour powder is Personal Care / Salon & Beauty, not Other Shopping.
+                - If a single amount covers unrelated items such as shampoo and groceries,
+                  do not invent an amount split. Return null subcategory when the message
+                  does not establish one dominant purpose, so the user can restate it.
                 - If the merchant resembles a preferred merchant or one of its aliases,
                   return its exact canonical name.
                 - sourceAccount identifies the user's account or funding source named in the message,

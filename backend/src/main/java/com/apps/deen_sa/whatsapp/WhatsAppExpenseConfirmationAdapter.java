@@ -60,6 +60,14 @@ public class WhatsAppExpenseConfirmationAdapter implements ExpenseConfirmationPo
                 """.strip());
     }
 
+    @Override
+    public void sendIncompleteExpenseInstruction(String externalUserId) {
+        replySender.sendTextReply(externalUserId,
+                "I found part of an expense, but I couldn't classify it safely. "
+                        + "Please send it again with the amount and what you bought. "
+                        + "For a mixed purchase, send separate amounts for each item if you know them.");
+    }
+
     private String displayAmount(StoredDraftExtraction extraction) {
         return extraction.amount() == null
                 ? "Not identified"
