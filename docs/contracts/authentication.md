@@ -4,7 +4,7 @@ All `/api/web/**` endpoints use the `WEB_SESSION` cookie, except public login-li
 
 | Endpoint | Contract | Frontend owner |
 | --- | --- | --- |
-| `POST /api/web/auth/login-link` | Public. Body: `{ "phoneNumber": "+919876543210" }`. Always returns `202` and `{ "message": "…" }`, without revealing whether the number exists. | `Auth.svelte` validates E.164-like input and sends/resends the WhatsApp link. |
+| `POST /api/web/auth/login-link` | Public. Body: `{ "phoneNumber": "+919876543210" }`. Always returns `202` and `{ "message": "…" }`, without revealing whether the number exists. | `Auth.svelte` displays India (+91) separately, accepts a 10-digit Indian mobile number beginning with 6–9, prepends +91, and sends/resends the WhatsApp link. Changing the country displays a coming-soon notice. |
 | `POST /api/web/auth/magic-link` | Public. Body: `{ "token": "…" }`. Consumes one-time token, sets `WEB_SESSION`, returns `{ "authenticated": true, "expiresAt": "ISO-8601 instant" }`. Invalid/expired/used links return `401`. | `App.svelte` on `/access?token=…`; redirects to saved destination or `/dashboard`. |
 | `GET /api/web/auth/session` | Validates session; returns `{ "authenticated": true, "expiresAt": null }`. | Wrapper exists but no current component calls it. |
 | `POST /api/web/auth/logout` | Invalidates the session, clears cookie, returns `204`. | `Home.svelte` settings sign-out; clears real and demo caches. |

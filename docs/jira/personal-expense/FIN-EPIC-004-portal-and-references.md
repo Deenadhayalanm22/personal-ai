@@ -17,6 +17,7 @@
 5. **Given** an expired session on a dashboard URL, **when** the portal starts, **then** it must not mount dashboard features or make protected feature calls before redirecting to portal sign-in.
 6. **Given** an existing WhatsApp user, **when** portal access is enabled on that user's `app_user` row, **then** a sign-in link may be sent; an absent or disabled user gets the same public response without a link. Existing enabled access and roles are migrated from the former `user_feature_flag` table.
 7. **Given** an enabled user requests sign-in, **when** the WhatsApp message is sent, **then** the same one-time URL appears in the message body and the Open portal button so it can be copied into another browser.
+8. **Given** the portal sign-in form, **when** a user enters a mobile number, **then** India (+91) is shown separately by default; only a 10-digit Indian mobile number beginning with 6, 7, 8, or 9 can be submitted, and the request includes the +91 prefix. Trying to change the country shows that more countries are coming soon.
 
 ### Integration-test scenarios
 
@@ -26,6 +27,7 @@
 - Load a dashboard URL with an expired session and assert the actions queue is not requested before the sign-in redirect.
 - Migrate enabled, disabled, and super-admin access to `app_user` while retaining existing user IDs; assert only enabled users receive login links.
 - Request a link for an enabled user and assert the message body contains the exact one-time URL used by the button.
+- On the sign-in form, assert the India prefix and country notice; reject short, long, and invalid-start mobile numbers without a request, then submit a valid 10-digit number and assert the +91-prefixed payload.
 
 ## FIN-013 — Switch presentation profile without leakage
 

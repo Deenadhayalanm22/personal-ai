@@ -12,18 +12,19 @@
   let resending = false;
   const signedOutMessage = new URLSearchParams(location.search).get('message');
 
-  const validPhone = (value) => /^\+[1-9]\d{7,14}$/.test(value.replace(/[\s()-]/g, ''));
+  const validPhone = (value) => /^[6-9]\d{9}$/.test(value);
+  function showCountryNotice() { error = 'More countries coming soon. India (+91) is currently supported.'; }
   function startCountdown() {
     clearInterval(timer); seconds = 60;
     timer = setInterval(() => { seconds -= 1; if (seconds <= 0) clearInterval(timer); }, 1000);
   }
   async function submit() {
     error = '';
-    if (!phoneNumber.trim()) { error = 'Enter your phone number, including the country code.'; return; }
-    if (!validPhone(phoneNumber)) { error = 'Enter a valid international number, such as +91 98765 43210.'; return; }
+    if (!phoneNumber.trim()) { error = 'Enter your 10-digit Indian mobile number.'; return; }
+    if (!validPhone(phoneNumber)) { error = 'Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.'; return; }
     state = 'submitting';
     try {
-      const result = await requestLoginLink(phoneNumber.trim());
+      const result = await requestLoginLink(`+91${phoneNumber}`);
       genericMessage = result?.message || 'If this number is registered, we sent a login link to its WhatsApp account.';
       state = 'sent'; startCountdown();
     } catch (cause) {
@@ -32,7 +33,7 @@
     }
   }
   function reset() { clearInterval(timer); phoneNumber = ''; error = ''; genericMessage = ''; state = 'form'; }
-  async function resend() { if (seconds > 0 || resending) return; resending = true; try { const result = await requestLoginLink(phoneNumber.trim()); genericMessage = result?.message || genericMessage; startCountdown(); } catch (cause) { error = !navigator.onLine ? 'You appear to be offline. Check your connection and try again.' : 'We couldn’t resend the link right now. Please try again shortly.'; } finally { resending = false; } }
+  async function resend() { if (seconds > 0 || resending) return; resending = true; try { const result = await requestLoginLink(`+91${phoneNumber}`); genericMessage = result?.message || genericMessage; startCountdown(); } catch (cause) { error = !navigator.onLine ? 'You appear to be offline. Check your connection and try again.' : 'We couldn’t resend the link right now. Please try again shortly.'; } finally { resending = false; } }
   onDestroy(() => clearInterval(timer));
 </script>
 
@@ -57,8 +58,8 @@
       <p>Enter the phone number connected to your WhatsApp account. We’ll send you a secure sign-in link.</p>
       <form on:submit|preventDefault={submit} novalidate>
         <label for="phone">Phone number</label>
-        <div class:error-field={error} class="phone-field"><input id="phone" type="tel" inputmode="tel" autocomplete="tel" bind:value={phoneNumber} placeholder="+91 98765 43210" aria-describedby="phone-hint phone-error" aria-invalid={Boolean(error)} on:input={() => error = ''} /></div>
-        <small id="phone-hint">Include your country code, for example +91.</small>
+        <div class:error-field={error} class="phone-field"><button class="country-prefix" type="button" aria-label="Country code: India +91" aria-describedby="phone-hint" on:click={showCountryNotice}>🇮🇳 +91 <span aria-hidden="true">⌄</span></button><input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" bind:value={phoneNumber} placeholder="9876543210" aria-describedby="phone-hint phone-error" aria-invalid={Boolean(error)} on:input={() => error = ''} /></div>
+        <small id="phone-hint">India only. Enter your 10-digit mobile number without +91.</small>
         {#if error}<p id="phone-error" class="auth-error" role="alert">{error}</p>{/if}
         <button class="auth-primary" type="submit" disabled={state === 'submitting'}>{state === 'submitting' ? 'Sending securely…' : 'Send link on WhatsApp'}</button>
       </form>
