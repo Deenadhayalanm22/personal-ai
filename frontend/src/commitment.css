@@ -106,3 +106,23 @@
 .cadence-selected-payment.due-sip strong,.cadence-selected-payment.due-sip span{color:var(--red)}
 .cadence-evidence-row .cadence-progress{grid-column:1/-1;grid-row:2}
 @media(max-width:420px){.cadence-selected-payment{align-items:flex-start;flex-direction:column}.cadence-selected-payment .fund-sip-actions{width:100%;justify-content:flex-start}}
+
+/* Monthly commitment story: one readable row per bucket on every viewport. */
+.story-slide:has(.commitment-progress-list){min-height:0;padding:24px}
+.story-slide:has(.commitment-progress-list) .slide-eyebrow{margin-bottom:13px}
+.story-slide:has(.commitment-progress-list) h1{max-width:none;margin-bottom:9px;font-size:clamp(25px,5vw,32px)}
+.story-slide:has(.commitment-progress-list)>p:not(.slide-eyebrow){max-width:none;font-size:13px;line-height:1.45}
+.commitment-summary{margin-top:20px;color:#665c39;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.commitment-progress-list{display:grid;gap:11px;margin-top:10px}
+.commitment-progress-row{min-width:0;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.7)}
+.commitment-progress-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;min-width:0;font-size:12px;font-weight:700}
+.commitment-progress-heading span{min-width:0;overflow-wrap:anywhere}
+.commitment-progress-heading strong{flex:none;color:var(--green);font:800 13px Manrope;white-space:nowrap}
+.commitment-progress-track{height:7px;margin-top:9px;overflow:hidden;border-radius:99px;background:#e1e2d5}
+.commitment-progress-track i{display:block;height:100%;border-radius:inherit;background:#b89a51}
+.commitment-progress-row.started .commitment-progress-track i{background:#437a7d}
+.commitment-progress-row.complete .commitment-progress-track i{background:var(--green)}
+.commitment-progress-row small{display:block;margin-top:5px;color:#676a5f;font-size:10px}
+.commitment-salary{margin-top:13px!important;font-size:11px!important}
+.story-slide:has(.commitment-progress-list) .story-action{margin-top:18px}
+@media(max-width:420px){.story-slide:has(.commitment-progress-list){padding:19px}.commitment-progress-heading{font-size:11px}.commitment-progress-heading strong{font-size:12px}}

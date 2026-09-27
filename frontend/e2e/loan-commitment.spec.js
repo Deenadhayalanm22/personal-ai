@@ -75,6 +75,15 @@ test('real API: manages loan payment, skip, closure, pre-closure, and restructur
   await page.locator('.story-carousel-card').first().click();
   const story = page.getByRole('dialog');
   await expect(story.getByRole('button', { name: 'Review loan' })).toHaveCount(0);
+  await expect(story.getByRole('progressbar', { name: 'Debt repayments: completed' })).toHaveAttribute('aria-valuenow', '0');
+  await story.getByRole('button', { name: 'Next →' }).click();
+  await expect(story.getByRole('progressbar', { name: 'Debt repayments: share of monthly plan' })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const readerWidth = await story.evaluate(element => element.scrollWidth - element.clientWidth);
+  expect(readerWidth).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await story.getByRole('button', { name: '←' }).last().click();
+
   await story.getByTestId('view-included-commitments').click();
   const included = page.getByRole('dialog').filter({ hasText: 'INCLUDED COMMITMENTS' });
   const dueLoanEvidence = included.locator('.evidence-row', { hasText: 'Home loan' });
