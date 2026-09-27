@@ -15,6 +15,8 @@
   $: salaryDifference = components.find(item => item.label === 'Salary after planned commitments');
   $: remaining = salaryPercent === null ? null : Math.max(0, 100 - salaryPercent);
   $: shortage = salaryPercent === null ? null : Math.max(0, salaryPercent - 100);
+  $: estimatedDifference = salaryPercent > 0 ? total * (100 / salaryPercent - 1) : null;
+  $: estimateCurrency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: buckets[0]?.currency || 'INR', maximumFractionDigits: 0 });
   const completed = item => item.label === 'Debt repayments' ? loanPaid : item.label === 'Planned investing' ? sipPaid : 0;
 </script>
 
@@ -33,7 +35,13 @@
           <span><i style={`background:${colors[index % colors.length]}`}></i>{item.label} {Math.round(Number(item.value) / total * (salaryPercent === null ? 100 : salaryPercent))}%</span>
         {/each}
       </div>
-      {#if salaryPercent !== null}<p>{#if salaryDifference && Number(salaryDifference.value) < 0}<strong class="salary-shortage">Short by {salaryDifference.displayValue}</strong>{:else if salaryDifference}<strong>{salaryDifference.displayValue} left after planned commitments</strong>{/if}<span>Salary is an estimate, not an account balance.</span></p>{/if}
+      {#if salaryPercent !== null}<p>
+        {#if salaryDifference && Number(salaryDifference.value) < 0}<strong class="salary-shortage">Short by {salaryDifference.displayValue} ({shortage.toFixed(1)}% of salary)</strong>
+        {:else if salaryDifference}<strong>{salaryDifference.displayValue} left after planned commitments</strong>
+        {:else if estimatedDifference !== null && estimatedDifference < 0}<strong class="salary-shortage">Short by about {estimateCurrency.format(Math.abs(estimatedDifference))} ({shortage.toFixed(1)}% of salary)</strong>
+        {:else if estimatedDifference !== null}<strong>About {estimateCurrency.format(estimatedDifference)} left after planned commitments</strong>{/if}
+        <span>Salary is an estimate, not an account balance.</span>
+      </p>{/if}
     </div>
   {/if}
   <div class="commitment-summary">{isCurrent ? 'This month' : 'Next month'} · commitment progress</div>

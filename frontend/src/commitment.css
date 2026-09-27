@@ -138,3 +138,4 @@
 .salary-allocation-legend{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:8px}
 .salary-allocation-legend span{display:inline-flex;align-items:center;gap:4px;color:#596156;font-size:9px}
 .salary-allocation-legend i{width:7px;height:7px;border-radius:50%}
+.salary-allocation .salary-shortage{font-size:13px;line-height:1.35}
