@@ -1,0 +1,21 @@
+{
+  "name": "money-stories-frontend-v2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "svelte": "^5.43.8",
+    "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
