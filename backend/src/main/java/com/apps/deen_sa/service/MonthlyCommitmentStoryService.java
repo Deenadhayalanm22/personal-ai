@@ -128,7 +128,7 @@ public class MonthlyCommitmentStoryService {
         StoryInsight salaryInsight = context.insights().stream()
                 .filter(insight -> insight.key().startsWith("COMMITMENT_INCOME_"))
                 .findFirst().orElse(null);
-        addSalaryContext(components, salaryInsight, total);
+        addSalaryContext(components, salaryInsight, total, currency);
         var card = new MoneyStoriesService.CardDto("commitment", 1, "COMMITMENT", copy.theme(),
                 copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), List.copyOf(actions));
         var nextCard = nextMonthCard(nextSnapshot, currency, runwayCopy.next(), salaryInsight);
@@ -156,18 +156,21 @@ public class MonthlyCommitmentStoryService {
         List<MoneyStoriesService.Action> actions = rows.isEmpty() ? List.of()
                 : List.of(new MoneyStoriesService.Action("OPEN_EVIDENCE", "View " + monthLabel(YearMonth.parse(snapshot.month())) + " commitments"));
         List<MoneyStoriesService.Component> components = new ArrayList<>(components(snapshot, currency));
-        addSalaryContext(components, salaryInsight, snapshot.fullIntendedCommitment());
+        addSalaryContext(components, salaryInsight, snapshot.fullIntendedCommitment(), currency);
         return new MoneyStoriesService.CardDto("next-commitment", 2, "COMMITMENT", copy.theme(),
                 copy.eyebrow(), copy.title(), copy.body(), List.copyOf(components), actions);
     }
 
-    private void addSalaryContext(List<MoneyStoriesService.Component> components, StoryInsight insight, BigDecimal commitment) {
+    private void addSalaryContext(List<MoneyStoriesService.Component> components, StoryInsight insight, BigDecimal commitment, String currency) {
         if (insight == null) return;
         if ("COMMITMENT_INCOME_EXACT".equals(insight.key())) {
             BigDecimal salary = (BigDecimal) insight.facts().get("monthlySalary");
             BigDecimal percent = commitment.multiply(BigDecimal.valueOf(100)).divide(salary, 1, java.math.RoundingMode.HALF_UP);
             components.add(new MoneyStoriesService.Component("PERCENTAGE", "Of monthly salary", percent, null,
                     percent.stripTrailingZeros().toPlainString() + "%"));
+            BigDecimal difference = salary.subtract(commitment);
+            components.add(new MoneyStoriesService.Component("MONEY", "Salary after planned commitments", difference, currency,
+                    MoneyStoryRenderer.money(difference.abs(), currency)));
             return;
         }
         components.add(new MoneyStoriesService.Component("PRIVATE", "Salary context", null, null, "Range shared privately"));

@@ -50,3 +50,10 @@
 1. **Given** a successful online load, **when** connectivity later drops, **then** the dashboard may show only cache for the same month and active profile.
 2. **Given** no matching cache while offline, **when** a section opens, **then** it is unavailable rather than empty-but-authoritative.
 3. **Given** connectivity returns, **when** health succeeds, **then** calendar, recent expenses, and stories are refreshed independently.
+4. **Given** a previously verified profile and a matching saved month, **when** the backend is waking, **then** a read-only saved dashboard appears immediately with a connecting notice. It makes no protected feature requests until the profile request succeeds; a `401` still redirects to sign-in.
+5. **Given** a sign-out or profile switch, **when** the portal opens again, **then** the previous profile's saved view is not displayed. Without a matching saved view, show a service wake-up message and retry control.
+
+### Integration-test scenarios
+
+- Delay the profile response after an online load; reload and assert the saved month is visible before the response, with no protected feature calls until profile verification completes.
+- Return `401` for a delayed profile response; assert redirect to sign-in and no dashboard feature requests.

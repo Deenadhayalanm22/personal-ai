@@ -92,6 +92,10 @@ class MonthlyCommitmentStoryServiceTest {
                 .extracting(component -> component.displayValue()).containsExactly("78.1%");
         assertThat(story.cards().get(1).components()).filteredOn(component -> component.label().equals("Of monthly salary"))
                 .extracting(component -> component.displayValue()).containsExactly("134.4%");
+        assertThat(story.cards().getFirst().components()).filteredOn(component -> component.label().equals("Salary after planned commitments"))
+                .extracting(component -> component.value()).containsExactly(new BigDecimal("17490"));
+        assertThat(story.cards().get(1).components()).filteredOn(component -> component.label().equals("Salary after planned commitments"))
+                .extracting(component -> component.value()).containsExactly(new BigDecimal("-27510"));
         assertThat(story.cards()).extracting(card -> card.cardId()).doesNotContain("commitment-income");
     }
 
