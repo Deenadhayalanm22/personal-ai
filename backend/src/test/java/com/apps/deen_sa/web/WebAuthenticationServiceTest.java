@@ -1,6 +1,7 @@
 package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.entity.MagicLinkEntity;
+import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.entity.WebSessionEntity;
 import com.apps.deen_sa.repository.AppUserRepository;
 import com.apps.deen_sa.repository.MagicLinkRepository;
@@ -62,5 +63,56 @@ class WebAuthenticationServiceTest {
         service.logout("session");
 
         assertThat(session.getRevokedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void allowsOnlySuperAdminsToUseDemoMode() {
+        WebSessionEntity session = activeSession();
+        AppUserEntity owner = owner("USER");
+        when(users.findById(42L)).thenReturn(Optional.of(owner));
+
+        assertThat(service.demoProfile("session")).isEqualTo(new WebAuthenticationService.DemoProfile(false, false));
+        assertThatThrownBy(() -> service.setDemoMode("session", true))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("403 FORBIDDEN");
+        assertThatThrownBy(() -> service.setDemoMode("session", false))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("403 FORBIDDEN");
+        verify(users, never()).saveAndFlush(any());
+        assertThat(session.getActiveUserId()).isNull();
+
+        owner.setRole("SUPER_ADMIN");
+        AppUserEntity demo = new AppUserEntity(); demo.setId(99L);
+        when(users.saveAndFlush(any(AppUserEntity.class))).thenReturn(demo);
+        assertThat(service.demoProfile("session")).isEqualTo(new WebAuthenticationService.DemoProfile(false, true));
+        assertThat(service.setDemoMode("session", true)).isEqualTo(new WebAuthenticationService.DemoProfile(true, true));
+        assertThat(session.getActiveUserId()).isNotNull();
+        assertThat(service.setDemoMode("session", false)).isEqualTo(new WebAuthenticationService.DemoProfile(false, true));
+    }
+
+    @Test
+    void ignoresAnExistingDemoProfileWhenOwnerLosesSuperAdminAccess() {
+        WebSessionEntity session = activeSession();
+        session.setActiveUserId(99L);
+        AppUserEntity owner = owner("USER");
+        when(users.findById(42L)).thenReturn(Optional.of(owner));
+
+        assertThat(service.demoProfile("session")).isEqualTo(new WebAuthenticationService.DemoProfile(false, false));
+        assertThat(service.authenticate("session")).isSameAs(owner);
+        verify(users, never()).findById(99L);
+    }
+
+    private WebSessionEntity activeSession() {
+        WebSessionEntity session = new WebSessionEntity();
+        session.setUserId(42L);
+        when(sessions.findByTokenHashAndRevokedAtIsNullAndExpiresAtAfter(
+                MagicLinkService.hash("session"), now)).thenReturn(Optional.of(session));
+        return session;
+    }
+
+    private AppUserEntity owner(String role) {
+        AppUserEntity owner = new AppUserEntity();
+        owner.setId(42L);
+        owner.setRole(role);
+        owner.setPortalEnabled(true);
+        return owner;
     }
 }

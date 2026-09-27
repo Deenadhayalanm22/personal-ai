@@ -13,6 +13,7 @@
   let calendarSection = state(), recentSection = state(), storiesSection = state(), connectionStatus = 'checking', cacheUpdatedAt = null;
   let connectionRequest = 0;
   let demoMode = false;
+  let canUseDemoMode = false;
 
   function state(data = null) { return { status: data ? 'ready' : 'loading', data, error: '' }; }
   function monthFromUrl() { const value = new URLSearchParams(location.search).get('month'); return /^\d{4}-\d{2}$/.test(value || '') ? value : currentMonth; }
@@ -46,6 +47,7 @@
   }
   function changeMonth(month, updateHistory = true) { selectedMonth = month; if (updateHistory) history.pushState({}, '', `/dashboard?month=${encodeURIComponent(month)}`); if (connectionStatus === 'online') { loadCalendar(); loadRecent(); loadStories(); } else { emptyFirstRun(); } }
   async function changeDemoMode(enabled) {
+    if (!canUseDemoMode) return;
     const result = await setDemoMode(enabled);
     demoMode = result.demoMode;
     clearProfileCaches();
@@ -58,7 +60,7 @@
     if (initialPath === '/access') { const token = new URLSearchParams(location.search).get('token'); if (!token) { view = 'invalid-link'; return; } view = 'magic-loading'; try { await exchangeMagicLink(token); const next = sessionStorage.getItem('portal-next') || '/dashboard'; sessionStorage.removeItem('portal-next'); location.replace(next); } catch (cause) { view = cause instanceof ApiError && cause.status === 401 ? 'invalid-link' : (!navigator.onLine ? 'magic-offline' : 'magic-error'); } return; }
     if (initialPath === '/portal') { const next = new URLSearchParams(location.search).get('next'); if (next?.startsWith('/')) sessionStorage.setItem('portal-next', next); view = 'login'; return; }
     // Resolve the active profile before reading a cache so presentation mode can never expose real cached data.
-    try { demoMode = (await getDemoMode()).demoMode; } catch (cause) {
+    try { const profile = await getDemoMode(); demoMode = profile.demoMode; canUseDemoMode = profile.canUseDemoMode; } catch (cause) {
       // request() has already notified the app and started the sign-in redirect.
       // Keeping the loading view here prevents Home from issuing protected calls
       // while the browser changes pages.
@@ -71,7 +73,7 @@
 </script>
 {#if view === 'privacy'}<PrivacyPolicy />
 {:else if view === 'login'}<Auth />
-{:else if view === 'dashboard'}<Home {calendarSection} {recentSection} {storiesSection} {selectedMonth} {connectionStatus} {cacheUpdatedAt} {demoMode} onDemoModeChange={changeDemoMode} onMonthChange={changeMonth} refreshCalendar={loadCalendar} refreshRecent={loadRecent} refreshStories={loadStories} onRetryConnection={refreshWhenOnline} onLogout={() => { try { localStorage.removeItem(`${CACHE_KEY}.real`); localStorage.removeItem(`${CACHE_KEY}.demo`); } catch {} location.replace('/portal?message=' + encodeURIComponent('You’ve been signed out.')); }} />
+{:else if view === 'dashboard'}<Home {calendarSection} {recentSection} {storiesSection} {selectedMonth} {connectionStatus} {cacheUpdatedAt} {demoMode} {canUseDemoMode} onDemoModeChange={changeDemoMode} onMonthChange={changeMonth} refreshCalendar={loadCalendar} refreshRecent={loadRecent} refreshStories={loadStories} onRetryConnection={refreshWhenOnline} onLogout={() => { try { localStorage.removeItem(`${CACHE_KEY}.real`); localStorage.removeItem(`${CACHE_KEY}.demo`); } catch {} location.replace('/portal?message=' + encodeURIComponent('You’ve been signed out.')); }} />
 {:else if view === 'invalid-link'}<main class="center-page expired" role="alert"><span class="brand-orb">!</span><h1>This sign-in link is invalid, expired, or has already been used.</h1><a class="center-action" href="/portal">Request a new link</a></main>
 {:else if view === 'magic-offline' || view === 'magic-error'}<main class="center-page expired" role="alert"><span class="brand-orb">↻</span><h1>{view === 'magic-offline' ? 'You appear to be offline.' : 'We couldn’t sign you in right now.'}</h1><button class="center-action" on:click={initialize}>Try again</button></main>
 {:else}<main class="center-page" aria-live="polite"><span class="brand-orb">₹</span><span class="spinner"></span><h1>Signing you in securely…</h1></main>{/if}

@@ -33,9 +33,15 @@
 
 ### Acceptance criteria
 
-1. **Given** an authenticated session, **when** demo mode is read or changed, **then** only `{ demoMode }` is exposed; underlying profile IDs remain server-only.
+1. **Given** an authenticated session, **when** demo mode is read, **then** only `{ demoMode, canUseDemoMode }` is exposed; underlying profile IDs remain server-only. The switch is shown only to portal-enabled super admins, and demo mode changes by other users return `403`.
 2. **Given** demo mode changes, **when** the portal refreshes, **then** it clears real/demo caches and reloads all sections for the selected profile.
 3. **Given** a server endpoint, **when** demo mode is active, **then** its authenticated data is resolved against the selected profile consistently.
+4. **Given** a user's super-admin access is removed while a demo session exists, **when** a protected endpoint is called, **then** it resolves to the session owner's real profile and reports demo mode as off.
+
+### Integration-test scenarios
+
+- Assert a normal user's demo profile response denies the feature and both switch directions return `403`; assert a super admin can switch in both directions.
+- Assert a previously active demo session resolves to the real owner after super-admin access is removed.
 
 ## FIN-014 — Keep portal data usable offline without changing truth
 

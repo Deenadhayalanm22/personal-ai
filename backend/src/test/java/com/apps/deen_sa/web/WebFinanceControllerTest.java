@@ -22,7 +22,7 @@ class WebFinanceControllerTest {
     void enablesDemoProfileWithoutAcceptingAUserIdFromTheBrowser() throws Exception {
         WebAuthenticationService authentication = mock(WebAuthenticationService.class);
         when(authentication.setDemoMode("session-token", true))
-                .thenReturn(new WebAuthenticationService.DemoProfile(true));
+                .thenReturn(new WebAuthenticationService.DemoProfile(true, true));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new WebFinanceController(new WebManager(
                 authentication, mock(WebLoginRequestService.class), mock(WebExpenseTaxonomyService.class),
                 mock(WebUserReferencePreferenceService.class), mock(WebReferenceMergeService.class),
@@ -36,7 +36,8 @@ class WebFinanceControllerTest {
                         .content("{\"enabled\":true}")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "session-token")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.demoMode").value(true));
+                .andExpect(jsonPath("$.demoMode").value(true))
+                .andExpect(jsonPath("$.canUseDemoMode").value(true));
 
         verify(authentication).setDemoMode("session-token", true);
     }

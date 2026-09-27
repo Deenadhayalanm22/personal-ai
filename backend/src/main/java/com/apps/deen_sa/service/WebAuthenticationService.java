@@ -66,6 +66,8 @@ public class WebAuthenticationService {
     @Transactional(readOnly = true)
     public AppUserEntity authenticate(String token) {
         WebSessionEntity session = activeSession(token);
+        AppUserEntity owner = users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+        if (!canUseDemoMode(owner)) return owner;
         Long activeUserId = session.getActiveUserId() == null ? session.getUserId() : session.getActiveUserId();
         return users.findById(activeUserId).orElseThrow(WebAuthenticationService::unauthorized);
     }
@@ -78,22 +80,30 @@ public class WebAuthenticationService {
     @Transactional
     public DemoProfile setDemoMode(String token, boolean enabled) {
         WebSessionEntity session = activeSession(token);
+        AppUserEntity owner = users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+        if (!canUseDemoMode(owner)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Demo mode requires super-admin access");
         if (!enabled) {
             session.setActiveUserId(null);
-            return new DemoProfile(false);
+            return new DemoProfile(false, true);
         }
 
-        AppUserEntity owner = users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
         String demoExternalId = "web-demo:" + owner.getId();
         AppUserEntity demo = users.findByChannelAndExternalUserId("WEB_DEMO", demoExternalId)
                 .orElseGet(() -> createDemoUser(demoExternalId, owner));
         session.setActiveUserId(demo.getId());
-        return new DemoProfile(true);
+        return new DemoProfile(true, true);
     }
 
     @Transactional(readOnly = true)
     public DemoProfile demoProfile(String token) {
-        return new DemoProfile(activeSession(token).getActiveUserId() != null);
+        WebSessionEntity session = activeSession(token);
+        AppUserEntity owner = users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+        boolean canUseDemoMode = canUseDemoMode(owner);
+        return new DemoProfile(canUseDemoMode && session.getActiveUserId() != null, canUseDemoMode);
+    }
+
+    private static boolean canUseDemoMode(AppUserEntity owner) {
+        return owner.isPortalEnabled() && UserAccessService.SUPER_ADMIN.equals(owner.getRole());
     }
 
     @Transactional
@@ -125,5 +135,5 @@ public class WebAuthenticationService {
     }
 
     public record SessionGrant(String token, Instant expiresAt) { }
-    public record DemoProfile(boolean demoMode) { }
+    public record DemoProfile(boolean demoMode, boolean canUseDemoMode) { }
 }
