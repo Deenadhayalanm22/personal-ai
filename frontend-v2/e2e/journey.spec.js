@@ -85,6 +85,7 @@ test('capture defaults to today, historical capture is explicit and confirm-only
   await page.getByLabel('Tell us about your spending').fill('Lunch ₹180 and Auto ₹90');await page.getByRole('button',{name:'Tell us',exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText('17 September 2026');
   await page.getByLabel('Expense 2 amount').fill('95.50');await page.getByRole('button',{name:'Add 2 sample expenses',exact:true}).click();
+  await day(page,17).getByRole('button',{name:'Show all 4 items'}).click();
   await expect(day(page,17).getByRole('region',{name:'Activity for 17 September'}).locator('.activity-row')).toHaveCount(4);
   await expect(page.getByTestId('monthly-spend')).toHaveText('₹1,655.5');
   await expect(day(page,17)).toContainText('Published sample story unchanged');

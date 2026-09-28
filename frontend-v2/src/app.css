@@ -30,3 +30,8 @@
 .item-status span,.task-value small,.item-details,.activity-heading>span{color:#52684d}
 .month-foot,.month-values span{color:#4b5e45}
 @media(max-width:640px){.day-summary{font-size:11px}.item-status{font-size:9px}.task-note,.activity-row small{font-size:10px}}
+.header-actions{display:flex;align-items:center;gap:14px}
+.month-switch input{background:transparent;border:1px solid #d8dece;color:#57704d;font-size:11px;padding:7px;border-radius:7px;width:125px}
+.empty-month{background:#edf0e2;border:1px solid #d8dfca;border-radius:15px;padding:22px 26px}.empty-month h2{font:23px Georgia,serif;margin:0 0 8px}.empty-month p:not(.eyebrow){font-size:12px;color:#4f654a;line-height:1.7;max-width:470px}.activity-more{display:block;margin-top:10px}
+@media(max-width:640px){.history-toolbar{align-items:flex-start}.history-toolbar>div{flex-wrap:wrap;justify-content:flex-end;gap:7px}.month-switch input{width:112px;font-size:10px}.date-jump input{width:112px}.empty-month{padding:18px}.empty-month h2{font-size:20px}}
+.quiet-gap .date-stone strong{font-size:17px}.quiet-gap .day-card{background:#f4f4ec;border-style:dashed}.collapse-gap{margin:0 0 10px 70px;font-size:10px}@media(max-width:640px){.quiet-gap .date-stone strong{font-size:13px}.collapse-gap{margin-left:48px}}

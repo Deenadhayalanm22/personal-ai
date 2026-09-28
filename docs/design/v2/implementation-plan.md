@@ -3,7 +3,7 @@
 ## Product core
 Help me understand what happened with my money, what changed, and what needs attention. The primary screen is a calm vertical journey, with monthly context above it. Routine actions happen beside their dated occurrence; full management stays in Money. A separate conversation surface will accommodate the future assistant.
 
-One stage per working session, followed by review. These are checkpoints, not a scheduled automation or guaranteed duration. Stages 1–2 are implemented with samples; stages 3–15 are planned.
+One stage per working session, followed by review. These are checkpoints, not a scheduled automation or guaranteed duration. Stages 1–3 are implemented with samples. Stage 4 and stages 5–15 are planned.
 
 | Stage | Deliverable | Verification gate |
 | --- | --- | --- |
@@ -44,6 +44,13 @@ Expanded story previews lead the date card, with a short visible explanation and
 A switchable first-use preview shows an honest blank month, a single capture invitation and no fabricated past journey. Confirming a sample expense reveals its amount and row, with no invented AI story. The footer switches back to the populated sample. This is a review scenario, not saved onboarding state.
 
 Review: Without opening every date, can you identify the busy spending day, the overdue amount, a genuinely quiet day and today’s due tasks? In the first-use preview, is the next action clear without pretending a financial history exists?
+
+## Stage 3 — navigation implemented
+Sample date, month, story and source-detail URLs now support direct load, reload and browser Back. Adjacent quiet dates form a compact stretch, and busy dates preview three activity rows before Show all. August and October navigation explicitly says sample data is unavailable; September remains the only populated fixture month.
+
+## Stage 4 — private access pending
+
+The prototype currently has no login, server-side access gate or deployment configuration. Keep this stage inside the v2 folder when implemented; do not add v2 routes or configuration to the shared backend or v1 frontend while the prototype is independent.
 
 ## Integration boundaries
 The prototype has no API, login or real data. Keep existing frontend and backend unchanged. Live integration must update the owning epics/contracts and reuse domain commands across Journey, Money and future assistant confirmations. Do not duplicate schedule/accounting logic in the feed. Fetch date summaries in batches; load bounded details on demand and cache by owner/period. Monthly projection and story history have separate scopes.

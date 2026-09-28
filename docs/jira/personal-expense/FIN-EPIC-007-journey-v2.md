@@ -1,9 +1,9 @@
 # FIN-EPIC-007 — Isolated Money Stories journey v2
 
-Status: Stages 1–2 implemented as isolated samples; stages 3–15 planned. See [15-stage plan](../../design/v2/implementation-plan.md).
+Status: Stages 1–3 implemented as isolated samples. Stage 4 and stages 5–15 planned. See [15-stage plan](../../design/v2/implementation-plan.md).
 
 ## Isolation
-Independent Svelte app in frontend-v2; existing frontend and backend unchanged. Stage 1 makes no API calls and contains no authentication or real financial records. All additions and decisions reset on reload. Live personal-data hosting requires server-enforced owner-only access, not merely a separate URL.
+Independent Svelte app in frontend-v2. The journey still contains sample data and all additions and decisions reset on reload. No v2 routes or configuration belong in the shared backend or v1 frontend during this prototype phase. Private hosting is not implemented yet.
 
 ## Stage 1 acceptance criteria
 1. Clearly identify sample data and fixed demo today, 21 September 2026. No backend requests or financial mutations.
@@ -26,6 +26,17 @@ Independent Svelte app in frontend-v2; existing frontend and backend unchanged. 
 4. A switchable first-use preview contains no fabricated ₹0 month, obligations, past stories, or historic date groups. It invites one confirmed sample expense, then shows the recorded item and amount with no generated story. The populated sample journey remains available for comparison. First-use records are temporary and isolated from the populated fixture.
 5. Decorative SVGs remain small and optional; no information depends on them. Keyboard actions, mobile layout and focusable evidence links remain usable. No new external assets or network calls are introduced.
 6. Browser checks cover these scenarios on desktop and phone widths, including first entry, narrative ordering, absence of fictitious totals, summary updates and overflow.
+
+## Stage 3 acceptance criteria
+1. A selected sample date and story/item/activity detail have stable query URLs; direct load, reload, close and browser Back restore the date and detail. Money return restores the journey position.
+2. Month selection and date jump support August–October 2026 as bounded sample navigation. Only September has populated financial fixtures. Other months and dates show explicit unavailable sample data, never a fabricated zero or historic commitment projection. Invalid calendar dates are rejected.
+3. Each expanded day previews at most three activity rows until Show all is selected. Consecutive quiet sample dates 13–14 September are compressed into a labelled stretch and can be opened individually or reached by direct date link. One composer keeps an explicit capture date.
+4. Desktop and phone browser tests cover direct links, reload, Back, month boundaries, quiet stretch and bounded activity.
+
+## Stage 4 acceptance criteria
+1. A future private v2 host protects both the app and its assets, rejects unauthenticated access and fails closed when its identity check is unavailable.
+2. Sign-in, session handling and sign-out are designed and verified within the v2 boundary before deployment, without adding preview-specific routes or configuration to the shared backend.
+3. The v2 service has separate deployment and rollback from v1. No live financial data is enabled until access and integration contracts are reviewed.
 
 ## Future contracts and ownership
 Live inline actions must reuse the existing domain commands and validations used by Money. A reusable occurrence identity, eligibility/read model and source-specific forms are required before integration. Loan, commitment, savings, funds and stocks retain their distinct semantics. Early payments, extra payments, restructuring, closure, corrections and destructive actions remain domain-owned; not every operation belongs on a date card.

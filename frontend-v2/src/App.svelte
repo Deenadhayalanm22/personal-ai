@@ -30,6 +30,7 @@
   let firstUse = false;
   let firstUseRecords = [];
   let showAllActivity = {};
+  let quietGapOpen = ["2026-09-13", "2026-09-14"].includes(selectedDate);
   let detailHistoryOwned = false;
   $: visibleDates = selectedMonth === sampleMonth ? dates : selectedDate ? [selectedDate] : [];
   $: overdue = occurrences.filter(item => item.status==='due' && item.date < demoToday);
@@ -74,7 +75,7 @@
   function toggle(date) { expanded={...expanded,[date]:!expanded[date]};selectedDate=date;route({month:selectedMonth,day:date}); }
   async function reveal(date) {
     if(!validDate(date) || !sampleMonths.includes(date.slice(0,7))) { dateError='Choose a date in August–October 2026 for this sample preview.';return; }
-    dateError='';selectedMonth=date.slice(0,7);selectedDate=date;expanded={...expanded,[date]:true};view='journey';route({month:selectedMonth,day:date});await tick();
+    dateError='';if(['2026-09-13','2026-09-14'].includes(date))quietGapOpen=true;selectedMonth=date.slice(0,7);selectedDate=date;expanded={...expanded,[date]:true};view='journey';route({month:selectedMonth,day:date});await tick();
     const node=document.getElementById(`day-${date}`);node?.scrollIntoView({block:'start',behavior:'instant'});node?.querySelector('.day-toggle')?.focus({preventScroll:true});
   }
   async function changeMonth(month) {
@@ -84,6 +85,7 @@
   function open(title,body,id=null) { detailTitle=title;detailBody=body;if(id){detailHistoryOwned=true;route({month:selectedMonth,day:selectedDate,detail:id});}detailsDialog.showModal(); }
   function openMonth() { detailHistoryOwned=true;route({month:selectedMonth,day:selectedDate,detail:'month'});monthlyDialog.showModal(); }
   function closeDetail(dialog) { dialog.close();if(detailHistoryOwned){detailHistoryOwned=false;history.back();}else if(readLocation(location.search).detail)route({month:selectedMonth,day:selectedDate},true); }
+  function jumpFromMonth(date) { monthlyDialog.close();detailHistoryOwned=false;history.replaceState({scrollY:window.scrollY},'',journeyUrl({month:selectedMonth,day:selectedDate}));reveal(date); }
   function resolveDetail(id) {
     if(id==='month' && selectedMonth===sampleMonth) { monthlyDialog.showModal();return; }
     if(id?.startsWith('story:')) { const base=source(id.slice(6));if(base){detailTitle=base.title;detailBody=`${base.body} ${base.detail}`;detailsDialog.showModal();}return; }
@@ -91,7 +93,7 @@
     if(id?.startsWith('activity:')) { const [,date,index]=id.split(':');const record=activity(date)[Number(index)];if(record){detailTitle=record.label;detailBody=`${record.amount==null?'No payment':money(record.amount)} · ${dayLabel(date)}. ${record.detail}`;detailsDialog.showModal();} }
   }
   async function applyLocation() {
-    const next=readLocation(location.search);selectedMonth=next.month;selectedDate=next.day || (next.month===sampleMonth?demoToday:null);view=next.view;expanded={...expanded,...(selectedDate?{[selectedDate]:true}:{})};detailHistoryOwned=false;
+    const next=readLocation(location.search);if(['2026-09-13','2026-09-14'].includes(next.day))quietGapOpen=true;selectedMonth=next.month;selectedDate=next.day || (next.month===sampleMonth?demoToday:null);view=next.view;expanded={...expanded,...(selectedDate?{[selectedDate]:true}:{})};detailHistoryOwned=false;
     if(detailsDialog?.open)detailsDialog.close();if(monthlyDialog?.open)monthlyDialog.close();await tick();
     if(next.detail)resolveDetail(next.detail);
     const target=selectedDate && next.day?document.getElementById(`day-${selectedDate}`):null;
@@ -118,7 +120,7 @@
 
 <svelte:head><title>Money Stories · Your journey</title></svelte:head>
 <div class="demo-banner"><span class="status-dot"></span> UI V2 PREVIEW <span>/</span> Stage 04 · Sample data only · Demo today: 21 Sep</div>
-<header class="app-header"><button class="brand" onclick={()=>navigate('journey')}><span class="brand-mark">m<span>•</span></span>money stories<span class="version">v2</span></button><button class="avatar" aria-label="About this preview" onclick={()=>open('Your private preview','The demo clock is fixed at 21 September 2026; the tiny sky uses your actual device time. All amounts are fictional. No backend is connected and all new entries and payment decisions clear on reload. The original app remains unchanged.')}>D</button></header>
+<header class="app-header"><button class="brand" onclick={()=>navigate('journey')}><span class="brand-mark">m<span>•</span></span>money stories<span class="version">v2</span></button><div class="header-actions"><button class="avatar" aria-label="About this preview" onclick={()=>open('Your private preview','The demo clock is fixed at 21 September 2026; the tiny sky uses your actual device time. All amounts are fictional. No live financial data is connected and all new entries and payment decisions clear on reload.')}>D</button></div></header>
 <main>
 {#if view==='journey'}
   <section class="journey-heading"><div><p class="eyebrow">YOUR MONEY, DAY BY DAY</p><h1>A story in every step.</h1></div><div class="traveller-world"><TimeSky/><svg class="traveller" viewBox="0 0 30 42" aria-hidden="true"><circle cx="15" cy="7" r="5" fill="#47684c"/><path d="M14 15 11 27 6 37M12 26 22 37M14 16 23 23M13 17 5 24" fill="none" stroke="#47684c" stroke-width="3.5" stroke-linecap="round"/><path d="M9 13h10v14H9Z" fill="#bc9b67"/></svg></div></section>
@@ -145,9 +147,13 @@
       {@const items=dateItems(date,occurrences)}
       {@const records=activity(date,additions,occurrences)}
       {@const newOutcomes=occurrences.filter(item=>(item.status==='recorded' || item.status==='skipped') && (item.recordedDate || item.decidedDate)===date)}
+      {#if date==='2026-09-14' && !quietGapOpen}
+      <section class="date-group quiet-gap" aria-label="Quiet stretch 13 to 14 September"><div class="date-stone" aria-hidden="true"><span>SEP</span><strong>13–14</strong></div><div class="day-card"><button class="day-toggle" onclick={()=>quietGapOpen=true}><span><span class="date-title">A quiet stretch</span><span class="day-summary">13–14 September · No sample activity recorded</span></span><span class="expand-mark" aria-hidden="true">＋</span></button></div></section>
+      {:else if date!=='2026-09-13' || quietGapOpen}
+      {#if date==='2026-09-14' && quietGapOpen}<button class="text-action collapse-gap" onclick={()=>{quietGapOpen=false;selectedDate=demoToday;route({month:sampleMonth,day:demoToday});}}>Collapse quiet stretch</button>{/if}
       <section class="date-group" class:is-today={date===demoToday} class:is-future={date>demoToday} id={`day-${date}`} aria-label={dayLabel(date)}>
         <div class="date-stone" aria-hidden="true"><span>{monthName(date.slice(0,7)).slice(0,3).toUpperCase()}</span><strong>{date.slice(-2)}</strong></div>
-        <div class="day-card"><button class="day-toggle" aria-expanded={!!expanded[date]} aria-controls={`content-${date}`} onclick={()=>toggle(date)}><span class="day-heading"><span class="date-title">{date===demoToday?'Today':date>demoToday?'Tomorrow':dayLabel(date)} <small>{weekday(date)}</small></span><span class="day-summary">{summary(date,additions,occurrences)}</span></span><span class="expand-mark" aria-hidden="true">{expanded[date]?'−':'＋'}</span></button>
+        <div class="day-card"><button class="day-toggle" aria-expanded={!!expanded[date]} aria-controls={`content-${date}`} onclick={()=>toggle(date)}><span class="day-heading"><span class="date-title">{date===demoToday?'Today':date==='2026-09-22'?'Tomorrow':dayLabel(date)} <small>{weekday(date)}</small></span><span class="day-summary">{summary(date,additions,occurrences)}</span></span><span class="expand-mark" aria-hidden="true">{expanded[date]?'−':'＋'}</span></button>
           <div id={`content-${date}`} class="day-content" hidden={!expanded[date]}>
             {#if base && base.kind!=='quiet'}<article class="day-story"><div><p class="eyebrow">YOUR STORY · {dayLabel(date).toUpperCase()}</p><h3>{base.title}</h3><p>{base.body}</p><button class="text-action" onclick={()=>open(base.title,`${base.body} ${base.detail}`,`story:${date}`)}>View supporting details <span aria-hidden="true">↗</span></button></div>{#if ['tree','bridge','shelter'].includes(base.kind)}<div class="story-illustration" aria-hidden="true"><Landscape day={base}/></div>{/if}</article>{/if}
             {#if items.length}<div class="schedule-list" aria-label={`Scheduled items for ${dayLabel(date)}`}><h3 class="schedule-heading">{date>demoToday?'Coming up':items.some(item=>item.status==='due')?'Needs your attention':'Scheduled item'}</h3>{#each items as item (item.id)}<ScheduledItem {item} {activeAction} onStart={(id)=>activeAction=id} onDecide={decide} onDetails={showItem}/>{/each}</div>{/if}
@@ -157,6 +163,7 @@
           </div>
         </div>
       </section>
+      {/if}
     {/each}
   </div>
   {/if}
@@ -167,4 +174,4 @@
 </main>
 <nav class="bottom-nav" aria-label="Main navigation"><button class:active={view==='journey'} aria-current={view==='journey'?'page':undefined} onclick={()=>navigate('journey')}><span aria-hidden="true">⌁</span>Journey</button><button class:active={view==='money'} aria-current={view==='money'?'page':undefined} onclick={()=>navigate('money')}><span aria-hidden="true">▥</span>Money</button></nav>
 <dialog bind:this={detailsDialog} oncancel={(event)=>{event.preventDefault();closeDetail(detailsDialog);}} aria-labelledby="detail-title"><div class="dialog-top"><span class="eyebrow">SAMPLE DETAILS</span><button aria-label="Close details" onclick={()=>closeDetail(detailsDialog)}>×</button></div><h2 id="detail-title">{detailTitle}</h2><p>{detailBody}</p><button class="dialog-done" onclick={()=>closeDetail(detailsDialog)}>Back to the journey</button></dialog>
-<dialog bind:this={monthlyDialog} oncancel={(event)=>{event.preventDefault();closeDetail(monthlyDialog);}} aria-labelledby="month-title"><div class="dialog-top"><span class="eyebrow">LATEST SAMPLE POSITION · 21 SEP</span><button aria-label="Close monthly overview" onclick={()=>closeDetail(monthlyDialog)}>×</button></div><h2 id="month-title">September, together.</h2><div class="monthly-details"><div><span>Recorded expenses</span><strong>{money(capturedSpend)}</strong></div><div><span>Planned commitments</span><strong>{money(planned)}</strong></div><div><span>Recorded investment contributions</span><strong>{money(invested)}</strong></div><div><span>Recorded savings this month</span><strong>{money(savedThisMonth)}</strong></div></div><p>These measures overlap. They are not added together and do not represent an account balance. Recording a payment here does not create a second expense.</p><p>Sample projection: ₹16,000 loan payments, ₹4,000 investment contributions and ₹5,000 savings already recorded in September, plus included scheduled items. Skipped items leave the active projection; a completed savings contribution also leaves it. Ordinary completed commitments remain planned.</p><h3 class="monthly-subtitle">Scheduled items</h3>{#each occurrences as item}<button class="month-source" onclick={()=>{closeDetail(monthlyDialog);reveal(item.date);}}><span>{item.name}<small>{dayLabel(item.date)} · {item.status}</small></span><strong>{money(item.amount)} ↗</strong></button>{/each}<p class="local-note">Next-month projections and historical monthly snapshots arrive in later stages. This prototype has one sample month.</p></dialog>
+<dialog bind:this={monthlyDialog} oncancel={(event)=>{event.preventDefault();closeDetail(monthlyDialog);}} aria-labelledby="month-title"><div class="dialog-top"><span class="eyebrow">LATEST SAMPLE POSITION · 21 SEP</span><button aria-label="Close monthly overview" onclick={()=>closeDetail(monthlyDialog)}>×</button></div><h2 id="month-title">September, together.</h2><div class="monthly-details"><div><span>Recorded expenses</span><strong>{money(capturedSpend)}</strong></div><div><span>Planned commitments</span><strong>{money(planned)}</strong></div><div><span>Recorded investment contributions</span><strong>{money(invested)}</strong></div><div><span>Recorded savings this month</span><strong>{money(savedThisMonth)}</strong></div></div><p>These measures overlap. They are not added together and do not represent an account balance. Recording a payment here does not create a second expense.</p><p>Sample projection: ₹16,000 loan payments, ₹4,000 investment contributions and ₹5,000 savings already recorded in September, plus included scheduled items. Skipped items leave the active projection; a completed savings contribution also leaves it. Ordinary completed commitments remain planned.</p><h3 class="monthly-subtitle">Scheduled items</h3>{#each occurrences as item}<button class="month-source" onclick={()=>jumpFromMonth(item.date)}><span>{item.name}<small>{dayLabel(item.date)} · {item.status}</small></span><strong>{money(item.amount)} ↗</strong></button>{/each}<p class="local-note">Next-month projections and historical monthly snapshots arrive in later stages. This prototype has one sample month.</p></dialog>
