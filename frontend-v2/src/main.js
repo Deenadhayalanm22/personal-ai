@@ -1,4 +1,5 @@
 import { mount } from 'svelte';
-import App from './App.svelte';
 import './app.css';
-mount(App, { target: document.getElementById('app') });
+const component = import.meta.env.VITE_V2_MODE === 'live'
+  ? import('./LiveApp.svelte') : import('./App.svelte');
+component.then(({ default: App }) => mount(App, { target: document.getElementById('app') }));

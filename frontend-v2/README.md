@@ -1,6 +1,6 @@
 # Money Stories — frontend v2
 
-Independent Svelte/Vite application. Stages 1–3 use temporary sample data. There is no authentication, backend integration or live financial data in this prototype. The v1 frontend and shared backend remain unchanged by v2.
+Independent Svelte/Vite application. The default local build preserves the stages 1–3 sample. A separate live build uses existing authenticated backend APIs through a private v2 host. The v1 frontend and shared backend source remain unchanged by v2.
 
 Use Node 20.19+:
 
@@ -40,4 +40,12 @@ Month and date controls cover August–October 2026. September is the only popul
 
 ## Stage 4 private deployment
 
-Pending. The v2 prototype has no login or deployment service yet. Keep it local until an independent access and hosting approach is agreed and verified.
+The private-host implementation and local access tests are present. Deployment remains pending until the separate v2 host and magic-link origin are configured and verified.
+
+## Frontend-only live mode, stages 4–15
+
+The original sample remains the default local build. `npm run build:live` builds the separate live UI. `V2_API_ORIGIN` and `V2_PUBLIC_ORIGIN` are required when starting the private host with `npm run start:private`; the v2 origin must match the existing backend magic-link base URL for sign-in links to return to this host. The user will provide the deployment host later. The private host gates app HTML and assets on the existing `WEB_SESSION`, proxies existing `/api/web` APIs, and fails closed if the backend session check is unavailable. No backend source was changed.
+
+The live UI reads the existing expense calendar, monthly stories, source lists, and cursor-paged expenses. It shows current-month commitments only within their valid period; older month projections and earlier story publications are labelled unavailable. Money provides due source commands for commitments, savings, loans, funds, and stocks through their existing endpoints. Expense corrections/deletions use the existing owned expense APIs. Capture uses the existing WhatsApp date handoff. Explore is a read-only published-story context viewer. The existing backend does not offer a combined daily summary, historical story publication read, or direct web conversational capture, so those stage gates remain open.
+
+Run `/opt/homebrew/opt/node@20/bin/node --test src/lib/live-read.test.js server.test.mjs` for adapter and private-host tests, and `npm run test:live` for mocked desktop/mobile browser checks. See the [active epic](../docs/jira/personal-expense/FIN-EPIC-007-journey-v2.md) for accepted scope and remaining stage gates.

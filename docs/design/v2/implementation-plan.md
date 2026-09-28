@@ -3,7 +3,7 @@
 ## Product core
 Help me understand what happened with my money, what changed, and what needs attention. The primary screen is a calm vertical journey, with monthly context above it. Routine actions happen beside their dated occurrence; full management stays in Money. A separate conversation surface will accommodate the future assistant.
 
-One stage per working session, followed by review. These are checkpoints, not a scheduled automation or guaranteed duration. Stages 1–3 are implemented with samples. Stage 4 and stages 5–15 are planned.
+One stage per working session, followed by review. These are checkpoints, not a scheduled automation or guaranteed duration. Stages 1–3 are implemented with samples. A separate frontend-only live mode now covers the available portions of stages 4–15 using existing APIs. Stage 4 deployment and the requirements needing new backend read or conversation contracts remain pending; see FIN-EPIC-007 for the current boundary.
 
 | Stage | Deliverable | Verification gate |
 | --- | --- | --- |

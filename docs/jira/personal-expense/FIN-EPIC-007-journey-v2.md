@@ -1,6 +1,6 @@
 # FIN-EPIC-007 — Isolated Money Stories journey v2
 
-Status: Stages 1–3 implemented as isolated samples. Stage 4 and stages 5–15 planned. See [15-stage plan](../../design/v2/implementation-plan.md).
+Status: Stages 1–3 remain isolated samples. A separate frontend-only live mode now reads existing owned APIs, offers source-specific Money actions, corrections, WhatsApp date handoff, and read-only story context. Private host code is present but deployment awaits the v2 host. Stages 5–15 are not fully accepted where the existing backend does not supply the required combined summaries, historical publications, or web conversation commands. See [15-stage plan](../../design/v2/implementation-plan.md).
 
 ## Isolation
 Independent Svelte app in frontend-v2. The journey still contains sample data and all additions and decisions reset on reload. No v2 routes or configuration belong in the shared backend or v1 frontend during this prototype phase. Private hosting is not implemented yet.
@@ -39,6 +39,10 @@ Independent Svelte app in frontend-v2. The journey still contains sample data an
 3. The v2 service has separate deployment and rollback from v1. No live financial data is enabled until access and integration contracts are reviewed.
 
 ## Future contracts and ownership
+The frontend-only live mode uses the existing expense calendar, monthly stories, expense list, loans, recurring commitments, savings, mutual funds, stocks, and credit-card APIs. Its monthly read cache is in memory and cleared on sign-out/profile change; date activity uses the expense cursor. Timeline occurrences are shown only when a source response supplies an explicit occurrence and due date. Savings and stock plans stay in Money when their list API lacks a dated occurrence. Timeline cards expose a Money review path; source-specific commands run in Money through the existing domain endpoints. The current monthly commitment is displayed only for the current owner-local month. Historical commitments and earlier story publications are explicitly unavailable rather than reconstructed. The assistant context surface is read-only and displays published copy/evidence, without invented answers or writes. Direct web conversational capture still requires a backend contract; the current frontend offers the existing WhatsApp date handoff.
+
+The private v2 Node host checks the current web session before serving assets, fails closed, proxies existing `/api/web` calls, and rewrites the session cookie path for its own host. Its deployment and magic-link base URL must be configured and verified once the v2 host is named. Browser tests with mocked existing APIs and local host tests cover the implemented frontend boundary; live owner isolation and full rollout are not yet verified.
+
 Live inline actions must reuse the existing domain commands and validations used by Money. A reusable occurrence identity, eligibility/read model and source-specific forms are required before integration. Loan, commitment, savings, funds and stocks retain their distinct semantics. Early payments, extra payments, restructuring, closure, corrections and destructive actions remain domain-owned; not every operation belongs on a date card.
 
 Daily summaries need an owned combined read composition; expense-calendar totals alone cannot supply investment/savings facts. Fetch bounded batches and cache by profile/period; expansion must not imply one database request per scroll. Historic story snapshots and live monthly commitments have separate time scopes. Never label current commitments as an earlier month's projection.
