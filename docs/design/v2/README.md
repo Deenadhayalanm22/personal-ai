@@ -1,10 +1,19 @@
 # Money Stories — UI v2
 
-Current direction: [revised 15-stage implementation plan](implementation-plan.md). The earlier landscape boards below are archived explorations, not instructions to build a city. The working stage 1 preview now uses a compact date journey, a factual summary, evidence and at most one small supporting illustration. A quiet Tell us entry now offers editable, explicitly confirmed sample expenses for the selected day; it uses a limited local demo parser, not AI, and resets on reload. Navigation is Journey / Money. Expanded scenery and Easter eggs are deferred.
+Current direction: vertical date groups with monthly context, inline routine actions and one conversational capture entry. Stage 1 is implemented in frontend-v2 using temporary samples. Journey/Money remain primary destinations; full management stays in Money. See the [15-stage plan](implementation-plan.md), [full-product review](full-product-layout-review.md) and [active epic](../../jira/personal-expense/FIN-EPIC-007-journey-v2.md).
 
-Status: concept review. These sketches are proposals, not accepted feature specifications or production UI. All amounts are fictional examples.
+The [previous horizontal stage 1](references/stage01-horizontal.zip) is preserved for reference. Existing frontend and backend are unchanged. Later live integrations require their own contract and acceptance updates.
 
-This folder isolates the new journey exploration from the existing UI. No application routes, components, contracts, or active epics are changed by these artifacts. Implementation begins only after flows are settled and the relevant active epics and contracts are updated.
+
+## Stage 2 previews
+
+- [Populated journey · phone](previews/stage02-journey-mobile.png) and [desktop](previews/stage02-journey-desktop.png)
+- [First-use state · phone](previews/stage02-first-use-mobile.png) and [desktop](previews/stage02-first-use-desktop.png)
+
+These static captures show the review scenarios. The interactive prototype is in frontend-v2.
+
+## Archived explorations
+The boards and interaction notes below are earlier alternatives, not the current implementation specification. City-building, expanded scenery and additional Easter eggs are deferred. All illustrated amounts are fictional.
 
 ## Review boards
 

@@ -1,43 +1,54 @@
 # UI v2 — 15-stage implementation plan
 
-## Product core and decision filter
+## Product core
+Help me understand what happened with my money, what changed, and what needs attention. The primary screen is a calm vertical journey, with monthly context above it. Routine actions happen beside their dated occurrence; full management stays in Money. A separate conversation surface will accommodate the future assistant.
 
-Help me understand what happened with my money, what changed, and what needs my attention through a simple personal journey.
-
-Keep the selected date, one useful summary and its evidence easy to find. The journey is navigation, not a game or city builder. Scenery supports meaning; it must not compete with amounts, obscure missing data, or imply financial health. Every proposed addition must improve understanding, finding history, or taking a relevant action. Otherwise defer it.
-
-One stage per working session/day, with a review gate before the next. This is sequencing, not a scheduled automation or duration estimate. Stage 15 verifies the complete integrated flow; earlier stages have their own checks. A failed gate is resolved before expanding scope.
+One stage per working session, followed by review. These are checkpoints, not a scheduled automation or guaranteed duration. Stages 1–2 are implemented with samples; stages 3–15 are planned.
 
 | Stage | Deliverable | Verification gate |
 | --- | --- | --- |
-| 01 | Simplified isolated sample app: compact date journey, factual change summary, one supporting illustration, activity, evidence and a local Tell us confirmation prototype | Date/change/action understood without interpreting art; desktop/mobile checks; no backend calls or v1 changes |
-| 02 | Validate hierarchy and visual language; small consistent tree/bridge/savings illustrations; no additional world-building | User can identify selected date, change and evidence quickly; quiet and busy days readable; touch/contrast checks |
-| 03 | Reliable time navigation: months, date jump, URLs/back and return-to-date; brief optional transition only if useful | Date boundaries, timezones, keyboard/touch; content never waits for animation; reduced motion |
-| 04 | Independent deployment, sessions and server-enforced owner-only access | Unauthorized/other-user rejection; origins/cookies/CORS verified; v1 regression; separate rollback |
-| 05 | Read-only daily activity with loading, empty, stale, offline and error states | Owned-profile totals and dates; missing records never imply zero spending; correct retry behavior |
-| 06 | Verified daily change summaries and restrained visual mapping; mixed-event priority rules | One primary summary; supporting events still discoverable; no invented balance, returns, progress or duplicated milestones |
-| 07 | Published story reader and supplied evidence/actions; stable context identifiers for future assistance | Source values/order/version retained; empty/stale states explicit; return to same date; no explanatory claim without evidence |
-| 08 | Historical stories and grouped same-day versions; define and implement required history APIs | Immutable original narrative/evidence; latest vs original clear; corrected facts distinguished from publication-time knowledge |
-| 09 | Late entries, corrections and deletions across dates | Effective vs recorded dates explained; current view converges; prior versions labelled; ownership and deletion/privacy policy respected |
-| 10 | Live conversational expense extraction/confirmation, WhatsApp handoff and searchable/editable transactions in Money | Selected/explicit dates, questions vs record changes, non-expense routing, confirmation, expiry/failures and deduplication; edits refresh affected views |
-| 11 | Commitment due/upcoming/payment/skip/savings flows with one relevant attention prompt | Planned vs paid vs set aside distinct; no double counting; actions return to selected day; no dashboard full of reminders |
-| 12 | Loan history and repayment/closure integration; optional bridge milestone | Verified repayment/closure; no invented completion percentage; all information accessible without illustration |
-| 13 | Investments and remaining secondary tools; optional contribution-tree milestones | Contributions distinct from valuation; corrections handled; v1 management parity checklist; primary navigation stays minimal |
-| 14 | Assistant-ready context contract and read-only contextual interaction prototype; accessibility/performance hardening | Selected date/story version/evidence scoped correctly; references resolvable; uncertainty explicit; no cross-user access or writes; optional motion within measured budgets |
-| 15 | Full private-user end-to-end verification and rollout decision | Capture → daily change → evidence → history → correction → commitments → loans/investments → contextual explanation; ownership, slow-device/network, accessibility, v1 regression and rollback |
+| 01 | Isolated vertical sample journey; monthly context; expandable dates; upcoming/overdue items; inline record/skip; confirmed sample capture | Desktop/mobile flows, separate financial measures, reload reset, no backend calls or v1 changes |
+| 02 | Review hierarchy across busy, quiet, overdue and first-use days; compact story previews; restrained SVG details | User can find date, amount, due action and evidence without interpreting art; no uncontrolled card growth |
+| 03 | Month/date navigation, stable day/detail URLs, back and scroll restoration; bounded event previews and quiet-date gaps | Month boundaries, timezones, keyboard/touch, drafts and deep links; one composer with explicit date |
+| 04 | Separate deployment, authentication and server-enforced owner-only access | Unauthorized access rejected; profile/logout clears state; cookies/origins verified; independent rollback |
+| 05 | Owned daily-summary read composition, monthly projection with independent period/freshness, batched pagination and caching | No request per scroll tick; bounded requests, correct invalidation, stale/offline/error states; missing data is not zero |
+| 06 | Typed due/upcoming/overdue occurrence read model and shared action eligibility | One occurrence identity across timeline and Money; source-specific rules; no frontend reconstruction of production financial schedules |
+| 07 | Published story reader, evidence and coverage period; stable assistant context references | Story period distinct from publication date; verified evidence; long stories do not overwhelm home |
+| 08 | Historical publications and grouped same-day versions; agreed history APIs | Original narrative/evidence retained; original vs latest explicit; no fabricated historic projection from current data |
+| 09 | Late entries, edits/deletions and cross-date corrections | Effective vs recorded date; affected periods refreshed; privacy/deletion semantics; prior publications clearly labelled |
+| 10 | Live conversational capture, confirmation, WhatsApp handoff and transaction management | Questions vs records, type/date clarification, idempotency, expired proposals, cancel/retry and duplicate handling |
+| 11 | Live commitments and savings actions in dated cards using shared domain forms/commands | Due/early/extra/skip rules; actual vs planned amounts; setting aside money is not paying a bill; no duplicate expense |
+| 12 | Live loan record/skip actions; history, final EMI, closure and restructure in Money | Fixed due amount/date rules, optional bank penalty, schedule extension, last EMI and repeated requests; verified closure |
+| 13 | Live investment occurrence actions and remaining Money parity | Fund amount/units/derived NAV; stock units/price and distinct command; contributions vs valuation; credit-card evidence/configuration; source-specific restrictions |
+| 14 | Contextual read-only assistant prototype plus accessibility/performance hardening | Date/period/version/evidence scope, ownership, uncertainty and return context; separate conversation surface; measured loading budgets |
+| 15 | Complete private-user verification and rollout decision | Capture → activity → story/evidence → history/correction → due/skip → loan/investment/savings → assistant context; v1 regression, security, slow network, accessibility and rollback |
 
-## Assistant preparation, not an automatic AI launch
+## Stage 1 — vertical revision implemented, awaiting review
+The sample month is September 2026; demo today is 21 September. A compact month card separates recorded expenses from planned commitments, opens a breakdown, and identifies pending items. It is not a bank balance or a complete forecast.
 
-Stage 07 identifies the date, timezone, story ID/version, publication time and evidence references the user is viewing. Stage 14 proposes and tests a permission-checked context contract plus a clearly labelled read-only prototype from a detail view. No persistent assistant panel or fabricated AI response is added in stage 1. Backend revalidates context ownership and evidence freshness; the frontend cannot authorize access. Future assistant mutations require explicit confirmation and separate agreed contracts/tests. Production AI capability and provider choice need a separately scoped decision.
+A single quiet Tell us entry defaults to demo today. Browsing history does not change its date. An explicit Add something action on a past date targets that day; switching capture date resets its unsaved message. A limited local parser previews editable sample expenses before confirmation. Questions and unsupported payment types do not become expenses.
 
-## Deferred until the core earns it
+Date groups cover 15–22 September, newest first. Today opens expanded, tomorrow is a collapsed labelled plan, and past dates remain available. Multiple groups can be expanded. A compact overdue link jumps to the original due date instead of creating a second actionable occurrence.
 
-Rich city-building, shops per transaction, elaborate camera/walking sequences, expanded Easter eggs, financial-news feeds and automatic month-end cinematic summaries are not required by these stages. One small decorative milestone can remain if it is unobtrusive and conveys no extra financial claim. Month-level browsing and existing monthly stories remain in scope; a new narrative feature requires evidence of usefulness and explicit specification.
+Today offers commitment, investment and savings examples; 19 September contains an overdue loan. Record and Skip open source-specific inline confirmations. Loan amount/date are fixed; investment collects units; savings explicitly sets money aside. Completed controls disappear, activity and monthly figures update, and repeated decisions are rejected. This is all temporary sample state. Loan schedule extension is explanatory only; no real schedule is recomputed.
 
-## Stage 1 — simplified revision implemented, awaiting user review
+Stories and evidence remain readable beside activity. Sample stories do not regenerate after edits. One small semicircular sky around a traveller follows real device-local time independently of demo dates. No city or second horizontal navigation is added. Journey/Money remain the only bottom destinations; management modules are labelled previews.
 
-Use 15–21 September 2026 sample dates. The demo opens on 21 September. The compact road/date rail sits above a factual summary and recorded activity. At most one relevant illustration appears in the summary; everyday and quiet days do not need a landmark. There are no separate landmark menus or assistant panel. A compact semicircular mountain/sky vignette around the traveller reflects current device time, not the selected historical date. It uses illustrative hour bands without location/weather services. The traveller makes a brief position transition; text updates immediately. Quiet days have no invented insight. Money tools remain explicit placeholders. A quiet Tell us entry beneath the summary previews editable sample expenses before explicit confirmation, then updates in-memory activity for that date. It is not live AI extraction; additions disappear on reload and do not regenerate a story. Bottom navigation contains Journey and Money only.
+Review: Can you scan what happened, find what needs attention, record an outcome without losing your place, and distinguish actual activity from future plans?
 
-Review: Can you immediately tell which date you are reading, what changed, and where to verify it? Does the illustration help without needing an explanation? Can you revisit a day and return from details without losing your place?
+## Stage 2 — hierarchy and first-use pass implemented, awaiting review
+Collapsed date cards show the key amount and meaning: spending on busy days, contribution or repayment on other days, and planned or overdue amount on the relevant date. Quiet dates say no activity was recorded; confirmed new sample expenses replace that message. A skipped overdue occurrence no longer appears as due.
 
-The static preview remains visibly sample-only. A private URL is not authentication; live personal data is gated by stage 04. Original frontend routes, components and deployment are unchanged.
+Expanded story previews lead the date card, with a short visible explanation and an evidence action. New sample actions label the original story as unchanged. Routine scheduled items follow in a compact list; full source-specific forms still open inline. Small tree, bridge and savings SVGs stay decorative.
+
+A switchable first-use preview shows an honest blank month, a single capture invitation and no fabricated past journey. Confirming a sample expense reveals its amount and row, with no invented AI story. The footer switches back to the populated sample. This is a review scenario, not saved onboarding state.
+
+Review: Without opening every date, can you identify the busy spending day, the overdue amount, a genuinely quiet day and today’s due tasks? In the first-use preview, is the next action clear without pretending a financial history exists?
+
+## Integration boundaries
+The prototype has no API, login or real data. Keep existing frontend and backend unchanged. Live integration must update the owning epics/contracts and reuse domain commands across Journey, Money and future assistant confirmations. Do not duplicate schedule/accounting logic in the feed. Fetch date summaries in batches; load bounded details on demand and cache by owner/period. Monthly projection and story history have separate scopes.
+
+The assistant is not automatically launched by this plan. Stage 14 is a labelled read-only prototype; production AI and mutations need explicit contracts. General conversation is independent of the day currently visible. News, city-building, elaborate walking animations and expanded Easter eggs remain deferred.
+
+## Reference
+The earlier horizontal stage 1 is preserved in [stage01-horizontal.zip](references/stage01-horizontal.zip). It is a design reference, not a second live mode. The [full-product review](full-product-layout-review.md) records placement rationale and backend gaps.

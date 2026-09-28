@@ -3,6 +3,7 @@
   import { previewExpenses } from '../lib/sampleCapture.js';
   import { dayLabel } from '../lib/journey.js';
   export let date;
+  export let compact = false;
   export let latest = false;
   export let onSave;
   let message = '';
@@ -28,7 +29,7 @@
   }
 </script>
 <section class="tell-us" aria-labelledby="tell-title">
-  <h3 id="tell-title">{latest ? 'Anything to add to today’s story?' : `Add something for ${dayLabel(date)}`}</h3>
+  <h3 id="tell-title" class:sr-only={compact}>{latest ? 'Anything to add to today’s story?' : `Add something for ${dayLabel(date)}`}</h3>
   <p class="capture-context">{latest ? `Demo today · ${dayLabel(date)} 2026` : `${dayLabel(date)} 2026`} · Review before adding.</p>
   <form onsubmit={preview}>
     <label class="sr-only" for="day-message">Tell us about your spending</label>

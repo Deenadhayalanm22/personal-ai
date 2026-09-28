@@ -57,8 +57,16 @@ public class MagicLinkService {
     }
 
     public String generateForWhatsAppUser(String phoneNumber) {
+        return generateForWhatsAppUserAt(phoneNumber, baseUrl);
+    }
+
+    /** The destination is server-configured; callers must never pass a request URL. */
+    public String generateForWhatsAppUserAt(String phoneNumber, String trustedBaseUrl) {
         if (phoneNumber == null || phoneNumber.isBlank()) {
             throw new IllegalArgumentException("A WhatsApp phone number is required");
+        }
+        if (trustedBaseUrl == null || trustedBaseUrl.isBlank()) {
+            throw new IllegalArgumentException("A configured destination is required");
         }
 
         AppUserEntity user = users.resolve(WHATSAPP, phoneNumber.replaceAll("[^0-9]", ""));
@@ -74,7 +82,7 @@ public class MagicLinkService {
         link.setExpiresAt(now.plus(expiry));
         links.save(link);
 
-        return UriComponentsBuilder.fromUriString(baseUrl)
+        return UriComponentsBuilder.fromUriString(trustedBaseUrl)
                 .path("/access")
                 .queryParam("token", token)
                 .build()

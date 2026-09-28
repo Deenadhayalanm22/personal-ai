@@ -72,6 +72,13 @@ public class WebAuthenticationService {
         return users.findById(activeUserId).orElseThrow(WebAuthenticationService::unauthorized);
     }
 
+    /** The v2 gate checks the signed-in account, never its optional demo profile. */
+    @Transactional(readOnly = true)
+    public AppUserEntity authenticateOwner(String token) {
+        WebSessionEntity session = activeSession(token);
+        return users.findById(session.getUserId()).orElseThrow(WebAuthenticationService::unauthorized);
+    }
+
     /**
      * Selects an isolated, non-WhatsApp profile for the current web session.  The
      * primary account remains the session owner, so turning demo mode off can never

@@ -52,6 +52,18 @@ public class WebLoginRequestService {
         replies.sendPortalLink(normalized, LOGIN_MESSAGE + "\n\nSign in: " + link, link);
     }
 
+    /** Public response remains generic; only the configured owner receives a v2 link. */
+    public void requestV2(String phoneNumber, String remoteAddress, String ownerPhone, String v2BaseUrl) {
+        String normalized = normalize(phoneNumber);
+        if (ownerPhone == null || ownerPhone.isBlank() || v2BaseUrl == null || v2BaseUrl.isBlank()
+                || !normalized.equals(normalize(ownerPhone))) return;
+        String address = remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress;
+        if (!allow("v2:phone:" + normalized) || !allow("v2:ip:" + address)) return;
+        if (!featureFlags.hasAnyEnabledFeature(CHANNEL, normalized)) return;
+        String link = magicLinks.generateForWhatsAppUserAt(normalized, v2BaseUrl);
+        replies.sendPortalLink(normalized, LOGIN_MESSAGE + "\n\nSign in: " + link, link);
+    }
+
     private String normalize(String phoneNumber) {
         return phoneNumber == null ? "" : phoneNumber.replaceAll("[^0-9]", "");
     }
