@@ -35,16 +35,18 @@ public class OpenAiExpenseChatModel implements ExpenseChatModel {
     }
 
     @Override
-    public Reply complete(String system, List<Message> messages, JsonNode tool) {
+    public Reply complete(String system, List<Message> messages, List<JsonNode> tools) {
         if (properties.openai().apiKey() == null || properties.openai().apiKey().isBlank())
-            throw new WebApiException(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_NOT_CONFIGURED", "Expense chat is not configured yet.");
-        var parameters = FunctionParameters.builder();
-        Map<String, Object> schema = mapper.convertValue(tool.path("inputSchema"), new TypeReference<>() {});
-        schema.forEach((key, value) -> parameters.putAdditionalProperty(key, JsonValue.from(value)));
-        var builder = ChatCompletionCreateParams.builder().model(model).store(false).maxCompletionTokens(1500)
-                .addSystemMessage(system)
-                .addFunctionTool(FunctionDefinition.builder().name(tool.path("name").asText())
-                        .description(tool.path("description").asText()).parameters(parameters.build()).build());
+            throw new WebApiException(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_NOT_CONFIGURED", "Money chat is not configured yet.");
+        var builder = ChatCompletionCreateParams.builder().model(model).store(false).maxCompletionTokens(2000)
+                .addSystemMessage(system);
+        for (JsonNode tool : tools) {
+            var parameters = FunctionParameters.builder();
+            Map<String, Object> schema = mapper.convertValue(tool.path("inputSchema"), new TypeReference<>() {});
+            schema.forEach((key, value) -> parameters.putAdditionalProperty(key, JsonValue.from(value)));
+            builder.addFunctionTool(FunctionDefinition.builder().name(tool.path("name").asText())
+                    .description(tool.path("description").asText()).parameters(parameters.build()).build());
+        }
         for (Message message : messages) {
             switch (message.role()) {
                 case "user" -> builder.addUserMessage(message.content());
@@ -77,7 +79,7 @@ public class OpenAiExpenseChatModel implements ExpenseChatModel {
         } catch (RuntimeException ex) {
             AiCallTelemetry.failure("ExpenseChat", model, started);
             throw new WebApiException(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_UNAVAILABLE",
-                    "Expense chat could not respond right now. Please try again.");
+                    "Money chat could not respond right now. Please try again.");
         }
     }
 }

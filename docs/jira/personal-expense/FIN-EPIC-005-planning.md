@@ -180,3 +180,13 @@ For a loan source, the snapshot also stores deterministic payoff facts: `remaini
 3. **Normal reads:** once present, the Stories response reads the stored snapshot rather than scanning loans and investments.
 4. **Future source mutations:** any new command that changes a commitment source—loan closure, SIP pause/resume/edit, a user-managed recurring commitment, emergency reserve rule, or goal contribution—must invoke the same refresh method in its transaction.
 5. **Future buckets:** Essential living, emergency reserve, goal contributions, and protection commitments extend this one payload; they must not create independent commitment tables or duplicate total-calculation logic.
+
+## FIN-024 — Read-only cross-module money chat
+
+**Status:** Implemented prototype · **Priority:** P1
+
+The V1 chat uses the canonical monthly commitment calculator for current/next-month intended amounts. It exposes owned loan, mutual-fund, stock and credit-card records/history through bounded read-only tools; it never uses a module list method that creates scheduled rows. It does not fetch live prices for chat or treat holdings as spendable cash. The salary profile remains masked in portal responses; the monthly-plan tool supplies only a backend-calculated difference when an exact regular monthly estimate exists. An exact salary can be inferred mathematically from the total and difference, so this derived disclosure is disclosed in the chat contract.
+
+Given a next-month salary shortfall question, the assistant reads the canonical projection, separates debt/card obligations, planned investing, essential living and earmarked savings, then may compute a hypothetical reduction to selected non-debt sources. The result states original total, revised total, remaining gap and what assumption each reduction requires. No scenario saves a user record. Loan EMIs and credit-card bills cannot be reduced by the scenario tool; the user would need a verified lender/card arrangement outside this chat. A SIP reduction is conditional on provider terms and savings-goal trade-offs, not an automatic instruction to skip a payment.
+
+Acceptance coverage: private exact salary yields numeric difference, range/missing/irregular salary does not; all owners and histories remain isolated; no live valuation or available-cash claim; protected sources remain unchanged in scenarios; planned investing and savings are counted once in the snapshot.

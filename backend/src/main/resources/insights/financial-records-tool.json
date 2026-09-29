@@ -1,0 +1,64 @@
+{
+  "name": "read_financial_records",
+  "description": "Read owned loans, mutual funds, stocks, commitments, credit cards, savings or account labels. Use records view to discover IDs and history view with an ID for recorded payment/allocation history. No writes or live market valuation; holdings are not cash. Search matches names literally, case-insensitively. Page through nextOffset; do not treat a limited page as the whole portfolio. For monthly totals and salary comparison use read_monthly_plan, not sums of these records.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "module": {
+        "type": "string",
+        "enum": [
+          "loans",
+          "mutual_funds",
+          "stocks",
+          "commitments",
+          "credit_cards",
+          "savings",
+          "accounts"
+        ]
+      },
+      "view": {
+        "type": "string",
+        "enum": [
+          "records",
+          "history"
+        ]
+      },
+      "id": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "description": "Optional owned record ID; required for history. Savings uses plan ID."
+      },
+      "search": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 50
+      },
+      "offset": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10000
+      }
+    },
+    "required": [
+      "module",
+      "view",
+      "id",
+      "search",
+      "limit",
+      "offset"
+    ]
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -142,3 +142,7 @@ The Monthly Commitment story continues to render server-provided amounts only. I
 - Seed loans, SIPs, and two active commitments; assert the snapshot contains all three semantic buckets, correct total, evidence rows, and current/next-month runway amounts.
 - Apply an override and a skip to different months; assert story totals/evidence are deterministic and snapshots are refreshed within the same committed write.
 - Record a later unusually high utility payment; assert an earlier stored snapshot remains unchanged and a newer estimate is only used after the user confirms it.
+
+## Read-only conversation about commitments
+
+The V1 money chat may inspect owned commitment rules and recorded occurrences, use the canonical current/next-month projection, and calculate next-month what-if reductions to an included recurring-commitment source. A plan reduction never updates its recurrence, effective date or payment history. A flexible schedule or Skip action does not prove a bill may be missed without consequences. The assistant describes any commitment reduction as conditional until the user confirms flexibility. Earmarked savings contributions and their later underlying bill remain separate sources; reducing a savings contribution cannot be described as reducing the bill.

@@ -32,7 +32,10 @@ class MonthlyFinancialSnapshotCreditCardTest {
         var service = new MonthlyFinancialSnapshotService(snapshots, loans, investments, recurring, cards, transactions,
                 Clock.fixed(Instant.parse("2026-09-10T00:00:00Z"), ZoneId.of("Asia/Kolkata")));
 
+        var preview = service.preview(user, YearMonth.of(2026, 9));
+        verify(snapshots, never()).save(any());
         var snapshot = service.current(user);
+        assertThat(preview).isEqualTo(snapshot);
 
         var bill = snapshot.commitmentBuckets().stream().filter(bucket -> bucket.key().equals("CREDIT_CARD_BILLS")).findFirst().orElseThrow();
         assertThat(bill.plannedAmount()).isEqualByComparingTo("12500.00");

@@ -15,30 +15,41 @@ import java.util.Map;
 public class ExpenseMcpTools {
     private final ExpenseQueryTool query;
     private final ObjectMapper mapper;
-    private final JsonNode definition;
+    private final List<JsonNode> definitions;
+    private final FinancialRecordsTool records;
+    private final MonthlyPlanningTool planning;
 
-    public ExpenseMcpTools(ExpenseQueryTool query, ObjectMapper mapper) throws IOException {
-        this.query = query;
-        this.mapper = mapper;
-        try (var input = new ClassPathResource("insights/expense-query-tool.json").getInputStream()) {
-            definition = mapper.readTree(input);
+    public ExpenseMcpTools(ExpenseQueryTool query, FinancialRecordsTool records, MonthlyPlanningTool planning, ObjectMapper mapper) throws IOException {
+        this.query = query; this.records = records; this.planning = planning; this.mapper = mapper;
+        var catalog = new java.util.ArrayList<JsonNode>();
+        for (String name : List.of("expense-query", "financial-records", "monthly-plan", "monthly-scenario")) {
+            try (var input = new ClassPathResource("insights/" + name + "-tool.json").getInputStream()) {
+                catalog.add(mapper.readTree(input));
+            }
         }
+        definitions = List.copyOf(catalog);
     }
-    public JsonNode definition() { return definition.deepCopy(); }
-    public ExpenseQueryTool.Result call(AppUserEntity user, String name, String arguments) {
-        if (!"query_expenses".equals(name)) throw ExpenseQueryTool.invalid("Unknown tool.");
-        ExpenseQueryTool.Query request;
+    public List<JsonNode> definitions() { return definitions.stream().<JsonNode>map(JsonNode::deepCopy).toList(); }
+    public Object call(AppUserEntity user, String name, String arguments) {
+        return switch (name) {
+            case "query_expenses" -> query.execute(user, parse(arguments, ExpenseQueryTool.Query.class));
+            case "read_financial_records" -> records.read(user, parse(arguments, FinancialRecordsTool.Request.class));
+            case "read_monthly_plan" -> planning.read(user, parse(arguments, MonthlyPlanningTool.MonthRequest.class));
+            case "simulate_monthly_plan" -> planning.simulate(user, parse(arguments, MonthlyPlanningTool.ScenarioRequest.class));
+            default -> throw ExpenseQueryTool.invalid("Unknown tool.");
+        };
+    }
+    private <T> T parse(String arguments, Class<T> type) {
         try {
             if (arguments == null || arguments.length() > 6000) throw new IOException();
-            request = mapper.readerFor(ExpenseQueryTool.Query.class)
+            return mapper.readerFor(type)
                     .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .with(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
                     .without(DeserializationFeature.ACCEPT_FLOAT_AS_INT).readValue(arguments);
         } catch (IOException | IllegalArgumentException ex) {
-            throw ExpenseQueryTool.invalid("Invalid query arguments. Follow the query_expenses schema.");
+            throw ExpenseQueryTool.invalid("Invalid tool arguments. Follow the selected tool's schema.");
         }
-        return query.execute(user, request);
     }
     public Map<String, Object> callResult(AppUserEntity user, String name, String arguments) {
         try {

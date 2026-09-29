@@ -38,7 +38,7 @@ class ExpenseChatControllerTest {
         mvc.perform(post("/api/web/expense-chat").cookie(new Cookie("WEB_SESSION", "demo"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"Hi\",\"month\":\"2026-09\",\"history\":[]}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.answer").value("Hello"));
-        when(tools.definition()).thenReturn(new ObjectMapper().readTree("{\"name\":\"query_expenses\"}"));
+        when(tools.definitions()).thenReturn(List.of(new ObjectMapper().readTree("{\"name\":\"query_expenses\"}")));
         mvc.perform(post("/api/web/expense-chat/mcp").cookie(new Cookie("WEB_SESSION", "demo"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.result.tools[0].name").value("query_expenses"));

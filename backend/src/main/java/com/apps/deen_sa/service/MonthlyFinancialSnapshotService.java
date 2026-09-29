@@ -88,7 +88,16 @@ public class MonthlyFinancialSnapshotService {
         rebuild(user, month.plusMonths(1));
     }
 
-    private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {
+    /** Read-only planning view: identical calculation to persisted snapshots, with no cache writes. */
+    @Transactional(readOnly = true)
+    public MonthlySnapshot preview(AppUserEntity user, YearMonth month) {
+        YearMonth current = currentMonth(user);
+        if (!month.equals(current) && !month.equals(current.plusMonths(1)))
+            throw new IllegalArgumentException("Planning supports the current and next month only");
+        return calculate(user, month);
+    }
+
+    private MonthlySnapshot calculate(AppUserEntity user, YearMonth month) {
         List<Source> debt = loans.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(loan -> hasEmiIn(loan, month))
                 .map(loan -> loanSource(loan, month)).toList();
         List<Source> investing = investments.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().filter(investment -> hasRecurringInvestmentIn(investment, month))
@@ -127,6 +136,11 @@ public class MonthlyFinancialSnapshotService {
         Bucket cardBucket = bucket("CREDIT_CARD_BILLS", "Credit-card bills", cardBills);
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
                 debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()).add(cardBucket.plannedAmount()).add(savingBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket, cardBucket, savingBucket));
+        return value;
+    }
+
+    private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {
+        MonthlySnapshot value = calculate(user, month);
         String payload = write(value);
         String fingerprint = fingerprint(payload);
         MonthlyFinancialSnapshotEntity entity = snapshots.findByUserIdAndScopeMonth(user.getId(), month.atDay(1)).orElseGet(() -> {

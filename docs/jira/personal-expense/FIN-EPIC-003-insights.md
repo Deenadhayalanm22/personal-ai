@@ -79,19 +79,22 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 ## V1 prototype — Conversational expense exploration
 
-**Status:** Implemented prototype · **Scope:** Read-only recorded expenses
+**Status:** Implemented prototype · **Scope:** Read-only recorded expenses and user-owned financial planning data
 
-The V1 dashboard includes an **Ask about expenses** panel. It uses the existing configured AI provider with a single general `query_expenses` tool; there is no question-specific intent classifier or separate prompt per scenario. The same catalog/executor is exposed through a private MCP endpoint. The portal uses in-process tool dispatch to avoid a loopback HTTP request. See [expense chat contract](../../contracts/expense-chat.md).
+The V1 dashboard includes an **Ask about expenses** panel. It uses the existing configured AI provider with a general `query_expenses` tool plus financial-record, monthly-plan and scenario tools; there is no question-specific intent classifier or separate prompt per scenario. The same catalog/executor is exposed through a private MCP endpoint. The portal uses in-process tool dispatch to avoid a loopback HTTP request. See [expense chat contract](../../contracts/expense-chat.md).
 
 ### Acceptance criteria
 
-1. Only after profile verification, the V1 dashboard offers a compact chat panel with example questions, typed questions, loading/error/offline states, and a new-chat action. V2 is unchanged.
+1. Only after profile verification, the V1 dashboard offers a compact money-chat panel with example questions, typed questions, loading/error/offline states, and a new-chat action. V2 is unchanged.
 2. Questions can dynamically combine date ranges, up to two grouping dimensions, text/amount filters, ordering and detail/summary modes. Totals, category/merchant breakdowns, largest expenses and period comparisons use this same tool. Unsupported data or query operations are explained or clarified rather than fabricated.
 3. Every query is scoped to the authenticated active profile, excludes deleted expenses, binds values and restricts SQL identifiers/operators to an allowlist. Caller/model-supplied SQL and ownership fields are rejected. The prototype cannot create, update or delete any record.
 4. Replies retain recent conversation context and include expandable query evidence with date boundaries, filters, count, total and returned rows. A row limit never changes the reported complete matching total/count; truncation is explicit.
-5. Chat history is held only in component memory and resets on page reload, new chat, sign-out, or a real/demo profile switch. Unmount aborts the browser request and ignores late replies. History is not saved to browser storage or the application database.
+5. **New chat** preserves the current conversation in a horizontally scrollable **Recent chats** strip below the chat header. Selecting a conversation restores its messages, evidence, unsent draft/error and original month context; follow-up requests include only that conversation’s recent messages. Conversations are titled from their first question. Closing/reopening the panel retains them. New-chat and conversation-switch controls are disabled while a response is pending. Chat history is held only in component memory and resets on page reload, sign-out, or a real/demo profile switch; the strip explains this lifetime. Unmount aborts the browser request and ignores late replies. History is not saved to browser storage or the application database.
 6. Missing provider configuration, provider/database failure, or exhausted query limits produce an actionable error. Failed questions remain available to retry. Unauthenticated requests never reach the model or expense tool.
-7. No account balance, income, future payment, loan, investment, or payment-deferral claim is supported by this prototype. The assistant explains the limits of recorded expenses and does not fabricate missing data.
+7. The assistant reads owned loan, mutual-fund, stock, commitment, savings, credit-card and account-label records through bounded server queries. It distinguishes scheduled investment transactions from confirmed investments, stored holdings from live market value, and original loan principal from outstanding balance.
+8. For the current and next month it reads the canonical commitment projection without persisting a new snapshot. With a saved exact regular monthly salary estimate, backend arithmetic returns the projected surplus/shortfall; range, missing and irregular salary do not yield a numeric comparison. The assistant does not expose the saved salary amount directly, although a user can infer it from total plus difference.
+9. The assistant can compute a next-month what-if by reducing selected planned investment, savings, or recurring-commitment sources. A scenario leaves records unchanged, preserves loan and credit-card bill amounts, and labels unverified flexibility and remaining savings targets. It never describes a missed payment as safe merely because the UI supports Skip.
+10. No account balance, confirmed salary receipt, live market valuation, sale proceeds, or payment-deferral permission is supported. Missing data remains explicit.
 
 ### Verification scenarios
 
@@ -99,4 +102,4 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 - Real PostgreSQL queries isolate two owners, exclude deleted rows, preserve full totals under truncation, and combine filters/grouping correctly.
 - Reject unknown fields/operators, oversized/invalid ranges, ownership arguments and forged system-role history; bound the model loop.
 - Reject unauthenticated chat/MCP calls and disallowed MCP origins; use the selected authenticated profile.
-- Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, clearing history, offline state and profile-switch reset.
+- Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, new-chat preservation, reopening conversations with isolated follow-up context and drafts, pending-response controls, mobile strip overflow, offline state and profile-switch reset.

@@ -42,7 +42,7 @@ class OpenAiExpenseChatModelTest {
         server.start();
         var query = mock(ExpenseQueryTool.class);
         when(query.execute(any(), any())).thenReturn(new ExpenseQueryTool.Result(mapper.readValue(arguments, ExpenseQueryTool.Query.class), "INR", 2, new BigDecimal("750"), List.of(), false));
-        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mapper), Clock.systemUTC());
+        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.systemUTC());
         var user = new AppUserEntity(); user.setId(1L);
         var result = service.chat(user, new ExpenseChatService.Request("How much did I spend?", "2026-09", List.of()));
         assertThat(result.answer()).contains("750");
@@ -60,8 +60,8 @@ class OpenAiExpenseChatModelTest {
             count.incrementAndGet(); exchange.sendResponseHeaders(503, -1); exchange.close();
         });
         server.start();
-        var tools = new ExpenseMcpTools(mock(ExpenseQueryTool.class), mapper);
-        assertThatThrownBy(() -> model().complete("system", List.of(new ExpenseChatModel.Message("user", "Hi")), tools.definition()))
+        var tools = new ExpenseMcpTools(mock(ExpenseQueryTool.class), mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper);
+        assertThatThrownBy(() -> model().complete("system", List.of(new ExpenseChatModel.Message("user", "Hi")), tools.definitions()))
                 .isInstanceOfSatisfying(WebApiException.class, ex -> assertThat(ex.code()).isEqualTo("CHAT_UNAVAILABLE"));
         assertThat(count.get()).isEqualTo(1);
     }

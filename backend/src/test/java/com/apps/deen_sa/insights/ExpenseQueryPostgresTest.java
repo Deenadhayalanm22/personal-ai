@@ -16,6 +16,8 @@ import static org.assertj.core.api.Assertions.*;
 class ExpenseQueryPostgresTest {
     static JdbcTemplate jdbc;
     static ExpenseQueryTool tool;
+    static FinancialRecordsTool records;
+    static long ownerLoanId, otherLoanId, ownerFundId, ownerStockId, ownerCommitmentId, ownerSavingsId;
     static String schema;
     static AppUserEntity owner;
     @BeforeAll static void setup() {
@@ -25,7 +27,7 @@ class ExpenseQueryPostgresTest {
         Flyway.configure().dataSource(admin).schemas(schema).defaultSchema(schema).locations("classpath:db/migration").load().migrate();
         var dataSource = new DriverManagerDataSource(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
                 System.getenv("EXPENSE_CHAT_TEST_DB_USER"), System.getenv("EXPENSE_CHAT_TEST_DB_PASSWORD"));
-        jdbc = new JdbcTemplate(dataSource); tool = new ExpenseQueryTool(dataSource);
+        jdbc = new JdbcTemplate(dataSource); tool = new ExpenseQueryTool(dataSource); records = new FinancialRecordsTool(dataSource);
         owner = new AppUserEntity(); owner.setId(user("owner"));
         long other = user("other");
         expense(owner.getId(), "2026-09-01", "Food", "250", false);
@@ -34,6 +36,18 @@ class ExpenseQueryPostgresTest {
         expense(owner.getId(), "2026-09-06", "Hidden", "9000", true);
         expense(owner.getId(), "2026-08-06", "Food", "100", false);
         expense(other, "2026-09-05", "Other user", "99000", false);
+        ownerLoanId = loan(owner.getId(), "Home EMI"); otherLoanId = loan(other, "Secret loan");
+        ownerFundId = investment(owner.getId(), "MUTUAL_FUND", "Index fund", "MF1");
+        ownerStockId = investment(owner.getId(), "STOCK", "Acme stock", "ST1");
+        investment(other, "MUTUAL_FUND", "Secret fund", "MF2");
+        jdbc.update("INSERT INTO investment_transaction(user_investment_id,transaction_kind,status,transaction_date,amount,units,calculation_source) VALUES (?, 'OPENING_BALANCE','CONFIRMED',date '2026-09-01', 1000, 10, 'USER_ENTERED')", ownerFundId);
+        jdbc.update("INSERT INTO investment_transaction(user_investment_id,transaction_kind,status,scheduled_month,amount) VALUES (?, 'SIP','SCHEDULED',date '2026-10-01', 500)", ownerFundId);
+        jdbc.update("INSERT INTO loan_emi_occurrence(loan_id,due_month,due_date,status,planned_amount) VALUES (?,date '2026-10-01',date '2026-10-05','UPCOMING',30000)", ownerLoanId);
+        ownerCommitmentId = jdbc.queryForObject("INSERT INTO user_recurring_commitment(user_id,label,amount_mode,planning_amount,effective_month,status,created_at,updated_at) VALUES (?,?, 'FIXED',25000,date '2026-09-01','ACTIVE',now(),now()) RETURNING id", Long.class, owner.getId(), "Rent");
+        ownerSavingsId = jdbc.queryForObject("INSERT INTO commitment_savings_plan(commitment_id,target_date,target_amount,start_month,monthly_amount,final_amount,used_amount,created_at) VALUES (?,date '2027-09-01',20000,date '2026-10-01',2000,2000,0,now()) RETURNING id", Long.class, ownerCommitmentId);
+        long account = jdbc.queryForObject("INSERT INTO user_reference_entity(user_id,entity_type,canonical_name) VALUES (?, 'ACCOUNT', 'Primary account') RETURNING id", Long.class, owner.getId());
+        jdbc.update("INSERT INTO user_credit_card(user_id,account_reference_id,card_name,issuer_name,statement_day,due_day) VALUES (?,?,'Visa card','Example Bank',5,20)", owner.getId(), account);
+
     }
     @AfterAll static void cleanup() { if (jdbc != null) jdbc.execute("DROP SCHEMA " + schema + " CASCADE"); }
     static long user(String name) {
@@ -42,6 +56,35 @@ class ExpenseQueryPostgresTest {
     static void expense(long user, String date, String category, String amount, boolean deleted) {
         long draft = jdbc.queryForObject("INSERT INTO transaction_draft(user_id,input_type,source,source_message_id,status) VALUES (?, 'TEXT','WHATSAPP',?,'CONSUMED') RETURNING id", Long.class, user, UUID.randomUUID().toString());
         jdbc.update("INSERT INTO financial_transaction(user_id,source_draft_id,occurred_at,category,amount,deleted_at) VALUES (?,?,cast(? as date),?,?,CASE WHEN ? THEN now() ELSE NULL END)", user, draft, date, category, new BigDecimal(amount), deleted);
+    }
+    static long loan(long user, String name) {
+        return jdbc.queryForObject("INSERT INTO user_loan(user_id,loan_name,loan_type,lender_name,original_principal,monthly_emi_amount,total_tenure_months,first_emi_due_date) VALUES (?,?,'HOME','Example Lender',300000,30000,12,date '2026-09-05') RETURNING id", Long.class, user, name);
+    }
+    static long investment(long user, String type, String name, String instrument) {
+        return jdbc.queryForObject("INSERT INTO user_investment(user_id,asset_type,provider,external_instrument_id,display_name_snapshot) VALUES (?,?, 'TEST',?,?) RETURNING id", Long.class, user, type, instrument, name);
+    }
+    FinancialRecordsTool.Request read(String module, String view, Long id) {
+        return new FinancialRecordsTool.Request(module, view, id, "", 20, 0);
+    }
+    @Test void eachModuleReadsOnlyOwnedRecordsAndHistories() {
+        assertThat(records.read(owner, read("loans", "records", null)).rows()).extracting(row -> row.get("name")).containsExactly("Home EMI");
+        assertThat(records.read(owner, read("loans", "history", ownerLoanId)).rows()).hasSize(1);
+        assertThat(records.read(owner, read("loans", "history", otherLoanId)).rows()).isEmpty();
+        assertThat(records.read(owner, read("mutual_funds", "records", null)).rows()).extracting(row -> row.get("name")).containsExactly("Index fund");
+        assertThat(records.read(owner, read("mutual_funds", "history", ownerFundId)).rows()).hasSize(2);
+        assertThat(records.read(owner, read("stocks", "records", null)).rows()).extracting(row -> row.get("name")).containsExactly("Acme stock");
+        assertThat(records.read(owner, read("commitments", "records", null)).rows()).hasSize(1);
+        assertThat(records.read(owner, read("savings", "records", null)).rows()).hasSize(1);
+        assertThat(records.read(owner, read("credit_cards", "records", null)).rows()).hasSize(1);
+        assertThat(records.read(owner, read("accounts", "records", null)).rows()).hasSize(1);
+    }
+    @Test void confirmedHoldingsExcludeScheduledAmountsAndPagingIsExplicit() {
+        var funds = records.read(owner, new FinancialRecordsTool.Request("mutual_funds", "records", null, "index", 1, 0));
+        assertThat(funds.rows().getFirst().get("invested_amount")).isEqualTo(new BigDecimal("1000.00"));
+        assertThat(funds.rows().getFirst().get("units")).isEqualTo(new BigDecimal("10.000000"));
+        assertThat(records.read(owner, new FinancialRecordsTool.Request("loans", "records", null, "", 1, 0)).truncated()).isFalse();
+        assertThatThrownBy(() -> records.read(owner, read("credit_cards", "history", 1L)))
+                .isInstanceOf(com.apps.deen_sa.exception.WebApiException.class);
     }
     ExpenseQueryTool.Query query(String mode, List<String> groups, List<ExpenseQueryTool.Filter> filters, int limit) {
         return new ExpenseQueryTool.Query(LocalDate.parse("2026-09-01"), LocalDate.parse("2026-10-01"), mode, groups, filters, "amount_desc", limit);

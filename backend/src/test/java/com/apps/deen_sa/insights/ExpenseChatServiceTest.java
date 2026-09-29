@@ -19,7 +19,7 @@ class ExpenseChatServiceTest {
     private final AppUserEntity user = user();
     private AppUserEntity user() { var value = new AppUserEntity(); value.setId(7L); return value; }
     private ExpenseChatService service() throws Exception {
-        return new ExpenseChatService(model, new ExpenseMcpTools(query, mapper), Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC));
+        return new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC));
     }
     private ExpenseChatService.Request request() { return new ExpenseChatService.Request("And excluding rent?", "2026-09",
             List.of(new ExpenseChatService.History("user", "Where did my money go?"), new ExpenseChatService.History("assistant", "Let us inspect it."))); }
@@ -55,6 +55,26 @@ class ExpenseChatServiceTest {
                 ex -> assertThat(ex.code()).isEqualTo("CHAT_QUERY_LIMIT"));
         when(model.complete(anyString(), anyList(), any())).thenReturn(new ExpenseChatModel.Reply("Try a shorter period.", List.of()));
         assertThat(service.chat(user, request()).answer()).contains("shorter");
+    }
+    @Test void composesPlanAndScenarioToolsInOneFollowUpWithoutNewIntent() throws Exception {
+        var plan = mock(MonthlyPlanningTool.class);
+        var data = new MonthlyPlanningTool.Plan("plan", "2026-10", "INR", new BigDecimal("75000"),
+                new BigDecimal("75000"), BigDecimal.ZERO, "EXACT_MONTHLY_ESTIMATE", new BigDecimal("-15000"), new BigDecimal("-15000"), List.of(), List.of(), List.of());
+        var scenario = new MonthlyPlanningTool.Plan("scenario", "2026-10", "INR", new BigDecimal("75000"),
+                new BigDecimal("60000"), new BigDecimal("15000"), "EXACT_MONTHLY_ESTIMATE", new BigDecimal("-15000"), BigDecimal.ZERO, List.of(), List.of(), List.of());
+        when(plan.read(eq(user), any())).thenReturn(data);
+        when(plan.simulate(eq(user), any())).thenReturn(scenario);
+        var service = new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), plan, mapper),
+                Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC));
+        when(model.complete(anyString(), anyList(), any())).thenReturn(
+                new ExpenseChatModel.Reply("", List.of(new ExpenseChatModel.Call("p", "read_monthly_plan", "{\"month\":\"2026-10\"}"))),
+                new ExpenseChatModel.Reply("", List.of(new ExpenseChatModel.Call("s", "simulate_monthly_plan", "{\"month\":\"2026-10\",\"adjustments\":[{\"sourceKey\":\"MUTUAL_FUND_SIP:2:2026-10-12\",\"newAmount\":5000}]}"))),
+                new ExpenseChatModel.Reply("The hypothetical reduction closes the recorded gap.", List.of()));
+        var response = service.chat(user, new ExpenseChatService.Request("How can I adjust next month?", "2026-09", List.of()));
+        assertThat(response.evidence()).containsExactly(data, scenario);
+        assertThat(response.answer()).contains("hypothetical");
+        verify(plan).read(eq(user), any()); verify(plan).simulate(eq(user), any());
+        verifyNoInteractions(query);
     }
     @Test void rejectsSystemHistoryAndOversizedMessagesBeforeModel() throws Exception {
         var service = service();

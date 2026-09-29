@@ -1,0 +1,45 @@
+{
+  "name": "simulate_monthly_plan",
+  "description": "Calculate a next-month what-if WITHOUT saving changes. First read_monthly_plan, then choose its sourceKey values. Each newAmount must be 0..baseline, at most two decimals. Loans and credit-card bills cannot be reduced. Other reductions are conditional possibilities, not verified permission to defer. Never apply changes, use portfolio value as cash, invent user flexibility, or derive/disclose salary. When user protects SIPs or another item, omit those sources from adjustments.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "month": {
+        "type": "string"
+      },
+      "adjustments": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sourceKey": {
+              "type": "string"
+            },
+            "newAmount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "sourceKey",
+            "newAmount"
+          ]
+        }
+      }
+    },
+    "required": [
+      "month",
+      "adjustments"
+    ]
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

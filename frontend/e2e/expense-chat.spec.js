@@ -14,7 +14,7 @@ async function dashboard(page) {
   });
   await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
   await page.goto('/dashboard?month=2026-09');
-  await page.getByRole('button', { name: 'Ask about expenses', exact: true }).click();
+  await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Where did my money go?' })).toBeEnabled();
 }
 
@@ -28,15 +28,19 @@ test('starter question, evidence, follow-up history and new chat', async ({ page
   await page.getByRole('button', { name: 'Where did my money go?' }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
   expect(requests[0]).toEqual({ message: 'Where did my money go?', month: '2026-09', history: [] });
-  await page.getByText('Based on 1 expense query').click();
+  await page.getByText('Based on 1 data query').click();
   await expect(page.getByText('2 matching records', { exact: false })).toBeVisible();
-  await page.getByLabel('Your expense question').fill('And excluding rent?');
+  await page.getByLabel('Your money question').fill('And excluding rent?');
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect.poll(() => requests.length).toBe(2);
   expect(requests[1].history).toEqual([{ role: 'user', content: requests[0].message }, { role: 'assistant', content: answer.answer }]);
   await expect(page.getByRole('button', { name: 'New chat' })).toBeEnabled();
   await page.getByRole('button', { name: 'New chat' }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toHaveCount(0);
+  const history = page.getByRole('navigation', { name: 'Recent money chats' });
+  await expect(history.getByRole('button', { name: /Where did my money go/ })).toBeVisible();
+  await history.getByRole('button', { name: /Where did my money go/ }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toHaveCount(2);
   await page.screenshot({ path: 'test-results/expense-chat-desktop.png' });
 });
 
@@ -45,7 +49,7 @@ test('failed question remains editable and retry does not duplicate history', as
   await page.route('**/api/web/expense-chat', route => route.fulfill({ status: 503, json: { message: 'Expense chat is not configured yet.' } }));
   await page.getByRole('button', { name: 'Which were my largest expenses?' }).click();
   await expect(page.getByRole('alert')).toContainText('not configured');
-  await expect(page.getByLabel('Your expense question')).toHaveValue('Which were my largest expenses?');
+  await expect(page.getByLabel('Your money question')).toHaveValue('Which were my largest expenses?');
   await page.route('**/api/web/expense-chat', route => {
     expect(route.request().postDataJSON().history).toEqual([]);
     return route.fulfill({ json: answer });
@@ -60,19 +64,114 @@ test('fits mobile, disables offline questions and clears on profile switch', asy
   await page.route('**/api/web/expense-chat', route => route.fulfill({ json: answer }));
   await page.getByRole('button', { name: 'Where did my money go?' }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
-  const box = await page.getByRole('region', { name: 'Expense assistant' }).boundingBox();
+  const box = await page.getByRole('region', { name: 'Money assistant' }).boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/expense-chat-mobile.png' });
   await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-  await expect(page.getByLabel('Your expense question')).toBeDisabled();
-  await page.getByRole('button', { name: 'Close expense chat' }).click();
+  await expect(page.getByLabel('Your money question')).toBeDisabled();
+  await page.getByRole('button', { name: 'Close money chat' }).click();
   // Switching the active profile unmounts the chat component and drops its history.
   await page.route('**/api/web/auth/demo-profile', route => route.fulfill({ json: { demoMode: true, canUseDemoMode: true } }));
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
   // The V1 header exposes the profile toggle as a checkbox.
   const toggle = page.getByLabel(/demo mode/i);
   await toggle.check();
-  await page.getByRole('button', { name: 'Ask about expenses', exact: true }).click();
+  await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Recent money chats' })).toHaveCount(0);
+});
+
+
+test('keeps conversations, drafts and month context separate when reopening old chats', async ({ page }) => {
+  await dashboard(page);
+  const requests = [];
+  await page.route('**/api/web/expense-chat', route => {
+    const request = route.request().postDataJSON();
+    requests.push(request);
+    return route.fulfill({ json: { answer: `Reply to ${request.message}`, evidence: [] } });
+  });
+  await page.getByRole('button', { name: 'Where did my money go?', exact: true }).click();
+  await expect(page.getByText('Reply to Where did my money go?', { exact: true })).toBeVisible();
+  await page.getByLabel('Your money question').fill('Continue the first chat');
+  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.evaluate(() => {
+    history.pushState({}, '', '/dashboard?month=2026-08');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(page.getByText('Exploring 2026-08', { exact: true })).toBeVisible();
+  await page.getByLabel('Your money question').fill('Show my August spending');
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByText('Reply to Show my August spending', { exact: true })).toBeVisible();
+  expect(requests[1].history).toEqual([]);
+  expect(requests[1].month).toBe('2026-08');
+  await page.getByLabel('Your money question').fill('Draft for August');
+  const chats = page.getByRole('navigation', { name: 'Recent money chats' });
+  await chats.getByRole('button', { name: /Where did my money go/ }).click();
+  await expect(page.getByText('Exploring 2026-09', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Continue the first chat');
+  await expect(page.getByText('Reply to Show my August spending', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByText('Reply to Continue the first chat', { exact: true })).toBeVisible();
+  expect(requests[2].month).toBe('2026-09');
+  expect(requests[2].history).toEqual([
+    { role: 'user', content: 'Where did my money go?' },
+    { role: 'assistant', content: 'Reply to Where did my money go?' }
+  ]);
+  await page.getByRole('button', { name: 'Close money chat' }).click();
+  await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
+  await chats.getByRole('button', { name: /Show my August spending/ }).click();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Draft for August');
+  await expect(page.getByText('Reply to Show my August spending', { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(chats.getByRole('button', { name: /Show my August spending/ })).toBeVisible();
+  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  const dimensions = await chats.evaluate(el => ({ width: el.clientWidth, content: el.scrollWidth, right: el.getBoundingClientRect().right }));
+  expect(dimensions.content).toBeGreaterThan(dimensions.width);
+  expect(dimensions.right).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: 'test-results/expense-chat-history-mobile.png' });
+});
+
+test('prevents switching conversations while a reply is pending', async ({ page }) => {
+  await dashboard(page);
+  let finish;
+  const responseReady = new Promise(resolve => { finish = resolve; });
+  await page.route('**/api/web/expense-chat', async route => {
+    await responseReady;
+    await route.fulfill({ json: answer });
+  });
+  await page.getByRole('button', { name: 'Where did my money go?', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: /Checking your financial records|Reading your expenses/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New chat', exact: true })).toBeDisabled();
+  await expect(page.getByRole('navigation', { name: 'Recent money chats' }).getByRole('button')).toBeDisabled();
+  finish();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New chat', exact: true })).toBeEnabled();
+});
+
+
+test('shows monthly plan, conditional scenario and cross-module evidence', async ({ page }) => {
+  await dashboard(page);
+  const nextMonth = { kind: 'plan', month: '2026-10', currency: 'INR', baselineTotal: 75000, proposedTotal: 75000,
+    incomeStatus: 'EXACT_MONTHLY_ESTIMATE', baselineAfterIncome: -15000, proposedAfterIncome: -15000,
+    items: [{ label: 'Home EMI', dueDate: '2026-10-05', baseline: 30000, proposed: 30000, reduction: 0,
+      condition: 'Obligation: preserve payment.' }, { label: 'Index SIP', dueDate: '2026-10-12', baseline: 20000, proposed: 20000,
+      reduction: 0, condition: 'Review provider terms.' }], limitations: ['Additional living costs are not included.'] };
+  const scenario = { ...nextMonth, kind: 'scenario', proposedTotal: 60000, proposedAfterIncome: 0,
+    items: [nextMonth.items[0], { ...nextMonth.items[1], proposed: 5000, reduction: 15000 }] };
+  const portfolio = { kind: 'records', module: 'mutual_funds', view: 'records', currency: 'INR', matchingCount: 1,
+    rows: [{ name: 'Index fund', invested_amount: 1000, units: 10 }], truncated: false,
+    note: 'Stored holdings only. No live market value.' };
+  await page.route('**/api/web/expense-chat', route => route.fulfill({ json: {
+    answer: 'The recorded plan is ₹75,000 against your salary estimate, a ₹15,000 shortfall. Reducing the SIP is only a hypothetical option.',
+    evidence: [nextMonth, scenario, portfolio]
+  } }));
+  await page.getByRole('button', { name: 'Can I cover next month’s commitments with my salary?' }).click();
+  await expect(page.getByText(/₹15,000 shortfall/)).toBeVisible();
+  await page.getByText('Based on 3 data queries').click();
+  await expect(page.getByRole('table', { name: 'Scenario comparison' })).toBeVisible();
+  await expect(page.getByText('Hypothetical only · No records changed')).toBeVisible();
+  await expect(page.getByText('Obligation: preserve payment.', { exact: true })).toHaveCount(2);
+  await expect(page.getByText('Stored holdings only. No live market value.')).toBeVisible();
+  await page.screenshot({ path: 'test-results/money-chat-scenario.png' });
 });

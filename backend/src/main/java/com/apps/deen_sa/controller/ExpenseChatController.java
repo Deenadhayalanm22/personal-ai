@@ -61,7 +61,7 @@ public class ExpenseChatController {
             case "initialize" -> result = Map.of("protocolVersion", "2025-06-18", "capabilities", Map.of("tools", Map.of()),
                     "serverInfo", Map.of("name", "personal-expense", "version", "1.0.0"));
             case "ping" -> result = Map.of();
-            case "tools/list" -> result = Map.of("tools", List.of(tools.definition()));
+            case "tools/list" -> result = Map.of("tools", tools.definitions());
             case "tools/call" -> {
                 JsonNode params = request.path("params");
                 if (!params.path("name").isTextual() || !params.path("arguments").isObject())
