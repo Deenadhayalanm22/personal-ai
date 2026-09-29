@@ -56,6 +56,8 @@ test('existing source lists expose only owned occurrence dates, without fabricat
   assert.equal(items[0].status,'OVERDUE');
   assert.equal(items[0].key,'LOAN_EMI:4:2026-09:2026-09-19');
   assert.deepEqual(items[0].allowedActions,['OPEN_MONEY']);
+  const due=mapOwnedOccurrences('2026-09',{loans:{loans:[{id:4,loanName:'Loan',emiOccurrences:[{month:'2026-09',dueDate:'2026-09-19',status:'DUE',plannedAmount:8000}]}]}},'2026-09-19');
+  assert.deepEqual(due[0].allowedActions,['OPEN_MONEY','RECORD','SKIP']);
 });
 
 test('expense effective date is read in the profile timezone', () => {

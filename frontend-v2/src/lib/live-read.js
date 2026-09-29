@@ -86,9 +86,10 @@ export function profileDate(instant, timezone) {
   } catch { return null; }
 }
 
-function occurrence(source, sourceId, label, month, dueDate, status, plannedAmount, actualAmount, recordedDate, moneyUrl) {
+function occurrence(source, sourceId, label, month, dueDate, status, plannedAmount, actualAmount, recordedDate, moneyUrl, today, details={}) {
   return normalizeOccurrence({source,sourceId:String(sourceId),label,month,dueDate,status,plannedAmount,actualAmount,
-    recordedDate,allowedActions:['OPEN_MONEY'],moneyUrl});
+    recordedDate,allowedActions:status==='DUE' && month===today.slice(0,7)
+      ? ['OPEN_MONEY','RECORD','SKIP'] : ['OPEN_MONEY'],moneyUrl,...details});
 }
 
 export function mapOwnedOccurrences(month, {loans, commitments, funds} = {}, today) {
@@ -96,12 +97,13 @@ export function mapOwnedOccurrences(month, {loans, commitments, funds} = {}, tod
   for(const loan of loans?.loans || []) for(const emi of loan.emiOccurrences || []) {
     if(emi.month!==month || !isDate(emi.dueDate)) continue;
     const status=emi.status==='PAID'?'RECORDED':emi.status==='SKIPPED'?'SKIPPED':emi.status==='DUE' && emi.dueDate<today?'OVERDUE':emi.status==='DUE'?'DUE':'UPCOMING';
-    items.push(occurrence('LOAN_EMI',loan.id,loan.loanName,month,emi.dueDate,status,emi.plannedAmount,emi.paidAmount,emi.paidAt,`/money/loans/${loan.id}`));
+    items.push(occurrence('LOAN_EMI',loan.id,loan.loanName,month,emi.dueDate,status,emi.plannedAmount,emi.paidAmount,emi.paidAt,`/money/loans/${loan.id}`,today));
   }
   for(const commitment of commitments?.items || []) for(const row of commitment.currentOccurrences || []) {
     if(row.month!==month || !isDate(row.dueDate)) continue;
     const status=row.status==='COMPLETED'?'RECORDED':row.status==='SKIPPED'?'SKIPPED':row.status==='DUE' && row.dueDate<today?'OVERDUE':row.status==='DUE'?'DUE':'UPCOMING';
-    items.push(occurrence('COMMITMENT',commitment.id,commitment.label,month,row.dueDate,status,commitment.planningAmount,row.actualAmount,row.completedAt,`/money/commitments/${commitment.id}`));
+    items.push(occurrence('COMMITMENT',commitment.id,commitment.label,month,row.dueDate,status,commitment.planningAmount,row.actualAmount,row.completedAt,`/money/commitments/${commitment.id}`,today,
+      {dated:['DAY','WEEK'].includes(commitment.recurrenceUnit)}));
   }
   // The fund list exposes a current occurrence and an explicit next due date. We never
   // infer a historical SIP day or synthesize occurrences from an active plan.
@@ -110,7 +112,7 @@ export function mapOwnedOccurrences(month, {loans, commitments, funds} = {}, tod
     if(sip?.scheduledMonth!==month || !isDate(due) || due.slice(0,7)!==month) continue;
     const status=sip.status==='CONFIRMED'?'RECORDED':sip.status==='SKIPPED'?'SKIPPED':sip.status==='DUE' && due<today?'OVERDUE':sip.status==='DUE'?'DUE':'UPCOMING';
     items.push(occurrence('MUTUAL_FUND_SIP',fund.id,fund.schemeName,month,due,status,sip.amount,
-      sip.status==='CONFIRMED'?sip.amount:null,sip.transactionDate,`/money/funds/${fund.id}`));
+      sip.status==='CONFIRMED'?sip.amount:null,sip.transactionDate,`/money/funds/${fund.id}`,today));
   }
   return items.sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.key.localeCompare(b.key));
 }
@@ -147,7 +149,7 @@ export function createReadClient({ fetcher = fetch, base = '', ttlMs = 60_000, n
     const query=`month=${encodeURIComponent(month)}`;
     if(scope==='days') {
       const calendar=await request(`/api/web/expenses/calendar?${query}`,signal);
-      return {...calendar,asOf:new Date(now()).toISOString(),days:calendar.days.map(day=>({date:day.date,
+      return {...calendar,asOf:new Date(now()).toISOString(),days:calendar.days.map(day=>({...day,
         recordedExpenses:day.totalSpend,recordedExpenseCount:day.transactionCount,occurrenceKeys:[]}))};
     }
     if(scope==='projection' || scope==='stories') {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPrivateServer } from './server.mjs';
@@ -41,4 +41,23 @@ test('auth cookie is scoped to v2 host and cross-origin writes are refused', asy
     assert.match(accepted.headers.get('set-cookie'),/Path=\//);
     assert.doesNotMatch(accepted.headers.get('set-cookie'),/Path=\/api\/web/);
   } finally { await new Promise(resolve=>server.close(resolve)); }
+});
+
+test('built sign-in UI is public while live app assets stay session protected', async () => {
+  const dist=await mkdtemp(join(tmpdir(),'v2-signin-'));
+  await mkdir(join(dist,'.vite'));
+  await mkdir(join(dist,'assets'));
+  await writeFile(join(dist,'auth.html'),'<script type="module" src="./assets/auth.js"></script>');
+  await writeFile(join(dist,'index.html'),'private app');
+  await writeFile(join(dist,'assets/auth.js'),'public sign-in');
+  await writeFile(join(dist,'assets/live.js'),'private journey');
+  await writeFile(join(dist,'.vite/manifest.json'),JSON.stringify({'auth.html':{file:'assets/auth.js'}}));
+  const server=createPrivateServer({apiOrigin:'http://backend.invalid',publicOrigin:'http://127.0.0.1:42001',dist,fetcher:async()=>new Response('',{status:401})});
+  await new Promise(resolve=>server.listen(42001,'127.0.0.1',resolve));
+  try {
+    assert.match(await (await fetch('http://127.0.0.1:42001/portal')).text(),/auth\.js/);
+    assert.equal(await (await fetch('http://127.0.0.1:42001/assets/auth.js')).text(),'public sign-in');
+    const denied=await fetch('http://127.0.0.1:42001/assets/live.js',{redirect:'manual'});
+    assert.equal(denied.status,302);
+  } finally {await new Promise(resolve=>server.close(resolve));await rm(dist,{recursive:true,force:true});}
 });

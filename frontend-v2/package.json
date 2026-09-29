@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "dev": "VITE_API_BASE=/ vite --host 127.0.0.1 --port 5174 --strictPort",
     "build": "vite build",
-    "build:live": "VITE_V2_MODE=live vite build",
+    "build:live": "VITE_V2_MODE=live VITE_API_BASE=/ vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort",
     "start:private": "node server.mjs",
-    "test:unit": "node --test src/lib/live-read.test.js server.test.mjs",
+    "test:unit": "node --test src/lib/*.test.js server.test.mjs",
     "test:e2e": "playwright test",
     "test:live": "playwright test -c playwright.live.config.js"
   },

@@ -8,6 +8,8 @@
 
 ## FIN-012 — Sign in through a one-time WhatsApp link
 
+The isolated v2 private host serves this same frontend sign-in component and its existing login-link API. Only the sign-in bundle is public; the Journey bundle still requires a verified web session. Its separate host and magic-link origin remain to be configured and verified before deployment.
+
 ### Acceptance criteria
 
 1. **Given** a phone-number login request, **when** submitted, **then** it returns the same accepted message whether or not the number is registered.

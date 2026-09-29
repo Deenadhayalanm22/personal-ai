@@ -6,6 +6,8 @@
 | Status | In Progress |
 | Goal | Let a user record planning information separately from expense capture and inspect its stated valuation basis |
 
+The v2 vertical Journey links a dated loan, SIP, or stock plan to the existing Money component. Payment, skip, allocation, history, and correction stay in the established frontend forms and use the existing APIs; the default v1 flow is unchanged.
+
 ## FIN-015 — Manage user loans
 
 **Status:** Done · **Priority:** P1

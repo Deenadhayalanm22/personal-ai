@@ -1,6 +1,7 @@
 // FIN-EPIC-007: private v2 host. It serves no application asset before session validation.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { resolve, sep, extname } from 'node:path';
 
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.ico':'image/x-icon', '.woff2':'font/woff2' };
@@ -18,6 +19,33 @@ export function createPrivateServer({ apiOrigin, publicOrigin, dist = new URL('.
   const publicUrl = new URL(publicOrigin);
   if (!['http:','https:'].includes(backend.protocol) || !['http:','https:'].includes(publicUrl.protocol)) throw new Error('Invalid origin');
   const root = resolve(dist);
+  const publicAuthAssets = new Set();
+  let builtAuthPage = null;
+  try {
+    const manifest = JSON.parse(readFileSync(resolve(root,'.vite/manifest.json'),'utf8'));
+    builtAuthPage = readFileSync(resolve(root,'auth.html'));
+    const visit = (key) => {
+      const entry = manifest[key];
+      if (!entry) return;
+      if (entry.file) publicAuthAssets.add(`/${entry.file}`);
+      for (const css of entry.css || []) publicAuthAssets.add(`/${css}`);
+      for (const asset of entry.assets || []) publicAuthAssets.add(`/${asset}`);
+      for (const imported of entry.imports || []) visit(imported);
+    };
+    visit('auth.html');
+  } catch { /* Source-only tests and local development use the fallback portal page. */ }
+  async function serveFile(request,response,path) {
+    let decoded;
+    try { decoded = decodeURIComponent(path); } catch { response.writeHead(400).end(); return; }
+    const file = resolve(root, `.${decoded === '/' ? '/index.html' : decoded}`);
+    if (!file.startsWith(root + sep) || file.includes('\0')) { response.writeHead(404).end(); return; }
+    try {
+      const metadata = await stat(file);
+      if (!metadata.isFile()) throw Error();
+      const data = await readFile(file);
+      response.writeHead(200, {'content-type':types[extname(file)] || 'application/octet-stream','cache-control':'private, no-store','x-content-type-options':'nosniff'}).end(request.method === 'HEAD' ? undefined : data);
+    } catch { response.writeHead(404, {'cache-control':'no-store'}).end(); }
+  }
   async function proxy(request, response, path) {
     const method = request.method || 'GET';
     if (!['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method)) { response.writeHead(405).end(); return; }
@@ -44,18 +72,10 @@ export function createPrivateServer({ apiOrigin, publicOrigin, dist = new URL('.
     const path = new URL(request.url || '/', publicUrl).pathname;
     if (path.startsWith('/api/web/')) { await proxy(request,response,request.url); return; }
     if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405).end(); return; }
-    if (publicPages.has(path)) { response.writeHead(200, {'content-type':'text/html; charset=utf-8','cache-control':'no-store'}).end(path === '/portal' ? portalPage : accessPage); return; }
+    if (publicPages.has(path)) { response.writeHead(200, {'content-type':'text/html; charset=utf-8','cache-control':'no-store'}).end(path === '/portal' ? builtAuthPage || portalPage : accessPage); return; }
+    if (publicAuthAssets.has(path)) { await serveFile(request,response,path); return; }
     if (!(await authorized(request))) { response.writeHead(302, {'location':'/portal','cache-control':'no-store'}).end(); return; }
-    let decoded;
-    try { decoded = decodeURIComponent(path); } catch { response.writeHead(400).end(); return; }
-    const file = resolve(root, `.${decoded === '/' ? '/index.html' : decoded}`);
-    if (!file.startsWith(root + sep) || file.includes('\0')) { response.writeHead(404).end(); return; }
-    try {
-      const metadata = await stat(file);
-      if (!metadata.isFile()) throw Error();
-      const data = await readFile(file);
-      response.writeHead(200, {'content-type':types[extname(file)] || 'application/octet-stream','cache-control':'private, no-store','x-content-type-options':'nosniff'}).end(request.method === 'HEAD' ? undefined : data);
-    } catch { response.writeHead(404, {'cache-control':'no-store'}).end(); }
+    await serveFile(request,response,path);
   });
 }
 
