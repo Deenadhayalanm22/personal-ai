@@ -17,12 +17,14 @@ public class ExpenseChatController {
     private final WebAuthenticationService authentication;
     private final ExpenseChatService chat;
     private final ExpenseMcpTools tools;
+    private final MoneyChatConversationStore conversations;
     private final Set<String> origins;
 
     public ExpenseChatController(WebAuthenticationService authentication, ExpenseChatService chat, ExpenseMcpTools tools,
+                                 MoneyChatConversationStore conversations,
                                  @Value("${app.cors.allowed-origins:}") String allowedOrigins,
                                  @Value("${app.web.base-url:}") String webBaseUrl) {
-        this.authentication = authentication; this.chat = chat; this.tools = tools;
+        this.authentication = authentication; this.chat = chat; this.tools = tools; this.conversations = conversations;
         origins = new HashSet<>();
         for (String value : (allowedOrigins + "," + webBaseUrl).split(",")) {
             if (!value.isBlank()) {
@@ -38,6 +40,21 @@ public class ExpenseChatController {
     public ResponseEntity<ExpenseChatService.Response> chat(@CookieValue(name = "WEB_SESSION", required = false) String token,
                                             @RequestBody ExpenseChatService.Request request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(chat.chat(authentication.authenticate(token), request));
+    }
+
+    @GetMapping("/conversations")
+    public ResponseEntity<List<MoneyChatConversationStore.Conversation>> conversations(
+            @CookieValue(name = "WEB_SESSION", required = false) String token) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(conversations.list(authentication.authenticate(token).getId()));
+    }
+
+    @PutMapping("/conversations/{id}")
+    public ResponseEntity<MoneyChatConversationStore.Conversation> saveConversation(
+            @CookieValue(name = "WEB_SESSION", required = false) String token,
+            @PathVariable UUID id, @RequestBody MoneyChatConversationStore.Conversation conversation) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(conversations.put(authentication.authenticate(token).getId(), id, conversation));
     }
 
     // Stateless Streamable HTTP JSON response mode. No SSE or server-originated requests.

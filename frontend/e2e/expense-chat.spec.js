@@ -5,18 +5,51 @@ const answer = {
   evidence: [{ query: { startDate: '2026-09-01', endDate: '2026-10-01', groupBy: ['category'], filters: [] }, currency: 'INR', matchingCount: 2, matchingTotal: 750, rows: [{ category: 'Food', total: 750, count: 2 }], truncated: false }]
 };
 async function dashboard(page) {
+  const savedConversations = new Map();
+  let activeProfile = 'real';
   await page.route('**/api/web/**', route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('demo-profile') && route.request().method() === 'PUT') activeProfile = route.request().postDataJSON().enabled ? 'demo' : 'real';
     const json = path.endsWith('demo-profile') ? { demoMode: false, canUseDemoMode: true }
       : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 750, transactionCount: 2, days: [] }
       : path.endsWith('/monthly') ? { stories: [] } : { items: [], actions: [], commitments: [], loans: [], funds: [], stocks: [] };
     return route.fulfill({ json });
   });
+  await page.route('**/api/web/expense-chat/conversations**', route => {
+    const request = route.request();
+    const profileChats = savedConversations.get(activeProfile) || new Map();
+    if (request.method() === 'GET') return route.fulfill({ json: [...profileChats.values()].reverse() });
+    const conversation = request.postDataJSON();
+    profileChats.set(conversation.id, conversation);
+    savedConversations.set(activeProfile, profileChats);
+    return route.fulfill({ json: conversation });
+  });
   await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
   await page.goto('/dashboard?month=2026-09');
   await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Where did my money go?' })).toBeEnabled();
+  return { setProfile: profile => { activeProfile = profile; } };
 }
+
+test('restores profile chat, evidence and draft after refresh without sending them to the model', async ({ page }) => {
+  await dashboard(page);
+  const modelRequests = [];
+  await page.route('**/api/web/expense-chat', route => {
+    modelRequests.push(route.request().postDataJSON());
+    return route.fulfill({ json: answer });
+  });
+  await page.getByRole('button', { name: 'Where did my money go?' }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  await page.getByLabel('Your money question').fill('And next month?');
+  await page.waitForTimeout(650);
+  await page.reload();
+  await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Your money question')).toHaveValue('And next month?');
+  expect(modelRequests).toHaveLength(1);
+  await page.getByText('Based on 1 data query').click();
+  await expect(page.getByText('2 matching records', { exact: false })).toBeVisible();
+});
 
 test('starter question, evidence, follow-up history and new chat', async ({ page }) => {
   await dashboard(page);
@@ -60,7 +93,7 @@ test('failed question remains editable and retry does not duplicate history', as
 
 test('fits mobile, disables offline questions and clears on profile switch', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await dashboard(page);
+  const fixture = await dashboard(page);
   await page.route('**/api/web/expense-chat', route => route.fulfill({ json: answer }));
   await page.getByRole('button', { name: 'Where did my money go?' }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
@@ -76,6 +109,7 @@ test('fits mobile, disables offline questions and clears on profile switch', asy
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
   // The V1 header exposes the profile toggle as a checkbox.
   const toggle = page.getByLabel(/demo mode/i);
+  fixture.setProfile('demo');
   await toggle.check();
   await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toHaveCount(0);
@@ -126,6 +160,7 @@ test('keeps conversations, drafts and month context separate when reopening old 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(chats.getByRole('button', { name: /Show my August spending/ })).toBeVisible();
   await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await expect(chats.getByText('New conversation')).toBeVisible();
   const dimensions = await chats.evaluate(el => ({ width: el.clientWidth, content: el.scrollWidth, right: el.getBoundingClientRect().right }));
   expect(dimensions.content).toBeGreaterThan(dimensions.width);
   expect(dimensions.right).toBeLessThanOrEqual(390);

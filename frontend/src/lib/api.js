@@ -139,3 +139,7 @@ export const addStockPurchase = (id, purchase) => request(`/api/web/stocks/${enc
 export const updateStockTransaction = (id, transactionId, values) => request(`/api/web/stocks/${encodeURIComponent(id)}/transactions/${encodeURIComponent(transactionId)}`, { method: 'PATCH', body: JSON.stringify(values) });
 
 export const askExpenseChat = (message, month, history, signal) => request('/api/web/expense-chat', { method: 'POST', body: JSON.stringify({ message, month, history }), signal });
+export const getMoneyConversations = () => request('/api/web/expense-chat/conversations');
+export const saveMoneyConversation = conversation => request(`/api/web/expense-chat/conversations/${encodeURIComponent(conversation.id)}`, {
+  method: 'PUT', body: JSON.stringify(conversation)
+});

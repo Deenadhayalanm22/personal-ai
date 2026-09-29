@@ -1,12 +1,14 @@
 <!-- FIN-EPIC-003: docs/jira/personal-expense/FIN-EPIC-003-insights.md -->
 <script>
-  import { onDestroy, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import FinancialEvidence from './FinancialEvidence.svelte';
-  import { askExpenseChat } from '../lib/api.js';
+  import { askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
   export let selectedMonth;
   export let connectionStatus;
   let open = false, question = '', messages = [], pending = false, error = '', transcript, input, launcher;
   let conversations = [], activeId = null, conversationMonth = null;
+  let loadingHistory = true, storageError = '', draftTimer;
+  const saves = new Map();
   let requestController;
   let destroyed = false;
   const suggestions = ['Can I cover next month’s commitments with my salary?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
@@ -14,7 +16,7 @@
   async function show() { open = true; await tick(); input?.focus(); }
   async function close() { open = false; await tick(); launcher?.focus(); }
   function saveConversation() {
-    if (!activeId && !messages.length && !question.trim()) return;
+    if (!activeId && !messages.length && !question.trim()) return Promise.resolve();
     if (!activeId) {
       activeId = crypto.randomUUID();
       conversationMonth = selectedMonth;
@@ -23,25 +25,32 @@
     const firstQuestion = messages.find(message => message.role === 'user')?.content || question.trim();
     const conversation = {
       id: activeId, title: firstQuestion || existing?.title || 'New conversation',
-      month: conversationMonth, messages, draft: question, error
+      month: conversationMonth, messages, draft: question
     };
     conversations = existing
       ? conversations.map(chat => chat.id === activeId ? conversation : chat)
       : [conversation, ...conversations];
+    const previous = saves.get(conversation.id) || Promise.resolve();
+    const current = previous.catch(() => {}).then(() => saveMoneyConversation(conversation));
+    saves.set(conversation.id, current);
+    current.catch(() => { if (!destroyed) storageError = 'Chat could not be saved. Retry before leaving this page.'; });
+    return current;
   }
-  function newChat() {
+  async function newChat() {
     if (pending) return;
-    saveConversation();
+    clearTimeout(draftTimer);
+    try { await saveConversation(); storageError = ''; } catch { return; }
     activeId = null; conversationMonth = null; messages = []; error = ''; question = '';
     input?.focus();
   }
   async function selectConversation(id) {
     if (pending || id === activeId) return;
-    saveConversation();
+    clearTimeout(draftTimer);
+    try { await saveConversation(); storageError = ''; } catch { return; }
     const conversation = conversations.find(chat => chat.id === id);
     if (!conversation) return;
     activeId = conversation.id; conversationMonth = conversation.month;
-    messages = conversation.messages; question = conversation.draft; error = conversation.error;
+    messages = conversation.messages; question = conversation.draft; error = '';
     await scrollDown();
     input?.focus();
   }
@@ -50,9 +59,28 @@
     while (recent.reduce((sum, item) => sum + item.content.length, 0) > 24000) recent.splice(0, 2);
     return recent;
   }
+  onMount(async () => {
+    try {
+      const saved = await getMoneyConversations();
+      if (destroyed) return;
+      conversations = Array.isArray(saved) ? saved : [];
+      if (conversations.length) {
+        const recent = conversations[0];
+        activeId = recent.id; conversationMonth = recent.month;
+        messages = recent.messages; question = recent.draft;
+      }
+    } catch {
+      if (!destroyed) storageError = 'Saved chats could not be loaded. Try refreshing the page.';
+    } finally { if (!destroyed) loadingHistory = false; }
+  });
+  function scheduleDraftSave() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => saveConversation(), 500);
+  }
   async function send(text = question) {
     const message = text.trim();
-    if (!message || pending || connectionStatus !== 'online') return;
+    if (!message || pending || loadingHistory || connectionStatus !== 'online') return;
+    clearTimeout(draftTimer);
     const previous = history();
     messages = [...messages, { role: 'user', content: message }];
     question = ''; error = ''; pending = true;
@@ -70,10 +98,10 @@
       error = cause.name === 'AbortError' ? 'That took too long. Try a more focused question.' : cause.message || 'Could not send. Please try again.';
     } finally {
       clearTimeout(timeout);
-      if (!destroyed) { pending = false; saveConversation(); scrollDown(); await tick(); input?.focus(); }
+      if (!destroyed) { pending = false; try { await saveConversation(); storageError = ''; } catch {} scrollDown(); await tick(); input?.focus(); }
     }
   }
-  onDestroy(() => { destroyed = true; requestController?.abort(); });
+  onDestroy(() => { destroyed = true; clearTimeout(draftTimer); requestController?.abort(); });
 </script>
 
 {#if open}
@@ -82,13 +110,13 @@
       <div><span class="eyebrow">YOUR MONEY, IN CONTEXT</span><h2>Ask about your money</h2></div>
       <button class="icon-button" aria-label="Close money chat" on:click={close}>×</button>
     </header>
-    <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={pending || (!messages.length && !question.trim())}>New chat</button></div>
+    <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
     {#if conversations.length}
-      <div class="history-heading"><span>Recent chats</span><span>Saved while this page is open</span></div>
+      <div class="history-heading"><span>Recent chats</span><span>Saved to your profile</span></div>
       <nav class="chat-history" aria-label="Recent money chats">
         {#if !activeId}<span class="history-draft" aria-current="true">New conversation</span>{/if}
         {#each conversations as conversation (conversation.id)}
-          <button class:active={conversation.id === activeId} aria-current={conversation.id === activeId ? 'true' : undefined} title={conversation.title} disabled={pending} on:click={() => selectConversation(conversation.id)}>
+          <button class:active={conversation.id === activeId} aria-current={conversation.id === activeId ? 'true' : undefined} title={conversation.title} disabled={pending || loadingHistory} on:click={() => selectConversation(conversation.id)}>
             <span class="history-title">{conversation.title}</span><span class="history-month">{conversation.month}</span>
           </button>
         {/each}
@@ -97,7 +125,7 @@
     <div class="transcript" bind:this={transcript} role="log" aria-live="polite" aria-label="Money conversation" aria-busy={pending}>
       {#if !messages.length}
         <div class="welcome"><span class="spark">✦</span><h3>See how it all adds up.</h3><p>Ask a question, then dig deeper. Explore expenses, loans, investments and commitments, or compare a what-if plan. I won’t change your records.</p></div>
-        <div class="suggestions">{#each suggestions as suggestion}<button disabled={pending || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
+        <div class="suggestions">{#each suggestions as suggestion}<button disabled={pending || loadingHistory || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
       {/if}
       {#each messages as message}
         <article class:user={message.role === 'user'} class="message">
@@ -116,9 +144,10 @@
     </div>
     <form on:submit|preventDefault={() => send()}>
       {#if error}<p class="chat-error" role="alert">{error}</p>{/if}
+      {#if storageError}<p class="chat-error" role="alert">{storageError}</p>{/if}
       {#if connectionStatus !== 'online'}<p class="chat-error" role="status">Connect to the service to ask about your money.</p>{/if}
       <label class="sr-only" for="expense-question">Your money question</label>
-      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={pending || connectionStatus !== 'online'} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={pending || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
+      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={pending || loadingHistory || connectionStatus !== 'online'} on:input={scheduleDraftSave} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={pending || loadingHistory || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
       <small>Based on recorded data. Scenarios are estimates, not changes.</small>
     </form>
   </section>
