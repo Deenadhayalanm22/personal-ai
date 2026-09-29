@@ -1,0 +1,25 @@
+{
+  "name": "query_expenses",
+  "description": "Read the current user's recorded, non-deleted expenses. Compose filters, date ranges and groupings dynamically. Dates use the user's local calendar; startDate inclusive, endDate exclusive, maximum 366 days. summary computes sum/count/average/largest across all matching records; details returns individual records. matchingTotal and matchingCount always cover all matches even when rows are truncated. Monetary amounts use the returned profile currency. weekday is ISO 1 Monday to 7 Sunday. nature is ESSENTIAL, DISCRETIONARY or UNKNOWN. Discover actual categories/merchants with a grouped summary before guessing exact labels. All filters are ANDed, text matching is case-insensitive. No income, balances, budgets or future obligations are available. No write operations.",
+  "inputSchema": {
+    "type": "object", "additionalProperties": false,
+    "properties": {
+      "startDate": {"type": "string", "description": "Inclusive YYYY-MM-DD"},
+      "endDate": {"type": "string", "description": "Exclusive YYYY-MM-DD"},
+      "mode": {"type": "string", "enum": ["summary", "details"]},
+      "groupBy": {"type": "array", "maxItems": 2, "items": {"type": "string", "enum": ["category", "subcategory", "merchant", "account", "nature", "day", "month", "weekday"]}, "description": "Empty for total or details. Up to two dimensions for summary."},
+      "filters": {"type": "array", "maxItems": 8, "items": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "field": {"type": "string", "enum": ["category", "subcategory", "merchant", "account", "nature", "day", "month", "weekday", "amount"]},
+          "operator": {"type": "string", "enum": ["eq", "ne", "contains", "gte", "lte"]},
+          "value": {"type": "string", "maxLength": 150}
+        }, "required": ["field", "operator", "value"]
+      }},
+      "orderBy": {"type": "string", "enum": ["amount_desc", "date_desc", "label_asc"]},
+      "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+    },
+    "required": ["startDate", "endDate", "mode", "groupBy", "filters", "orderBy", "limit"]
+  },
+  "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+}

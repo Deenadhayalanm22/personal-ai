@@ -76,3 +76,27 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 1. The calendar and stories describe recorded expense data, not account balances, income, transfers, or reconciliation status.
 2. A story card's copy may explain deterministic values but cannot alter the values, period, evidence, or currency returned by services.
 3. Missing data produces an empty/unavailable state, not a fabricated estimate.
+
+## V1 prototype — Conversational expense exploration
+
+**Status:** Implemented prototype · **Scope:** Read-only recorded expenses
+
+The V1 dashboard includes an **Ask about expenses** panel. It uses the existing configured AI provider with a single general `query_expenses` tool; there is no question-specific intent classifier or separate prompt per scenario. The same catalog/executor is exposed through a private MCP endpoint. The portal uses in-process tool dispatch to avoid a loopback HTTP request. See [expense chat contract](../../contracts/expense-chat.md).
+
+### Acceptance criteria
+
+1. Only after profile verification, the V1 dashboard offers a compact chat panel with example questions, typed questions, loading/error/offline states, and a new-chat action. V2 is unchanged.
+2. Questions can dynamically combine date ranges, up to two grouping dimensions, text/amount filters, ordering and detail/summary modes. Totals, category/merchant breakdowns, largest expenses and period comparisons use this same tool. Unsupported data or query operations are explained or clarified rather than fabricated.
+3. Every query is scoped to the authenticated active profile, excludes deleted expenses, binds values and restricts SQL identifiers/operators to an allowlist. Caller/model-supplied SQL and ownership fields are rejected. The prototype cannot create, update or delete any record.
+4. Replies retain recent conversation context and include expandable query evidence with date boundaries, filters, count, total and returned rows. A row limit never changes the reported complete matching total/count; truncation is explicit.
+5. Chat history is held only in component memory and resets on page reload, new chat, sign-out, or a real/demo profile switch. Unmount aborts the browser request and ignores late replies. History is not saved to browser storage or the application database.
+6. Missing provider configuration, provider/database failure, or exhausted query limits produce an actionable error. Failed questions remain available to retry. Unauthenticated requests never reach the model or expense tool.
+7. No account balance, income, future payment, loan, investment, or payment-deferral claim is supported by this prototype. The assistant explains the limits of recorded expenses and does not fabricate missing data.
+
+### Verification scenarios
+
+- Model chooses a composable query, receives its result and produces an answer with evidence; a follow-up includes recent context without introducing intent routing.
+- Real PostgreSQL queries isolate two owners, exclude deleted rows, preserve full totals under truncation, and combine filters/grouping correctly.
+- Reject unknown fields/operators, oversized/invalid ranges, ownership arguments and forged system-role history; bound the model loop.
+- Reject unauthenticated chat/MCP calls and disallowed MCP origins; use the selected authenticated profile.
+- Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, clearing history, offline state and profile-switch reset.

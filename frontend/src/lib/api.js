@@ -137,3 +137,5 @@ export const mergeReferencePreferences = (merge) => request('/api/web/reference-
 export const skipStockMonthlyPlan = (id, month) => request(`/api/web/stocks/${encodeURIComponent(id)}/monthly-plan-occurrences/${encodeURIComponent(month)}/skip`, { method: 'POST' });
 export const addStockPurchase = (id, purchase) => request(`/api/web/stocks/${encodeURIComponent(id)}/purchases`, { method: 'POST', body: JSON.stringify(purchase) });
 export const updateStockTransaction = (id, transactionId, values) => request(`/api/web/stocks/${encodeURIComponent(id)}/transactions/${encodeURIComponent(transactionId)}`, { method: 'PATCH', body: JSON.stringify(values) });
+
+export const askExpenseChat = (message, month, history, signal) => request('/api/web/expense-chat', { method: 'POST', body: JSON.stringify({ message, month, history }), signal });

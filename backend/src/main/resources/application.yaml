@@ -33,6 +33,8 @@ management:
           - metrics
 
 app:
+  expense-chat:
+    model: ${EXPENSE_CHAT_MODEL:${OPENAI_MODEL:gpt-4.1-mini}}
   investments:
     sip-scheduling-enabled: ${APP_INVESTMENTS_SIP_SCHEDULING_ENABLED:false}
   aggregation:

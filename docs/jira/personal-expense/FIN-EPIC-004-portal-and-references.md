@@ -36,7 +36,7 @@ The isolated v2 private host serves this same frontend sign-in component and its
 ### Acceptance criteria
 
 1. **Given** an authenticated session, **when** demo mode is read, **then** only `{ demoMode, canUseDemoMode }` is exposed; underlying profile IDs remain server-only. The switch is shown only to portal-enabled super admins, and demo mode changes by other users return `403`.
-2. **Given** demo mode changes, **when** the portal refreshes, **then** it clears real/demo caches and reloads all sections for the selected profile.
+2. **Given** demo mode changes, **when** the portal refreshes, **then** it clears real/demo caches and reloads all sections for the selected profile. The V1 expense-chat panel is remounted, its in-memory conversation is discarded, and pending browser requests are aborted so a late reply cannot appear in the new profile.
 3. **Given** a server endpoint, **when** demo mode is active, **then** its authenticated data is resolved against the selected profile consistently.
 4. **Given** a user's super-admin access is removed while a demo session exists, **when** a protected endpoint is called, **then** it resolves to the session owner's real profile and reports demo mode as off.
 
