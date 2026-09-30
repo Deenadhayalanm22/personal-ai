@@ -131,6 +131,13 @@ public class WebFinanceController {
         return webManager.expenses(token, month, date, limit, beforeId, category, subcategory);
     }
 
+    @GetMapping("/activity")
+    public FinancialActivityService.ActivityResponse activity(
+            @CookieValue(name = SESSION_COOKIE, required = false) String token,
+            @RequestParam(required = false) YearMonth month) {
+        return webManager.activity(token, month);
+    }
+
     @GetMapping("/expenses/calendar")
     public FinancialTransactionCalendarService.CalendarResponse expenseCalendar(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,

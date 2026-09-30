@@ -36,6 +36,7 @@ public class WebManager {
     private final WebRecurringCommitmentService commitments;
     private final WebCreditCardService creditCards;
     @Autowired private CommitmentSavingsService savings;
+    @Autowired private FinancialActivityService activity;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -143,6 +144,12 @@ public class WebManager {
         YearMonth selected = month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month;
         return transactionList.list(user, selected, limit, beforeId,
                 new FinancialTransactionListService.ExpenseFilter(category, subcategory, date));
+    }
+
+    public FinancialActivityService.ActivityResponse activity(String token, YearMonth month) {
+        AppUserEntity user = authentication.authenticate(token);
+        YearMonth selected = month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month;
+        return activity.list(user, selected);
     }
 
     public FinancialTransactionCalendarService.CalendarResponse expenseCalendar(String token, String month) {

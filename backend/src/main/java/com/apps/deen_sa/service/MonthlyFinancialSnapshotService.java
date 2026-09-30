@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 8;
+    private static final int CALCULATION_VERSION = 9;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -107,12 +107,7 @@ public class MonthlyFinancialSnapshotService {
         List<Source> essential = (recurringCommitments == null ? List.<com.apps.deen_sa.entity.UserRecurringCommitmentEntity>of() : recurringCommitments.findAllOwned(user.getId())).stream().filter(commitment ->
                         commitment.getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE
                                 && !month.atDay(1).isBefore(commitment.getEffectiveMonth()))
-                .flatMap(commitment -> java.util.stream.Stream.concat(
-                        RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream(),
-                        RecurringCommitmentSchedule.dated(commitment) && commitmentOccurrences != null
-                                ? commitmentOccurrences.findByCommitmentIdAndScheduledMonthBetweenOrderByScheduledMonthAsc(commitment.getId(), month.atDay(1), month.atEndOfMonth()).stream()
-                                    .map(com.apps.deen_sa.entity.RecurringCommitmentOccurrenceEntity::getScheduledMonth)
-                                : java.util.stream.Stream.<LocalDate>empty()).distinct().sorted()
+                .flatMap(commitment -> commitmentDates(user, commitment, month).stream()
                         .filter(due -> commitmentOccurrences == null || commitmentOccurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), RecurringCommitmentSchedule.dated(commitment) ? due : month.atDay(1))
                                 .map(occurrence -> occurrence.getStatus() != com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.SKIPPED).orElse(true))
                         .map(due -> new Source("RECURRING_COMMITMENT", String.valueOf(commitment.getId()), commitment.getLabel(), commitment.getPlanningAmount(),
@@ -137,6 +132,26 @@ public class MonthlyFinancialSnapshotService {
         MonthlySnapshot value = new MonthlySnapshot(month.toString(), user.getCurrency(), CALCULATION_VERSION,
                 debtBucket.plannedAmount().add(investingBucket.plannedAmount()).add(essentialBucket.plannedAmount()).add(cardBucket.plannedAmount()).add(savingBucket.plannedAmount()), List.of(debtBucket, investingBucket, essentialBucket, cardBucket, savingBucket));
         return value;
+    }
+
+    private List<LocalDate> commitmentDates(AppUserEntity user,
+            com.apps.deen_sa.entity.UserRecurringCommitmentEntity commitment, YearMonth month) {
+        List<LocalDate> scheduled = RecurringCommitmentSchedule.dates(commitment, month,
+                java.time.ZoneId.of(user.getTimezone()));
+        if (commitmentOccurrences == null) return scheduled;
+        var outcomes = commitmentOccurrences.findByCommitmentIdAndScheduledMonthBetweenOrderByScheduledMonthAsc(
+                commitment.getId(), month.atDay(1), month.atEndOfMonth());
+        if (RecurringCommitmentSchedule.dated(commitment)) {
+            return java.util.stream.Stream.concat(scheduled.stream(), outcomes.stream()
+                    .map(com.apps.deen_sa.entity.RecurringCommitmentOccurrenceEntity::getScheduledMonth))
+                    .distinct().sorted().toList();
+        }
+        // A completed monthly occurrence must remain in this month's plan after
+        // the recurrence rule advances to its next expected date.
+        return outcomes.stream().filter(outcome -> outcome.getStatus()
+                        == com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.COMPLETED)
+                .findFirst().map(outcome -> List.of(outcome.getCompletedAt()))
+                .orElse(scheduled);
     }
 
     private MonthlySnapshot rebuild(AppUserEntity user, YearMonth month) {

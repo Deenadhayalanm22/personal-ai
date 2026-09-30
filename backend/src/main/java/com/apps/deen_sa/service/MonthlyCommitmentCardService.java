@@ -5,7 +5,9 @@ import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
 import com.apps.deen_sa.repository.InvestmentTransactionRepository;
 import com.apps.deen_sa.repository.LoanEmiOccurrenceRepository;
+import com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository;
 import com.apps.deen_sa.domain.LoanEmiOccurrenceStatus;
+import com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus;
 import com.apps.deen_sa.repository.UserActionItemRepository;
 import com.apps.deen_sa.domain.InvestmentTransactionKind;
 import com.apps.deen_sa.domain.InvestmentTransactionStatus;
@@ -36,6 +38,7 @@ public class MonthlyCommitmentCardService {
     private final FinancialTransactionRepository transactions;
     private final InvestmentTransactionRepository investmentTransactions;
     private final LoanEmiOccurrenceRepository loanOccurrences;
+    @Autowired(required = false) private RecurringCommitmentOccurrenceRepository commitmentOccurrences;
 
     /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentCardService(MonthlyFinancialSnapshotService snapshots, CommitmentCopyGenerator copyGenerator, Clock clock) {
@@ -69,15 +72,19 @@ public class MonthlyCommitmentCardService {
         var investing = snapshot.commitmentBuckets().stream().filter(bucket -> "PLANNED_INVESTING".equals(bucket.key())).findFirst().orElseThrow();
         BigDecimal emiTotal = debt.plannedAmount(), sipTotal = investing.plannedAmount(), cardBillTotal = snapshot.commitmentBuckets().stream().filter(bucket -> "CREDIT_CARD_BILLS".equals(bucket.key())).findFirst().map(MonthlyFinancialSnapshotService.Bucket::plannedAmount).orElse(BigDecimal.ZERO), total = snapshot.fullIntendedCommitment();
         BigDecimal savingsTotal = snapshot.commitmentBuckets().stream().filter(bucket -> "COMMITMENT_SAVINGS".equals(bucket.key())).findFirst().map(MonthlyFinancialSnapshotService.Bucket::plannedAmount).orElse(BigDecimal.ZERO);
+        var recurring = snapshot.commitmentBuckets().stream().filter(bucket -> "ESSENTIAL_LIVING".equals(bucket.key())).findFirst().orElse(null);
         String currency = user.getCurrency();
         String value = CommitmentMoneyFormatter.money(total, currency);
         List<MonthlyCommitmentPresentationService.Component> components = new ArrayList<>();
         if (emiTotal.signum() > 0) components.add(component("Debt repayments", emiTotal, currency));
         if (sipTotal.signum() > 0) components.add(component("Planned investing", sipTotal, currency));
         if (cardBillTotal.signum() > 0) components.add(component("Credit-card bills", cardBillTotal, currency));
+        if (recurring != null && recurring.plannedAmount().signum() > 0) components.add(component(recurring.label(), recurring.plannedAmount(), currency));
         if (savingsTotal.signum() > 0) components.add(component("Saving for upcoming bills", savingsTotal, currency));
         BigDecimal completedSipTotal = completedSipTotal(investing, month);
         if (completedSipTotal.signum() > 0) components.add(component("SIP allocations complete", completedSipTotal, currency));
+        BigDecimal completedRecurringTotal = recurring == null ? BigDecimal.ZERO : completedRecurringTotal(recurring, month);
+        if (completedRecurringTotal.signum() > 0) components.add(component("Recurring commitments complete", completedRecurringTotal, currency));
         BigDecimal completedLoanTotal = completedLoanTotal(debt, month);
         if (emiTotal.signum() > 0) {
             BigDecimal remainingLoanTotal = emiTotal.subtract(completedLoanTotal);
@@ -206,6 +213,19 @@ public class MonthlyCommitmentCardService {
                 .map(source -> loanOccurrences.findByLoanIdAndDueMonth(Long.valueOf(source.sourceId()), month.atDay(1))
                         .filter(value -> value.getStatus() == LoanEmiOccurrenceStatus.PAID).map(value -> value.getPaidAmount()).orElse(BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal completedRecurringTotal(MonthlyFinancialSnapshotService.Bucket recurring, YearMonth month) {
+        if (commitmentOccurrences == null) return BigDecimal.ZERO;
+        return recurring.sources().stream().filter(source -> "RECURRING_COMMITMENT".equals(source.sourceType()))
+                .map(source -> {
+                    Long id = Long.valueOf(source.sourceId());
+                    var exact = source.dueDate() == null ? java.util.Optional.<com.apps.deen_sa.entity.RecurringCommitmentOccurrenceEntity>empty()
+                            : commitmentOccurrences.findByCommitmentIdAndScheduledMonth(id, source.dueDate());
+                    return exact.or(() -> commitmentOccurrences.findByCommitmentIdAndScheduledMonth(id, month.atDay(1)))
+                            .filter(outcome -> outcome.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED)
+                            .map(outcome -> source.plannedAmount()).orElse(BigDecimal.ZERO);
+                }).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<MonthlyCommitmentPresentationService.Component> components(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {

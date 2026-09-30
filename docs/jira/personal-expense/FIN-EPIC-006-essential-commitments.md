@@ -41,7 +41,7 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 5. **Given** an active commitment, **when** the user pauses it, ends it, skips a selected month, or supplies a one-month amount override, **then** the action has the stated scope and is visible in Manage commitments and story evidence. `Skip this month` does not end the commitment; `Pause` excludes it until resumed; `End` excludes it from its end month onward.
 6. **Given** another user's commitment, source transaction, or reference ID, **when** it is read or mutated, **then** it is not visible or changed and the API returns the appropriate ownership-safe `4xx` response.
 7. **Given** a user created a commitment by mistake, **when** they select Delete from Manage commitments, **then** the rule is removed, current and next projections refresh, and any transaction match is unlinked without deleting the transaction or rewriting historical snapshots.
-8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this acknowledgement leaves the planned total unchanged and removes the due highlight without applying a separate completion colour.
+8. **Given** an active commitment with a due day reaches that day, **when** the Monthly Commitment evidence is opened, **then** it is highlighted as due and Review opens its Manage commitments row. The user can mark the current occurrence done; this acknowledgement leaves the planned total unchanged, removes the due highlight, and advances the current-month Essential living progress bar for that occurrence.
 9. **Given** a user creates a commitment after its configured due day in the current month, **when** they open Monthly Commitment, **then** it remains a planning projection but is never shown as a retroactive current-month due reminder. Its first due reminder is on that due day in the next month.
 10. **Given** a commitment occurrence was marked done, **when** the user selects `View details`, **then** the existing details-sheet presentation lists the completed payment with its due and completion dates.
 11. **Given** a user has a flexible commitment such as bike service, **when** they complete it before its expected date, **then** they can record the actual amount and completion date and explicitly set the next expected date without changing the planning estimate or usual recurrence.
@@ -140,6 +140,7 @@ The Monthly Commitment story continues to render server-provided amounts only. I
 ### Integration-test scenarios
 
 - Seed loans, SIPs, and two active commitments; assert the snapshot contains all three semantic buckets, correct total, evidence rows, and current/next-month runway amounts.
+- Complete one current-month recurring commitment and assert it remains in the current snapshot and Essential living bar at 100% of its own planned amount, while the next month keeps its next scheduled occurrence.
 - Apply an override and a skip to different months; assert story totals/evidence are deterministic and snapshots are refreshed within the same committed write.
 - Record a later unusually high utility payment; assert an earlier stored snapshot remains unchanged and a newer estimate is only used after the user confirms it.
 

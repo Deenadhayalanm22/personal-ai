@@ -51,6 +51,7 @@ export const logout = () => request('/api/web/auth/logout', { method: 'POST' }, 
 
 export const getExpenseCalendar = (month) => request(`/api/web/expenses/calendar?month=${encodeURIComponent(month)}`);
 export const getRecentExpenses = (month, limit = 10) => request(`/api/web/expenses?month=${encodeURIComponent(month)}&limit=${encodeURIComponent(limit)}`);
+export const getFinancialActivity = (month) => request(`/api/web/activity?month=${encodeURIComponent(month)}`);
 export const getExpenseOptions = () => request('/api/web/expenses/options');
 export const getMonthlyCommitment = (month) => request(`/api/web/monthly-commitment?month=${encodeURIComponent(month)}`);
 export const createMissingDateContext = (date, timezone) => request('/api/web/expenses/calendar/context', { method: 'POST', body: JSON.stringify({ type: 'MISSING_TRANSACTION_DATE', date, timezone }) });

@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import ExpenseChat from './components/ExpenseChat.svelte';
   import Home from './Home.svelte'; import Auth from './Auth.svelte'; import PrivacyPolicy from './PrivacyPolicy.svelte'; import CachedDashboard from './CachedDashboard.svelte';
-  import { ApiError, clearProfileCaches, exchangeMagicLink, getDemoMode, getExpenseCalendar, getHealth, getMonthlyCommitment, getRecentExpenses, setDemoMode } from './lib/api.js';
+  import { ApiError, clearProfileCaches, exchangeMagicLink, getDemoMode, getExpenseCalendar, getFinancialActivity, getHealth, getMonthlyCommitment, getRecentExpenses, setDemoMode } from './lib/api.js';
 
   const CACHE_KEY = 'money-stories.dashboard-cache.v3';
   const PROFILE_CACHE_KEY = 'money-stories.last-verified-profile.v1';
@@ -12,7 +12,7 @@
   // Do not mount Home until the session/profile request has succeeded. Home loads
   // protected data on mount, including the actions queue.
   let view = isPrivacyPage ? 'privacy' : 'initializing', selectedMonth = monthFromUrl();
-  let calendarSection = state(), recentSection = state(), commitmentSection = state(), connectionStatus = 'checking', cacheUpdatedAt = null;
+  let calendarSection = state(), recentSection = state(), commitmentSection = state(), activitySection = state(), connectionStatus = 'checking', cacheUpdatedAt = null;
   let connectionRequest = 0;
   let demoMode = false;
   let canUseDemoMode = false;
@@ -35,16 +35,18 @@
     } catch { /* Storage can be unavailable or contain old data. */ }
   }
   function readCache() {
-    try { const cache = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); if (!cache?.sections || cache.month !== selectedMonth) return false; calendarSection = cache.sections.calendar ? state(cache.sections.calendar) : unavailableSection(); recentSection = cache.sections.recent ? state(cache.sections.recent) : unavailableSection(); commitmentSection = cache.sections.commitment ? state(cache.sections.commitment) : unavailableSection(); cacheUpdatedAt = cache.updatedAt || null; return true; } catch { return false; }
+    try { const cache = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); if (!cache?.sections || cache.month !== selectedMonth) return false; calendarSection = cache.sections.calendar ? state(cache.sections.calendar) : unavailableSection(); recentSection = cache.sections.recent ? state(cache.sections.recent) : unavailableSection(); commitmentSection = cache.sections.commitment ? state(cache.sections.commitment) : unavailableSection(); activitySection = cache.sections.activity ? state(cache.sections.activity) : unavailableSection(); cacheUpdatedAt = cache.updatedAt || null; return true; } catch { return false; }
   }
   function saveCache() {
-    try { localStorage.setItem(cacheKey(), JSON.stringify({ version: 3, month: selectedMonth, updatedAt: new Date().toISOString(), sections: { calendar: calendarSection.data, recent: recentSection.data, commitment: commitmentSection.data } })); cacheUpdatedAt = new Date().toISOString(); } catch { /* Storage can be unavailable in private browsing. The live app still works. */ }
+    try { localStorage.setItem(cacheKey(), JSON.stringify({ version: 3, month: selectedMonth, updatedAt: new Date().toISOString(), sections: { calendar: calendarSection.data, recent: recentSection.data, commitment: commitmentSection.data, activity: activitySection.data } })); cacheUpdatedAt = new Date().toISOString(); } catch { /* Storage can be unavailable in private browsing. The live app still works. */ }
   }
-  function emptyFirstRun() { calendarSection = unavailableSection(); recentSection = unavailableSection(); commitmentSection = unavailableSection(); }
+  function emptyFirstRun() { calendarSection = unavailableSection(); recentSection = unavailableSection(); commitmentSection = unavailableSection(); activitySection = unavailableSection(); }
   function clearSavedDashboard() { try { localStorage.removeItem(PROFILE_CACHE_KEY); for (const mode of ['real', 'demo']) { localStorage.removeItem(`${CACHE_KEY}.${mode}`); localStorage.removeItem(`money-stories.dashboard-cache.v1.${mode}`); localStorage.removeItem(`money-stories.dashboard-cache.v2.${mode}`); localStorage.removeItem(`money-stories.money-modules-cache.v1.${mode}`); } } catch {} }
   function unauthorized() { clearSavedDashboard(); location.replace(`/portal?next=${encodeURIComponent(location.pathname + location.search)}`); }
   async function loadCalendar() { calendarSection = { ...calendarSection, status: calendarSection.data ? 'refreshing' : 'loading', error: '' }; try { calendarSection = { status: 'ready', data: await getExpenseCalendar(selectedMonth), error: '' }; saveCache(); } catch (cause) { if (!(cause instanceof ApiError && cause.status === 401)) calendarSection = calendarSection.data ? { ...calendarSection, status: 'ready', error: '' } : unavailableSection(); } }
   async function loadRecent() { recentSection = { ...recentSection, status: recentSection.data ? 'refreshing' : 'loading', error: '' }; try { recentSection = { status: 'ready', data: await getRecentExpenses(selectedMonth, 5), error: '' }; saveCache(); } catch (cause) { if (!(cause instanceof ApiError && cause.status === 401)) recentSection = recentSection.data ? { ...recentSection, status: 'ready', error: '' } : unavailableSection(); } }
+  async function loadActivity() { activitySection = { ...activitySection, status: activitySection.data ? 'refreshing' : 'loading', error: '' }; try { activitySection = { status: 'ready', data: await getFinancialActivity(selectedMonth), error: '' }; saveCache(); } catch (cause) { if (!(cause instanceof ApiError && cause.status === 401)) activitySection = activitySection.data ? { ...activitySection, status: 'ready', error: '' } : unavailableSection(); } }
+  async function refreshPlanAndActivity() { await Promise.allSettled([loadCommitment(), loadActivity()]); }
   async function loadCommitment() { commitmentSection = { ...commitmentSection, status: commitmentSection.data ? 'refreshing' : 'loading', error: '' }; try { commitmentSection = { status: 'ready', data: { commitment: (await getMonthlyCommitment(selectedMonth)).commitment }, error: '' }; saveCache(); } catch (cause) { if (!(cause instanceof ApiError && cause.status === 401)) commitmentSection = commitmentSection.data ? { ...commitmentSection, status: 'ready', error: '' } : unavailableSection(); } }
   async function refreshWhenOnline() {
     const requestId = ++connectionRequest;
@@ -54,14 +56,14 @@
       await getHealth();
       if (requestId !== connectionRequest) return;
       connectionStatus = 'online';
-      await Promise.allSettled([loadCalendar(), loadRecent(), loadCommitment()]);
+      await Promise.allSettled([loadCalendar(), loadRecent(), loadCommitment(), loadActivity()]);
     } catch {
       if (requestId !== connectionRequest) return;
       connectionStatus = 'offline';
       if (!calendarSection.data && !recentSection.data && !commitmentSection.data) emptyFirstRun();
     }
   }
-  function changeMonth(month, updateHistory = true) { selectedMonth = month; if (updateHistory) history.pushState({}, '', `/dashboard?month=${encodeURIComponent(month)}`); if (connectionStatus === 'online') { loadCalendar(); loadRecent(); loadCommitment(); } else { emptyFirstRun(); } }
+  function changeMonth(month, updateHistory = true) { selectedMonth = month; if (updateHistory) history.pushState({}, '', `/dashboard?month=${encodeURIComponent(month)}`); if (connectionStatus === 'online') { loadCalendar(); loadRecent(); loadCommitment(); loadActivity(); } else { emptyFirstRun(); } }
   async function changeDemoMode(enabled) {
     if (!canUseDemoMode) return;
     const result = await setDemoMode(enabled);
@@ -94,7 +96,7 @@
 </script>
 {#if view === 'privacy'}<PrivacyPolicy />
 {:else if view === 'login'}<Auth />
-{:else if view === 'dashboard'}<Home {calendarSection} {recentSection} {commitmentSection} {selectedMonth} {connectionStatus} {cacheUpdatedAt} {demoMode} {canUseDemoMode} onDemoModeChange={changeDemoMode} onMonthChange={changeMonth} refreshCalendar={loadCalendar} refreshRecent={loadRecent} refreshCommitment={loadCommitment} onRetryConnection={refreshWhenOnline} onLogout={() => { clearSavedDashboard(); location.replace('/portal?message=' + encodeURIComponent('You’ve been signed out.')); }} />
+{:else if view === 'dashboard'}<Home {calendarSection} {recentSection} {commitmentSection} {activitySection} {selectedMonth} {connectionStatus} {cacheUpdatedAt} {demoMode} {canUseDemoMode} onDemoModeChange={changeDemoMode} onMonthChange={changeMonth} refreshCalendar={loadCalendar} refreshRecent={loadRecent} refreshCommitment={refreshPlanAndActivity} onRetryConnection={refreshWhenOnline} onLogout={() => { clearSavedDashboard(); location.replace('/portal?message=' + encodeURIComponent('You’ve been signed out.')); }} />
 {#key demoMode}<ExpenseChat {selectedMonth} {connectionStatus} />{/key}
 {:else if view === 'invalid-link'}<main class="center-page expired" role="alert"><span class="brand-orb">!</span><h1>This sign-in link is invalid, expired, or has already been used.</h1><a class="center-action" href="/portal">Request a new link</a></main>
 {:else if view === 'magic-offline' || view === 'magic-error'}<main class="center-page expired" role="alert"><span class="brand-orb">↻</span><h1>{view === 'magic-offline' ? 'You appear to be offline.' : 'We couldn’t sign you in right now.'}</h1><button class="center-action" on:click={initialize}>Try again</button></main>
