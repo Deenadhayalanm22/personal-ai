@@ -8,14 +8,14 @@ This release meters every model call made by V1 money chat, including scope clas
 
 Migration `V35` creates persistent wallets, requests, provider-call reservations, a UTC daily budget, and an append-only grant/usage/access ledger. Existing and new users start with zero credits; super admins also need a grant for their own chat. There is no automatic refill, purchase flow or unlimited admin exemption. Wallets belong to the server-resolved active profile; demo and real balances are separate. Viewing records and saved conversations remains available without credits.
 
-Before enabling chat in an environment, configure a tariff for its `EXPENSE_CHAT_MODEL` (or fallback `OPENAI_MODEL`) and grant credits from **You → AI credits** using an authenticated super-admin profile. Input and output rates default to zero, which deliberately blocks model calls until configured; this is a rollout requirement for existing users too.
+Before enabling chat in an environment, configure a tariff for its `EXPENSE_CHAT_MODEL` (or fallback `OPENAI_MODEL`) and grant credits from **You → AI credits** using an authenticated super-admin profile. Input/output rates and the shared daily budget default to zero, which deliberately blocks model calls until all are configured; this is a rollout requirement for existing users too.
 
 | Environment variable | Meaning | Default |
 |---|---|---|
 | `AI_CREDITS_INPUT_PER_MILLION` | Credits per million uncached input tokens | 0; setup required |
 | `AI_CREDITS_CACHED_PER_MILLION` | Credits per million cached input tokens | 0 |
 | `AI_CREDITS_OUTPUT_PER_MILLION` | Credits per million output tokens | 0; setup required |
-| `AI_CREDITS_DAILY_LIMIT` | Shared money-chat credit budget per UTC day | 1000 |
+| `AI_CREDITS_DAILY_LIMIT` | Shared money-chat credit budget per UTC day | 0; explicit budget required |
 | `AI_CREDITS_REQUEST_LIMIT` | Maximum credits spent/reserved for one question | 10 |
 | `AI_CREDITS_REQUESTS_PER_MINUTE` | Accepted new questions per profile in a rolling minute | 6 |
 | `AI_CREDITS_ENABLED` | Global chat switch; false blocks new calls, never bypasses billing | true |

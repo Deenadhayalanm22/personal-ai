@@ -21,7 +21,7 @@ public record CreditPolicy(String model, BigDecimal inputRate, BigDecimal cached
             @Value("${app.ai-credits.input-per-million:0}") BigDecimal inputRate,
             @Value("${app.ai-credits.cached-per-million:0}") BigDecimal cachedRate,
             @Value("${app.ai-credits.output-per-million:0}") BigDecimal outputRate,
-            @Value("${app.ai-credits.daily-limit:1000}") BigDecimal dailyLimit,
+            @Value("${app.ai-credits.daily-limit:0}") BigDecimal dailyLimit,
             @Value("${app.ai-credits.request-limit:10}") BigDecimal requestLimit,
             @Value("${app.ai-credits.requests-per-minute:6}") int requestsPerMinute,
             @Value("${app.ai-credits.enabled:true}") boolean enabled) {
@@ -36,7 +36,7 @@ public record CreditPolicy(String model, BigDecimal inputRate, BigDecimal cached
     }
     public void requireEnabled() {
         if (!enabled) throw error(HttpStatus.SERVICE_UNAVAILABLE, "AI_PAUSED", "Money chat is temporarily paused.");
-        if (!configured()) throw error(HttpStatus.SERVICE_UNAVAILABLE, "AI_CREDITS_NOT_CONFIGURED", "Money chat credit rates need administrator setup.");
+        if (!configured()) throw error(HttpStatus.SERVICE_UNAVAILABLE, "AI_CREDITS_NOT_CONFIGURED", "Money chat credit rates and daily budget need administrator setup.");
     }
     public BigDecimal cost(long input, long cached, long output) {
         if (input < 0 || cached < 0 || cached > input || output < 0) throw new IllegalArgumentException("Invalid provider usage");

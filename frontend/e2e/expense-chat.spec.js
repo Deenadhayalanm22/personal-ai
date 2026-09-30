@@ -285,6 +285,7 @@ test('credit loading failure fails closed and regular users see no grant control
   await page.route('**/api/web/ai-credits/ledger', route => route.fulfill({ json: [] }));
   await page.reload();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await expect(page.getByLabel(/demo mode/i)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'AI credits', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toHaveCount(0);
 });

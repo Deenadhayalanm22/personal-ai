@@ -24,6 +24,12 @@ class CreditPolicyTest {
         assertThatThrownBy(()->policy("100","25","400",false).requireEnabled()).isInstanceOfSatisfying(WebApiException.class,e->assertThat(e.code()).isEqualTo("AI_PAUSED"));
         assertThat(policy("100","101","400",true).configured()).isFalse();
     }
+    @Test void zeroDailyBudgetBlocksEvenWithConfiguredTokenRates() {
+        var policy = new CreditPolicy("test", new BigDecimal("40"), new BigDecimal("10"),
+                new BigDecimal("160"), BigDecimal.ZERO, BigDecimal.TEN, 6, true);
+        assertThatThrownBy(policy::requireEnabled).isInstanceOfSatisfying(WebApiException.class,
+                e -> assertThat(e.code()).isEqualTo("AI_CREDITS_NOT_CONFIGURED"));
+    }
     @Test void unicodeAndLargeToolResultsAreIncludedInReservation() {
         var tariff=policy("100","25","400",true); var mapper=new ObjectMapper();
         var ascii=tariff.reservation(mapper,"system",List.of(new ExpenseChatModel.Message("user","a")),List.of());

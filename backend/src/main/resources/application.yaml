@@ -73,7 +73,7 @@ app:
     input-per-million: ${AI_CREDITS_INPUT_PER_MILLION:0}
     cached-per-million: ${AI_CREDITS_CACHED_PER_MILLION:0}
     output-per-million: ${AI_CREDITS_OUTPUT_PER_MILLION:0}
-    daily-limit: ${AI_CREDITS_DAILY_LIMIT:1000}
+    daily-limit: ${AI_CREDITS_DAILY_LIMIT:0}
     request-limit: ${AI_CREDITS_REQUEST_LIMIT:10}
     requests-per-minute: ${AI_CREDITS_REQUESTS_PER_MINUTE:6}
   cors:

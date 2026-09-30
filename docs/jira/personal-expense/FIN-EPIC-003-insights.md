@@ -119,7 +119,7 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 4. Missing/uncertain usage retains a durable hold and blocks new questions until verified reconciliation. A super admin can settle a stale reservation with an audited cost/note. A crash cannot make reserved usage free.
 5. Chat displays available/held credits and reloads them after attempts. Exhaustion, pause and failed balance loads disable sending without hiding records or conversations. Grants become usable after refresh; unknown network retries reuse the request ID while the panel remains mounted.
 6. Profile settings expose manual grants, user pause/resume and per-user activity to super admins. Grants are idempotent and audited; admin access depends only on the authenticated profile’s `SUPER_ADMIN` role, regardless of channel or portal-enabled status. Credit UI is remounted on profile switches.
-7. Expense capture, audio transcription and scheduled story generation remain outside chat credits and its daily budget. No automatic refill or purchases are introduced. Missing tariff configuration fails closed, including on initial rollout.
+7. Expense capture, audio transcription and scheduled story generation remain outside chat credits and its daily budget. No automatic refill or purchases are introduced. Missing tariff or shared daily-budget configuration fails closed, including on initial rollout. The shared daily budget defaults to zero and must be explicitly selected; no 1,000-credit allowance is assumed.
 
 ### Verification scenarios
 
