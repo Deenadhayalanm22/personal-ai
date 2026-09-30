@@ -38,7 +38,7 @@ public class OpenAiExpenseChatModel implements ExpenseChatModel {
     public Reply complete(String system, List<Message> messages, List<JsonNode> tools) {
         if (properties.openai().apiKey() == null || properties.openai().apiKey().isBlank())
             throw new WebApiException(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_NOT_CONFIGURED", "Money chat is not configured yet.");
-        var builder = ChatCompletionCreateParams.builder().model(model).store(false).maxCompletionTokens(2000)
+        var builder = ChatCompletionCreateParams.builder().model(model).store(false).maxCompletionTokens(com.apps.deen_sa.credits.CreditPolicy.OUTPUT_LIMIT)
                 .addSystemMessage(system);
         for (JsonNode tool : tools) {
             var parameters = FunctionParameters.builder();
@@ -75,7 +75,9 @@ public class OpenAiExpenseChatModel implements ExpenseChatModel {
                 var function = call.asFunction();
                 return new Call(function.id(), function.function().name(), function.function().arguments());
             }).toList();
-            return new Reply(message.content().orElse(""), calls);
+            return new Reply(message.content().orElse(""), calls, completion.usage().map(usage ->
+                    new Usage(usage.promptTokens(), usage.promptTokensDetails().flatMap(details -> details.cachedTokens()).orElse(0L),
+                            usage.completionTokens())).orElse(null));
         } catch (RuntimeException ex) {
             AiCallTelemetry.failure("ExpenseChat", model, started);
             throw new WebApiException(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_UNAVAILABLE",

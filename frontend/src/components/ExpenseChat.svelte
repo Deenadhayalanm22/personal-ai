@@ -2,7 +2,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import FinancialEvidence from './FinancialEvidence.svelte';
-  import { askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
+  import { getAiCredits, askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
   export let selectedMonth;
   export let connectionStatus;
   let open = false, question = '', messages = [], pending = false, error = '', transcript, input, launcher;
@@ -10,10 +10,19 @@
   let loadingHistory = true, storageError = '', draftTimer;
   const saves = new Map();
   let requestController;
+  let credits = null, creditError = '', loadingCredits = false, retryRequest = null;
+  $: creditBlocked = !credits || credits.available <= 0 || credits.paused || !credits.enabled || !credits.configured;
+  const formatCredits = value => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 });
+  async function refreshCredits() {
+    loadingCredits = true;
+    try { const value = await getAiCredits(); if (!destroyed) { credits = value; creditError = ''; } }
+    catch (cause) { if (!destroyed) { credits = null; creditError = cause.message || 'Credits could not be loaded.'; } }
+    finally { if (!destroyed) loadingCredits = false; }
+  }
   let destroyed = false;
   const suggestions = ['Can I cover next month’s commitments with my salary?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
   async function scrollDown() { await tick(); if (transcript) transcript.scrollTop = transcript.scrollHeight; }
-  async function show() { open = true; await tick(); input?.focus(); }
+  async function show() { open = true; refreshCredits(); await tick(); input?.focus(); }
   async function close() { open = false; await tick(); launcher?.focus(); }
   function saveConversation() {
     if (!activeId && !messages.length && !question.trim()) return Promise.resolve();
@@ -40,7 +49,7 @@
     if (pending) return;
     clearTimeout(draftTimer);
     try { await saveConversation(); storageError = ''; } catch { return; }
-    activeId = null; conversationMonth = null; messages = []; error = ''; question = '';
+    activeId = null; conversationMonth = null; messages = []; error = ''; question = ''; retryRequest = null;
     input?.focus();
   }
   async function selectConversation(id) {
@@ -50,7 +59,7 @@
     const conversation = conversations.find(chat => chat.id === id);
     if (!conversation) return;
     activeId = conversation.id; conversationMonth = conversation.month;
-    messages = conversation.messages; question = conversation.draft; error = '';
+    messages = conversation.messages; question = conversation.draft; error = ''; retryRequest = null;
     await scrollDown();
     input?.focus();
   }
@@ -60,6 +69,7 @@
     return recent;
   }
   onMount(async () => {
+    refreshCredits();
     try {
       const saved = await getMoneyConversations();
       if (destroyed) return;
@@ -77,11 +87,13 @@
     clearTimeout(draftTimer);
     draftTimer = setTimeout(() => saveConversation(), 500);
   }
-  async function send(text = question) {
+  async function send(text = question, recover = false) {
     const message = text.trim();
     if (!message || pending || loadingHistory || connectionStatus !== 'online') return;
     clearTimeout(draftTimer);
     const previous = history();
+    const signature = JSON.stringify({ message, month: conversationMonth, history: previous });
+    if (creditBlocked && !(recover && retryRequest?.signature === signature)) return;
     messages = [...messages, { role: 'user', content: message }];
     question = ''; error = ''; pending = true;
     saveConversation();
@@ -89,16 +101,21 @@
     const timeout = setTimeout(() => requestController?.abort(), 95000);
     scrollDown();
     try {
-      const response = await askExpenseChat(message, conversationMonth, previous, requestController.signal);
+      const signature = JSON.stringify({ message, month: conversationMonth, history: previous });
+      if (!retryRequest || retryRequest.signature !== signature) retryRequest = { signature, id: crypto.randomUUID() };
+      const response = await askExpenseChat(message, conversationMonth, previous, requestController.signal, retryRequest.id);
+      retryRequest = null;
+      if (!destroyed && response.credits) credits = response.credits;
       if (!destroyed) messages = [...messages, { role: 'assistant', content: response.answer, evidence: response.evidence || [] }];
     } catch (cause) {
       if (destroyed) return;
+      if (cause.status && cause.data?.code !== 'AI_USAGE_PENDING') retryRequest = null;
       messages = messages.slice(0, -1);
       question = message;
       error = cause.name === 'AbortError' ? 'That took too long. Try a more focused question.' : cause.message || 'Could not send. Please try again.';
     } finally {
       clearTimeout(timeout);
-      if (!destroyed) { pending = false; try { await saveConversation(); storageError = ''; } catch {} scrollDown(); await tick(); input?.focus(); }
+      if (!destroyed) { pending = false; refreshCredits(); try { await saveConversation(); storageError = ''; } catch {} scrollDown(); await tick(); input?.focus(); }
     }
   }
   onDestroy(() => { destroyed = true; clearTimeout(draftTimer); requestController?.abort(); });
@@ -111,6 +128,14 @@
       <button class="icon-button" aria-label="Close money chat" on:click={close}>×</button>
     </header>
     <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
+    <div class="credit-status" aria-live="polite">
+      <span>{credits ? `${formatCredits(credits.available)} credits available` : 'Credits unavailable'}{credits?.reserved > 0 ? ` · ${formatCredits(credits.reserved)} on hold` : ''}</span>
+      <button on:click={refreshCredits} disabled={loadingCredits || pending}>Refresh credits</button>
+    </div>
+    {#if credits?.paused}<p class="credit-notice">Your AI access is paused. Contact your administrator.</p>
+    {:else if credits && (!credits.enabled || !credits.configured)}<p class="credit-notice">Money chat is currently unavailable. Contact your administrator.</p>
+    {:else if credits && credits.available <= 0}<p class="credit-notice">You’ve used your AI credits. Contact your administrator for more credits.</p>{/if}
+    {#if creditError}<p class="credit-notice" role="alert">{creditError}</p>{/if}
     {#if conversations.length}
       <div class="history-heading"><span>Recent chats</span><span>Saved to your profile</span></div>
       <nav class="chat-history" aria-label="Recent money chats">
@@ -125,7 +150,7 @@
     <div class="transcript" bind:this={transcript} role="log" aria-live="polite" aria-label="Money conversation" aria-busy={pending}>
       {#if !messages.length}
         <div class="welcome"><span class="spark">✦</span><h3>See how it all adds up.</h3><p>Ask a question, then dig deeper. Explore expenses, loans, investments and commitments, or compare a what-if plan. I won’t change your records.</p></div>
-        <div class="suggestions">{#each suggestions as suggestion}<button disabled={pending || loadingHistory || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
+        <div class="suggestions">{#each suggestions as suggestion}<button disabled={pending || loadingHistory || creditBlocked || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
       {/if}
       {#each messages as message}
         <article class:user={message.role === 'user'} class="message">
@@ -143,11 +168,14 @@
       {#if pending}<p class="thinking" role="status">Checking your financial records…</p>{/if}
     </div>
     <form on:submit|preventDefault={() => send()}>
-      {#if error}<p class="chat-error" role="alert">{error}</p>{/if}
+      {#if error}<p class="chat-error" role="alert">{error}</p>
+        {#if retryRequest && JSON.parse(retryRequest.signature).message === question.trim()}<button type="button" class="recover-request" disabled={pending || connectionStatus !== 'online'} on:click={() => send(question, true)}>Check previous answer</button>{/if}
+      {/if}
       {#if storageError}<p class="chat-error" role="alert">{storageError}</p>{/if}
       {#if connectionStatus !== 'online'}<p class="chat-error" role="status">Connect to the service to ask about your money.</p>{/if}
       <label class="sr-only" for="expense-question">Your money question</label>
-      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={pending || loadingHistory || connectionStatus !== 'online'} on:input={scheduleDraftSave} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={pending || loadingHistory || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
+      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={pending || loadingHistory || connectionStatus !== 'online'} on:input={scheduleDraftSave} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={pending || loadingHistory || creditBlocked || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
+      <small>AI credits are charged by usage, including follow-ups and scope checks.</small>
       <small>Based on recorded data. Scenarios are estimates, not changes.</small>
     </form>
   </section>
@@ -156,6 +184,9 @@
 {/if}
 
 <style>
+  .recover-request{margin-bottom:8px;padding:7px 10px;border:1px solid #a6bba9;border-radius:8px;background:#eef4ed;color:#234c3c;cursor:pointer;font:inherit;font-size:12px}
+  .credit-status{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 20px;font-size:11px;background:#f5f7f1}.credit-status button{border:0;background:none;text-decoration:underline;color:#355d47;cursor:pointer;font:inherit}.credit-notice{padding:6px 20px;margin:0;font-size:12px;color:#975336}
+
   .chat-launcher{position:fixed;right:24px;bottom:92px;z-index:45;display:flex;align-items:center;gap:10px;background:#234c3c;color:#fff;border:0;border-radius:24px;padding:13px 19px;box-shadow:0 6px 24px #16332330;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
   .expense-chat{position:fixed;right:24px;bottom:88px;width:410px;height:min(690px,calc(100dvh - 116px));z-index:60;background:#fffefb;border:1px solid #d9e2d9;border-radius:22px;box-shadow:0 16px 70px #183c3433;display:flex;flex-direction:column;overflow:hidden;color:#233b30;font-family:inherit}
   header{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 15px;background:#eff4ed}h2{font-size:20px;margin:5px 0 0;letter-spacing:-.4px}.eyebrow{font-size:9px;letter-spacing:1.5px;color:#627467}.icon-button{border:0;background:transparent;font-size:28px;color:#52685c;cursor:pointer;padding:6px 10px}

@@ -31,24 +31,25 @@ class OpenAiExpenseChatModelTest {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> {
             requests.add(mapper.readTree(exchange.getRequestBody()));
-            Object message = requests.size() == 1
+            Object message = requests.size() == 1 ? Map.of("role", "assistant", "content", "IN_SCOPE") : requests.size() == 2
                     ? Map.of("role", "assistant", "tool_calls", List.of(Map.of("id", "call_1", "type", "function", "function", Map.of("name", "query_expenses", "arguments", arguments))))
                     : Map.of("role", "assistant", "content", "Your recorded spending is INR 750.");
             byte[] body = mapper.writeValueAsBytes(Map.of("id", "completion_1", "object", "chat.completion", "created", 1,
-                    "model", "gpt-4.1-mini", "choices", List.of(Map.of("index", 0, "finish_reason", requests.size() == 1 ? "tool_calls" : "stop", "message", message))));
+                    "usage", Map.of("prompt_tokens",100,"completion_tokens",10,"total_tokens",110), "model", "gpt-4.1-mini", "choices", List.of(Map.of("index", 0, "finish_reason", requests.size() == 1 ? "tool_calls" : "stop", "message", message))));
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length); exchange.getResponseBody().write(body); exchange.close();
         });
         server.start();
         var query = mock(ExpenseQueryTool.class);
         when(query.execute(any(), any())).thenReturn(new ExpenseQueryTool.Result(mapper.readValue(arguments, ExpenseQueryTool.Query.class), "INR", 2, new BigDecimal("750"), List.of(), false));
-        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.systemUTC());
+        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.systemUTC(), mock(com.apps.deen_sa.credits.CreditStore.class),
+                new com.apps.deen_sa.credits.CreditPolicy("gpt-4.1-mini",new BigDecimal("100"),new BigDecimal("25"),new BigDecimal("400"),new BigDecimal("1000"),new BigDecimal("10"),6,true), mapper);
         var user = new AppUserEntity(); user.setId(1L);
         var result = service.chat(user, new ExpenseChatService.Request("How much did I spend?", "2026-09", List.of()));
         assertThat(result.answer()).contains("750");
-        assertThat(requests).hasSize(2);
+        assertThat(requests).hasSize(3);
         assertThat(requests.getFirst().path("store").asBoolean()).isFalse();
-        assertThat(requests.getFirst().path("tools").get(0).path("function").path("parameters").path("properties").has("filters")).isTrue();
+        assertThat(requests.get(1).path("tools").get(0).path("function").path("parameters").path("properties").has("filters")).isTrue();
         var messages = requests.getLast().path("messages");
         assertThat(messages.get(messages.size() - 1).path("role").asText()).isEqualTo("tool");
         assertThat(messages.get(messages.size() - 1).path("content").asText()).contains("750");

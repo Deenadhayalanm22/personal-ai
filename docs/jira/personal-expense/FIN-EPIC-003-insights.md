@@ -81,7 +81,7 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 **Status:** Implemented prototype · **Scope:** Read-only recorded expenses and user-owned financial planning data
 
-The V1 dashboard includes an **Ask about expenses** panel. It uses the existing configured AI provider with a general `query_expenses` tool plus financial-record, monthly-plan and scenario tools; there is no question-specific intent classifier or separate prompt per scenario. The same catalog/executor is exposed through a private MCP endpoint. The portal uses in-process tool dispatch to avoid a loopback HTTP request. See [expense chat contract](../../contracts/expense-chat.md).
+The V1 dashboard includes an **Ask about expenses** panel. It uses the existing configured AI provider with a general `query_expenses` tool plus financial-record, monthly-plan and scenario tools; a scope check rejects unrelated questions, while no question-specific intent routing or separate prompt per scenario is used. The same catalog/executor is exposed through a private MCP endpoint. The portal uses in-process tool dispatch to avoid a loopback HTTP request. See [expense chat contract](../../contracts/expense-chat.md).
 
 ### Acceptance criteria
 
@@ -95,12 +95,35 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 8. For the current and next month it reads the canonical commitment projection without persisting a new snapshot. With a saved exact regular monthly salary estimate, backend arithmetic returns the projected surplus/shortfall; range, missing and irregular salary do not yield a numeric comparison. The assistant does not expose the saved salary amount directly, although a user can infer it from total plus difference.
 9. The assistant can compute a next-month what-if by reducing selected planned investment, savings, or recurring-commitment sources. A scenario leaves records unchanged, preserves loan and credit-card bill amounts, and labels unverified flexibility and remaining savings targets. It never describes a missed payment as safe merely because the UI supports Skip.
 10. No account balance, confirmed salary receipt, live market valuation, sale proceeds, or payment-deferral permission is supported. Missing data remains explicit.
+11. The assistant classifies the latest question in conversation context before answering. Questions outside the user's own money information receive a polite refusal with no financial tool call or unrelated answer. Ambiguous classifications also decline. In-scope questions with unavailable data explain the limitation.
 
 ### Verification scenarios
 
 - Model chooses a composable query, receives its result and produces an answer with evidence; a follow-up includes recent context without introducing intent routing.
+- Reject an unrelated question before tool use, and fail closed when scope classification is ambiguous.
 - Real PostgreSQL queries isolate two owners, exclude deleted rows, preserve full totals under truncation, and combine filters/grouping correctly.
 - Reject unknown fields/operators, oversized/invalid ranges, ownership arguments and forged system-role history; bound the model loop.
 - Reject unauthenticated chat/MCP calls and disallowed MCP origins; use the selected authenticated profile.
 - PostgreSQL tests verify stored messages, evidence and draft survive a fresh store instance, isolate profiles and reject invalid roles.
 - Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, new-chat preservation, refresh restoration, reopening conversations with isolated follow-up context and drafts, pending-response controls, mobile strip overflow, offline state and profile-switch isolation.
+
+## Usage-based money-chat credits
+
+**Status:** Implemented · **Scope:** V1 chat model calls; see [credit contract](../../contracts/ai-credits.md).
+
+### Acceptance criteria
+
+1. Each real/demo profile starts at zero and needs a manual grant. Every chat provider call, including scope classification and refusals, reserves credits before execution and settles from reported input/cached/output usage at the snapshotted configured tariff. Six-decimal arithmetic excludes cached input from the uncached count.
+2. Wallet and UTC daily-budget reservations are database-atomic across concurrent requests and instances. Shared daily allowance, per-question maximum, per-user rolling rate limit, access pause and global switch reject work before the next provider call.
+3. Replaying the same request ID and body cannot call the model or debit twice. Changed content under the same ID is rejected. Success and failure outcomes are persisted; completed calls remain charged when later work fails.
+4. Missing/uncertain usage retains a durable hold and blocks new questions until verified reconciliation. A super admin can settle a stale reservation with an audited cost/note. A crash cannot make reserved usage free.
+5. Chat displays available/held credits and reloads them after attempts. Exhaustion, pause and failed balance loads disable sending without hiding records or conversations. Grants become usable after refresh; unknown network retries reuse the request ID while the panel remains mounted.
+6. Profile settings expose manual grants, user pause/resume and per-user activity to super admins. Grants are idempotent and audited; admin access depends only on the authenticated profile’s `SUPER_ADMIN` role, regardless of channel or portal-enabled status. Credit UI is remounted on profile switches.
+7. Expense capture, audio transcription and scheduled story generation remain outside chat credits and its daily budget. No automatic refill or purchases are introduced. Missing tariff configuration fails closed, including on initial rollout.
+
+### Verification scenarios
+
+- Exercise PostgreSQL races for the same wallet and shared budget, input/cache/output settlement, duplicate grants and requests, pause/rate/question limits, UTC rollover, and restart recovery with held usage.
+- Verify authenticated profile isolation and reject normal-user access to admin endpoints; allow `SUPER_ADMIN` regardless of channel or portal-enabled status.
+- Verify scope and answer calls both reserve/settle, and no model call occurs with rejected credits or a cached answer.
+- In the browser, verify exhaustion preserves history, replenishment enables sending, network retry retains its ID, failed balance loads disable sending, and admin grants/pause update the selected user.

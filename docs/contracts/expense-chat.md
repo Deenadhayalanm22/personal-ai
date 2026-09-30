@@ -7,14 +7,16 @@ Feature source: [FIN-EPIC-003](../jira/personal-expense/FIN-EPIC-003-insights.md
 The path remains unchanged for V1 compatibility. Requires the `WEB_SESSION` cookie and uses the active real/demo profile from `WebAuthenticationService`. No owner ID is accepted. Request:
 
 ```json
-{"message":"Next month my commitments exceed salary. What could I adjust?","month":"2026-09","history":[]}
+{"message":"Next month my commitments exceed salary. What could I adjust?","month":"2026-09","history":[],"requestId":"123e4567-e89b-12d3-a456-426614174000"}
 ```
 
 `message`: nonblank, at most 2,000 characters. `month`: ISO `YYYY-MM`, used when the question has no explicit period. `history`: required, at most 12 `{role,content}` items and 24,000 characters total; roles only `user` and `assistant`. The browser derives this bounded history from the active saved conversation. Stored evidence and other conversations are not sent with the question. History is conversation context, never financial evidence.
 
-Response: `{answer: string, evidence: Evidence[]}`. Each `Evidence` is the exact bounded result of one of the four tools below. The existing expense-query result has `query`, `currency`, `matchingCount`, `matchingTotal`, `rows`, and `truncated`; its rows can be limited without changing complete matching totals. Other results carry `kind` (`records`, `plan`, or `scenario`) and their own fields. The UI shows source facts and assumptions in expandable evidence, with a side-by-side baseline/scenario table when relevant.
+Response: `{answer: string, evidence: Evidence[], credits: {balance,reserved,available,paused,enabled,configured}}`. A UUID `requestId` is required for durable idempotency. Every model call is subject to [usage-based credits](ai-credits.md), including the scope check. The linked contract defines manual grants, rate/budget limits, failure accounting and additional credit error codes. Each `Evidence` is the exact bounded result of one of the four tools below. The existing expense-query result has `query`, `currency`, `matchingCount`, `matchingTotal`, `rows`, and `truncated`; its rows can be limited without changing complete matching totals. Other results carry `kind` (`records`, `plan`, or `scenario`) and their own fields. The UI shows source facts and assumptions in expandable evidence, with a side-by-side baseline/scenario table when relevant.
 
-The model may take at most five turns and eight tool calls per request. Each provider call times out after 20 seconds with no automatic retries; SQL times out after five seconds. The service stops starting new operations after 60 seconds. Four conversations may run globally at once and one per active profile; these are process-local limits. The browser timeout is 95 seconds.
+The backend first classifies the latest question using recent conversation context and no tools. Only questions about the active user's money information proceed to the answer loop. Unrelated or ambiguous questions receive a polite scope refusal with `evidence: []`; no financial tool is called. In-scope questions requiring unavailable information receive a plain limitation. This adds one provider call to each accepted request.
+
+After the scope check, the answer model may take at most five turns and eight tool calls per request. Each provider call times out after 20 seconds with no automatic retries; SQL times out after five seconds. The service stops starting new operations after 60 seconds. Four conversations may run globally at once and one per active profile; these are process-local limits. The browser timeout is 95 seconds.
 
 ## Saved conversations
 
@@ -26,7 +28,7 @@ Errors follow `{code,message}`: `401 UNAUTHORIZED`, `400 INVALID_CHAT_REQUEST`, 
 
 ## Tool catalog
 
-Canonical schemas live in `backend/src/main/resources/insights/`. The portal model loop and private MCP endpoint share the same definitions and executor. There is no intent classifier and no model-supplied SQL. The server selects known SQL and binds all filter values. All tools use the authenticated active profile, never a model-supplied owner.
+Canonical schemas live in `backend/src/main/resources/insights/`. The portal model loop and private MCP endpoint share the same definitions and executor. The scope classifier does not route questions to tools, and there is no model-supplied SQL. The server selects known SQL and binds all filter values. All tools use the authenticated active profile, never a model-supplied owner.
 
 ### `query_expenses`
 

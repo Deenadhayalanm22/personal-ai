@@ -10,7 +10,7 @@ async function dashboard(page) {
   await page.route('**/api/web/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('demo-profile') && route.request().method() === 'PUT') activeProfile = route.request().postDataJSON().enabled ? 'demo' : 'real';
-    const json = path.endsWith('demo-profile') ? { demoMode: false, canUseDemoMode: true }
+    const json = path.endsWith('/ai-credits/permissions') ? { admin: true } : path.includes('/ai-credits/') ? [] : path.endsWith('/ai-credits') ? { available: 100, balance: 100, reserved: 0, paused: false, enabled: true, configured: true } : path.endsWith('demo-profile') ? { demoMode: false, canUseDemoMode: true }
       : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 750, transactionCount: 2, days: [] }
       : path.endsWith('/monthly') ? { stories: [] } : { items: [], actions: [], commitments: [], loans: [], funds: [], stocks: [] };
     return route.fulfill({ json });
@@ -60,7 +60,7 @@ test('starter question, evidence, follow-up history and new chat', async ({ page
   });
   await page.getByRole('button', { name: 'Where did my money go?' }).click();
   await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
-  expect(requests[0]).toEqual({ message: 'Where did my money go?', month: '2026-09', history: [] });
+  expect(requests[0]).toEqual({ message: 'Where did my money go?', month: '2026-09', history: [], requestId: expect.any(String) });
   await page.getByText('Based on 1 data query').click();
   await expect(page.getByText('2 matching records', { exact: false })).toBeVisible();
   await page.getByLabel('Your money question').fill('And excluding rent?');
@@ -209,4 +209,82 @@ test('shows monthly plan, conditional scenario and cross-module evidence', async
   await expect(page.getByText('Obligation: preserve payment.', { exact: true })).toHaveCount(2);
   await expect(page.getByText('Stored holdings only. No live market value.')).toBeVisible();
   await page.screenshot({ path: 'test-results/money-chat-scenario.png' });
+});
+
+
+test('exhausted credits block new questions but keep saved chats readable', async ({ page }) => {
+  await dashboard(page);
+  await page.route('**/api/web/expense-chat', route => route.fulfill({ json: answer }));
+  await page.getByRole('button', { name: 'Where did my money go?' }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  await page.route('**/api/web/ai-credits', route => route.fulfill({ json: { balance: 0, available: 0, reserved: 0, paused: false, enabled: true, configured: true } }));
+  await page.getByRole('button', { name: 'Refresh credits', exact: true }).click();
+  await expect(page.getByText('You’ve used your AI credits.', { exact: false })).toBeVisible();
+  await page.getByLabel('Your money question').fill('Another question');
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  await page.route('**/api/web/ai-credits', route => route.fulfill({ json: { balance: 20, available: 20, reserved: 0, paused: false, enabled: true, configured: true } }));
+  await page.getByRole('button', { name: 'Refresh credits', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
+});
+
+test('network retry reuses request ID and shows held credits', async ({ page }) => {
+  await dashboard(page);
+  const requests = [];
+  await page.route('**/api/web/expense-chat', route => {
+    requests.push(route.request().postDataJSON());
+    return requests.length === 1 ? route.abort('failed') : route.fulfill({ json: answer });
+  });
+  await page.getByRole('button', { name: 'Where did my money go?' }).click();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Where did my money go?');
+  await page.route('**/api/web/ai-credits', route => route.fulfill({ json: { balance: 0, available: 0, reserved: 0, paused: false, enabled: true, configured: true } }));
+  await page.getByRole('button', { name: 'Refresh credits', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Check previous answer' }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  expect(requests[1].requestId).toBe(requests[0].requestId);
+  await page.route('**/api/web/ai-credits', route => route.fulfill({ json: { balance: 20, available: 18, reserved: 2, paused: false, enabled: true, configured: true } }));
+  await page.getByRole('button', { name: 'Refresh credits', exact: true }).click();
+  await expect(page.getByText('18 credits available · 2 on hold')).toBeVisible();
+});
+
+test('admin can grant credits and pause a friend from profile settings', async ({ page }) => {
+  await dashboard(page);
+  await page.getByRole('button', { name: 'Close money chat' }).click();
+  const friend = { id: 2, externalUserId: '919876543210', channel: 'WHATSAPP', balance: 0, reserved: 0, available: 0, paused: false };
+  let grant;
+  await page.route('**/api/web/ai-credits/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/permissions')) return route.fulfill({ json: { admin: true } });
+    if (path.endsWith('/grants')) { grant = route.request().postDataJSON(); friend.available += grant.amount; friend.balance += grant.amount; return route.fulfill({ json: friend }); }
+    if (path.endsWith('/access')) { friend.paused = route.request().postDataJSON().paused; return route.fulfill({ json: friend }); }
+    if (path.endsWith('/users')) return route.fulfill({ json: [friend] });
+    return route.fulfill({ json: [] });
+  });
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toBeVisible();
+  await page.getByLabel('Grant to').selectOption('2');
+  await page.getByLabel('Credits to add').fill('25');
+  await page.getByLabel('Reason', { exact: true }).fill('Welcome allowance');
+  await page.getByRole('button', { name: 'Add credits', exact: true }).click();
+  await expect(page.getByText('Credits added.', { exact: true })).toBeVisible();
+  expect(grant).toMatchObject({ amount: 25, note: 'Welcome allowance', requestId: expect.any(String) });
+  await expect(page.getByText('WHATSAPP · 25 available · 0 held')).toBeVisible();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeVisible();
+});
+
+test('credit loading failure fails closed and regular users see no grant controls', async ({ page }) => {
+  await dashboard(page);
+  await page.route('**/api/web/ai-credits', route => route.fulfill({ status: 503, json: { message: 'Credits temporarily unavailable' } }));
+  await page.getByRole('button', { name: 'Refresh credits', exact: true }).click();
+  await expect(page.getByText('Credits temporarily unavailable')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Where did my money go?' })).toBeDisabled();
+  await page.route('**/api/web/auth/demo-profile', route => route.fulfill({ json: { demoMode: false, canUseDemoMode: false } }));
+  await page.route('**/api/web/ai-credits/permissions', route => route.fulfill({ json: { admin: false } }));
+  await page.route('**/api/web/ai-credits/ledger', route => route.fulfill({ json: [] }));
+  await page.reload();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await expect(page.getByRole('heading', { name: 'AI credits', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toHaveCount(0);
 });

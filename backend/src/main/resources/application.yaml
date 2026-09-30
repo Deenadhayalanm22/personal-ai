@@ -68,6 +68,14 @@ app:
         min-multiple-of-median: ${APP_MONEY_STORIES_UNUSUAL_DAY_MIN_MULTIPLE:2.5}
         baseline-weeks: ${APP_MONEY_STORIES_UNUSUAL_DAY_BASELINE_WEEKS:8}
         min-baseline-active-days: ${APP_MONEY_STORIES_UNUSUAL_DAY_MIN_ACTIVE_DAYS:15}
+  ai-credits:
+    enabled: ${AI_CREDITS_ENABLED:true}
+    input-per-million: ${AI_CREDITS_INPUT_PER_MILLION:0}
+    cached-per-million: ${AI_CREDITS_CACHED_PER_MILLION:0}
+    output-per-million: ${AI_CREDITS_OUTPUT_PER_MILLION:0}
+    daily-limit: ${AI_CREDITS_DAILY_LIMIT:1000}
+    request-limit: ${AI_CREDITS_REQUEST_LIMIT:10}
+    requests-per-minute: ${AI_CREDITS_REQUESTS_PER_MINUTE:6}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
   web:

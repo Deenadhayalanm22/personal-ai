@@ -59,3 +59,7 @@ The isolated v2 private host serves this same frontend sign-in component and its
 
 - Delay the profile response after an online load; reload and assert the saved month is visible before the response, with no protected feature calls until profile verification completes.
 - Return `401` for a delayed profile response; assert redirect to sign-in and no dashboard feature requests.
+
+## AI credit administration
+
+The **You → AI credits** section exposes active-profile balances and the last 50 ledger entries. Only an authenticated user with role `SUPER_ADMIN` can search users, grant credits, pause/resume AI access, inspect other users' credit activity or reconcile held provider usage. All operations authorize on the backend and record the acting administrator. Profile changes remount the credit section; the server-reported role permission controls admin visibility independently of demo-mode eligibility. The demo wallet is separate. Credit exhaustion does not block access to financial records or saved conversations. API, rollout and test requirements are in the [AI credit contract](../../contracts/ai-credits.md) and [FIN-EPIC-003 credit acceptance criteria](FIN-EPIC-003-insights.md#usage-based-money-chat-credits).

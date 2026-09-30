@@ -138,8 +138,19 @@ export const skipStockMonthlyPlan = (id, month) => request(`/api/web/stocks/${en
 export const addStockPurchase = (id, purchase) => request(`/api/web/stocks/${encodeURIComponent(id)}/purchases`, { method: 'POST', body: JSON.stringify(purchase) });
 export const updateStockTransaction = (id, transactionId, values) => request(`/api/web/stocks/${encodeURIComponent(id)}/transactions/${encodeURIComponent(transactionId)}`, { method: 'PATCH', body: JSON.stringify(values) });
 
-export const askExpenseChat = (message, month, history, signal) => request('/api/web/expense-chat', { method: 'POST', body: JSON.stringify({ message, month, history }), signal });
+export const askExpenseChat = (message, month, history, signal, requestId) => request('/api/web/expense-chat', { method: 'POST', body: JSON.stringify({ message, month, history, requestId }), signal });
 export const getMoneyConversations = () => request('/api/web/expense-chat/conversations');
 export const saveMoneyConversation = conversation => request(`/api/web/expense-chat/conversations/${encodeURIComponent(conversation.id)}`, {
   method: 'PUT', body: JSON.stringify(conversation)
 });
+
+export const getAiCredits = () => request('/api/web/ai-credits');
+export const getAiCreditLedger = () => request('/api/web/ai-credits/ledger');
+export const getAiCreditUsers = search => request(`/api/web/ai-credits/admin/users?search=${encodeURIComponent(search)}`);
+export const grantAiCredits = (userId, grant) => request(`/api/web/ai-credits/admin/users/${userId}/grants`, { method: 'POST', body: JSON.stringify(grant) });
+export const setAiCreditAccess = (userId, paused) => request(`/api/web/ai-credits/admin/users/${userId}/access`, { method: 'PUT', body: JSON.stringify({ paused }) });
+export const getAiCreditUserLedger = userId => request(`/api/web/ai-credits/admin/users/${userId}/ledger`);
+export const getPendingAiCredits = () => request('/api/web/ai-credits/admin/pending');
+export const resolveAiCredits = (id, amount, note) => request(`/api/web/ai-credits/admin/pending/${id}/resolve`, { method: 'POST', body: JSON.stringify({ amount, note }) });
+
+export const getAiCreditPermissions = () => request('/api/web/ai-credits/permissions');
