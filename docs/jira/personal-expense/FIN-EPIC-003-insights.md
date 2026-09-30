@@ -15,7 +15,7 @@
 | `PendingActionContextService` | Creates the short-lived selected-date context consumed by the next eligible WhatsApp text expense. |
 | `MonthlyFinancialSnapshotService` | Maintains the canonical live monthly commitment projection; generated spending-story snapshots have been retired. |
 | `frontend/src/App.svelte` | Owns selected month, URL `?month=YYYY-MM`, online refresh, and month/profile-local cache. |
-| `frontend/src/Home.svelte` | Renders calendar intensity, month summary, recent/date activity tabs, missing-transaction handoff, and the live monthly commitment card. |
+| `frontend/src/Home.svelte` | Renders calendar intensity, the combined monthly overview, recent/date activity tabs, missing-transaction handoff, and live monthly commitment details. |
 
 Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). They must remain relevant to each story's evidence and must not make an optional input a prerequisite for normal expense insights.
 
@@ -51,11 +51,11 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 ## FIN-010 — Generated spending stories (retired)
 
-Generated spending-story cards, their publication history, rule evaluation, scheduler, and database tables have been removed. Home presents only the live Monthly Commitment card described by FIN-018. Expense exploration is available through the V1 money chatbot, which reads owned source data rather than story snapshots.
+Generated spending-story cards, their publication history, rule evaluation, scheduler, and database tables have been removed. Home combines recorded expenses and the live Monthly Commitment described by FIN-018 in one overview. Recorded expenses and planned commitments have separate labels and amounts; planned commitments are never presented as money already spent. Expense exploration is available through the V1 money chatbot, which reads owned source data rather than story snapshots.
 
 ### Verification scenario
 
-- The monthly commitment endpoint returns exactly the live commitment, and Home has no generated spending-story carousel or Stories menu. Migration V36 removes `money_story_evidence`, `money_story`, and `money_story_snapshot`.
+- The monthly commitment endpoint returns exactly the live commitment, and Home has no generated spending-story carousel or Stories menu. The combined Home overview shows recorded expenses and planned commitments separately. Migration V36 removes `money_story_evidence`, `money_story`, and `money_story_snapshot`.
 
 ## V1 prototype — Conversational expense exploration
 
