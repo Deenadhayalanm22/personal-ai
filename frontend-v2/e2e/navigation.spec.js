@@ -1,16 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test('day and story links survive reload, close, and browser back', async ({ page }) => {
+test('day links survive reload and browser back', async ({ page }) => {
   await page.goto('/?day=2026-09-17');
   const day = page.getByRole('region',{name:'17 September',exact:true});
   await expect(day.locator('.day-toggle')).toHaveAttribute('aria-expanded','true');
-  await day.getByRole('button',{name:'View supporting details'}).click();
-  await expect(page).toHaveURL(/detail=story%3A2026-09-17/);
-  await expect(page.getByRole('dialog')).toContainText('Groceries accounted for ₹1,200');
   await page.reload();
-  await expect(page.getByRole('dialog')).toContainText('Groceries accounted for ₹1,200');
-  await page.getByRole('button',{name:'Close details'}).click();
-  await expect(page).not.toHaveURL(/detail=/);
+  await expect(day.locator('.day-toggle')).toHaveAttribute('aria-expanded','true');
   await page.getByRole('button',{name:'Money',exact:true}).click();
   await expect(page).toHaveURL(/view=money/);
   await page.goBack();

@@ -112,11 +112,11 @@ public class WebFinanceController {
         return webManager.mergeReferences(token, request);
     }
 
-    @GetMapping("/expenses/monthly")
-    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(
+    @GetMapping("/monthly-commitment")
+    public MonthlyCommitmentPresentationService.MonthlyCommitmentApiResponse monthlyCommitment(
             @CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) YearMonth month) {
-        return webManager.monthlyExpenses(token, month);
+        return webManager.monthlyCommitment(token, month);
     }
 
     @GetMapping("/expenses")

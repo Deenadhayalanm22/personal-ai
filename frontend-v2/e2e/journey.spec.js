@@ -11,12 +11,6 @@ test('monthly context and expandable history stay independent without backend ca
   await expect(page.getByTestId('monthly-plan')).toHaveText('₹32,949');
   await expect(day(page,21).getByRole('button', {name:/^Today/})).toHaveAttribute('aria-expanded','true');
   await jump(page,16);
-  await expect(day(page,16).getByRole('heading',{name:'Your first investment contribution'})).toBeVisible();
-  await expect(day(page,21).getByRole('button',{name:/^Today/})).toHaveAttribute('aria-expanded','true');
-  await day(page,16).getByRole('button',{name:'View supporting details'}).click();
-  await expect(page.getByRole('dialog')).toContainText('does not represent investment returns');
-  await page.keyboard.press('Escape');
-  await expect(day(page,16).getByRole('button',{name:'View supporting details'})).toBeFocused();
   await expect(page.getByTestId('monthly-plan')).toHaveText('₹32,949');
   await page.getByRole('button',{name:'View month',exact:false}).click();
   await expect(page.getByRole('dialog')).toContainText('not represent an account balance');
@@ -68,7 +62,7 @@ test('investment and savings collect different facts and update separate totals'
   await sip.getByRole('button',{name:'Confirm sample record'}).click();await expect(sip.getByRole('form')).toBeVisible();
   await sip.getByLabel('Units received').fill('20');await sip.getByRole('button',{name:'Confirm sample record'}).click();
   await expect(sip).toContainText('20 units');
-  await expect(day(page,21)).toContainText('Published sample story unchanged');
+  await expect(day(page,21)).toContainText('New sample activity is shown below.');
   const saving=page.getByTestId('task-insurance-saving');await saving.getByRole('button',{name:'Record savings'}).click();
   await expect(saving).toContainText('does not pay the insurance bill');await saving.getByLabel('Amount set aside (₹)').fill('1000');await saving.getByRole('button',{name:'Confirm sample record'}).click();
   await expect(page.getByTestId('monthly-plan')).toHaveText('₹31,949');
@@ -80,7 +74,7 @@ test('investment and savings collect different facts and update separate totals'
 test('capture defaults to today, historical capture is explicit and confirm-only',async({page})=>{
   const calls=[];page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/'))calls.push(r.url());});
   await page.goto('/');await jump(page,17);
-  await expect(page.getByRole('button',{name:/Anything to add to today’s story/})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Anything to add today/})).toBeVisible();
   await day(page,17).getByRole('button',{name:'Add something for 17 September',exact:false}).click();
   await page.getByLabel('Tell us about your spending').fill('Lunch ₹180 and Auto ₹90');await page.getByRole('button',{name:'Tell us',exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText('17 September 2026');
@@ -88,12 +82,12 @@ test('capture defaults to today, historical capture is explicit and confirm-only
   await day(page,17).getByRole('button',{name:'Show all 4 items'}).click();
   await expect(day(page,17).getByRole('region',{name:'Activity for 17 September'}).locator('.activity-row')).toHaveCount(4);
   await expect(page.getByTestId('monthly-spend')).toHaveText('₹1,655.5');
-  await expect(day(page,17)).toContainText('Published sample story unchanged');
+  await expect(day(page,17)).toContainText('New sample activity is shown below.');
   await page.reload();await expect(page.getByTestId('monthly-spend')).toHaveText('₹1,380');expect(calls).toEqual([]);
 });
 
 test('invalid capture and cancelled confirmation make no changes',async({page})=>{
-  await page.goto('/');await page.getByRole('button',{name:/Anything to add to today’s story/}).click();
+  await page.goto('/');await page.getByRole('button',{name:/Anything to add today/}).click();
   const input=page.getByLabel('Tell us about your spending'),send=page.getByRole('button',{name:'Tell us',exact:true});
   await input.fill('Lunch ₹180');await send.click();await page.getByRole('button',{name:'Cancel expense preview'}).click();await expect(input).toHaveValue('Lunch ₹180');
   for(const text of ['Why did I spend more?','Investment ₹2000','Lunch ₹180 and Auto','Lunch -20','Lunch 0']){await input.fill(text);await send.click();await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByRole('dialog')).not.toBeVisible();}
@@ -103,7 +97,6 @@ test('invalid capture and cancelled confirmation make no changes',async({page})=
 test('keyboard expansion and Money preserve the journey state',async({page})=>{
   await page.goto('/');const toggle=day(page,18).getByRole('button',{name:/^18 September/});
   await toggle.focus();await page.keyboard.press('Enter');await expect(toggle).toHaveAttribute('aria-expanded','true');
-  await expect(day(page,18).getByRole('heading',{name:'Halfway to your insurance savings target'})).toBeVisible();
   await page.getByRole('button',{name:'Money',exact:true}).click();await page.getByRole('button',{name:/PREVIEW.*Commitments/}).click();await expect(page.getByRole('dialog')).toContainText('No real records');await page.keyboard.press('Escape');await page.getByRole('button',{name:'Journey',exact:true}).click();
   await expect(day(page,18).getByRole('button',{name:/^18 September/})).toHaveAttribute('aria-expanded','true');
   await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('button')).toHaveCount(2);
@@ -114,16 +107,6 @@ test('busy, quiet and overdue dates communicate their facts before expansion',as
   await expect(day(page,17).getByRole('button',{name:/17 September/})).toContainText('₹1,380 spent · 2 recorded expenses');
   await expect(day(page,19).getByRole('button',{name:/19 September/})).toContainText('₹3,500 overdue · No activity recorded');
   await expect(day(page,21).getByRole('button',{name:/Today/})).toContainText('₹2,000 invested · 3 due to review');
-  const order=await day(page,21).evaluate(node=>{
-    const story=node.querySelector('.day-story');
-    const tasks=node.querySelector('.schedule-list');
-    return story.compareDocumentPosition(tasks)&Node.DOCUMENT_POSITION_FOLLOWING;
-  });
-  expect(order).toBeTruthy();
-  await jump(page,17);
-  await day(page,17).getByRole('button',{name:'View supporting details'}).click();
-  await expect(page.getByRole('dialog')).toContainText('Groceries accounted for ₹1,200 and travel for ₹180');
-  await page.keyboard.press('Escape');
   await jump(page,19);
   await expect(day(page,19).getByRole('region',{name:'Activity for 19 September'})).toContainText('No activity recorded. This does not mean nothing was spent.');
   await expect(page.getByTestId('task-bike-emi')).toBeVisible();
@@ -131,7 +114,7 @@ test('busy, quiet and overdue dates communicate their facts before expansion',as
   await page.getByLabel('Tell us about your spending').fill('Lunch ₹80');
   await page.getByRole('button',{name:'Tell us',exact:true}).click();
   await page.getByRole('button',{name:'Add 1 sample expense'}).click();
-  await expect(day(page,19).locator('.day-toggle')).toContainText('₹80 in 1 new expense · No published story');
+  await expect(day(page,19).locator('.day-toggle')).toContainText('₹80 in 1 new expense');
 });
 
 test('first-use preview starts without fabricated totals and accepts a confirmed first entry',async({page})=>{
@@ -147,7 +130,7 @@ test('first-use preview starts without fabricated totals and accepts a confirmed
   await page.getByRole('button',{name:'Add 1 sample expense'}).click();
   await expect(first).toContainText('₹180');
   await expect(page.getByRole('region',{name:'First recorded day'})).toContainText('Lunch');
-  await expect(page.getByRole('region',{name:'First recorded day'})).toContainText('No story has been generated');
+  await expect(page.getByRole('region',{name:'First recorded day'})).toContainText('This sample entry appears in your activity');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await page.getByRole('button',{name:'Return to populated sample journey'}).click();
   await expect(page.getByTestId('monthly-spend')).toHaveText('₹1,380');

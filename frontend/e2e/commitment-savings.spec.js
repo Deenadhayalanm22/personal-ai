@@ -75,9 +75,9 @@ test('yearly car insurance savings survive a skipped November and fund part of t
   expect(plan.monthlyAmount).toBe(1666.67);
   expect(plan.saved).toBe(3333.34);
   expect(plan.history.find(item => item.month === '2026-11').status).toBe('SKIPPED');
-  const novemberStory = await request.get(`${api}/api/web/expenses/monthly?month=2026-11`, { headers: { Cookie: `WEB_SESSION=${sessionToken}` } });
+  const novemberStory = await request.get(`${api}/api/web/monthly-commitment?month=2026-11`, { headers: { Cookie: `WEB_SESSION=${sessionToken}` } });
   expect(novemberStory.ok()).toBeTruthy();
-  const novemberCommitment = (await novemberStory.json()).stories.find(item => item.storyType === 'MONTHLY_COMMITMENT');
+  const novemberCommitment = (await novemberStory.json()).commitment;
   expect(novemberCommitment.evidence.byCard.commitment.transactions).toEqual([]);
   expect(novemberCommitment.evidence.byCard.commitment.totalAmount.value).toBe(0);
   expect(novemberCommitment.evidence.byCard['next-commitment'].transactions).toEqual(expect.arrayContaining([

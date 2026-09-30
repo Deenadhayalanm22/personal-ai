@@ -166,9 +166,9 @@ test('frozen mutual-fund SIP lifecycle', async ({ page, request }) => {
   expect(Number(funds.find(f=>f.id===parag.id).currentValue)).toBe(21250);
   expect(funds.find(f=>f.id===parag.id).activeSip.frequency).toBe('QUARTERLY');
   expect(funds.find(f=>f.id===parag.id).activeSip.nextDueDate).toBe('2026-08-01');
-  const june=await request.get(`${api}/api/web/expenses/monthly?month=2026-06`,{headers});
+  const june=await request.get(`${api}/api/web/monthly-commitment?month=2026-06`,{headers});
   expect(june.ok()).toBeTruthy();
-  const juneStory=(await june.json()).stories.find(story=>story.storyType==='MONTHLY_COMMITMENT');
+  const juneStory=(await june.json()).commitment;
   const juneEvidence=juneStory.evidence.byCard['next-commitment'];
   expect(juneEvidence.totalAmount.value).toBe(50000);
   const juneNames=juneEvidence.transactions.map(item=>item.merchantLabel);

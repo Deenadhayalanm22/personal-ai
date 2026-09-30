@@ -3,12 +3,12 @@
 | Field | Value |
 |---|---|
 | Parent | INIT-002 |
-| Status | Proposed architecture |
-| Scope | All Money Stories, beginning with `MONTHLY_COMMITMENT` |
+| Status | Retired for generated spending stories; monthly commitment salary context remains |
+| Scope | Historical proposal; only the live `MONTHLY_COMMITMENT` presentation remains |
 
 ## Goal
 
-Allow a story to become more useful as a user voluntarily adds relevant planning information, without making any optional module a prerequisite for a useful story. This is an architecture direction only: it does not yet change a story payload, snapshot schema, or user interface.
+Historically proposed allowing a story to become more useful as a user voluntarily adds relevant planning information, without making any optional module a prerequisite for a useful story. This is an architecture direction only: it does not yet change a story payload, snapshot schema, or user interface.
 
 ## Product requirements
 

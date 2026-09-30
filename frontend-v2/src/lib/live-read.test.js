@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { composeDay, createReadClient, mapOwnedOccurrences, normalizeOccurrence, normalizeStory, profileDate } from './live-read.js';
+import { composeDay, createReadClient, mapOwnedOccurrences, normalizeOccurrence, profileDate } from './live-read.js';
 
 const occurrence = { source:'LOAN_EMI', sourceId:'17', month:'2026-09', dueDate:'2026-09-19', status:'OVERDUE', allowedActions:['OPEN_MONEY'] };
-const story = { storyId:'s1', logicalStoryId:'l1', revision:2, generatedAt:'2026-09-22T10:00:00Z', period:{startDate:'2026-09-15',endDate:'2026-09-21',displayLabel:'15–21 September'}, evidence:{transactions:[{transactionId:'t1'}]} };
+
 
 test('occurrence identity and server eligibility remain intact across views', () => {
   assert.equal(normalizeOccurrence(occurrence).key, 'LOAN_EMI:17:2026-09:2026-09-19');
@@ -11,14 +11,10 @@ test('occurrence identity and server eligibility remain intact across views', ()
   assert.throws(() => composeDay({date:'2026-09-19'}, [occurrence, occurrence]));
 });
 
-test('published story keeps coverage, publication, revision and evidence distinct', () => {
-  const result = composeDay({date:'2026-09-19'}, [occurrence], [story]);
+test('daily composition keeps missing spending distinct from zero', () => {
+  const result = composeDay({date:'2026-09-19'}, [occurrence]);
   assert.equal(result.recordedExpenses, null);
   assert.equal(result.occurrences.length, 1);
-  assert.deepEqual(result.stories[0].reference.evidenceIds, ['t1']);
-  assert.equal(result.stories[0].reference.publishedAt, '2026-09-22T10:00:00Z');
-  assert.equal(composeDay({date:'2026-09-22'}, [], [story]).stories.length, 0);
-  assert.throws(() => normalizeStory({...story,period:{startDate:'2026-09-22',endDate:'2026-09-21'}}));
 });
 
 test('month reads are cached per owner, stale on transient failure, and clear on owner change', async () => {

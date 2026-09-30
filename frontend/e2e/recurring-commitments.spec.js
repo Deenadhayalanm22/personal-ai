@@ -35,9 +35,9 @@ test('weekly family support contributes every scheduled week and each due paymen
   const card = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Wife family support' });
   await expect(card).toContainText('Due now');
   const sessionToken = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
-  const monthly = async month => (await request.get(`http://localhost:8080/api/web/expenses/monthly?month=${month}`, { headers: { Cookie: `WEB_SESSION=${sessionToken}` } })).json();
+  const monthly = async month => (await request.get(`http://localhost:8080/api/web/monthly-commitment?month=${month}`, { headers: { Cookie: `WEB_SESSION=${sessionToken}` } })).json();
   const september = await monthly('2026-09');
-  const story = september.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT');
+  const story = september.commitment;
   const rows = story.evidence.byCard.commitment.transactions.filter(item => item.transactionId.startsWith('recurring_commitment:'));
   expect(story.evidence.byCard.commitment.totalAmount.value).toBe(10000);
   expect(rows.map(item => item.dateLabel)).toEqual(['1 Sept', '8 Sept', '15 Sept', '22 Sept', '29 Sept']);
@@ -52,7 +52,7 @@ test('weekly family support contributes every scheduled week and each due paymen
   await expect(page.getByLabel('Next expected date')).toHaveValue('2026-09-08');
   await page.getByRole('button', { name: 'Save completion' }).click();
   const afterPayment = await monthly('2026-09');
-  expect(afterPayment.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions
+  expect(afterPayment.commitment.evidence.byCard.commitment.transactions
     .filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(5);
   await card.getByRole('button', { name: 'View details' }).click();
   await detail.getByRole('button', { name: /Sep 1 paid/ }).click();
@@ -73,13 +73,13 @@ test('weekly family support contributes every scheduled week and each due paymen
   await detail.getByRole('button', { name: /Sep 8 skipped/ }).click();
   await expect(detail.getByTestId('dated-occurrence-2026-09-08')).toContainText('Skipped');
   const afterSkip = await monthly('2026-09');
-  const remaining = afterSkip.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
+  const remaining = afterSkip.commitment.evidence.byCard.commitment.transactions;
   expect(remaining.filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(4);
-  expect(afterSkip.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.totalAmount.value).toBe(8000);
+  expect(afterSkip.commitment.evidence.byCard.commitment.totalAmount.value).toBe(8000);
   expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-10-01T09:00:00Z' } })).ok()).toBeTruthy();
   const october = await monthly('2026-10');
-  const nextRows = october.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
-  expect(october.stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.totalAmount.value).toBe(8000);
+  const nextRows = october.commitment.evidence.byCard.commitment.transactions;
+  expect(october.commitment.evidence.byCard.commitment.totalAmount.value).toBe(8000);
   expect(nextRows.filter(item => item.transactionId.startsWith('recurring_commitment:')).map(item => item.dateLabel)).toEqual(['6 Oct', '13 Oct', '20 Oct', '27 Oct']);
 });
 
@@ -92,9 +92,9 @@ test('weekly commitment does not invent weeks before its first expected payment'
   await page.getByLabel('Next expected date').fill('2026-10-06');
   await page.getByRole('button', { name: 'Add commitment' }).click();
   const token = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
-  const response = await request.get('http://localhost:8080/api/web/expenses/monthly?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
+  const response = await request.get('http://localhost:8080/api/web/monthly-commitment?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
   expect(response.ok()).toBeTruthy();
-  const story = (await response.json()).stories.find(item => item.storyType === 'MONTHLY_COMMITMENT');
+  const story = (await response.json()).commitment;
   expect(story.evidence.byCard.commitment.transactions.filter(item => item.transactionId.startsWith('recurring_commitment:'))).toHaveLength(0);
 });
 
@@ -140,9 +140,9 @@ test('every two weeks creates three September contributions in one progress bar'
   await expect(detail.getByRole('button', { name: /Sep 15 upcoming/ })).toBeVisible();
   await expect(detail.getByRole('button', { name: /Sep 29 upcoming/ })).toBeVisible();
   const token = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
-  const response = await request.get('http://localhost:8080/api/web/expenses/monthly?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
+  const response = await request.get('http://localhost:8080/api/web/monthly-commitment?month=2026-09', { headers: { Cookie: `WEB_SESSION=${token}` } });
   expect(response.ok()).toBeTruthy();
-  const rows = (await response.json()).stories.find(item => item.storyType === 'MONTHLY_COMMITMENT').evidence.byCard.commitment.transactions;
+  const rows = (await response.json()).commitment.evidence.byCard.commitment.transactions;
   expect(rows.filter(item => item.transactionId.startsWith('recurring_commitment:')).map(item => item.dateLabel)).toEqual(['1 Sept', '15 Sept', '29 Sept']);
 });
 
@@ -272,7 +272,7 @@ test('recurring commitment details and payment lifecycle', async ({ page, reques
     await upcomingDetails.getByRole('button', { name: '×' }).click();
 
     expect((await request.post('http://localhost:8080/test/e2e/clock', { data: { instant: '2026-04-05T09:00:00Z' } })).ok()).toBeTruthy();
-    const refreshedStories = page.waitForResponse(response => response.url().includes('/api/web/expenses/monthly?month=2026-04') && response.status() === 200);
+    const refreshedStories = page.waitForResponse(response => response.url().includes('/api/web/monthly-commitment?month=2026-04') && response.status() === 200);
     await page.reload();
     await refreshedStories;
     await page.locator('.story-carousel-card').first().click();

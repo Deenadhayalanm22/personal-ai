@@ -14,7 +14,7 @@ import java.util.List;
 public class ExpenseDailyAggregationService {
     private final ExpenseDailyAggregateRepository aggregates;
 
-    /** Drain durable edit/backfill requests before stories read their projections. */
+    /** Drain durable edit/backfill requests for calendar queries. */
     @Transactional
     public void rebuildChangedDates(int limit) {
         for (java.sql.Date date : aggregates.lockDatesNeedingRebuild(limit)) {

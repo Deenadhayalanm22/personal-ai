@@ -39,7 +39,7 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 2. **Given** an edit with no fields, invalid values, invalid category pair, or unavailable reference, **when** submitted, **then** it returns `400` and changes nothing.
 3. **Given** an owned visible expense, **when** it is deleted, **then** it is soft-deleted, excluded from subsequent list/calendar reads, and returns `204`.
 4. **Given** another user's or previously deleted expense ID, **when** edited or deleted, **then** it returns `404 EXPENSE_NOT_FOUND`.
-5. **Given** an edit or delete that changes a selected month, **when** stories are read again, **then** the affected story state is eligible for regeneration.
+5. **Given** an edit or delete that changes a selected month, **then** affected calendar aggregates are marked for rebuilding and the live monthly commitment is refreshed.
 
 ### Integration-test scenarios
 

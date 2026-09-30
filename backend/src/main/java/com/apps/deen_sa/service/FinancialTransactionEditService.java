@@ -5,6 +5,7 @@ import com.apps.deen_sa.domain.UserReferenceEntityType;
 import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
+import com.apps.deen_sa.repository.ExpenseDailyAggregateRepository;
 import com.apps.deen_sa.repository.UserReferenceEntityRepository;
 import com.apps.deen_sa.exception.WebApiException;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ public class FinancialTransactionEditService {
     private final FinancialTransactionRepository transactions;
     private final UserReferenceEntityRepository references;
     private final ExpenseTaxonomyRegistry taxonomy;
-    private final MoneyStoryChangeService storyChanges;
+    private final ExpenseDailyAggregateRepository aggregates;
     private final MonthlyFinancialSnapshotService snapshots;
 
     public FinancialTransactionEditService(FinancialTransactionRepository transactions,
@@ -35,9 +36,9 @@ public class FinancialTransactionEditService {
     public FinancialTransactionEditService(FinancialTransactionRepository transactions,
                                            UserReferenceEntityRepository references,
                                            ExpenseTaxonomyRegistry taxonomy,
-                                           MoneyStoryChangeService storyChanges, MonthlyFinancialSnapshotService snapshots) {
+                                           ExpenseDailyAggregateRepository aggregates, MonthlyFinancialSnapshotService snapshots) {
         this.transactions = transactions; this.references = references; this.taxonomy = taxonomy;
-        this.storyChanges = storyChanges;
+        this.aggregates = aggregates;
         this.snapshots = snapshots;
     }
 
@@ -87,9 +88,9 @@ public class FinancialTransactionEditService {
         }
         transaction.setUpdatedAt(Instant.now());
         FinancialTransactionEntity saved = transactions.saveAndFlush(transaction);
-        if (storyChanges != null) {
-            storyChanges.changed(user, previousDate);
-            if (!previousDate.equals(saved.getOccurredAt())) storyChanges.changed(user, saved.getOccurredAt());
+        if (aggregates != null) {
+            aggregates.markDateForRebuild(previousDate);
+            if (!previousDate.equals(saved.getOccurredAt())) aggregates.markDateForRebuild(saved.getOccurredAt());
         }
         if (snapshots != null) snapshots.refreshCurrent(user);
         return FinancialTransactionListService.ExpenseItem.from(saved, user);
@@ -106,7 +107,7 @@ public class FinancialTransactionEditService {
         transaction.setDeletedAt(now);
         transaction.setUpdatedAt(now);
         transactions.saveAndFlush(transaction);
-        if (storyChanges != null) storyChanges.changed(user, transaction.getOccurredAt());
+        if (aggregates != null) aggregates.markDateForRebuild(transaction.getOccurredAt());
         if (snapshots != null) snapshots.refreshCurrent(user);
     }
 

@@ -2,8 +2,8 @@ package com.apps.deen_sa.service;
 
 import com.apps.deen_sa.entity.AppUserEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -16,18 +16,16 @@ import java.util.Map;
 @Service
 public class MonthlyFinancialTransactionService {
     private final FinancialTransactionRepository transactions;
-    private final MoneyStoriesService moneyStories;
+    private final MonthlyCommitmentPresentationService commitmentPresentation;
 
-    /** Kept for focused unit tests and non-web callers. Spring uses the two-argument constructor. */
     public MonthlyFinancialTransactionService(FinancialTransactionRepository transactions) {
         this(transactions, null);
     }
 
     @Autowired
-    public MonthlyFinancialTransactionService(FinancialTransactionRepository transactions,
-                                              MoneyStoriesService moneyStories) {
+    public MonthlyFinancialTransactionService(FinancialTransactionRepository transactions, MonthlyCommitmentPresentationService commitmentPresentation) {
         this.transactions = transactions;
-        this.moneyStories = moneyStories;
+        this.commitmentPresentation = commitmentPresentation;
     }
 
     @Transactional(readOnly = true)
@@ -46,34 +44,19 @@ public class MonthlyFinancialTransactionService {
                 .countByUserIdAndOccurredAtGreaterThanEqualAndOccurredAtLessThanAndDeletedAtIsNull(
                         user.getId(), start, end);
 
-        return new MonthlyExpenseResponse(month.toString(), user.getCurrency(), total, transactionCount, categories,
-                moneyStories == null ? MoneyStoriesService.MoneyStoriesResponse.empty()
-                        : moneyStories.monthly(user, month));
+        return new MonthlyExpenseResponse(month.toString(), user.getCurrency(), total, transactionCount, categories);
     }
 
-    /** Web contract for the Money Chapters shelf and expanded story reader. */
     @Transactional(readOnly = true)
-    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyStories(AppUserEntity user, YearMonth month) {
-        return moneyStories == null
-                ? MoneyStoriesService.MonthlyStoriesApiResponse.empty(month, user)
-                : moneyStories.monthlyForWeb(user, month);
+    public MonthlyCommitmentPresentationService.MonthlyCommitmentApiResponse monthlyCommitment(AppUserEntity user, YearMonth month) {
+        return commitmentPresentation == null ? MonthlyCommitmentPresentationService.MonthlyCommitmentApiResponse.empty(month, user)
+                : commitmentPresentation.monthlyForWeb(user, month);
     }
 
     private BigDecimal money(BigDecimal amount) {
         return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public record MonthlyExpenseResponse(
-            String month,
-            String currency,
-            BigDecimal total,
-            long transactionCount,
-            Map<String, BigDecimal> categories,
-            MoneyStoriesService.MoneyStoriesResponse moneyStories
-    ) {
-        public MonthlyExpenseResponse(String month, String currency, BigDecimal total, long transactionCount,
-                                      Map<String, BigDecimal> categories) {
-            this(month, currency, total, transactionCount, categories, MoneyStoriesService.MoneyStoriesResponse.empty());
-        }
-    }
+    public record MonthlyExpenseResponse(String month, String currency, BigDecimal total,
+            long transactionCount, Map<String, BigDecimal> categories) { }
 }

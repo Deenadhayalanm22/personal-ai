@@ -12,7 +12,7 @@ async function dashboard(page) {
     if (path.endsWith('demo-profile') && route.request().method() === 'PUT') activeProfile = route.request().postDataJSON().enabled ? 'demo' : 'real';
     const json = path.endsWith('/ai-credits/permissions') ? { admin: true } : path.includes('/ai-credits/') ? [] : path.endsWith('/ai-credits') ? { available: 100, balance: 100, reserved: 0, paused: false, enabled: true, configured: true } : path.endsWith('demo-profile') ? { demoMode: false, canUseDemoMode: true }
       : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 750, transactionCount: 2, days: [] }
-      : path.endsWith('/monthly') ? { stories: [] } : { items: [], actions: [], commitments: [], loans: [], funds: [], stocks: [] };
+      : path.endsWith('/monthly-commitment') ? { commitment: null } : { items: [], actions: [], commitments: [], loans: [], funds: [], stocks: [] };
     return route.fulfill({ json });
   });
   await page.route('**/api/web/expense-chat/conversations**', route => {

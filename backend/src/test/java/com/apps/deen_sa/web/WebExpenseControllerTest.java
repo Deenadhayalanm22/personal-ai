@@ -32,24 +32,24 @@ class WebExpenseControllerTest {
         AppUserEntity user = new AppUserEntity();
         user.setId(42L);
         when(authentication.authenticate("session-token")).thenReturn(user);
-        when(service.monthlyStories(user, YearMonth.of(2026, 9))).thenReturn(
-                new MoneyStoriesService.MonthlyStoriesApiResponse(
-                        "2026-09", "INR", "Asia/Kolkata", List.of()));
+        when(service.monthlyCommitment(user, YearMonth.of(2026, 9))).thenReturn(
+                new MonthlyCommitmentPresentationService.MonthlyCommitmentApiResponse(
+                        "2026-09", "INR", "Asia/Kolkata", null));
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 controller(authentication, service, listService, calendar, options, editor)).build();
 
-        mvc.perform(get("/api/web/expenses/monthly")
+        mvc.perform(get("/api/web/monthly-commitment")
                         .param("month", "2026-09")
                         .cookie(new jakarta.servlet.http.Cookie("WEB_SESSION", "session-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.month").value("2026-09"))
                 .andExpect(jsonPath("$.currency").value("INR"))
                 .andExpect(jsonPath("$.timezone").value("Asia/Kolkata"))
-                .andExpect(jsonPath("$.stories").isArray())
+                .andExpect(jsonPath("$.commitment").doesNotExist())
                 .andExpect(jsonPath("$.total").doesNotExist())
                 .andExpect(jsonPath("$.moneyStories").doesNotExist());
 
-        verify(service).monthlyStories(user, YearMonth.of(2026, 9));
+        verify(service).monthlyCommitment(user, YearMonth.of(2026, 9));
     }
 
     @Test

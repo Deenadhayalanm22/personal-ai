@@ -13,9 +13,9 @@
 | `FinancialTransactionCalendarService` | Aggregates visible expenses by selected month and produces the per-day transaction count, total spend, and intensity. |
 | `FinancialTransactionListService` | Returns recent or selected-date expense rows, ownership-scoped filter summary, and cursor metadata. |
 | `PendingActionContextService` | Creates the short-lived selected-date context consumed by the next eligible WhatsApp text expense. |
-| `MoneyStoriesService` and scheduler | Persist and refresh read-only monthly story snapshots with evidence. |
+| `MonthlyFinancialSnapshotService` | Maintains the canonical live monthly commitment projection; generated spending-story snapshots have been retired. |
 | `frontend/src/App.svelte` | Owns selected month, URL `?month=YYYY-MM`, online refresh, and month/profile-local cache. |
-| `frontend/src/Home.svelte` | Renders calendar intensity, month summary, recent/date activity tabs, missing-transaction handoff, story filtering, story deck, and evidence. |
+| `frontend/src/Home.svelte` | Renders calendar intensity, month summary, recent/date activity tabs, missing-transaction handoff, and the live monthly commitment card. |
 
 Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). They must remain relevant to each story's evidence and must not make an optional input a prerequisite for normal expense insights.
 
@@ -32,13 +32,13 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 ### Portal behavior
 
-1. The selected month comes from `?month=YYYY-MM` or defaults to the current local month. Changing it updates browser history and reloads calendar, recent activity, and stories.
+1. The selected month comes from `?month=YYYY-MM` or defaults to the current local month. Changing it updates browser history and reloads calendar, recent activity, and monthly commitment.
 2. Each day button uses the API-provided `intensity` (0–4) as its visual spend-depth class. The frontend does not calculate or reinterpret intensity from transaction amounts.
 3. The month summary displays API totals: `totalSpend`, `transactionCount`, and `highestSpend`.
 4. **Recent** displays the latest five records loaded for the selected month. Selecting a calendar day switches to the date activity tab and requests up to 50 records for that selected date.
 5. The activity panel initially shows five items and can expand to all returned items. It is a presentation limit, not backend pagination.
 6. A future day cannot be selected. An empty past day can open the missing-transaction flow, which creates a date context and offers the returned WhatsApp URL.
-7. Editing or deleting an item refreshes calendar, recent activity, and stories so all three views converge on the updated record.
+7. Editing or deleting an item refreshes calendar, recent activity, and monthly commitment so the views converge on the updated record. A dedicated calendar job drains dirty aggregate dates independently of story generation.
 
 ### Integration-test scenarios
 
@@ -47,36 +47,15 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 - Verify a session cannot read another profile's calendar or expense list.
 - Render a fixture with intensities 0–4 and assert each calendar day uses the matching visual class without recalculating it.
 - Select a populated day and assert a date-scoped expense request; select an empty past day and assert context creation plus WhatsApp handoff; assert future days are disabled.
-- Edit/delete a displayed item and assert all three dashboard fetches are requested again.
+- Edit/delete a displayed item and assert calendar, recent activity, and commitment fetches are requested again.
 
-## FIN-010 — Render explainable money stories
+## FIN-010 — Generated spending stories (retired)
 
-**Status:** Done · **Priority:** P0
+Generated spending-story cards, their publication history, rule evaluation, scheduler, and database tables have been removed. Home presents only the live Monthly Commitment card described by FIN-018. Expense exploration is available through the V1 money chatbot, which reads owned source data rather than story snapshots.
 
-### Acceptance criteria
+### Verification scenario
 
-1. **Given** a selected month, **when** stories exist, **then** the response contains the selected month, currency, timezone, and only the story cards/evidence generated for that user.
-2. **Given** a story with multiple cards, **when** the portal opens it, **then** cards are ordered by `sequence` and evidence can be opened only from the supplied action.
-3. **Given** multiple available stories, **when** the portal shows Home, **then** it presents every available story in a single horizontally swipeable, stacked card rail with a visible dot/count indicator and a partial next-card preview.
-4. **Given** an expense edit or soft deletion, **when** an affected month is re-evaluated, **then** story change tracking ensures stale insight data is not treated as final.
-5. **Given** no eligible story, **when** the endpoint is read, **then** it returns an empty `stories` array rather than invented guidance.
-6. **Given** a legacy confirmed `Food & Dining / Meat, Fish & Eggs` transaction with no spending nature, **when** the database migration backfills its deterministic `ESSENTIAL` nature, **then** current snapshots for the owner become stale so the next evaluation can rebuild stories with complete classification.
-
-### Integration-test scenarios
-
-- Render four monthly stories and assert Home can select the fourth, while the navigation has no Stories item or separate Stories view.
-- Seed a known fixture, request monthly stories, and assert period, card order, evidence transaction IDs, and display components.
-- Mutate an evidence expense and assert subsequent story generation/revision changes or stale state according to service contract.
-
-## FIN-011 — Keep insight scope honest
-
-**Status:** In Progress · **Priority:** P1
-
-### Acceptance criteria
-
-1. The calendar and stories describe recorded expense data, not account balances, income, transfers, or reconciliation status.
-2. A story card's copy may explain deterministic values but cannot alter the values, period, evidence, or currency returned by services.
-3. Missing data produces an empty/unavailable state, not a fabricated estimate.
+- The monthly commitment endpoint returns exactly the live commitment, and Home has no generated spending-story carousel or Stories menu. Migration V36 removes `money_story_evidence`, `money_story`, and `money_story_snapshot`.
 
 ## V1 prototype — Conversational expense exploration
 
@@ -120,7 +99,7 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 4. Missing/uncertain usage retains a durable hold and blocks new questions until verified reconciliation. A super admin can settle a stale reservation with an audited cost/note. A crash cannot make reserved usage free.
 5. Chat displays available/held credits and reloads them after attempts. Exhaustion, pause and failed balance loads disable sending without hiding records or conversations. Grants become usable after refresh; unknown network retries reuse the request ID while the panel remains mounted.
 6. Profile settings expose manual grants, user pause/resume and per-user activity to super admins. Grants are idempotent and audited; admin access depends only on the authenticated profile’s `SUPER_ADMIN` role, regardless of channel or portal-enabled status. Credit UI is remounted on profile switches.
-7. Expense capture, audio transcription and scheduled story generation remain outside chat credits and its daily budget. No automatic refill or purchases are introduced. Missing tariff or shared daily-budget configuration fails closed, including on initial rollout. The shared daily budget defaults to zero and must be explicitly selected; no 1,000-credit allowance is assumed.
+7. Expense capture, audio transcription and monthly commitment presentation remain outside chat credits and its daily budget. No automatic refill or purchases are introduced. Missing tariff or shared daily-budget configuration fails closed, including on initial rollout. The shared daily budget defaults to zero and must be explicitly selected; no 1,000-credit allowance is assumed.
 
 ### Verification scenarios
 

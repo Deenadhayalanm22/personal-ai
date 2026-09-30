@@ -1,16 +1,16 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.domain.MoneyStoryType;
+import com.apps.deen_sa.domain.CommitmentContextType;
 import com.apps.deen_sa.repository.UserIncomeProfileRepository;
 import org.springframework.stereotype.Component;
 
 /** Voluntary salary data is context only: never a transaction, balance, or evidence row. */
 @Component
-public class SalaryStoryContextContributor implements StoryContextContributor {
+public class SalaryCommitmentContextContributor implements CommitmentContextContributor {
     private final UserIncomeProfileRepository profiles;
-    public SalaryStoryContextContributor(UserIncomeProfileRepository profiles) { this.profiles = profiles; }
-    @Override public boolean supports(MoneyStoryType type) { return type == MoneyStoryType.MONTHLY_COMMITMENT; }
-    @Override public void contribute(StoryEnrichmentRequest request, StoryContext context) {
+    public SalaryCommitmentContextContributor(UserIncomeProfileRepository profiles) { this.profiles = profiles; }
+    @Override public boolean supports(CommitmentContextType type) { return type == CommitmentContextType.MONTHLY_COMMITMENT; }
+    @Override public void contribute(CommitmentEnrichmentRequest request, CommitmentContext context) {
         profiles.findById(request.user().getId()).ifPresent(profile -> {
             context.put("salary.visibility", profile.getSalaryVisibility());
             context.put("salary.frequency", profile.getSalaryFrequency());

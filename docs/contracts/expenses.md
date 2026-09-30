@@ -1,6 +1,6 @@
 # Expenses and calendar
 
-Expenses originate from conversational capture, normally WhatsApp, and appear as records users can correct or soft-delete. Dashboard values use the active profile's timezone and currency. Editing or deleting an expense marks affected money stories for recalculation.
+Expenses originate from conversational capture, normally WhatsApp, and appear as records users can correct or soft-delete. Dashboard values use the active profile's timezone and currency. Editing or deleting an expense marks affected calendar aggregates for rebuilding and refreshes the live monthly commitment.
 
 ## Read contracts
 
@@ -17,7 +17,7 @@ Expenses originate from conversational capture, normally WhatsApp, and appear as
 
 | Endpoint | Request and behavior | Frontend owner |
 | --- | --- | --- |
-| `PATCH /api/web/expenses/{id}` | Send at least one of `{ amount, transactionDate, category, subcategory, merchantId, accountId }`. Amount must be positive; category/subcategory must be a valid pair; reference IDs must be active and user-owned. Returns updated item. | Home edit dialog, then refreshes calendar, recent items, stories. |
+| `PATCH /api/web/expenses/{id}` | Send at least one of `{ amount, transactionDate, category, subcategory, merchantId, accountId }`. Amount must be positive; category/subcategory must be a valid pair; reference IDs must be active and user-owned. Returns updated item. | Home edit dialog, then refreshes calendar, recent items, monthly commitment. |
 | `DELETE /api/web/expenses/{id}` | Soft-deletes an owned visible expense. Returns `204`; inaccessible/missing is `404 EXPENSE_NOT_FOUND`. | Home delete confirmation, then refreshes the three sections. |
 | `POST /api/web/expenses/calendar/context` | Body `{ "type": "MISSING_TRANSACTION_DATE", "date": "YYYY-MM-DD", "timezone": "IANA zone" }`. Date cannot be future. Returns `{ contextId, status: "ACTIVE", date, expiresAt, whatsappUrl? }`. | Home calls it for an empty past day and shows WhatsApp handoff. |
 

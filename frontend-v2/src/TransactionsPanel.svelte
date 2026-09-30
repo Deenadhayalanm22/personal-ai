@@ -42,12 +42,12 @@
       if(merchantId)changes.merchantId=Number(merchantId);
       if(accountId)changes.accountId=Number(accountId);
       await api(`/expenses/${encodeURIComponent(edit.id)}`,{method:'PATCH',body:JSON.stringify(changes)});
-      edit=null;await load();await onChanged();notice='Correction saved. Affected dates and stories have been refreshed.';
+      edit=null;await load();await onChanged();notice='Correction saved. Affected dates have been refreshed.';
     }catch(cause){notice=cause.message || 'Correction failed.';}finally{saving=false;}
   }
   async function confirmDelete() {
     if(!remove || saving)return;saving=true;
-    try {await api(`/expenses/${encodeURIComponent(remove.id)}`,{method:'DELETE'});remove=null;await load();await onChanged();notice='Expense deleted. Published stories remain historical.';}
+    try {await api(`/expenses/${encodeURIComponent(remove.id)}`,{method:'DELETE'});remove=null;await load();await onChanged();notice='Expense deleted.';}
     catch(cause){notice=cause.message || 'Delete failed.';}finally{saving=false;}
   }
 </script>
@@ -65,4 +65,4 @@
   <label>Merchant <select bind:value={merchantId}><option value="">Keep current</option>{#each options.merchants as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
   <label>Source account <select bind:value={accountId}><option value="">Keep current</option>{#each options.accounts as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
   {#if notice}<p role="alert">{notice}</p>{/if}<button onclick={()=>edit=null} disabled={saving}>Cancel</button><button onclick={save} disabled={saving}>Save correction</button></div></div>{/if}
-{#if remove}<div class="live-overlay" role="presentation"><div role="dialog" tabindex="-1" aria-modal="true" aria-label="Delete transaction"><h2>Delete this expense?</h2><p>{remove.merchant || remove.category || 'Expense'} · {money(remove.amount)}</p><p>This removes the owned record from current activity. Historical story publications remain separate.</p><button onclick={()=>remove=null} disabled={saving}>Cancel</button><button onclick={confirmDelete} disabled={saving}>Delete expense</button></div></div>{/if}
+{#if remove}<div class="live-overlay" role="presentation"><div role="dialog" tabindex="-1" aria-modal="true" aria-label="Delete transaction"><h2>Delete this expense?</h2><p>{remove.merchant || remove.category || 'Expense'} · {money(remove.amount)}</p><p>This removes the expense from current activity.</p><button onclick={()=>remove=null} disabled={saving}>Cancel</button><button onclick={confirmDelete} disabled={saving}>Delete expense</button></div></div>{/if}

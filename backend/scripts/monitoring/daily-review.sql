@@ -1,6 +1,6 @@
 -- PostgreSQL. One read-only SELECT; default: yesterday in Asia/Kolkata.
 -- Replace the report_date expression with DATE '2026-09-24' to select a day.
--- Excludes direct account identifiers; free text and story payloads ARE sensitive.
+-- Excludes direct account identifiers; free text IS sensitive.
 -- This is current state for a daily activity cohort, NOT an end-of-day audit log.
 WITH
 params AS (
@@ -60,12 +60,6 @@ capture AS (
        OR (t.deleted_at >= b.start_at AND t.deleted_at < b.end_at)
        OR (d.status IN ('PENDING', 'TRANSCRIPT_REVIEW') AND d.created_at < b.end_at)
 ),
-selected_snapshots AS (
-    SELECT s.* FROM money_story_snapshot s CROSS JOIN bounds b
-    WHERE (s.generated_at >= b.start_at AND s.generated_at < b.end_at)
-       OR (s.superseded_at IS NULL AND
-           (s.status <> 'READY' OR s.user_id IN (SELECT user_id FROM capture)))
-),
 report_rows AS (
     SELECT 0 AS sort_order, 'report'::text AS section, NULL::bigint AS user_id,
            'daily-review-v1'::text AS record_id,
@@ -78,8 +72,7 @@ report_rows AS (
                              WHERE d.created_at >= b.start_at AND d.created_at < b.end_at),
                'new_transactions_including_later_deleted', (SELECT count(*) FROM financial_transaction t
                              WHERE t.created_at >= b.start_at AND t.created_at < b.end_at),
-               'selected_snapshots', (SELECT count(*) FROM selected_snapshots),
-               'notes', 'Current database state, not historical end-of-day state. Flags require investigation. Empty stories may be valid. Live MONTHLY_COMMITMENT copy, outbound replies, audio files and runtime failures are not included.'
+               'notes', 'Current database state, not historical end-of-day state. Flags require investigation. Live monthly commitment copy, outbound replies, audio files and runtime failures are not included.'
            ) AS detail
     FROM bounds b
     UNION ALL
@@ -95,33 +88,7 @@ report_rows AS (
                'review_flags', to_jsonb(c.review_flags))
     FROM capture c JOIN app_user u ON u.id = c.user_id
     UNION ALL
-    SELECT 2, 'story_snapshot', s.user_id, s.id::text,
-           to_jsonb(s) || jsonb_build_object(
-               'is_current_at_export', s.superseded_at IS NULL,
-               'story_count', (SELECT count(*) FROM money_story st WHERE st.snapshot_id = s.id))
-    FROM selected_snapshots s
-    UNION ALL
-    SELECT 3, 'story', s.user_id, st.id::text,
-           to_jsonb(st) || jsonb_build_object(
-               'snapshot_status', s.status, 'scope_month', s.scope_month,
-               'is_current_at_export', s.superseded_at IS NULL,
-               'evidence', COALESCE((
-                   SELECT jsonb_agg(to_jsonb(e) || jsonb_build_object(
-                       'current_transaction', to_jsonb(t),
-                       'source_draft_text', d.raw_text,
-                       'source_transcript', d.transcribed_text,
-                       'owner_mismatch', t.user_id <> s.user_id,
-                       'transaction_changed_since_generation',
-                           t.updated_at > s.generated_at OR t.deleted_at IS NOT NULL
-                   ) ORDER BY e.ordinal)
-                   FROM money_story_evidence e
-                   JOIN financial_transaction t ON t.id = e.transaction_id
-                   JOIN transaction_draft d ON d.id = t.source_draft_id
-                   WHERE e.story_id = st.id
-               ), '[]'::jsonb))
-    FROM selected_snapshots s JOIN money_story st ON st.snapshot_id = s.id
-    UNION ALL
-    SELECT 4, 'planning_snapshot_not_live_story', s.user_id, s.id::text, to_jsonb(s)
+    SELECT 4, 'planning_snapshot', s.user_id, s.id::text, to_jsonb(s)
     FROM monthly_financial_snapshot s CROSS JOIN bounds b
     WHERE (s.updated_at >= b.start_at AND s.updated_at < b.end_at)
        OR (s.user_id IN (SELECT user_id FROM capture) AND

@@ -4,6 +4,7 @@ import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import com.apps.deen_sa.entity.TransactionDraftExtractionEntity;
 import com.apps.deen_sa.entity.UserReferenceEntity;
 import com.apps.deen_sa.repository.FinancialTransactionRepository;
+import com.apps.deen_sa.repository.ExpenseDailyAggregateRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -13,18 +14,18 @@ import java.time.Instant;
 public class FinancialTransactionWriter {
     private final FinancialTransactionRepository repository;
     private final ExpenseTaxonomyRegistry taxonomy;
-    private final MoneyStoryChangeService storyChanges;
+    private final ExpenseDailyAggregateRepository aggregates;
     private final RecurringCommitmentMatcher commitmentMatcher;
 
     public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy) {
         this(repository, taxonomy, null, null);
     }
     public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy,
-                                      MoneyStoryChangeService storyChanges) { this(repository, taxonomy, storyChanges, null); }
+                                      ExpenseDailyAggregateRepository aggregates) { this(repository, taxonomy, aggregates, null); }
     @Autowired
     public FinancialTransactionWriter(FinancialTransactionRepository repository, ExpenseTaxonomyRegistry taxonomy,
-                                      MoneyStoryChangeService storyChanges, RecurringCommitmentMatcher commitmentMatcher) {
-        this.repository = repository; this.taxonomy = taxonomy; this.storyChanges = storyChanges; this.commitmentMatcher = commitmentMatcher;
+                                      ExpenseDailyAggregateRepository aggregates, RecurringCommitmentMatcher commitmentMatcher) {
+        this.repository = repository; this.taxonomy = taxonomy; this.aggregates = aggregates; this.commitmentMatcher = commitmentMatcher;
     }
 
     public FinancialTransactionEntity save(
@@ -53,7 +54,7 @@ public class FinancialTransactionWriter {
         transaction.setUpdatedAt(Instant.now());
         if (commitmentMatcher != null) commitmentMatcher.classify(transaction);
         FinancialTransactionEntity saved = repository.saveAndFlush(transaction);
-        if (storyChanges != null) storyChanges.changed(saved.getUser(), saved.getOccurredAt());
+        if (aggregates != null) aggregates.markDateForRebuild(saved.getOccurredAt());
         return saved;
     }
 }

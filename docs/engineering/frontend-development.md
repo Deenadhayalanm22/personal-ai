@@ -20,9 +20,9 @@ npm run dev
 2. The app exchanges the token through `POST /api/web/auth/magic-link`.
 3. The backend sets the HttpOnly `WEB_SESSION` cookie.
 4. The token is removed from the address bar and browser history.
-5. The app loads `GET /api/v2/web/expenses/monthly` with cookies included.
+5. The app loads `GET /api/web/monthly-commitment` with cookies included.
 
-Authenticated users can also open `/` directly while their session cookie remains valid. A month picker loads `GET /api/v2/web/expenses/monthly?month=YYYY-MM`.
+Authenticated users can also open `/` directly while their session cookie remains valid. A month picker loads `GET /api/web/monthly-commitment?month=YYYY-MM`.
 
 ## Deployment
 

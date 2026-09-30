@@ -34,32 +34,7 @@ export function normalizeOccurrence(item) {
   return { ...item, key };
 }
 
-export function normalizeStory(story) {
-  if (!story?.storyId || !story.logicalStoryId || !Number.isInteger(story.revision) ||
-      !isDate(story.period?.startDate) || !isDate(story.period?.endDate) ||
-      story.period.startDate > story.period.endDate || !story.generatedAt ||
-      Number.isNaN(Date.parse(story.generatedAt))) {
-    throw new TypeError('Invalid published story reference');
-  }
-  const evidence = story.evidence;
-  if (evidence && (!Array.isArray(evidence.transactions) ||
-      evidence.transactions.some(row => !row.transactionId))) {
-    throw new TypeError('Invalid story evidence');
-  }
-  return {
-    ...story,
-    reference: {
-      storyId: story.storyId,
-      logicalStoryId: story.logicalStoryId,
-      revision: story.revision,
-      publishedAt: story.generatedAt,
-      period: story.period,
-      evidenceIds: evidence?.transactions.map(row => row.transactionId) || []
-    }
-  };
-}
-
-export function composeDay(day, occurrences = [], stories = []) {
+export function composeDay(day, occurrences = []) {
   if (!isDate(day?.date)) throw new TypeError('Invalid daily summary date');
   const owned = occurrences.map(normalizeOccurrence);
   if (new Set(owned.map(item => item.key)).size !== owned.length) throw new TypeError('Duplicate occurrence');
@@ -67,9 +42,7 @@ export function composeDay(day, occurrences = [], stories = []) {
     ...day,
     // Missing recorded measures stay null. A missing composition is never rendered as zero.
     recordedExpenses: day.recordedExpenses ?? null,
-    occurrences: owned.filter(item => item.dueDate === day.date),
-    stories: stories.map(normalizeStory).filter(story =>
-      story.period.startDate <= day.date && story.period.endDate >= day.date)
+    occurrences: owned.filter(item => item.dueDate === day.date)
   };
 }
 
@@ -152,12 +125,11 @@ export function createReadClient({ fetcher = fetch, base = '', ttlMs = 60_000, n
       return {...calendar,asOf:new Date(now()).toISOString(),days:calendar.days.map(day=>({...day,
         recordedExpenses:day.totalSpend,recordedExpenseCount:day.transactionCount,occurrenceKeys:[]}))};
     }
-    if(scope==='projection' || scope==='stories') {
-      const result=await request(`/api/web/expenses/monthly?${query}`,signal);
-      if(scope==='stories') return {...result,state:'AVAILABLE',stories:result.stories.filter(story=>story.storyType!=='MONTHLY_COMMITMENT')};
+    if(scope==='projection') {
+      const result=await request(`/api/web/monthly-commitment?${query}`,signal);
       const current=localMonth(result.timezone,new Date(now()));
       return {month,state:month===current?'AVAILABLE':'UNAVAILABLE',asOf:new Date(now()).toISOString(),
-        story:month===current?result.stories.find(story=>story.storyType==='MONTHLY_COMMITMENT') || null:null};
+        story:month===current?result.commitment || null:null};
     }
     if(scope==='occurrences') {
       const [calendar,loans,commitments,funds]=await Promise.all([
@@ -167,7 +139,6 @@ export function createReadClient({ fetcher = fetch, base = '', ttlMs = 60_000, n
       return {month,asOf:new Date(now()).toISOString(),coverage:'SOURCE_LIST_OCCURRENCES',
         unavailableSources:['SAVINGS','STOCK_PLAN'],items:mapOwnedOccurrences(month,{loans,commitments,funds},today)};
     }
-    if(scope==='history') return {month,available:false,publications:[]};
     throw new TypeError('Unknown read scope');
   }
   return {
@@ -176,8 +147,6 @@ export function createReadClient({ fetcher = fetch, base = '', ttlMs = 60_000, n
     days: (month, signal, force) => cached('days', month, signal, force),
     projection: (month, signal, force) => cached('projection', month, signal, force),
     occurrences: (month, signal, force) => cached('occurrences', month, signal, force),
-    stories: (month, signal, force) => cached('stories', month, signal, force),
-    history: (month, signal, force) => cached('history', month, signal, force),
     async activity(date, { cursor = null, limit = 20, signal } = {}) {
       if (!owner || !isDate(date) || !Number.isInteger(limit) || limit < 1 || limit > 50) throw new TypeError('Invalid activity request');
       const params = new URLSearchParams({ date, limit: String(limit) });

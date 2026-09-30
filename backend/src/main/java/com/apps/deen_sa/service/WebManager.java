@@ -130,10 +130,10 @@ public class WebManager {
         return referenceMerges.merge(authentication.authenticate(token), request);
     }
 
-    public MoneyStoriesService.MonthlyStoriesApiResponse monthlyExpenses(String token, YearMonth month) {
+    public MonthlyCommitmentPresentationService.MonthlyCommitmentApiResponse monthlyCommitment(String token, YearMonth month) {
         AppUserEntity user = authentication.authenticate(token);
         YearMonth selected = month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month;
-        return monthlyTransactions.monthlyStories(user, selected);
+        return monthlyTransactions.monthlyCommitment(user, selected);
     }
 
     public FinancialTransactionListService.ExpensePage expenses(

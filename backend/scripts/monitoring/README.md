@@ -33,15 +33,9 @@ Preserve row IDs, dates, amounts and classification where possible for diagnosis
   day, and unresolved drafts from before the window end. Shows original text,
   transcript, extraction and current expense side by side. `normalized_text` may
   be null; the extraction is the persisted structured result.
-- `story_snapshot`: snapshots generated that day, all current snapshots for
-  capture users, and all current non-READY snapshots. Historical/superseded rows
-  are explicitly marked. A READY snapshot with zero stories can be valid.
-- `story`: stored card payload and ordered evidence with current transactions and
-  original source words. `payload` is JSON stored as a string. Evidence can
-  legitimately differ after an edit or deletion, especially on old snapshots.
-- `planning_snapshot_not_live_story`: daily changed planning projections and
-  current/next report-month projections for capture users. These are inputs,
-  not the live monthly commitment card or its generated copy.
+- `planning_snapshot`: daily changed planning projections and current/next
+  report-month projections for capture users. These are inputs to the live
+  monthly commitment card; the report does not include generated copy.
 
 Flags are triage hints, not proof of bugs. `CHECK_PENDING_EXTRACTION_CANNOT_BE_CONFIRMED`
 identifies a legacy active extraction missing facts required by the confirmation

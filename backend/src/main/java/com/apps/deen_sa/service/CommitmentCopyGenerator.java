@@ -1,10 +1,8 @@
 package com.apps.deen_sa.service;
 
-import com.apps.deen_sa.domain.MoneyStoryType;
 import java.util.Map;
 
-public interface MoneyStoryCopyGenerator {
-    Copy generate(MoneyStoryType type, Map<String, String> facts, Copy fallback);
+public interface CommitmentCopyGenerator {
     /** A single model turn writes the linked current/next commitment cards. */
     default CommitmentRunwayCopy generateCommitmentRunway(Map<String, String> facts, CommitmentRunwayCopy fallback) {
         return fallback;

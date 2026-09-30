@@ -21,11 +21,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
-class MonthlyCommitmentStoryServiceTest {
+class MonthlyCommitmentCardServiceTest {
     @Test
     void totalsOnlyCommitmentsActiveInTheCurrentMonth() {
         MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
-        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
+        CommitmentCopyGenerator copy = mock(CommitmentCopyGenerator.class);
         AppUserEntity user = new AppUserEntity();
         user.setId(7L); user.setCurrency("INR"); user.setTimezone("Asia/Kolkata");
         var october = new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-10", "INR", 3,
@@ -39,18 +39,16 @@ class MonthlyCommitmentStoryServiceTest {
         when(snapshots.current(user)).thenReturn(october);
         when(snapshots.next(user)).thenReturn(november);
 
-        when(copy.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
-                .thenAnswer(invocation -> invocation.getArgument(2));
         when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
-        var story = new MonthlyCommitmentStoryService(snapshots, copy,
+        var story = new MonthlyCommitmentCardService(snapshots, copy,
                 Clock.fixed(Instant.parse("2026-10-10T00:00:00Z"), ZoneId.of("Asia/Kolkata"))).currentFor(user);
 
         assertThat(story.storyType()).isEqualTo("MONTHLY_COMMITMENT");
         assertThat(story.storyId()).isEqualTo("monthly-commitment");
         assertThat(story.cardFace().displayValue()).contains("46,000");
         assertThat(story.cards().getFirst().components()).extracting(component -> component.label())
-                .containsExactly("Debt repayments", "Planned investing");
+                .contains("Debt repayments", "Planned investing", "Loan payment progress", "This month");
         assertThat(story.cards().getFirst().layout()).isEqualTo("COMMITMENT");
         assertThat(story.cards()).hasSize(3);
         assertThat(story.cards().get(1).cardId()).isEqualTo("next-commitment");
@@ -69,7 +67,7 @@ class MonthlyCommitmentStoryServiceTest {
     @Test
     void exactMonthlySalaryAddsAPeriodSpecificPercentageToBothCommitmentCardsWithoutAStandaloneCard() {
         MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
-        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
+        CommitmentCopyGenerator copy = mock(CommitmentCopyGenerator.class);
         UserIncomeProfileRepository profiles = mock(UserIncomeProfileRepository.class);
         AppUserEntity user = new AppUserEntity();
         user.setId(7L); user.setCurrency("INR"); user.setTimezone("Asia/Kolkata");
@@ -82,9 +80,9 @@ class MonthlyCommitmentStoryServiceTest {
         when(snapshots.next(user)).thenReturn(october);
         when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
-        var pipeline = new StoryEnrichmentPipeline(List.of(new SalaryStoryContextContributor(profiles)), List.of(new CommitmentSalaryInsightRule()));
+        var pipeline = new CommitmentEnrichmentPipeline(List.of(new SalaryCommitmentContextContributor(profiles)), List.of(new CommitmentSalaryInsightRule()));
 
-        var story = new MonthlyCommitmentStoryService(snapshots, copy,
+        var story = new MonthlyCommitmentCardService(snapshots, copy,
                 Clock.fixed(Instant.parse("2026-09-16T00:00:00Z"), ZoneId.of("Asia/Kolkata")), pipeline).currentFor(user);
 
         assertThat(story.cards()).hasSize(2);
@@ -102,7 +100,7 @@ class MonthlyCommitmentStoryServiceTest {
     @Test
     void showsConfirmedSipAllocationsAsReadOnlyProgressAndLinksToInvestments() {
         MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
-        MoneyStoryCopyGenerator copy = mock(MoneyStoryCopyGenerator.class);
+        CommitmentCopyGenerator copy = mock(CommitmentCopyGenerator.class);
         InvestmentTransactionRepository investmentTransactions = mock(InvestmentTransactionRepository.class);
         AppUserEntity user = new AppUserEntity(); user.setId(7L); user.setCurrency("INR");
         var month = new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-09", "INR", 1, new BigDecimal("10000"), List.of(
@@ -118,12 +116,12 @@ class MonthlyCommitmentStoryServiceTest {
         when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
-        var story = new MonthlyCommitmentStoryService(snapshots, copy, Clock.fixed(Instant.parse("2026-09-16T00:00:00Z"), ZoneId.of("Asia/Kolkata")),
-                new StoryEnrichmentPipeline(List.of(), List.of()), null, investmentTransactions).currentFor(user);
+        var story = new MonthlyCommitmentCardService(snapshots, copy, Clock.fixed(Instant.parse("2026-09-16T00:00:00Z"), ZoneId.of("Asia/Kolkata")),
+                new CommitmentEnrichmentPipeline(List.of(), List.of()), null, investmentTransactions).currentFor(user);
 
         assertThat(story.cards().getFirst().components()).filteredOn(component -> component.label().equals("SIP allocations complete"))
                 .extracting(component -> component.displayValue()).containsExactly("₹10,000.00");
-        assertThat(story.cards().getFirst().actions()).extracting(action -> action.label()).contains("Review investments");
+        assertThat(story.cards().getFirst().actions()).extracting(action -> action.label()).contains("View included commitments");
     }
 
     private MonthlyFinancialSnapshotService.MonthlySnapshot snapshot(String month, BigDecimal total) {

@@ -170,8 +170,8 @@ public class MonthlyFinancialSnapshotService {
                     BigDecimal saved = savingsEntries.findByPlanIdOrderByScheduledMonthAsc(plan.getId()).stream()
                             .filter(entry -> "SAVED".equals(entry.getStatus())).map(com.apps.deen_sa.entity.CommitmentSavingsEntryEntity::getAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    return MoneyStoryRenderer.money(saved, commitment.getUser().getCurrency()) + " recorded as set aside · "
-                            + MoneyStoryRenderer.money(commitment.getPlanningAmount().subtract(saved).max(BigDecimal.ZERO), commitment.getUser().getCurrency()) + " still needed";
+                    return CommitmentMoneyFormatter.money(saved, commitment.getUser().getCurrency()) + " recorded as set aside · "
+                            + CommitmentMoneyFormatter.money(commitment.getPlanningAmount().subtract(saved).max(BigDecimal.ZERO), commitment.getUser().getCurrency()) + " still needed";
                 }).orElse(commitment.getAmountMode() == com.apps.deen_sa.domain.CommitmentAmountMode.RECENT_BILL_ESTIMATE ? "Recent-bill estimate" : "Monthly planning amount");
     }
     private boolean hasEmiIn(UserLoanEntity loan, YearMonth month) {

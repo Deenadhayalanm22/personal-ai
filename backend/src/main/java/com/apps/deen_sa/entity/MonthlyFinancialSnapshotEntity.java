@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** Canonical, versioned monthly read model used by stories and later AI-safe monthly context. */
+/** Canonical, versioned monthly read model for commitments and AI-safe monthly context. */
 @Entity
 @Table(name = "monthly_financial_snapshot")
 @Getter @Setter
