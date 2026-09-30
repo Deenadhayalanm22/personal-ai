@@ -57,13 +57,14 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 1. **Given** a selected month, **when** stories exist, **then** the response contains the selected month, currency, timezone, and only the story cards/evidence generated for that user.
 2. **Given** a story with multiple cards, **when** the portal opens it, **then** cards are ordered by `sequence` and evidence can be opened only from the supplied action.
-3. **Given** multiple available stories, **when** the portal shows its Home preview or Stories view, **then** it presents one active card in a horizontally swipeable, stacked card rail with a visible dot/count indicator and a partial next-card preview.
+3. **Given** multiple available stories, **when** the portal shows Home, **then** it presents every available story in a single horizontally swipeable, stacked card rail with a visible dot/count indicator and a partial next-card preview.
 4. **Given** an expense edit or soft deletion, **when** an affected month is re-evaluated, **then** story change tracking ensures stale insight data is not treated as final.
 5. **Given** no eligible story, **when** the endpoint is read, **then** it returns an empty `stories` array rather than invented guidance.
 6. **Given** a legacy confirmed `Food & Dining / Meat, Fish & Eggs` transaction with no spending nature, **when** the database migration backfills its deterministic `ESSENTIAL` nature, **then** current snapshots for the owner become stale so the next evaluation can rebuild stories with complete classification.
 
 ### Integration-test scenarios
 
+- Render four monthly stories and assert Home can select the fourth, while the navigation has no Stories item or separate Stories view.
 - Seed a known fixture, request monthly stories, and assert period, card order, evidence transaction IDs, and display components.
 - Mutate an evidence expense and assert subsequent story generation/revision changes or stale state according to service contract.
 

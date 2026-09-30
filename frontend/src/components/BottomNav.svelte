@@ -1,7 +1,7 @@
 <script>
   export let view;
   export let onNavigate;
-  const items = [['home','⌂','Home'],['transactions','▤','Transactions'],['stories','▱','Stories'],['you','♙','You']];
+  const items = [['home','⌂','Home'],['transactions','▤','Transactions'],['you','♙','You']];
 </script>
 
 <nav class="bottom-nav" aria-label="Main navigation">
