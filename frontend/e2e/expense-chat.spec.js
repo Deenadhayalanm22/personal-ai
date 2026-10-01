@@ -26,7 +26,12 @@ async function dashboard(page) {
   });
   await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
   await page.goto('/dashboard?month=2026-09');
-  await page.getByRole('button', { name: 'Ask about your money', exact: true }).click();
+  const assistantTab = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Ask about your money', exact: true });
+  await expect(assistantTab).toBeVisible();
+  await expect(page.locator('.chat-launcher')).toHaveCount(0);
+  await assistantTab.click();
+  await expect(assistantTab).toHaveClass(/active/);
+  await expect(page.locator('.app-shell').getByRole('region', { name: 'Money assistant' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Where did my money go?' })).toBeEnabled();
   return { setProfile: profile => { activeProfile = profile; } };
 }
@@ -106,7 +111,7 @@ test('fits mobile, disables offline questions and clears on profile switch', asy
   await page.getByRole('button', { name: 'Close money chat' }).click();
   // Switching the active profile unmounts the chat component and drops its history.
   await page.route('**/api/web/auth/demo-profile', route => route.fulfill({ json: { demoMode: true, canUseDemoMode: true } }));
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You', exact: true }).click();
   // The V1 header exposes the profile toggle as a checkbox.
   const toggle = page.getByLabel(/demo mode/i);
   fixture.setProfile('demo');
@@ -261,7 +266,7 @@ test('admin can grant credits and pause a friend from profile settings', async (
     if (path.endsWith('/users')) return route.fulfill({ json: [friend] });
     return route.fulfill({ json: [] });
   });
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toBeVisible();
   await page.getByLabel('Grant to').selectOption('2');
   await page.getByLabel('Credits to add').fill('25');
@@ -284,7 +289,7 @@ test('credit loading failure fails closed and regular users see no grant control
   await page.route('**/api/web/ai-credits/permissions', route => route.fulfill({ json: { admin: false } }));
   await page.route('**/api/web/ai-credits/ledger', route => route.fulfill({ json: [] }));
   await page.reload();
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' }).click();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You', exact: true }).click();
   await expect(page.getByLabel(/demo mode/i)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'AI credits', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toHaveCount(0);

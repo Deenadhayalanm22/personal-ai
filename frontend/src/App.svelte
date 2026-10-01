@@ -1,7 +1,6 @@
 <!-- FIN-EPIC-003 and FIN-EPIC-004: docs/jira/personal-expense/FIN-EPIC-003-insights.md and FIN-EPIC-004-portal-and-references.md -->
 <script>
   import { onMount } from 'svelte';
-  import ExpenseChat from './components/ExpenseChat.svelte';
   import Home from './Home.svelte'; import Auth from './Auth.svelte'; import PrivacyPolicy from './PrivacyPolicy.svelte'; import CachedDashboard from './CachedDashboard.svelte';
   import { ApiError, clearProfileCaches, exchangeMagicLink, getDemoMode, getExpenseCalendar, getFinancialActivity, getHealth, getMonthlyCommitment, getRecentExpenses, setDemoMode } from './lib/api.js';
 
@@ -97,7 +96,6 @@
 {#if view === 'privacy'}<PrivacyPolicy />
 {:else if view === 'login'}<Auth />
 {:else if view === 'dashboard'}<Home {calendarSection} {recentSection} {commitmentSection} {activitySection} {selectedMonth} {connectionStatus} {cacheUpdatedAt} {demoMode} {canUseDemoMode} onDemoModeChange={changeDemoMode} onMonthChange={changeMonth} refreshCalendar={loadCalendar} refreshRecent={loadRecent} refreshCommitment={refreshPlanAndActivity} onRetryConnection={refreshWhenOnline} onLogout={() => { clearSavedDashboard(); location.replace('/portal?message=' + encodeURIComponent('You’ve been signed out.')); }} />
-{#key demoMode}<ExpenseChat {selectedMonth} {connectionStatus} />{/key}
 {:else if view === 'invalid-link'}<main class="center-page expired" role="alert"><span class="brand-orb">!</span><h1>This sign-in link is invalid, expired, or has already been used.</h1><a class="center-action" href="/portal">Request a new link</a></main>
 {:else if view === 'magic-offline' || view === 'magic-error'}<main class="center-page expired" role="alert"><span class="brand-orb">↻</span><h1>{view === 'magic-offline' ? 'You appear to be offline.' : 'We couldn’t sign you in right now.'}</h1><button class="center-action" on:click={initialize}>Try again</button></main>
 {:else if previewCache}<CachedDashboard cache={previewCache} moneyModules={previewMoneyModules} month={selectedMonth} onRetry={initialize} />

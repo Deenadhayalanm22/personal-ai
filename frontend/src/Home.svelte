@@ -8,6 +8,7 @@
   import Normalization from './Normalization.svelte';
   import AppHeader from './components/AppHeader.svelte';
   import BottomNav from './components/BottomNav.svelte';
+  import ExpenseChat from './components/ExpenseChat.svelte';
   import DueReminder from './components/DueReminder.svelte';
   import ViewDetailsLink from './components/ViewDetailsLink.svelte';
   import CadenceProgress from './components/CadenceProgress.svelte';
@@ -17,7 +18,7 @@
   export let calendarSection; export let recentSection; export let commitmentSection; export let activitySection; export let selectedMonth; export let connectionStatus; export let cacheUpdatedAt; export let demoMode; export let canUseDemoMode; export let onDemoModeChange; export let onMonthChange; export let refreshCalendar; export let refreshRecent; export let refreshCommitment; export let onRetryConnection; export let onLogout;
   export let embeddedMoney=false; export let onCloseEmbeddedMoney=()=>{}; export let focusedMoneyItem=null;
 
-  let view='home', showMoney=false, showNormalization=false, selectedDay=null, activityTab='recent', dayItems=[], dayStatus='idle', showAll=false, showAllActivity=false, overviewExpanded=false, expandedId=null;
+  let view='home', chatOpen=false, showMoney=false, showNormalization=false, selectedDay=null, activityTab='recent', dayItems=[], dayStatus='idle', showAll=false, showAllActivity=false, overviewExpanded=false, expandedId=null;
   let openedStory=null, handoff=null, addingContext=false, actionError='', loggingOut=false, signOutError='', demoSwitching=false, demoError='', storySlide=0, storyTouchStart=null, showStoryEvidence=false;
   let commitmentStyle='playful';
   let editing=null, editAmount='', editDate='', editCategory='', editSubcategory='', editMerchantId='', editAccountId='', saving=false, deleting=null;
@@ -198,7 +199,7 @@
   function openHistoryEdit(fund,entry){editingFundTransaction={fund,entry};fundTransactionError='';fundTransactionForm={amount:String(entry.amount||''),transactionDate:entry.transactionDate||'',nav:entry.nav==null?'':String(entry.nav)};}
   async function saveFundTransaction(){const amount=Number(fundTransactionForm.amount),nav=Number(fundTransactionForm.nav);if(!(amount>0)||!fundTransactionForm.transactionDate||!(nav>0)){fundTransactionError='Enter a valid amount, transaction date, and NAV.';return;}fundTransactionSaving=true;fundTransactionError='';try{await updateMutualFundTransaction(editingFundTransaction.fund.id,editingFundTransaction.entry.id,{amount,transactionDate:fundTransactionForm.transactionDate,nav,calculationSource:'USER_ENTERED'});const id=editingFundTransaction.fund.id;editingFundTransaction=null;await Promise.all([loadMutualFunds(),openFundDetail(id),refreshCommitment()]);}catch(cause){fundTransactionError=cause?.message||'Could not update this investment.';}finally{fundTransactionSaving=false;}}
   async function saveLumpSum(){const amount=Number(lumpSumForm.amount),units=Number(lumpSumForm.units);if(!(amount>0)||!lumpSumForm.transactionDate||!(units>0)){lumpSumError='Enter a positive amount, transaction date, and units received.';return;}lumpSumSaving=true;try{const id=lumpSumFund.id;await createMutualFundLumpSum(id,{amount,transactionDate:lumpSumForm.transactionDate,units,calculationSource:'USER_ENTERED'});lumpSumFund=null;await Promise.all([loadMutualFunds(),refreshCommitment()]);if(fundDetail?.id===id)await openFundDetail(id);}catch(cause){lumpSumError=cause?.message||'Could not add this lump sum.';}finally{lumpSumSaving=false;}}
-  function navigate(next){view=next;if(next!=='home'){selectedDay=null;activityTab='recent';}window.scrollTo({top:0,behavior:'smooth'});}
+  function navigate(next){if(next==='chat'){chatOpen=true;window.scrollTo({top:0,behavior:'smooth'});return;}chatOpen=false;view=next;if(next!=='home'){selectedDay=null;activityTab='recent';}window.scrollTo({top:0,behavior:'smooth'});}
   function currentLocalMonth(){const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;}
   function nextLocalMonth(){const[y,m]=currentLocalMonth().split('-').map(Number);return new Date(Date.UTC(y,m,1)).toISOString().slice(0,7);}
   function changeMonth(offset){const[y,m]=selectedMonth.split('-').map(Number),next=new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);if(next<=nextLocalMonth()){selectedDay=null;dayItems=[];activityTab='recent';onMonthChange(next);}}
@@ -311,6 +312,8 @@
 
 <AppHeader {connectionStatus} {connectionLabel} onRetry={onRetryConnection} onHome={() => navigate('home')} onProfile={() => navigate('you')} />
 <main class="app-shell">
+{#key demoMode}<ExpenseChat {selectedMonth} {connectionStatus} bind:open={chatOpen} />{/key}
+{#if !chatOpen}
 {#if connectionStatus==='offline'}<section class="offline-notice"><span>◌</span><div><strong>{cacheUpdatedAt?'Showing your last saved view':'You’re offline'}</strong><p>{cacheUpdatedAt?'We’ll refresh automatically when the service is back.':'Your layout is ready. Connect once to load your expenses and monthly commitment.'}</p></div><button on:click={onRetryConnection}>Retry</button></section>{/if}
 {#if view==='home'}
   <section class="app-heading"><div><p class="micro-label">{monthLabel(selectedMonth).toUpperCase()}</p><h1>{greeting()}</h1><p>Here’s how your month is unfolding.</p></div></section>
@@ -326,8 +329,9 @@
 {:else}
   <ProfileSettings {demoMode} {canUseDemoMode} {demoSwitching} {demoError} {loggingOut} {signOutError} onNavigate={navigate} onOpenMoney={openMoney} onDemoModeChange={switchDemoMode} onSignOut={signOut} />
 {/if}
+{/if}
 </main>
-<BottomNav {view} onNavigate={navigate} />
+<BottomNav view={chatOpen?'chat':view} onNavigate={navigate} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 {#if showMoney}

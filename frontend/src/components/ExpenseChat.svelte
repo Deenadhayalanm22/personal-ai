@@ -5,7 +5,8 @@
   import { getAiCredits, askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
   export let selectedMonth;
   export let connectionStatus;
-  let open = false, question = '', messages = [], pending = false, error = '', transcript, input, launcher;
+  export let open = false;
+  let question = '', messages = [], pending = false, error = '', transcript, input;
   let conversations = [], activeId = null, conversationMonth = null;
   let loadingHistory = true, storageError = '', draftTimer;
   const saves = new Map();
@@ -22,8 +23,8 @@
   let destroyed = false;
   const suggestions = ['Can I cover next month’s commitments with my salary?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
   async function scrollDown() { await tick(); if (transcript) transcript.scrollTop = transcript.scrollHeight; }
-  async function show() { open = true; refreshCredits(); await tick(); input?.focus(); }
-  async function close() { open = false; await tick(); launcher?.focus(); }
+  $: if (open) { refreshCredits(); tick().then(() => input?.focus()); }
+  async function close() { open = false; await tick(); document.querySelector('[data-nav-chat]')?.focus(); }
   function saveConversation() {
     if (!activeId && !messages.length && !question.trim()) return Promise.resolve();
     if (!activeId) {
@@ -179,16 +180,13 @@
       <small>Based on recorded data. Scenarios are estimates, not changes.</small>
     </form>
   </section>
-{:else}
-  <button class="chat-launcher" bind:this={launcher} on:click={show}><span aria-hidden="true">✦</span> Ask about your money</button>
 {/if}
 
 <style>
   .recover-request{margin-bottom:8px;padding:7px 10px;border:1px solid #a6bba9;border-radius:8px;background:#eef4ed;color:#234c3c;cursor:pointer;font:inherit;font-size:12px}
   .credit-status{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 20px;font-size:11px;background:#f5f7f1}.credit-status button{border:0;background:none;text-decoration:underline;color:#355d47;cursor:pointer;font:inherit}.credit-notice{padding:6px 20px;margin:0;font-size:12px;color:#975336}
 
-  .chat-launcher{position:fixed;right:24px;bottom:92px;z-index:45;display:flex;align-items:center;gap:10px;background:#234c3c;color:#fff;border:0;border-radius:24px;padding:13px 19px;box-shadow:0 6px 24px #16332330;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
-  .expense-chat{position:fixed;right:24px;bottom:88px;width:410px;height:min(690px,calc(100dvh - 116px));z-index:60;background:#fffefb;border:1px solid #d9e2d9;border-radius:22px;box-shadow:0 16px 70px #183c3433;display:flex;flex-direction:column;overflow:hidden;color:#233b30;font-family:inherit}
+  .expense-chat{width:100%;min-height:560px;height:calc(100dvh - 210px);max-height:850px;background:#fffefb;border:1px solid #d9e2d9;border-radius:22px;box-shadow:0 16px 70px #183c3433;display:flex;flex-direction:column;overflow:hidden;color:#233b30;font-family:inherit}
   header{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 15px;background:#eff4ed}h2{font-size:20px;margin:5px 0 0;letter-spacing:-.4px}.eyebrow{font-size:9px;letter-spacing:1.5px;color:#627467}.icon-button{border:0;background:transparent;font-size:28px;color:#52685c;cursor:pointer;padding:6px 10px}
   .chat-context{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;border-bottom:1px solid #e7ebe3;font-size:11px;color:#657468}.chat-context button{border:0;background:none;color:#355d47;text-decoration:underline;cursor:pointer;font-size:11px}
   .history-heading{display:flex;justify-content:space-between;gap:8px;padding:10px 18px 5px;color:#657468;font-size:10px}.history-heading span:first-child{font-weight:600;color:#36573d}
@@ -196,5 +194,5 @@
   .transcript{overflow-y:auto;flex:1;padding:18px;min-height:0;overscroll-behavior:contain}.welcome{text-align:left;padding:10px 3px 15px}.spark{font-size:29px;color:#517e51}.welcome h3{font-size:23px;line-height:1.2;letter-spacing:-.6px;margin:12px 0}.welcome p{font-size:13px;line-height:1.7;color:#6b756b}.suggestions{display:grid;gap:8px}.suggestions button{display:flex;justify-content:space-between;text-align:left;gap:12px;border:1px solid #dce4d8;background:white;padding:12px;border-radius:10px;font:inherit;font-size:12px;color:#36573d;cursor:pointer}
   .message{padding:13px 14px;background:#f0f3eb;border-radius:14px;margin:0 18px 14px 0}.message.user{margin:0 0 14px 28px;background:#e0ece2}.speaker{font-size:10px;font-weight:700;color:#52694f}.message p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65;margin:6px 0 0}details{font-size:10px;margin-top:12px;border-top:1px solid #ccd7c8;padding-top:9px}summary{cursor:pointer}.thinking{font-size:12px;color:#64725c;padding:10px}
   form{padding:12px 16px 16px;border-top:1px solid #e5e9df}.composer{display:flex;align-items:center;gap:8px;border:1px solid #d4dfcf;background:#fff;border-radius:12px;padding:8px}.composer textarea{flex:1;min-width:0;resize:none;border:0;outline:0;background:transparent;font:inherit;font-size:13px;line-height:1.5;color:#243c30;padding:3px}.composer:focus-within{outline:2px solid #73916c}.composer button{border:0;background:#315b43;color:white;border-radius:9px;width:34px;height:34px;font-size:23px;cursor:pointer}button:disabled{opacity:.45;cursor:default}small{display:block;text-align:center;font-size:9px;color:#7b8276;margin-top:9px}.chat-error{color:#975336;font-size:12px;line-height:1.5;margin:0 0 9px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  @media(max-width:600px){.chat-launcher{right:14px;bottom:83px;padding:11px 15px}.expense-chat{right:8px;left:8px;width:auto;bottom:80px;height:min(660px,calc(100dvh - 96px));border-radius:18px}}
+  @media(max-width:600px){.expense-chat{min-height:440px;height:calc(100dvh - 176px);border-radius:18px}}
 </style>
