@@ -454,3 +454,29 @@ test('30-second recording cutoff discards audio and asks for a fresh recording',
   expect(uploads).toBe(1);
   expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(2);
 });
+
+test('mic follows Send inside composer and recording shows animated feedback', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fakeMicrophone(page); await dashboard(page);
+  const composer = page.locator('.composer');
+  const send = composer.getByRole('button', { name: 'Send question', exact: true });
+  const mic = composer.getByRole('button', { name: 'Record voice question', exact: true });
+  await expect(mic).toBeVisible();
+  const sendBox = await send.boundingBox(), micBox = await mic.boundingBox();
+  expect(micBox.x).toBeGreaterThanOrEqual(sendBox.x + sendBox.width);
+  expect(micBox.y).toBe(sendBox.y);
+  await mic.click();
+  await expect(composer.getByRole('button', { name: 'Stop and transcribe', exact: true })).toBeVisible();
+  const bars = composer.locator('.recording-wave i');
+  await expect(bars).toHaveCount(9);
+  expect(await bars.first().evaluate(bar => getComputedStyle(bar).animationName)).not.toBe('none');
+  await expect(composer.getByText(/Recording ·/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/voice-recording-mobile.png' });
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await bars.first().evaluate(bar => getComputedStyle(bar).animationName)).toBe('none');
+  await composer.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(composer.locator('.recording-wave')).toHaveCount(0);
+  await expect(composer.getByRole('button', { name: 'Record voice question', exact: true })).toBeVisible();
+});
