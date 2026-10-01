@@ -208,3 +208,36 @@ test('Paid can attach an expense already recorded without increasing spending ag
   await expect(summary.locator('.month-overview-stat').nth(1)).toContainText('₹0');
   await expect(page.getByRole('region', { name: 'Activity', exact: true }).locator('.unified-activity-row')).toHaveCount(1);
 });
+
+test('Stock monthly plans appear in calendar and due activity before opening Money', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-02T09:00:00Z'));
+  const stock = (id, status, day = 1, startMonth = '2026-10') => ({ id, name: `ETF ${id}`, symbol: `ETF${id}`, quantity: 10, invested: 1000, latestPrice: 100, currentValue: 1000, profitOrLoss: 0, profitOrLossPercent: 0,
+    activeMonthlyPlan: { amount: 10000, day, startMonth, status: 'ACTIVE' }, currentMonthlyPlan: { month: '2026-10', status, amount: 10000 } });
+  const stocks = [stock(1, 'DUE'), stock(2, 'CONFIRMED'), stock(3, 'SKIPPED'), stock(4, 'SCHEDULED', 7), stock(5, 'SCHEDULED', 1, '2026-11')];
+  await page.route('**/api/web/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
+      : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 0, transactionCount: 0, days: [] }
+      : path.endsWith('/stocks/1') ? { stock: stocks[0], history: [] }
+      : path.endsWith('/stocks') ? { stocks }
+      : { items: [], loans: [], mutualFunds: [], actions: [] };
+    return route.fulfill({ json });
+  });
+  await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
+  await page.goto('/dashboard?month=2026-10');
+  const activity = page.getByRole('region', { name: 'Activity', exact: true });
+  await expect(activity).toContainText('ETF 1');
+  await expect(activity).toContainText('Stock monthly plan · Due now');
+  await expect(activity).toContainText('₹10,000');
+  for (const id of [2, 3, 4, 5]) await expect(activity.getByRole('button', { name: `Review ETF ${id}`, exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: /2026-10-01:.*2 planned payments/ }).click();
+  await expect(activity.getByRole('button', { name: 'Review ETF 1', exact: true })).toBeVisible();
+  await activity.getByRole('button', { name: 'Review ETF 1', exact: true }).click();
+  const detail = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'ETF 1', exact: true }) });
+  await expect(detail.getByRole('button', { name: 'Confirm allocation' })).toBeEnabled();
+  await detail.getByRole('button', { name: '×', exact: true }).click();
+  await page.locator('.money-modal > .close').click();
+  await page.getByRole('button', { name: /2026-10-07:.*1 planned payments/ }).click();
+  await expect(activity.getByRole('button', { name: 'Review ETF 4', exact: true })).toBeVisible();
+  await expect(activity).toContainText('Stock monthly plan · Upcoming');
+});

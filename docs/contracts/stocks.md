@@ -20,3 +20,5 @@ An optional monthly plan requires a positive amount, day 1–28, and a start mon
 The compact card shows valuation and a due strip. Plan setup, due confirmation or skip, direct history, manual purchase, investment correction, and delete are in View details. Scheduled purchases cannot be confirmed or skipped before their due date; completed and skipped purchases cannot be acted on again.
 
 The stock detail layout places the title above right-aligned Edit stock and Delete stock actions. Add stock purchase is beside total P&L above the holding grid. Individual history rows are read-only in the portal. A due stock commitment uses the same red row treatment as due funds and loans, and the card combines Due now with View details in one red-bordered strip.
+
+Home also reads the stock list at startup to render active monthly-plan calendar markers and pending Activity. It uses activeMonthlyPlan amount/day/startMonth and currentMonthlyPlan month/status; Review opens stock details. Confirmed/skipped purchases are omitted from pending Activity, and skipped plans are omitted from calendar markers for that month.

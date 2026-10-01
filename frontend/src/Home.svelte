@@ -56,7 +56,7 @@
   $: data=calendarSection.data||{}; $: currency=data.currency||'INR'; $: calendar=buildCalendar(selectedMonth,data.days||[]);
   $: recentData=recentSection.data||{}; $: recentItems=(recentData.items||recentData.expenses||[]).slice(0,5);
   $: activityItems=activitySection.data?.items||[];
-  $: calendarPlans=plannedCalendarItems(selectedMonth,commitments,loans,mutualFunds);
+  $: calendarPlans=plannedCalendarItems(selectedMonth,commitments,loans,mutualFunds,stocks);
   $: todayDate=profileToday(data.timezone);
   $: unifiedActivity=buildUnifiedActivity(calendarPlans,activityItems,selectedDay==null?null:isoDate(selectedDay),todayDate,selectedMonth);
   $: visibleUnifiedActivity=showAllActivity?unifiedActivity:unifiedActivity.slice(0,Math.max(5,unifiedActivity.filter(item=>item.status==='DUE').length));
@@ -230,7 +230,7 @@
   function nextLocalMonth(){const[y,m]=currentLocalMonth().split('-').map(Number);return new Date(Date.UTC(y,m,1)).toISOString().slice(0,7);}
   function changeMonth(offset){const[y,m]=selectedMonth.split('-').map(Number),next=new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);if(next<=nextLocalMonth()){selectedDay=null;dayItems=[];activityTab='recent';onMonthChange(next);}}
   function buildCalendar(monthValue,apiDays){const[y,m]=monthValue.split('-').map(Number),count=new Date(y,m,0).getDate(),leading=(new Date(y,m-1,1).getDay()+6)%7,values=new Map(apiDays.map(x=>[Number(String(x.date).slice(-2)),x])),today=new Date(),current=today.getFullYear()===y&&today.getMonth()+1===m;return{leading,days:Array.from({length:count},(_,i)=>{const day=i+1,v=values.get(day)||{};return{day,totalSpend:Number(v.totalSpend||0),transactionCount:Number(v.transactionCount||0),intensity:Math.max(0,Math.min(4,Number(v.intensity||0))),future:current&&day>today.getDate()};})};}
-  function plannedCalendarItems(month,commitmentItems,loanItems,fundItems){
+  function plannedCalendarItems(month,commitmentItems,loanItems,fundItems,stockItems){
     const items=[];
     const add=(date,type,sourceId,label,amount,status)=>{if(date?.slice(0,7)===month)items.push({date,type,sourceId,label,amount:Number(amount||0),status,planned:true});};
     const advance=(date,unit,interval)=>{const next=new Date(`${date}T12:00:00Z`),step=Math.max(1,Number(interval||1));if(unit==='DAY')next.setUTCDate(next.getUTCDate()+step);else if(unit==='WEEK')next.setUTCDate(next.getUTCDate()+7*step);else if(unit==='YEAR')next.setUTCFullYear(next.getUTCFullYear()+step);else next.setUTCMonth(next.getUTCMonth()+step);return next.toISOString().slice(0,10);};
@@ -258,6 +258,13 @@
         next=advance(next,'MONTH',interval);
       }
     }
+    for(const stock of stockItems){
+      const plan=stock.activeMonthlyPlan;
+      if(!plan||plan.status!=='ACTIVE'||month<plan.startMonth)continue;
+      const date=`${month}-${String(plan.day).padStart(2,'0')}`;
+      const occurrence=stock.currentMonthlyPlan;
+      add(date,'STOCK',stock.id,stock.name,plan.amount,occurrence?.month===month?occurrence.status:'UPCOMING');
+    }
     return items.filter(item=>item.status!=='SKIPPED');
   }
   function buildUnifiedActivity(plans,recorded,date,today,month){
@@ -266,13 +273,14 @@
     const actual=recorded.filter(item=>date?item.date===date:item.date<=today);
     return [...pending,...actual].sort((a,b)=>Number(b.status==='DUE')-Number(a.status==='DUE')||b.date.localeCompare(a.date));
   }
-  const activityDescription=item=>item.planned?`${item.type==='LOAN'?'Loan EMI':item.type==='INVESTMENT'?'Mutual fund SIP':'Commitment'} · ${item.status==='DUE'?'Due now':'Upcoming'}`:item.description;
+  const activityDescription=item=>item.planned?`${item.type==='LOAN'?'Loan EMI':item.type==='INVESTMENT'?'Mutual fund SIP':item.type==='STOCK'?'Stock monthly plan':'Commitment'} · ${item.status==='DUE'?'Due now':'Upcoming'}`:item.description;
   function resetActivity(){selectedDay=null;showAllActivity=false;if(selectedMonth!==todayDate.slice(0,7))onMonthChange(todayDate.slice(0,7));}
   async function reviewActivity(item){
     await openMoney();
     if(item.type==='COMMITMENT'){const commitment=commitments.find(row=>String(row.id)===String(item.sourceId));if(commitment)await openCommitmentHistory(commitment,item.date);}
     else if(item.type==='LOAN'){const loan=loans.find(row=>String(row.id)===String(item.sourceId));if(loan)await openLoanHistory(loan);}
     else if(item.type==='INVESTMENT')await openFundDetail(item.sourceId);
+    else if(item.type==='STOCK')await openStockDetail(item.sourceId);
   }
   function calendarDayLabel(day){const date=isoDate(day.day);const planned=calendarPlans.filter(item=>item.date===date);return `${date}: ${day.transactionCount} recorded expenses${planned.length?`, ${planned.length} planned payments`:''}`;}
   function hasCalendarMarker(day){const date=isoDate(day);return calendarPlans.some(item=>item.date===date)||activityItems.some(item=>item.date===date&&item.type!=='EXPENSE');}
@@ -308,7 +316,7 @@
 
   async function signOut(){loggingOut=true;try{await logout();try{localStorage.removeItem(`${MONEY_MODULES_CACHE_KEY}.real`);localStorage.removeItem(`${MONEY_MODULES_CACHE_KEY}.demo`);}catch{}onLogout();}catch{loggingOut=false;signOutError='Could not sign out.';}}
   async function switchDemoMode(){if(demoSwitching)return;demoSwitching=true;demoError='';try{await onDemoModeChange(!demoMode);captureDate=null;chatOpen=false;showNormalization=false;loans=[];mutualFunds=[];stocks=[];actions=[];loanStatus='idle';mutualFundStatus='idle';stockStatus='idle';actionsStatus='idle';fundDetail=null;dayItems=[];selectedDay=null;editOptions={categories:[],merchants:[],accounts:[]};optionsStatus='idle';showMoney=false;await loadActions();}catch(cause){demoError=cause?.message||'Could not switch profiles.';}finally{demoSwitching=false;}}
-  onMount(()=>{try{commitmentStyle=localStorage.getItem('money-stories.commitment-style')||'playful';}catch{}loadActions();readMoneyModulesCache();Promise.allSettled([loadLoans(),loadMutualFunds(),loadCommitments()]);});
+  onMount(()=>{try{commitmentStyle=localStorage.getItem('money-stories.commitment-style')||'playful';}catch{}loadActions();readMoneyModulesCache();Promise.allSettled([loadLoans(),loadMutualFunds(),loadStocks(),loadCommitments()]);});
 </script>
 {#if showCommitmentExtra}<div class="modal-backdrop commitment-extra-backdrop"><section class="modal loan-form" role="dialog" aria-modal="true"><button class="close" on:click={()=>showCommitmentExtra=false}>×</button><p class="micro-label">EXTRA PAYMENT</p><h2>Add extra to {commitmentHistory?.label}</h2><label>{isDatedCommitment(commitmentHistory?.commitment)?'Paid date':'Paid month'}<select bind:value={commitmentExtraMonth}>{#each commitmentHistory?.history?.filter(entry=>entry.status==='COMPLETED')||[] as entry}<option value={isDatedCommitment(commitmentHistory?.commitment)?entry.dueDate:entry.month}>{isDatedCommitment(commitmentHistory?.commitment)?expectedLabel(entry.dueDate):monthLabel(entry.month)}</option>{/each}</select></label><label>Extra amount<input type="number" min="0.01" step="0.01" bind:value={commitmentExtraAmount}/></label><label>Reason<input maxlength="200" bind:value={commitmentExtraReason}/></label>{#if commitmentHistoryError}<p class="form-error">{commitmentHistoryError}</p>{/if}<div class="modal-actions"><button class="secondary" on:click={()=>showCommitmentExtra=false}>Cancel</button><button class="primary" on:click={saveCommitmentExtra}>Save extra</button></div></section></div>{/if}
 {#if loanHistory}<div class="modal-backdrop fund-form-backdrop"><section class="modal fund-detail" role="dialog" aria-modal="true"><button class="close" on:click={()=>loanHistory=null}>×</button><p class="micro-label">LOAN DETAILS</p><h2>{loanHistory.loanName}</h2>{#if loanHistory.loan?.status==='ACTIVE'}<div class="modal-actions"><button class="secondary" on:click={()=>{const loan=loanHistory.loan;loanHistory=null;openLoanForm(loan)}}>Edit loan</button><button class="secondary" on:click={()=>loanAction='delete'}>Delete loan</button><button class="secondary" disabled={!loanHistory.loan?.emiOccurrences?.some(entry=>entry.status==='DUE')} on:click={()=>{loanAction='preclose';loanActionAmount=''}}>Pre-close loan</button></div>{/if}{#if loanHistoryStatus==='loading'}<p>Loading payment history…</p>{:else if loanHistoryStatus==='error'}<p>{loanHistoryError}</p>{:else}<section class="investment-history"><h3>{loanHistory.loan?.status==='CLOSED'?'Full payment history':'Next payable EMI'}</h3>{#if lastLoanPaymentDate}<p>Paid on {dateLabel(lastLoanPaymentDate)}</p>{/if}{#each (loanHistory.loan?.status==='CLOSED'?loanHistory.history:loanHistory.history?.filter(entry=>entry.status!=='PAID'&&entry.status!=='SKIPPED').slice(0,1)) as entry}<div class="investment-history-row" class:due={entry.status==='DUE'}><span>{dateLabel(entry.dueDate)}</span><strong>{monthLabel(entry.month)} EMI</strong><span class="history-amount"><b>{money(entry.paidAmount||entry.plannedAmount)}</b></span><small>{entry.preClosureSettlement?`Pre-closure settlement · Paid on ${dateLabel(entry.paidAt)}`:entry.status==='PAID'?`Paid on ${dateLabel(entry.paidAt)}`:entry.status==='DUE'?'Due now':entry.status.toLowerCase()}</small>{#if loanHistory.loan?.status==='ACTIVE'}<div class="loan-history-action"><button class="primary" disabled={entry.status!=='DUE'} on:click={()=>payLoanHistoryEmi(entry)}>{`Pay ${monthLabel(entry.month).split(' ')[0]} EMI`}</button><button class="secondary" disabled={entry.status!=='DUE'} on:click={()=>{loanAction='skip';loanActionAmount=''}}>{`Skip ${monthLabel(entry.month).split(' ')[0]} EMI`}</button></div>{/if}</div>{/each}{#if loanHistory.loan?.restructuredFrom}<p>Restructured from {monthLabel(loanHistory.loan.restructuredFrom)}</p>{/if}</section>{/if}</section></div>{/if}

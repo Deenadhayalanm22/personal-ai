@@ -196,3 +196,5 @@ The main dashboard owns the Money dialog: Home → Your money opens the existing
 ### Skipped occurrence consistency (FIN-018)
 
 A skipped loan EMI, recurring bill, mutual-fund SIP, or ETF monthly purchase is excluded from its scheduled month’s monthly-plan buckets, evidence, full intended commitment, and salary allocation/shortfall. The calendar overview and View monthly plan use the same inclusion rule. Completed payments remain planned and contribute to progress; future months keep their scheduled sources. Existing cached snapshots are recalculated on the calculation-version change. Regression coverage checks skipped versus confirmed investment occurrences and preserves next-month sources.
+
+FIN-023 calendar acceptance: Active stock/ETF monthly plans appear on their investment day in Home calendar and its due Activity list. Review opens the owning stock details; confirming or skipping removes the pending row. Home loads stocks on startup so this works before opening Your money.
