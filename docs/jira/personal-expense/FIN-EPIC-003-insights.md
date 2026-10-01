@@ -15,7 +15,7 @@
 | `PendingActionContextService` | Creates the short-lived selected-date context consumed by the next eligible WhatsApp text expense. |
 | `MonthlyFinancialSnapshotService` | Maintains the canonical live monthly commitment projection; generated spending-story snapshots have been retired. |
 | `frontend/src/App.svelte` | Owns selected month, URL `?month=YYYY-MM`, online refresh, and month/profile-local cache. |
-| `frontend/src/Home.svelte` | Renders calendar intensity, the combined monthly overview, recent/date activity tabs, missing-transaction handoff, and live monthly commitment details. |
+| `frontend/src/Home.svelte` | Renders calendar intensity, the combined monthly overview, unified activity with due-payment review, missing-transaction handoff, and live monthly commitment details. |
 
 Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 — Composable story enrichment](FIN-ARCH-001-story-enrichment.md). They must remain relevant to each story's evidence and must not make an optional input a prerequisite for normal expense insights.
 
@@ -36,10 +36,11 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 2. Each day button uses the API-provided `intensity` (0–4) as its visual spend-depth class. The frontend does not calculate or reinterpret intensity from transaction amounts.
 3. The month summary displays API totals: `totalSpend`, `transactionCount`, and `highestSpend`.
 4. Home combines the greeting, a compact expandable spending-and-commitment overview, the full monthly calendar, and activity below it. Each day keeps the expense API's intensity color and adds one marker when a recurring commitment, loan EMI, or mutual-fund SIP is scheduled or recorded on that date. The calendar can show the current and next month; future dates can be selected to inspect planned items.
-5. The activity section initially shows the latest five recorded items for the selected month. Selecting a calendar day filters actual activity to that date and also shows individually labelled due or upcoming commitments, EMIs, and SIPs. Completed plans appear as recorded activity rather than a duplicate planned row. Expense editing remains available through the date's transaction workspace.
-6. The activity panel can expand to all returned items. It is a presentation limit, not backend pagination.
-7. An empty past day can open the missing-transaction flow, which creates a date context and offers the returned WhatsApp URL.
-8. Editing or deleting an item refreshes calendar, recent activity, and monthly commitment so the views converge on the updated record. A dedicated calendar job drains dirty aggregate dates independently of story generation.
+5. A single activity section defaults to Today: it combines all server-reported due payments in the selected month, today's scheduled items, and recent recorded activity. Due now rows appear first; remaining entries follow in descending date order. Selecting a calendar day filters the same section to that date; Back to today restores its default view. A historical or future month shows its month activity and scheduled items. Completed plans appear as recorded activity rather than a duplicate planned row.
+6. Due rows use the Monthly Commitment evidence style: a red border, pale red background, and Review action. Selecting Review or the row opens the owning commitment, loan, or mutual fund details where the existing payment flow is available. After payment, the due row clears and the refreshed recorded payment appears in the same activity section.
+7. The activity panel initially shows five entries and can expand to all returned items; all due rows remain visible even when there are more than five. It is a presentation limit, not backend pagination.
+8. An empty past day can open the missing-transaction flow in the transaction workspace, which creates a date context and offers the returned WhatsApp URL.
+9. Editing or deleting an item refreshes calendar, recent activity, and monthly commitment so the views converge on the updated record. A dedicated calendar job drains dirty aggregate dates independently of story generation.
 
 ### Integration-test scenarios
 
@@ -48,6 +49,7 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 - Verify a session cannot read another profile's calendar or expense list.
 - Render a fixture with intensities 0–4 and assert each calendar day uses the matching visual class without recalculating it.
 - Render commitments, a loan EMI, and a mutual-fund SIP on one date; assert the calendar shows one planning marker and selecting the date lists each plan alongside that date's recorded expense.
+- Verify the default Today section puts due payments before newer recorded activity, Review opens the correct payment details, and completing a commitment replaces its due row with one recorded payment while other dues remain.
 - Select a populated day and assert a date-scoped expense request; select an empty past day and assert context creation plus WhatsApp handoff; assert future days are disabled.
 - Edit/delete a displayed item and assert calendar, recent activity, and commitment fetches are requested again.
 

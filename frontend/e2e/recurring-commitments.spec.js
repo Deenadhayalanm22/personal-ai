@@ -78,11 +78,13 @@ test('two first-day commitments become due and only paid chit fund appears in ac
   expect((await list()).find(item => item.label === 'Internet recharge').currentOccurrence.status).toBe('DUE');
 
   await page.locator('.money-modal > .close').click();
-  const activity = page.locator('.home-section').filter({ has: page.getByRole('heading', { name: 'Everything recorded' }) });
+  const activity = page.getByRole('region', { name: 'Activity', exact: true });
   const paidActivity = activity.locator('.activity-entry', { hasText: 'Chit fund' });
   await expect(paidActivity).toContainText('Commitment paid');
   await expect(paidActivity).toContainText('₹5,000');
-  await expect(activity.locator('.activity-entry', { hasText: 'Internet recharge' })).toHaveCount(0);
+  const unpaidActivity = activity.locator('.activity-entry', { hasText: 'Internet recharge' });
+  await expect(unpaidActivity).toContainText('Due now');
+  await expect(unpaidActivity).not.toContainText('Commitment paid');
 });
 
 test('weekly family support contributes every scheduled week and each due payment can be recorded', async ({ page, request }) => {

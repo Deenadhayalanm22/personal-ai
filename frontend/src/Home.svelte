@@ -55,8 +55,9 @@
   $: recentData=recentSection.data||{}; $: recentItems=(recentData.items||recentData.expenses||[]).slice(0,5);
   $: activityItems=activitySection.data?.items||[];
   $: calendarPlans=plannedCalendarItems(selectedMonth,commitments,loans,mutualFunds);
-  $: selectedActivity=selectedDay==null?activityItems:activityItems.filter(item=>item.date===isoDate(selectedDay));
-  $: selectedPlans=selectedDay==null?[]:calendarPlans.filter(item=>item.date===isoDate(selectedDay)&&!['COMPLETED','PAID','CONFIRMED'].includes(item.status));
+  $: todayDate=profileToday(data.timezone);
+  $: unifiedActivity=buildUnifiedActivity(calendarPlans,activityItems,selectedDay==null?null:isoDate(selectedDay),todayDate,selectedMonth);
+  $: visibleUnifiedActivity=showAllActivity?unifiedActivity:unifiedActivity.slice(0,Math.max(5,unifiedActivity.filter(item=>item.status==='DUE').length));
   $: commitment=commitmentSection.data?.commitment || null;
   $: selected=selectedDay==null?null:calendar.days.find(day=>day.day===selectedDay); $: activeItems=activityTab==='recent'?recentItems:dayItems; $: visibleItems=showAll?activeItems:activeItems.slice(0,5);
   $: editSubcategories=editOptions.categories.find(option=>option.name===editCategory)?.subcategories||[];
@@ -80,6 +81,7 @@
   $: evidenceItems=(commitments,evidenceFor(openedStory,storySlide));
   $: displayEvidenceItems=groupCadenceEvidence(evidenceItems,commitments,openedStory,storySlide);
   function localInputDate(value){if(!value)return '';const text=String(value);if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const date=new Date(text);return Number.isNaN(date.getTime())?text.slice(0,10):`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+  function profileToday(timezone){const parts=new Intl.DateTimeFormat('en',{timeZone:timezone||'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=type=>parts.find(part=>part.type===type).value;return `${value('year')}-${value('month')}-${value('day')}`;}
   function evidenceFor(story,slide=0){const card=story?.cards?.slice().sort((a,b)=>(a.sequence||0)-(b.sequence||0))[slide];const evidence=story?.evidence?.byCard?.[card?.cardId]||story?.evidence;const raw=Array.isArray(evidence)?evidence:evidence?.transactions||evidence?.items||story?.transactions||[];return raw.map(item=>{const[idType,id,occurrenceDate]=String(item.transactionId||item.id||'').split(':');return{sourceType:idType,sourceId:id,occurrenceDate,merchant:item.merchantLabel||item.merchant||item.merchantName||item.description||'Expense',category:item.categoryLabel||item.category?.name||item.category||'Uncategorised',detail:item.subcategoryLabel||item.detail||'',date:item.dateLabel||dateLabel(item.transactionDate||item.transactionTime||item.date),amount:item.amount?.displayValue||item.displayAmount||money(item.amount),amountValue:item.amount?.value??(Number(item.amount)||0)}});}
   const isDatedCommitment=item=>item?.recurrenceUnit==='DAY'||item?.recurrenceUnit==='WEEK';
   function groupCadenceEvidence(items,knownCommitments,story,slide){
@@ -206,35 +208,49 @@
   function buildCalendar(monthValue,apiDays){const[y,m]=monthValue.split('-').map(Number),count=new Date(y,m,0).getDate(),leading=(new Date(y,m-1,1).getDay()+6)%7,values=new Map(apiDays.map(x=>[Number(String(x.date).slice(-2)),x])),today=new Date(),current=today.getFullYear()===y&&today.getMonth()+1===m;return{leading,days:Array.from({length:count},(_,i)=>{const day=i+1,v=values.get(day)||{};return{day,totalSpend:Number(v.totalSpend||0),transactionCount:Number(v.transactionCount||0),intensity:Math.max(0,Math.min(4,Number(v.intensity||0))),future:current&&day>today.getDate()};})};}
   function plannedCalendarItems(month,commitmentItems,loanItems,fundItems){
     const items=[];
-    const add=(date,type,label,amount,status)=>{if(date?.slice(0,7)===month)items.push({date,type,label,amount:Number(amount||0),status});};
+    const add=(date,type,sourceId,label,amount,status)=>{if(date?.slice(0,7)===month)items.push({date,type,sourceId,label,amount:Number(amount||0),status,planned:true});};
     const advance=(date,unit,interval)=>{const next=new Date(`${date}T12:00:00Z`),step=Math.max(1,Number(interval||1));if(unit==='DAY')next.setUTCDate(next.getUTCDate()+step);else if(unit==='WEEK')next.setUTCDate(next.getUTCDate()+7*step);else if(unit==='YEAR')next.setUTCFullYear(next.getUTCFullYear()+step);else next.setUTCMonth(next.getUTCMonth()+step);return next.toISOString().slice(0,10);};
     for(const item of commitmentItems){
       if(item.status!=='ACTIVE')continue;
       const dates=item.currentOccurrences?.length?item.currentOccurrences:[item.currentOccurrence].filter(Boolean);
-      for(const occurrence of dates)add(occurrence.dueDate,'COMMITMENT',item.label,item.planningAmount,occurrence.status);
+      for(const occurrence of dates)add(occurrence.dueDate,'COMMITMENT',item.id,item.label,item.planningAmount,occurrence.status);
       let next=item.nextExpectedDate;
       for(let i=0;next&&next.slice(0,7)<=month&&i<70;i++){
-        if(!dates.some(occurrence=>occurrence.dueDate===next))add(next,'COMMITMENT',item.label,item.planningAmount,'UPCOMING');
+        if(!dates.some(occurrence=>occurrence.dueDate===next))add(next,'COMMITMENT',item.id,item.label,item.planningAmount,'UPCOMING');
         next=advance(next,item.recurrenceUnit,item.recurrenceInterval);
       }
     }
     for(const loan of loanItems){
       if(loan.status!=='ACTIVE')continue;
-      for(const occurrence of loan.emiOccurrences||[])add(occurrence.dueDate,'LOAN',loan.loanName,occurrence.plannedAmount||loan.monthlyEmiAmount,occurrence.status);
+      for(const occurrence of loan.emiOccurrences||[])add(occurrence.dueDate,'LOAN',loan.id,loan.loanName,occurrence.plannedAmount||loan.monthlyEmiAmount,occurrence.status);
     }
     for(const fund of fundItems){
       if(!fund.activeSip)continue;
       const sip=fund.activeSip,interval=sip.frequency==='QUARTERLY'?3:sip.frequency==='YEARLY'?12:1;
-      if(fund.currentSip?.scheduledMonth===month)add(`${month}-${String(sip.day).padStart(2,'0')}`,'INVESTMENT',fund.schemeName,sip.amount,fund.currentSip.status);
+      if(fund.currentSip?.scheduledMonth===month)add(`${month}-${String(sip.day).padStart(2,'0')}`,'INVESTMENT',fund.id,fund.schemeName,sip.amount,fund.currentSip.status);
       let next=sip.nextDueDate;
       for(let i=0;next&&next.slice(0,7)<=month&&i<12;i++){
-        if(fund.currentSip?.scheduledMonth!==next.slice(0,7))add(next,'INVESTMENT',fund.schemeName,sip.amount,'UPCOMING');
+        if(fund.currentSip?.scheduledMonth!==next.slice(0,7))add(next,'INVESTMENT',fund.id,fund.schemeName,sip.amount,'UPCOMING');
         next=advance(next,'MONTH',interval);
       }
     }
     return items.filter(item=>item.status!=='SKIPPED');
   }
-  function calendarDayLabel(day){const date=isoDate(day);const planned=calendarPlans.filter(item=>item.date===date);return `${date}: ${day.transactionCount} recorded expenses${planned.length?`, ${planned.length} planned payments`:''}`;}
+  function buildUnifiedActivity(plans,recorded,date,today,month){
+    const pending=plans.filter(item=>!['COMPLETED','PAID','CONFIRMED','SKIPPED'].includes(item.status))
+      .filter(item=>date?item.date===date:month===today.slice(0,7)?item.status==='DUE'||item.date===today:true);
+    const actual=recorded.filter(item=>date?item.date===date:item.date<=today);
+    return [...pending,...actual].sort((a,b)=>Number(b.status==='DUE')-Number(a.status==='DUE')||b.date.localeCompare(a.date));
+  }
+  const activityDescription=item=>item.planned?`${item.type==='LOAN'?'Loan EMI':item.type==='INVESTMENT'?'Mutual fund SIP':'Commitment'} · ${item.status==='DUE'?'Due now':'Upcoming'}`:item.description;
+  function resetActivity(){selectedDay=null;showAllActivity=false;if(selectedMonth!==todayDate.slice(0,7))onMonthChange(todayDate.slice(0,7));}
+  async function reviewActivity(item){
+    await openMoney();
+    if(item.type==='COMMITMENT'){const commitment=commitments.find(row=>String(row.id)===String(item.sourceId));if(commitment)await openCommitmentHistory(commitment,item.date);}
+    else if(item.type==='LOAN'){const loan=loans.find(row=>String(row.id)===String(item.sourceId));if(loan)await openLoanHistory(loan);}
+    else if(item.type==='INVESTMENT')await openFundDetail(item.sourceId);
+  }
+  function calendarDayLabel(day){const date=isoDate(day.day);const planned=calendarPlans.filter(item=>item.date===date);return `${date}: ${day.transactionCount} recorded expenses${planned.length?`, ${planned.length} planned payments`:''}`;}
   function hasCalendarMarker(day){const date=isoDate(day);return calendarPlans.some(item=>item.date===date)||activityItems.some(item=>item.date===date&&item.type!=='EXPENSE');}
   async function selectDate(day){if(!day)return;selectedDay=day.day;activityTab='day';showAll=false;expandedId=null;if(!day.future)await loadDay();}
   async function loadDay(){if(selectedDay==null)return;dayStatus='loading';try{const page=await getExpensesForDate(selectedMonth,isoDate(selectedDay),50);dayItems=page.items||page.expenses||[];dayStatus='ready';}catch{dayStatus='error';}}
@@ -319,7 +335,20 @@
   <section class="app-heading"><div><p class="micro-label">{monthLabel(selectedMonth).toUpperCase()}</p><h1>{greeting()}</h1><p>Here’s how your month is unfolding.</p></div></section>
   <section class="monthly-overview compact-overview" aria-label="This month"><button class="overview-toggle" aria-expanded={overviewExpanded} on:click={()=>overviewExpanded=!overviewExpanded}><span><strong>Spending & commitments</strong><small>{money(data.totalSpend)} recorded · {commitment?storyCardFace(commitment).displayValue:'No plan' } planned</small></span><b>{overviewExpanded?'−':'+'}</b></button>{#if overviewExpanded}<div class="overview-details"><SectionState section={calendarSection} title="Recorded expenses" retry={refreshCalendar}><div class="overview-row"><span><strong>Recorded expenses</strong><small>{data.transactionCount||0} transactions</small></span><b>{money(data.totalSpend)}</b></div></SectionState><SectionState section={commitmentSection} title="Planned commitments" retry={refreshCommitment}>{#if commitment}<button class="overview-row" on:click={()=>openStory(commitment)}><span><strong>Planned commitments</strong><small>View details →</small></span><b>{storyCardFace(commitment).displayValue}</b></button>{:else}<p class="overview-empty">No plan for this month.</p>{/if}</SectionState><p class="overview-note">Planned commitments are upcoming amounts, not money already spent.</p></div>{/if}</section>
   <section class="home-section"><div class="section-title"><div><p class="micro-label">MONTH AT A GLANCE</p><h2>{monthLabel(selectedMonth)}</h2></div><label class="month-switcher"><button type="button" aria-label="Previous month" on:click={()=>changeMonth(-1)}>←</button><input type="month" aria-label="Calendar month" value={selectedMonth} max={nextLocalMonth()} on:change={e=>{selectedDay=null;onMonthChange(e.currentTarget.value);}}/><button type="button" aria-label="Next month" on:click={()=>changeMonth(1)}>→</button></label></div><SectionState section={calendarSection} title="Spending calendar" retry={refreshCalendar}><section class="month-card unified-calendar"><div class="weekdays">{#each ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as d}<span>{d}</span>{/each}</div><div class="calendar">{#each Array(calendar.leading) as _}<span></span>{/each}{#each calendar.days as d}<button class:future={d.future} class:selected={selectedDay===d.day} class={`level-${d.intensity}`} aria-label={calendarDayLabel(d)} on:click={()=>selectDate(d)}><span>{d.day}</span>{#if hasCalendarMarker(d.day)}<i class="plan-dot" aria-hidden="true"></i>{/if}</button>{/each}</div><div class="legend"><span>Lower spend</span><div>{#each [0,1,2,3,4] as l}<i class={`level-${l}`}></i>{/each}</div><span>Higher spend</span><span class="plan-key"><i class="plan-dot"></i> Planned</span></div></section></SectionState></section>
-  <section class="home-section calendar-activity"><div class="section-title"><div><p class="micro-label">ACTIVITY</p><h2>{selectedDay?`${selectedDay} ${monthLabel(selectedMonth)}`:'Everything recorded'}</h2></div>{#if selectedDay}<button class="text-link" on:click={()=>selectedDay=null}>Show all</button>{/if}</div><SectionState section={activitySection} title="Financial activity" retry={refreshCommitment}><div class="compact-list">{#each selectedPlans as item}<div class="row-main activity-entry planned-entry"><div><strong>{item.label}</strong><span>{item.type==='LOAN'?'Loan EMI':item.type==='INVESTMENT'?'Mutual fund SIP':'Commitment'} · {item.status==='COMPLETED'?'Completed':item.status==='DUE'?'Due now':'Planned'}</span></div><b>{money(item.amount)}</b></div>{/each}{#each (showAllActivity?selectedActivity:selectedActivity.slice(0,5)) as item}<div class="row-main activity-entry"><div><strong>{item.label}</strong><span>{item.description} · {dateLabel(item.date)}</span></div><b>{money(item.amount)}</b></div>{/each}{#if !selectedPlans.length&&!selectedActivity.length}<p class="empty-copy">{selectedDay?'Nothing on this date yet.':'No activity recorded this month yet.'}</p>{/if}</div>{#if selectedActivity.length>5}<button class="view-all" on:click={()=>showAllActivity=!showAllActivity}>{showAllActivity?'Show fewer ↑':`View all ${selectedActivity.length} activities ↓`}</button>{/if}</SectionState>{#if selectedDay&&!calendar.days.find(day=>day.day===selectedDay)?.future}<button class="text-link" on:click={()=>navigate('transactions')}>View and edit expenses for this date →</button>{/if}</section>
+  <section class="home-section calendar-activity" aria-label="Activity">
+    <div class="section-title"><div><p class="micro-label">ACTIVITY</p><h2>{selectedDay?`${selectedDay} ${monthLabel(selectedMonth)}`:selectedMonth===todayDate.slice(0,7)?'Today':'This month'}</h2><p class="activity-caption">{selectedDay?'Payments and records for this date':'Due payments first, then your latest records'}</p></div>{#if selectedDay}<button class="text-link" on:click={resetActivity}>Back to today</button>{/if}</div>
+    <SectionState section={activitySection} title="Financial activity" retry={refreshCommitment}>
+      <div class="unified-activity-list">
+        {#each visibleUnifiedActivity as item}
+          <article class="unified-activity-row activity-entry" class:due-commitment={item.status==='DUE'} class:planned-entry={item.planned}>
+            {#if item.planned}<button class="activity-row-content" aria-label={`Review ${item.label}`} on:click={()=>reviewActivity(item)}><strong>{item.label}</strong><span>{activityDescription(item)} · {dateLabel(item.date)}</span></button>{:else}<div class="activity-row-content"><strong>{item.label}</strong><span>{activityDescription(item)} · {dateLabel(item.date)}</span></div>{/if}
+            <div class="activity-row-actions"><b>{money(item.amount)}</b>{#if item.planned}<button class="activity-review" aria-label="Review" on:click={()=>reviewActivity(item)}>Review</button>{/if}</div>
+          </article>
+        {:else}<p class="empty-copy">{selectedDay?'Nothing on this date yet.':'No payments or activity to show yet.'}</p>{/each}
+      </div>
+      {#if unifiedActivity.length>visibleUnifiedActivity.length||showAllActivity}<button class="view-all" on:click={()=>showAllActivity=!showAllActivity}>{showAllActivity?'Show fewer ↑':`View all ${unifiedActivity.length} activities ↓`}</button>{/if}
+    </SectionState>
+  </section>
   <button class="your-money-card" on:click={openMoney}><span>◒</span><div><strong>Your money</strong><small>See your incoming and outgoing plan, only when you’re ready.</small></div><b>Explore ›</b></button>
 {:else if view==='transactions'}
   <section class="workspace-heading"><div><p class="micro-label">EXPENSE WORKSPACE</p><h1>Transactions</h1><p>AI-captured expenses, ready for your review.</p></div><label class="month-switcher"><button type="button" on:click={()=>changeMonth(-1)}>←</button><input type="month" value={selectedMonth} max={currentLocalMonth()} on:change={e=>onMonthChange(e.currentTarget.value)}/><button type="button" on:click={()=>changeMonth(1)}>→</button></label></section>

@@ -31,6 +31,7 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 2. **Expense transaction:** a transaction detail or edit affordance exposes `Add as monthly commitment`. It opens the same commitment form with its label, category, merchant/reference, amount, and date prefilled; saving does not modify the transaction.
 3. **Manual add:** Manage commitments exposes `Add commitment` so a user can plan for an obligation with no suitable transaction in the selected month.
 4. **Month review:** Manage commitments can show a selected completed month's transactions with an `Add as monthly commitment` action. It is available whenever the user chooses; it is not a blocking or end-of-month-only prompt.
+5. **Home activity:** the unified calendar activity section prioritizes due occurrences with the same red evidence border and Review action. Review or selecting the row opens that commitment's details and payment flow; recording payment refreshes the row as completed activity while other pending commitments remain due.
 
 ### Acceptance criteria
 
