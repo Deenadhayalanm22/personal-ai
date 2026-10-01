@@ -31,11 +31,23 @@ public class ConfirmedReferenceWriter {
         Long userId = extraction.getDraft().getUser().getId();
         UserReferenceEntity reference = references
                 .findByUserIdAndEntityTypeAndCanonicalNameIgnoreCase(userId, type, name)
-                .orElseGet(() -> createReference(extraction, type, name));
+                .filter(UserReferenceEntity::isActive)
+                .orElseGet(() -> resolveAliasOrCreate(extraction, type, name));
 
         aliases.findByReferenceEntityIdAndAliasTextIgnoreCase(reference.getId(), name)
                 .orElseGet(() -> createAlias(reference, name));
         return reference;
+    }
+
+    private UserReferenceEntity resolveAliasOrCreate(TransactionDraftExtractionEntity extraction,
+                                                      UserReferenceEntityType type, String name) {
+        // A reference may have been merged since its confirmation preview was prepared.
+        var matches = references.findByUserIdAndEntityTypeAndActiveTrue(extraction.getDraft().getUser().getId(), type)
+                .stream().filter(reference -> aliases.findByReferenceEntityId(reference.getId()).stream()
+                        .anyMatch(alias -> alias.getAliasText().equalsIgnoreCase(name)))
+                .toList();
+        if (matches.size() > 1) throw new IllegalStateException("Reference name is ambiguous");
+        return matches.isEmpty() ? createReference(extraction, type, name) : matches.getFirst();
     }
 
     private UserReferenceEntity createReference(

@@ -6,8 +6,6 @@
 | Status | In Progress |
 | Goal | Let a user record planning information separately from expense capture and inspect its stated valuation basis |
 
-The v2 vertical Journey links a dated loan, SIP, or stock plan to the existing Money component. Payment, skip, allocation, history, and correction stay in the established frontend forms and use the existing APIs; the default v1 flow is unchanged.
-
 ## FIN-015 — Manage user loans
 
 **Status:** Done · **Priority:** P1
@@ -192,3 +190,5 @@ The V1 chat uses the canonical monthly commitment calculator for current/next-mo
 Given a next-month salary shortfall question, the assistant reads the canonical projection, separates debt/card obligations, planned investing, essential living and earmarked savings, then may compute a hypothetical reduction to selected non-debt sources. The result states original total, revised total, remaining gap and what assumption each reduction requires. No scenario saves a user record. Loan EMIs and credit-card bills cannot be reduced by the scenario tool; the user would need a verified lender/card arrangement outside this chat. A SIP reduction is conditional on provider terms and savings-goal trade-offs, not an automatic instruction to skip a payment.
 
 Acceptance coverage: private exact salary yields numeric difference, range/missing/irregular salary does not; all owners and histories remain isolated; no live valuation or available-cash claim; protected sources remain unchanged in scenarios; planned investing and savings are counted once in the snapshot.
+
+The main dashboard owns the Money dialog: Home → Your money opens the existing source forms, and closing returns to the dashboard. `frontend/e2e/expense-capture.spec.js` verifies opening and closing on desktop and phone.

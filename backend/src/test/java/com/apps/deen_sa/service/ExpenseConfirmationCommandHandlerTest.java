@@ -61,6 +61,24 @@ class ExpenseConfirmationCommandHandlerTest {
         assertThat(extraction.getDraft().getStatus()).isEqualTo(TransactionDraftStatus.CANCELLED);
     }
 
+    @Test void webConfirmationIsProfileScopedAndIdempotent() {
+        var extraction=activeExtraction();extraction.setOccurredAt(java.time.LocalDate.parse("2026-09-28"));
+        when(repository.findOwnedWebExtraction(5001L,42L)).thenReturn(Optional.of(extraction));
+        handler.handleWeb(42L,5001L,true);handler.handleWeb(42L,5001L,true);
+        verify(transactionWriter,org.mockito.Mockito.times(1)).save(extraction,null,null);
+        org.mockito.Mockito.verifyNoInteractions(dateContexts);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->handler.handleWeb(99L,5001L,true))
+                .isInstanceOf(com.apps.deen_sa.exception.WebApiException.class);
+    }
+    @Test void cancelledWebPreviewCannotBeConfirmed() {
+        var extraction=activeExtraction();
+        when(repository.findOwnedWebExtraction(5001L,42L)).thenReturn(Optional.of(extraction));
+        handler.handleWeb(42L,5001L,false);handler.handleWeb(42L,5001L,false);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->handler.handleWeb(42L,5001L,true))
+                .isInstanceOf(com.apps.deen_sa.exception.WebApiException.class);
+        org.mockito.Mockito.verifyNoInteractions(transactionWriter,referenceWriter,dateContexts);
+    }
+
     private TransactionDraftExtractionEntity activeExtraction() {
         TransactionDraftEntity draft = new TransactionDraftEntity();
         draft.setStatus(TransactionDraftStatus.PENDING);

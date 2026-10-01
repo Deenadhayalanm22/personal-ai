@@ -28,4 +28,13 @@ public interface TransactionDraftExtractionRepository
     Optional<TransactionDraftExtractionEntity> findOwnedWhatsAppExtraction(
             @Param("extractionId") Long extractionId,
             @Param("externalUserId") String externalUserId);
+    @Query("""
+            SELECT extraction FROM TransactionDraftExtractionEntity extraction
+            JOIN FETCH extraction.draft draft JOIN FETCH draft.user user
+            WHERE extraction.id = :extractionId AND user.id = :userId
+              AND draft.source = com.apps.deen_sa.domain.MessageSource.WEB_APP
+            """)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TransactionDraftExtractionEntity> findOwnedWebExtraction(
+            @Param("extractionId") Long extractionId, @Param("userId") Long userId);
 }

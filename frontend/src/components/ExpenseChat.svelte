@@ -1,12 +1,18 @@
 <!-- FIN-EPIC-003: docs/jira/personal-expense/FIN-EPIC-003-insights.md -->
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
+  import ExpenseCapture from './ExpenseCapture.svelte';
   import VoiceQuestion from './VoiceQuestion.svelte';
   import FinancialEvidence from './FinancialEvidence.svelte';
   import { getAiCredits, askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
   export let selectedMonth;
   export let connectionStatus;
   export let open = false;
+  export let captureDate = null;
+  export let defaultCaptureDate;
+  export let onCaptureChange = () => {};
+  export let onRecorded = () => {};
+  export let onViewExpense = () => {};
   let voiceControl;
   let voiceBusy = false, voiceReview = false, beforeVoice = '';
   function reviewVoice(text) {
@@ -34,7 +40,7 @@
   let destroyed = false;
   const suggestions = ['Can I cover next month’s commitments with my salary?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
   async function scrollDown() { await tick(); if (transcript) transcript.scrollTop = transcript.scrollHeight; }
-  $: if (open) { refreshCredits(); tick().then(() => input?.focus()); }
+  $: if (open && !captureDate) { refreshCredits(); tick().then(() => input?.focus()); }
   async function close() { open = false; await tick(); document.querySelector('[data-nav-chat]')?.focus(); }
   function saveConversation() {
     if (!activeId && !messages.length && !question.trim()) return Promise.resolve();
@@ -83,7 +89,7 @@
     return recent;
   }
   onMount(async () => {
-    refreshCredits();
+    if (!captureDate) refreshCredits();
     try {
       const saved = await getMoneyConversations();
       if (destroyed) return;
@@ -136,12 +142,15 @@
 </script>
 
 {#if open}
+  {#if captureDate}
+    {#key captureDate}<ExpenseCapture date={captureDate} {connectionStatus} {onRecorded} {onViewExpense} onExit={() => { captureDate = null; onCaptureChange(null); }} />{/key}
+  {:else}
   <section class="expense-chat" aria-label="Money assistant">
     <header>
       <div><span class="eyebrow">YOUR MONEY, IN CONTEXT</span><h2>Ask about your money</h2></div>
       <button class="icon-button" aria-label="Close money chat" on:click={close}>×</button>
     </header>
-    <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={voiceBusy || pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
+    <div class="chat-context"><button disabled={pending || voiceBusy} on:click={() => { captureDate = defaultCaptureDate; onCaptureChange(captureDate); }}>Add expense</button><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={voiceBusy || pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
     <div class="credit-status" aria-live="polite">
       <span>{credits ? `${formatCredits(credits.available)} credits available` : 'Credits unavailable'}{credits?.reserved > 0 ? ` · ${formatCredits(credits.reserved)} on hold` : ''}</span>
       <button on:click={refreshCredits} disabled={loadingCredits || pending}>Refresh credits</button>
@@ -196,6 +205,7 @@
       <small>Based on recorded data. Scenarios are estimates, not changes.</small>
     </form>
   </section>
+  {/if}
 {/if}
 
 <style>

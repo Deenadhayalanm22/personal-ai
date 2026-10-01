@@ -1,5 +1,6 @@
 <!-- FIN-EPIC-002: docs/jira/personal-expense/FIN-EPIC-002-correctness.md -->
 <script>
+  import './reference-cleanup.css';
   import { createReferencePreference, getReferenceEntityTypes, getReferencePreferences, mergeReferencePreferences } from './lib/api.js';
 
   let status = 'loading', error = '', entityTypes = [], savedPreferences = [];
@@ -27,7 +28,7 @@
     try {
       const result = await mergeReferencePreferences({ entityType: selectedEntityType, referenceIds: selectedMerchantIds, canonicalName: name });
       const transactionCount = result?.updatedTransactionCount ?? selectedTransactionCount;
-      mergeNotice = `${transactionCount} transactions are now grouped under ${result?.canonicalReference?.name || name}.`;
+      mergeNotice = selectedEntityType === 'BENEFICIARY' ? `Beneficiary aliases are now grouped under ${result?.canonicalReference?.name || name}.` : `${transactionCount} transactions are now grouped under ${result?.canonicalReference?.name || name}.`;
       selectedMerchantIds = []; showMergeModal = false; await refreshPreferences();
     } catch (cause) { mergeError = cause?.message || 'Could not merge these references.'; }
     finally { merging = false; }
@@ -66,7 +67,7 @@
 
 <section class="normalization-page">
   <div class="normalization-heading">
-    <div><p class="micro-label">FIX YOUR ACCOUNTS</p><h1>Account repair</h1><p>Edit, add, or merge merchant, beneficiary, and account names so your records stay clean and consistent.</p></div>
+    <div><p class="micro-label">YOUR SAVED NAMES</p><h1>Manage names</h1><p>Add aliases or merge merchant, beneficiary, and account names. Merchant/account merges update historical expenses; beneficiary merges organize aliases only.</p></div>
     <button class="add-normalization" type="button" aria-label="Add reference preference" on:click={openCreate} disabled={status !== 'ready' || !entityTypes.length}>＋</button>
   </div>
 
@@ -78,7 +79,7 @@
       {#each merchantsForMerge as merchant}
         <label class:selected={selectedMerchantIds.includes(merchant.id)} class:blocked={Boolean(selectedEntityType && selectedEntityType !== merchant.entityType)} class="merchant-option">
           <input type="checkbox" disabled={Boolean(selectedEntityType && selectedEntityType !== merchant.entityType)} checked={selectedMerchantIds.includes(merchant.id)} on:change={() => toggleMerchant(merchant.id)} />
-          <span class="merge-label-icon">{merchant.icon}</span><span><strong>{merchant.name}</strong><small>{merchant.entityType === 'ACCOUNT' ? 'Account' : 'Merchant'} · {merchant.transactionCount} {merchant.transactionCount === 1 ? 'transaction' : 'transactions'}</small></span>
+          <span class="merge-label-icon">{merchant.icon}</span><span><strong>{merchant.name}</strong><small>{typeLabel(merchant.entityType)} · {merchant.transactionCount} {merchant.transactionCount === 1 ? 'transaction' : 'transactions'}</small></span>
         </label>
       {/each}
     </div>
@@ -133,7 +134,7 @@
   <div class="modal-backdrop normalization-modal-backdrop">
     <div class="modal merge-modal" role="dialog" aria-modal="true" aria-labelledby="merge-modal-title" tabindex="-1">
       <button class="close" type="button" on:click={closeMerge}>×</button><p class="micro-label">MERGE {selectedMerchants.length} {selectedEntityType} NAMES</p><h2 id="merge-modal-title">Choose the name to keep</h2>
-      <p class="merge-modal-copy">Enter one name to use across all {selectedTransactionCount} selected transactions. The selected labels will remain as aliases.</p>
+      <p class="merge-modal-copy">{selectedEntityType === 'BENEFICIARY' ? 'Choose one name for these beneficiary aliases. Expenses do not link to beneficiaries.' : `Enter one name to use across all ${selectedTransactionCount} selected transactions.`} The selected labels will remain as aliases.</p>
       <label class="merge-name-field">Preferred {typeLabel(selectedEntityType).toLowerCase()} name<input bind:value={preferredMerchantName} placeholder="e.g. HDFC Bank" autocomplete="off" /></label>
       <div class="merge-modal-selected"><span>Selected names</span><p>{selectedMerchants.map(merchant => merchant.name).join(' · ')}</p></div>
       {#if mergeError}<p class="form-error" role="alert">{mergeError}</p>{/if}

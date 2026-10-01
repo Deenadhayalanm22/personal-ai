@@ -6,8 +6,6 @@
 | Status | Proposed |
 | Goal | Let a user deliberately turn repeatable household bills and personal obligations into explainable monthly planning commitments without guessing from spending history. |
 
-The v2 vertical Journey links a dated commitment to its existing Money details. Paid, Skip, savings, history, and edits remain in the established frontend forms and use the existing APIs; the default v1 flow is unchanged.
-
 ## Business value
 
 The Monthly Commitment story currently explains planned loan EMIs and SIPs, but it omits ordinary obligations such as rent, electricity, internet, insurance, and family support. A user should be able to include the obligations they expect to pay each month, see a realistic current- and next-month total, and retain control when an amount changes, varies, or is absent in one month.
@@ -165,3 +163,5 @@ Acceptance criteria:
 7. Savings set aside, investments, loan payments and credit-card settlements retain their existing separate storage/counting rules. Only recurring expense payments join the expense transaction model in this change.
 
 Coverage: `CommitmentPaymentsIT`, `CommitmentPaymentMigrationIT`, `MonthlyPaymentOverviewServiceTest`, and the Home/recurring-commitment browser regressions.
+
+The main dashboard owns the Money dialog: Home → Your money opens the existing source forms, and closing returns to the dashboard. `frontend/e2e/expense-capture.spec.js` verifies opening and closing on desktop and phone.

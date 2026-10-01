@@ -162,3 +162,10 @@ export function transcribeMoneyVoice(audio, signal) {
   form.append('audio', audio, `question.${extension}`);
   return request('/api/web/expense-chat/transcribe', { method: 'POST', body: form, signal });
 }
+
+// FIN-EPIC-001: browser capture creates a preview; only explicit confirmation writes an expense.
+export const prepareExpenseCapture = (body, signal) => request('/api/web/expense-chat/capture', { method: 'POST', body: JSON.stringify(body), signal });
+export const confirmExpenseCapture = (id, signal) => request(`/api/web/expense-chat/capture/${encodeURIComponent(id)}/confirm`, { method: 'POST', signal });
+export const cancelExpenseCapture = (id, signal) => request(`/api/web/expense-chat/capture/${encodeURIComponent(id)}/cancel`, { method: 'POST', signal });
+
+export const prepareManualExpense = (body, signal) => request('/api/web/expenses/manual', {method:'POST',body:JSON.stringify(body),signal});

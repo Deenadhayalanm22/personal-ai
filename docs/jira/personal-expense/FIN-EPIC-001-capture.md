@@ -4,12 +4,12 @@
 |---|---|
 | Parent | INIT-002 |
 | Status | In Progress |
-| Goal | Turn an eligible WhatsApp message into one safe, traceable expense record |
-| Primary interfaces | WhatsApp webhook; expense dashboard |
+| Goal | Turn an eligible WhatsApp or authenticated web description into one safe, traceable expense record |
+| Primary interfaces | WhatsApp webhook; expense dashboard; Ask AI |
 
 ## Functional boundary
 
-The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive confirmation replies are processed first. Text messages are persisted as idempotent drafts and passed to normalization. Audio messages are persisted as drafts, transcribed, and shown to the sender for word-level confirmation or discard before expense extraction. Confirmed words follow the ordinary expense extraction and confirmation flow; discarded audio never creates a transaction. Text/audio messages may be handled as an administrative aggregate-backfill command. The first newly routed text or audio message each day starts background aggregation for missed dates and the previous day, followed by daily action evaluation. A failed background run is retried on the next message. A successful expense confirmation produces a financial transaction and an outbound acknowledgement. The portal does not create raw expenses; it only displays and corrects captured ones.
+The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive confirmation replies are processed first. Text messages are persisted as idempotent drafts and passed to normalization. Audio messages are persisted as drafts, transcribed, and shown to the sender for word-level confirmation or discard before expense extraction. Confirmed words follow the ordinary expense extraction and confirmation flow; discarded audio never creates a transaction. Text/audio messages may be handled as an administrative aggregate-backfill command. The first newly routed text or audio message each day starts background aggregation for missed dates and the previous day, followed by daily action evaluation. A failed background run is retried on the next message. A successful expense confirmation produces a financial transaction and an outbound acknowledgement. The portal also prepares authenticated conversational expense drafts in Ask AI, then records only the explicitly confirmed server preview.
 
 ## Cross-stack ownership
 
@@ -18,7 +18,7 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 | WhatsApp/controller/orchestration | Maps inbound payloads, writes idempotent drafts, normalizes new text, and handles confirm/discard buttons. |
 | Expense services and database | Persist drafts, extractions, transactions, references, and confirmation outcome. |
 | `frontend/src/App.svelte` | Refreshes calendar, recent activity, and stories from the captured transaction data. |
-| `frontend/src/Home.svelte` | Lets the user inspect, edit, or delete a captured expense; it does not submit a new raw expense. |
+| `frontend/src/Home.svelte` | Lets the user inspect, edit, or delete a captured expense; it opens Ask AI to prepare a date-scoped draft; it does not write an expense directly. |
 
 ## FIN-001 — Receive, route, and retain an inbound turn
 
@@ -72,4 +72,28 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 - Capture does not create account balances, transfers, income, or a general ledger movement.
 - The current product does not offer conversational edit/undo; portal correction is in FIN-EPIC-002.
 
-Explicit recurring-commitment payments (FIN-EPIC-006) may also create expense transactions without a capture draft. Their separate origin and payment reference preserve traceability; captured transactions still require their source draft and keep the capture confirmation invariants. The portal has no general raw-expense creation endpoint.
+Explicit recurring-commitment payments (FIN-EPIC-006) may also create expense transactions without a capture draft. Their separate origin and payment reference preserve traceability; captured transactions still require their source draft and keep the capture confirmation invariants. The portal has no general raw-expense creation endpoint: web capture requires a persisted draft/extraction and explicit confirmation.
+
+## FIN-001/FIN-002 — Web expense capture
+
+1. Activity offers **Add expense** for today and **Add missing expense** for a selected past day, including days with existing expenses. Future dates cannot start capture. The action opens Add expense with a visible selected-date context and defaults to Enter manually; Describe with AI is an optional choice. Ask AI also offers Add expense independently of the calendar.
+2. AI browser preparation uses the authenticated active real/demo profile, a UUID request ID, bounded prior user statements, and the selected date. No caller-supplied owner or executable SQL is accepted. Canonical taxonomy and owned active merchant/account names and aliases inform extraction. Beneficiaries are not assigned to expense rows.
+3. AI preparation extracts one actual ordinary expense. Missing positive amount, invalid/missing category pair, ambiguous purpose/names, and future extracted dates ask for clarification rather than creating a confirmable preview. Missing merchant/account is optional. Follow-ups retain the earlier user statements; there is no forced one-question limit or invented split.
+4. The selected date defaults an unspecified date; relative dates use actual profile-local today. An explicit date appears in the preview for user review. Preview shows currency, rounded amount, date, merchant, category/subcategory, and optional account.
+5. Preparation retains source evidence in a `WEB_APP` draft. Complete previews have one ACTIVE extraction. Incomplete attempts retain a CANCELLED draft with no extraction. The preview never writes a financial transaction or creates saved names.
+6. Record expense confirms an owned web extraction through the shared confirmation/reference/transaction writer. Its transaction retains the source draft, taxonomy spending nature, reference ownership, recurring matching and dirty calendar-date handling; current commitments refresh. It does not consume a WhatsApp date handoff or send a WhatsApp acknowledgement.
+7. Duplicate confirmation returns the recorded date without another write. Foreign or WhatsApp extraction IDs are inaccessible. Cancel closes the preview; Edit closes it before the next preparation. A cancelled preview cannot later record. AI preparation retries reuse the request ID and cached response, without another model call or debit.
+8. AI preparation and follow-ups use the existing money-chat model, timeouts, usage reservations, profile wallet and global daily budget. Confirm/cancel do not call the model or charge credits. Offline sending is disabled, failed messages remain editable, and ambiguous confirmation failures can retry the same extraction. Profile switch/unmount discards the browser capture state and ignores late replies.
+9. Successful recording refreshes calendar, recent activity and commitment reads. View expense opens the persisted expense's date, including an explicit date different from the original selection. Questions continue through the read-only query tools; writes require the separate confirmation control.
+
+Verification: `WebExpenseCaptureServiceTest`, `WebExpenseCaptureControllerTest`, `ExpenseConfirmationCommandHandlerTest`, `WebExpenseCapturePostgresTest`, and mocked desktop/mobile browser capture scenarios. Provider quality still needs a configured provider; deterministic tests control extraction output.
+
+### Manual entry acceptance criteria
+
+1. Enter manually is the default in the frontend, with positive amount, editable selected date, required category/subcategory, and optional searchable owned merchant/account choices. New explicit names are allowed; beneficiaries remain outside expense assignment.
+2. Manual preparation validates profile-local past/current dates, rounded positive amounts within storage bounds, and valid taxonomy pairs. It resolves full canonical names before unambiguous aliases. Invalid details or ambiguous aliases do not produce an extraction or transaction.
+3. Manual capture remains usable with exhausted/paused credits, missing model/tariff configuration and a failed credits endpoint. Preparation, saved-name lookup, confirmation and cancellation make no model or wallet calls.
+4. Preparation retains a server preview; only Record expense writes through the shared confirmation path. Preview creates no references. Identical concurrent request retries return one extraction; changed details under one request ID conflict; cancelled previews cannot be revived. Foreign/profile-switched extraction IDs are inaccessible. Recording retries create one transaction.
+5. Edit cancels the old preview and restores entered form values; a replacement uses a new request ID. Either entry method can be selected before preparing a preview. Successful recording refreshes activity/calendar/commitments and View expense opens the actual recorded date.
+
+Verification: `ManualExpenseCaptureServiceTest`, manual controller scenarios in `WebExpenseCaptureControllerTest`, real PostgreSQL concurrent manual preparation/conflict/cancel/confirmation scenarios in `WebExpenseCapturePostgresTest`, and frontend desktop/mobile manual scenarios with AI disabled or credits unavailable. Interface: [free manual preparation](../../contracts/expenses.md#free-manual-expense-preparation).

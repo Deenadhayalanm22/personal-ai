@@ -4,7 +4,7 @@ Feature source: [FIN-EPIC-003](../jira/personal-expense/FIN-EPIC-003-insights.md
 
 ## Scope and rollout
 
-This release meters every model call made by V1 money chat, including scope classification, tool-selection turns, follow-ups and refusals. Expense normalization, audio transcription and scheduled story generation are **not** charged to this wallet or included in its shared daily limit. The private MCP endpoint executes database tools without calling the model and does not spend chat credits. V2 has no money-chat surface.
+This release meters every model call made by V1 money chat, including scope classification, tool-selection turns, follow-ups and refusals. WhatsApp expense normalization, audio transcription and scheduled story generation are **not** charged to this wallet or included in its shared daily limit. The private MCP endpoint executes database tools without calling the model and does not spend chat credits. Web expense preparation and clarification use the same wallet and budget; confirmation/cancellation have no model call or credit charge.
 
 Migration `V35` creates persistent wallets, requests, provider-call reservations, a UTC daily budget, and an append-only grant/usage/access ledger. Existing and new users start with zero credits; super admins also need a grant for their own chat. There is no automatic refill, purchase flow or unlimited admin exemption. Wallets belong to the server-resolved active profile; demo and real balances are separate. Viewing records and saved conversations remains available without credits.
 
@@ -64,3 +64,5 @@ The chat shows available and held credits and a refresh action. Zero balance, pa
 ## Verification
 
 `CreditStorePostgresTest` creates a unique schema on `EXPENSE_CHAT_TEST_DB_URL` (with `EXPENSE_CHAT_TEST_DB_USER` and `EXPENSE_CHAT_TEST_DB_PASSWORD`), migrates it, tests concurrent wallets/global budgets and settlement/replay/recovery, then drops only that schema. `AiCreditControllerTest` verifies authorization and profile isolation. Chat service/SDK tests verify the classification and answer path. `frontend/e2e/expense-chat.spec.js` covers balances, blocking, replenishment, ambiguous network retries and admin grants with mocked APIs.
+
+Manual expense entry (`POST /api/web/expenses/manual`), preview confirmation/cancellation, and saved-name choices (`GET /api/web/expenses/options`) are core operations outside credit enforcement and the AI daily budget. They remain available with zero/paused credits, absent AI configuration, or an unavailable credit service. Only optional Describe with AI preparation/follow-ups use the metered capture path.

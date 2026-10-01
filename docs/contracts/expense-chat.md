@@ -78,3 +78,27 @@ Voice requires enabled/configured AI access and positive available credits, resp
 Errors use `{code,message}`: `401 UNAUTHORIZED`; `400 INVALID_VOICE_AUDIO`; `413 VOICE_AUDIO_TOO_LARGE`; `415 VOICE_AUDIO_FORMAT`; `422 VOICE_NO_SPEECH` / `VOICE_TRANSCRIPT_TOO_LONG`; `429 VOICE_BUSY`; `503 VOICE_NOT_CONFIGURED` / `VOICE_UNAVAILABLE` / `AI_CREDITS_NOT_CONFIGURED`; `403 AI_ACCESS_PAUSED`; `402 AI_CREDITS_EXHAUSTED`. Provider details and credentials are not exposed.
 
 Provider interface: [OpenAI speech-to-text documentation](https://developers.openai.com/api/docs/guides/speech-to-text).
+
+## Web expense capture (the frontend)
+
+These commands are separate from the read-only chat tool catalog and private MCP. All require `WEB_SESSION`, return `Cache-Control: no-store`, and resolve the active real/demo profile on the server. Owner IDs are never accepted. The UI enters this mode through Add expense in Ask AI or Activity. Entry defaults to the free manual form ([expenses contract](expenses.md#free-manual-expense-preparation)); Describe with AI explicitly selects the metered conversational path. AI balance failures never block switching to manual entry.
+
+### POST /api/web/expense-chat/capture
+
+Body: `{requestId: UUID, date: "YYYY-MM-DD", message: string, turns: string[]}`. `date` is a past/current profile-local date. Message is nonblank, at most 2,000 characters. Prior user statements are at most 12 strings, each at most 2,000 characters, at most 24,000 total. They supply conversational evidence, not authority to confirm. Relative dates use actual profile-local today; the selected date supplies an unspecified date. Only one ordinary expense is prepared at a time; investment/loan/savings commands remain domain-owned.
+
+Response: `{status: "READY" | "NEEDS_DETAILS", answer, extractionId: number | null, preview: {amount,date,category,subcategory,merchant,account,currency}}`. Partial preview fields may be null. READY requires a positive amount after rounding to two decimals, a configured taxonomy pair, a past/current date, and no unresolved clarification. Merchant/account are optional. Owned active canonical names and aliases are read from the database; exact aliases are resolved again server-side. Up to 100 active references of each supported type and 10 aliases each enter provider context; exact server resolution still considers all owned references. Beneficiary assignment is unsupported.
+
+Complete preparation retains a `WEB_APP` source draft and ACTIVE extraction, but no transaction or new name. Incomplete preparation retains source evidence in a CANCELLED draft without a confirmation extraction. Editing requires cancelling the old preview before preparing its replacement. Browser capture conversation state is held in memory; reload starts a new capture. Retained drafts preserve evidence; this release does not offer a draft-resume inbox.
+
+Each preparation/follow-up uses the configured expense-chat model and existing metered credit reservation/settlement. Durable request fingerprints include a capture namespace so IDs cannot collide with question requests. Identical completed request retries replay their preview without another model call/debit. Existing credit errors and request-conflict/usage-pending behavior apply. Provider requests use the existing 20-second timeout and no retries. Process-local limits: four captures globally and one per profile; persistent credit requests enforce cross-instance/profile limits with normal chat.
+
+Additional errors: `400 INVALID_CAPTURE_REQUEST`, `429 CHAT_BUSY`, `422 CAPTURE_AMBIGUOUS_REFERENCE`, `503 CAPTURE_UNAVAILABLE`. Malformed provider output never becomes a preview. Provider details are not returned.
+
+### POST /api/web/expense-chat/capture/{extractionId}/confirm
+
+No body. Uses a pessimistically locked owned `WEB_APP` extraction. ACTIVE/PENDING becomes USED/CONSUMED and writes one transaction through the shared confirmation/reference/transaction writer; current commitments refresh and the expense date is marked dirty. Returns `{status:"RECORDED",date:"YYYY-MM-DD"}`. An already-recorded extraction returns the same date without another transaction. It does not consume a WhatsApp context or emit a WhatsApp notification. No AI call/credit charge occurs.
+
+### POST /api/web/expense-chat/capture/{extractionId}/cancel
+
+No body. ACTIVE/PENDING becomes REJECTED/CANCELLED; returns `{status:"CANCELLED"}`. Repeating cancellation succeeds without effects. Confirming a cancelled preview or cancelling a recorded one returns `409 CAPTURE_CLOSED`. Foreign/profile-switched/WhatsApp IDs return `404 CAPTURE_NOT_FOUND` for either action. Confirmation always uses persisted preview fields, never browser/model-supplied replacement fields.

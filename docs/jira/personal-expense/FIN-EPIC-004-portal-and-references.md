@@ -8,7 +8,6 @@
 
 ## FIN-012 — Sign in through a one-time WhatsApp link
 
-The isolated v2 private host serves this same frontend sign-in component and its existing login-link API. Only the sign-in bundle is public; the Journey bundle still requires a verified web session. Its separate host and magic-link origin remain to be configured and verified before deployment.
 
 ### Acceptance criteria
 
@@ -63,3 +62,7 @@ The isolated v2 private host serves this same frontend sign-in component and its
 ## AI credit administration
 
 The **You → AI credits** section exposes active-profile balances and the last 50 ledger entries. Only an authenticated user with role `SUPER_ADMIN` can search users, grant credits, pause/resume AI access, inspect other users' credit activity or reconcile held provider usage. All operations authorize on the backend and record the acting administrator. Profile changes remount the credit section; the server-reported role permission controls admin visibility independently of demo-mode eligibility. The demo wallet is separate. Credit exhaustion does not block access to financial records or saved conversations. API, rollout and test requirements are in the [AI credit contract](../../contracts/ai-credits.md) and [FIN-EPIC-003 credit acceptance criteria](FIN-EPIC-003-insights.md#usage-based-money-chat-credits).
+
+You → Manage names exposes existing reference hygiene in the frontend, with merchant/account historical merges and beneficiary alias-only behavior (FIN-EPIC-002). Browser capture/confirmation resolve the active profile on every endpoint; real/demo drafts cannot be confirmed across a profile switch.
+
+Core manual expense preparation and saved-name options remain available independently of AI credit balances/configuration. Both capture methods authenticate the active real/demo profile; no caller-selected owner is accepted. Manual controller and PostgreSQL scenarios verify profile scoping.

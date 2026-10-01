@@ -67,3 +67,9 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 ## Linked commitment-payment corrections
 
 A recurring payment is an expense transaction with an explicit occurrence/extra link. Editing its amount/date updates the linked payment-history compatibility fields in the same transaction; changing a date does not change the scheduled occurrence. An amount below its savings allocation is rejected. Deleting a linked payment returns `409 COMMITMENT_PAYMENT_LINKED` because payment undo/allocation reversal is not implemented; the portal omits Delete for these items. Deleting a commitment rule retains its recorded expenses. Ordinary expense edits and soft deletion remain unchanged. Verified by `CommitmentPaymentsIT`.
+
+## Reference management access
+
+**You → Manage names** exposes the existing reference list, add-alias and same-type merge workflow in the frontend. The V1 transaction-workspace cleanup shortcut remains available. Merchant/account merges repoint historical expenses; beneficiary merges consolidate aliases only. Confirmation resolves active canonical names and preserved aliases again so a name merged after preview does not attach a new expense to an inactive reference. Verify profile-scoped lookup and merge-during-preview with `CaptureReferenceMergeTest` and browser name-management access checks.
+
+Name management uses its dedicated stylesheet. Beneficiary labels and merge notices explicitly describe aliases rather than claiming expense reassignment.

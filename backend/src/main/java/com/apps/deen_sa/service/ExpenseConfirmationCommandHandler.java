@@ -38,16 +38,8 @@ public class ExpenseConfirmationCommandHandler {
                 return null;
             }
             requireActive(extraction);
-            extraction.setStatus(TransactionDraftExtractionStatus.USED);
-            draft.setStatus(TransactionDraftStatus.CONSUMED);
-            var merchant = referenceWriter.save(
-                    extraction, UserReferenceEntityType.MERCHANT, extraction.getMerchantName());
-            var sourceAccount = referenceWriter.save(
-                    extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName());
-            transactionWriter.save(extraction, merchant, sourceAccount);
-            if (snapshots != null) snapshots.refreshCurrent(draft.getUser());
+            record(extraction);
             dateContexts.consumeForConfirmedDraft(draft);
-            draft.setUpdatedAt(Instant.now());
             return new RecordedExpense(
                     command.externalUserId(),
                     extraction.getAmount(),
@@ -63,6 +55,41 @@ public class ExpenseConfirmationCommandHandler {
         }
         draft.setUpdatedAt(Instant.now());
         return null;
+    }
+
+    /** Web confirmation uses the active profile and cannot act on WhatsApp extractions. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public java.time.LocalDate handleWeb(Long userId, Long extractionId, boolean confirm) {
+        var extraction = extractionRepository.findOwnedWebExtraction(extractionId, userId)
+                .orElseThrow(() -> new com.apps.deen_sa.exception.WebApiException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "CAPTURE_NOT_FOUND", "Expense draft not found."));
+        var draft = extraction.getDraft();
+        if (confirm && extraction.getStatus() == TransactionDraftExtractionStatus.USED
+                && draft.getStatus() == TransactionDraftStatus.CONSUMED) return extraction.getOccurredAt();
+        if (!confirm && extraction.getStatus() == TransactionDraftExtractionStatus.REJECTED
+                && draft.getStatus() == TransactionDraftStatus.CANCELLED) return extraction.getOccurredAt();
+        if (extraction.getStatus() != TransactionDraftExtractionStatus.ACTIVE
+                || draft.getStatus() != TransactionDraftStatus.PENDING)
+            throw new com.apps.deen_sa.exception.WebApiException(org.springframework.http.HttpStatus.CONFLICT,
+                    "CAPTURE_CLOSED", "This expense draft has already been closed.");
+        if (confirm) record(extraction);
+        else {
+            extraction.setStatus(TransactionDraftExtractionStatus.REJECTED);
+            draft.setStatus(TransactionDraftStatus.CANCELLED);
+            draft.setUpdatedAt(Instant.now());
+        }
+        return extraction.getOccurredAt();
+    }
+
+    private void record(TransactionDraftExtractionEntity extraction) {
+        extraction.setStatus(TransactionDraftExtractionStatus.USED);
+        var draft = extraction.getDraft();
+        draft.setStatus(TransactionDraftStatus.CONSUMED);
+        var merchant = referenceWriter.save(extraction, UserReferenceEntityType.MERCHANT, extraction.getMerchantName());
+        var account = referenceWriter.save(extraction, UserReferenceEntityType.ACCOUNT, extraction.getSourceAccountName());
+        transactionWriter.save(extraction, merchant, account);
+        if (snapshots != null) snapshots.refreshCurrent(draft.getUser());
+        draft.setUpdatedAt(Instant.now());
     }
 
     /** Compatibility constructor retained for the focused confirmation tests. */
