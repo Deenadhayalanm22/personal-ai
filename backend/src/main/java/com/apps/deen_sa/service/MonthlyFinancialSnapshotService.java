@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 10;
+    private static final int CALCULATION_VERSION = 11;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -45,6 +45,7 @@ public class MonthlyFinancialSnapshotService {
     private final FinancialTransactionRepository transactions;
     private final Clock clock;
     @Autowired(required = false) private com.apps.deen_sa.repository.LoanEmiOccurrenceRepository loanOccurrences;
+    @Autowired(required = false) private com.apps.deen_sa.repository.InvestmentTransactionRepository investmentOccurrences;
     @Autowired(required = false) private com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository commitmentOccurrences;
     @Autowired(required = false) private com.apps.deen_sa.repository.CommitmentSavingsPlanRepository savingsPlans;
     @Autowired(required = false) private com.apps.deen_sa.repository.CommitmentSavingsEntryRepository savingsEntries;
@@ -196,6 +197,9 @@ public class MonthlyFinancialSnapshotService {
         return !month.isBefore(first) && !month.isAfter(first.plusMonths(loan.getTotalTenureMonths() - 1L));
     }
     private boolean hasRecurringInvestmentIn(UserInvestmentEntity investment, YearMonth month) {
+        if (investmentOccurrences != null && investmentOccurrences.findByInvestmentIdAndTransactionKindAndScheduledMonth(
+                investment.getId(), com.apps.deen_sa.domain.InvestmentTransactionKind.SIP, month.atDay(1))
+                .map(value -> value.getStatus() == com.apps.deen_sa.domain.InvestmentTransactionStatus.SKIPPED).orElse(false)) return false;
         return (investment.getAssetType() == InvestmentAssetType.MUTUAL_FUND || investment.getAssetType() == InvestmentAssetType.STOCK) && investment.getSipStatus() == InvestmentSipStatus.ACTIVE
                 && investment.getSipAmount() != null && investment.getSipStartMonth() != null && !month.isBefore(YearMonth.from(investment.getSipStartMonth()))
                 && (investment.getAssetType() != InvestmentAssetType.MUTUAL_FUND || !"QUARTERLY".equals(investment.getSipFrequency())

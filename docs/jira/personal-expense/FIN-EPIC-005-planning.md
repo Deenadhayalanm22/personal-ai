@@ -192,3 +192,7 @@ Given a next-month salary shortfall question, the assistant reads the canonical 
 Acceptance coverage: private exact salary yields numeric difference, range/missing/irregular salary does not; all owners and histories remain isolated; no live valuation or available-cash claim; protected sources remain unchanged in scenarios; planned investing and savings are counted once in the snapshot.
 
 The main dashboard owns the Money dialog: Home → Your money opens the existing source forms, and closing returns to the dashboard. `frontend/e2e/expense-capture.spec.js` verifies opening and closing on desktop and phone.
+
+### Skipped occurrence consistency (FIN-018)
+
+A skipped loan EMI, recurring bill, mutual-fund SIP, or ETF monthly purchase is excluded from its scheduled month’s monthly-plan buckets, evidence, full intended commitment, and salary allocation/shortfall. The calendar overview and View monthly plan use the same inclusion rule. Completed payments remain planned and contribute to progress; future months keep their scheduled sources. Existing cached snapshots are recalculated on the calculation-version change. Regression coverage checks skipped versus confirmed investment occurrences and preserves next-month sources.
