@@ -31,7 +31,7 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 
 **Status:** Done · **Priority:** P0
 
-**As a** signed-in user, **I want** to correct an AI-captured transaction or remove a mistaken one **so that** my dashboard reflects my actual spending.
+**As a** signed-in user, **I want** to correct a manually entered or AI-captured transaction or remove a mistaken one **so that** my dashboard reflects my actual spending.
 
 ### Acceptance criteria
 
@@ -41,8 +41,11 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 4. **Given** another user's or previously deleted expense ID, **when** edited or deleted, **then** it returns `404 EXPENSE_NOT_FOUND`.
 5. **Given** an edit or delete that changes a selected month, **then** affected calendar aggregates are marked for rebuilding and the live monthly commitment is refreshed.
 
+6. **Given** a recorded ordinary expense in Home Activity, **then** it exposes accessible wrench/Edit and Delete buttons while online. Edit loads the full owned expense (including later date-list pages) into the existing correction dialog. Delete requires confirmation. Linked commitment payments and other financial sources expose neither expense action in Activity. Failed mutations keep the dialog and show the error; successful changes refresh Activity, calendar, recent expenses and monthly commitment. Optional unset merchant/account references remain unset when saving.
+
 ### Integration-test scenarios
 
+- Browser: edit a manually recorded Activity expense, verify prefilled fields and PATCH, cancel then confirm deletion, verify refreshes and removal; assert Chit fund commitment payments have neither action and errors are retryable.
 - Create two users, edit/delete one user's ID from the other session, and assert no cross-user read or write.
 - Edit date and amount, then assert the old calendar aggregate no longer includes it and the new date does.
 - Delete a transaction, inspect persisted `deletedAt`, and assert list/calendar omit it.

@@ -58,7 +58,7 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 
 Generated spending-story cards, their publication history, rule evaluation, scheduler, and database tables have been removed. Home combines recorded expenses and the live Monthly Commitment described by FIN-018 in one overview. Recorded expenses and planned commitments have separate labels and amounts; planned commitments are never presented as money already spent. Expense exploration is available through the V1 money chatbot, which reads owned source data rather than story snapshots.
 
-Home also shows one read-only recent activity feed. It merges actual recorded expenses with completed commitments, paid loan installments, confirmed investments, and recorded savings contributions by their actual dates. Each item identifies its source type; recurring expense payments use their linked expense transactions and appear once; loan payments, investing and savings retain their separate counting rules. Planned and skipped records do not appear as completed activity.
+Home also shows one recent activity feed with correction/removal actions for ordinary recorded expenses. It merges actual recorded expenses with completed commitments, paid loan installments, confirmed investments, and recorded savings contributions by their actual dates. Each item identifies its source type; recurring expense payments use their linked expense transactions and appear once; loan payments, investing and savings retain their separate counting rules. Planned and skipped records do not appear as completed activity.
 
 ### Verification scenario
 
