@@ -73,7 +73,7 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 
 ### Acceptance criteria
 
-1. Only after profile verification, the V1 bottom navigation offers a highlighted Ask AI entry between Home and You. It opens the money chat inside the application content area, with example questions, typed questions, loading/error/offline states, and a new-chat action. The separate floating launcher is removed. V2 is unchanged.
+1. Only after profile verification, the V1 bottom navigation offers a highlighted Ask AI entry between Home and You. It opens the money chat inside the application content area, with example questions, typed questions, loading/error/offline states, and a new-chat action. The separate floating launcher is removed. The question composer uses at least 16px text so mobile input focus does not trigger small-text browser zoom; browser pinch zoom remains enabled. V2 is unchanged.
 2. Questions can dynamically combine date ranges, up to two grouping dimensions, text/amount filters, ordering and detail/summary modes. Totals, category/merchant breakdowns, largest expenses and period comparisons use this same tool. Unsupported data or query operations are explained or clarified rather than fabricated.
 3. Every query is scoped to the authenticated active profile, excludes deleted expenses, binds values and restricts SQL identifiers/operators to an allowlist. Caller/model-supplied SQL and ownership fields are rejected. The prototype cannot create, update or delete any record.
 4. Replies retain recent conversation context and include expandable query evidence with date boundaries, filters, count, total and returned rows. A row limit never changes the reported complete matching total/count; truncation is explicit.
@@ -93,7 +93,7 @@ The V1 dashboard includes an **Ask about expenses** panel. It uses the existing 
 - Reject unknown fields/operators, oversized/invalid ranges, ownership arguments and forged system-role history; bound the model loop.
 - Reject unauthenticated chat/MCP calls and disallowed MCP origins; use the selected authenticated profile.
 - PostgreSQL tests verify stored messages, evidence and draft survive a fresh store instance, isolate profiles and reject invalid roles.
-- Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, new-chat preservation, refresh restoration, reopening conversations with isolated follow-up context and drafts, pending-response controls, mobile strip overflow, offline state and profile-switch isolation.
+- Browser tests cover starter questions, follow-up payloads, evidence, failures/retry, new-chat preservation, refresh restoration, reopening conversations with isolated follow-up context and drafts, pending-response controls, mobile strip overflow, a focused composer with at least 16px text and no horizontal overflow, offline state and profile-switch isolation.
 
 ## Usage-based money-chat credits
 

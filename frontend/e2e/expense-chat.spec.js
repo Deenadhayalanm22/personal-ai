@@ -294,3 +294,19 @@ test('credit loading failure fails closed and regular users see no grant control
   await expect(page.getByRole('heading', { name: 'AI credits', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Manage friends’ credits' })).toHaveCount(0);
 });
+
+
+test('mobile question focus keeps readable text and fits narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await dashboard(page);
+  const question = page.getByLabel('Your money question');
+  await question.focus();
+  await expect(question).toBeFocused();
+  expect(await question.evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
+  await question.fill('What did I spend this month?');
+  await page.setViewportSize({ width: 320, height: 420 });
+  await question.scrollIntoViewIfNeeded();
+  await expect(question).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toMatch(/user-scalable=no|maximum-scale=1/);
+});
