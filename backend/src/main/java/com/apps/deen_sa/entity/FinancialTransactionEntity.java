@@ -66,9 +66,16 @@ public class FinancialTransactionEntity {
     @Column(name = "commitment_match_status", length = 20)
     private CommitmentMatchStatus commitmentMatchStatus;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_draft_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_draft_id", unique = true)
     private TransactionDraftEntity sourceDraft;
+
+    @Column(nullable = false, length = 30)
+    private String origin = "CAPTURE";
+    @Column(name = "payment_reference", unique = true, length = 100)
+    private String paymentReference;
+    @Column(length = 255)
+    private String description;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

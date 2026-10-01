@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-test('Home separates recorded expenses from planned commitments in one overview', async ({ page }) => {
+test('Home shares one compact card with calendar before spending and unpaid bills', async ({ page }) => {
   await page.route('**/api/web/**', route => {
     const path = new URL(route.request().url()).pathname;
     const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
-      : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 0, transactionCount: 0, days: [] }
-      : path.endsWith('/monthly-commitment') ? { commitment: {
+      : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 5000, commitmentSpend: 5000, transactionCount: 1, days: [] }
+      : path.endsWith('/monthly-commitment') ? { overview: { stillToPay: 0, plannedInvesting: 2000, plannedSavings: 0 }, commitment: {
           storyId: 'monthly-commitment', storyType: 'MONTHLY_COMMITMENT',
           cardFace: { heading: 'Monthly commitment', displayValue: '₹1,000' },
+          evidence: { byCard: { 'next-commitment': { totalAmount: { displayValue: '₹1,500' } } } },
           cards: [{ cardId: 'commitment', sequence: 1, layout: 'COMMITMENT', title: 'Your monthly plan', body: 'One item completed.', components: [
             { type: 'MONEY', label: 'Essential living', value: 1000, currency: 'INR', displayValue: '₹1,000' },
             { type: 'MONEY', label: 'Recurring commitments complete', value: 1000, currency: 'INR', displayValue: '₹1,000' }
@@ -22,19 +23,43 @@ test('Home separates recorded expenses from planned commitments in one overview'
   await page.goto('/dashboard?month=2026-09');
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Stories' })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Transactions' })).toHaveCount(0);
-  const overview = page.getByRole('region', { name: 'This month' });
-  await expect(overview.getByRole('button', { name: /Spending & commitments/ })).toBeVisible();
-  await overview.getByRole('button', { name: /Spending & commitments/ }).click();
-  await expect(overview.getByText('Recorded expenses', { exact: true })).toBeVisible();
-  await expect(overview.getByRole('button', { name: /Planned commitments.*₹1,000/ })).toBeVisible();
-  await expect(overview.getByText('Planned commitments are upcoming amounts, not money already spent.')).toBeVisible();
+  const overview = page.getByRole('region', { name: 'Month overview' });
+  const monthCard = page.getByRole('region', { name: 'Month at a glance', exact: true });
+  await expect(monthCard.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
+  await expect(monthCard.getByLabel('Calendar month')).toHaveValue('2026-09');
+  await expect(page.locator('.app-heading')).not.toContainText('September 2026');
+  await expect(page.getByText('Here’s how your month is unfolding.', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('MONTH AT A GLANCE', { exact: true })).toHaveCount(0);
+  await expect(overview.locator('[aria-expanded]')).toHaveCount(0);
+  await expect(overview).toContainText('₹0');
+  await expect(overview).toContainText('Includes ₹5,000 in commitment payments');
+  await expect(overview).not.toContainText('₹1,500');
+  await expect(overview.getByText('Spent so far', { exact: true })).toBeVisible();
+  await expect(overview.getByText('Still to pay this month', { exact: true })).toBeVisible();
+  await expect(overview).toContainText('₹5,000');
+  expect(await overview.evaluate(widget => {
+    const card = widget.closest('.month-at-a-glance');
+    const calendar = card.querySelector('.unified-calendar');
+    return !!(calendar.compareDocumentPosition(widget) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && getComputedStyle(calendar).borderTopWidth === '0px'
+      && getComputedStyle(card).borderTopWidth === '1px';
+  })).toBe(true);
+  await page.locator('.calendar button').first().click();
+  await expect(overview).toContainText('₹5,000');
+  await page.getByRole('button', { name: 'Back to today' }).click();
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(await monthCard.evaluate(widget => {
+    const bounds = widget.getBoundingClientRect();
+    return widget.scrollWidth <= widget.clientWidth && bounds.left >= 0 && bounds.right <= window.innerWidth;
+  })).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await expect(page.locator('.story-carousel-card')).toHaveCount(0);
   const activity = page.getByRole('region', { name: 'Activity', exact: true });
   await expect(activity).toContainText('Internet bill');
   await expect(activity).toContainText('Commitment paid');
   await expect(activity).toContainText('Index fund');
   await expect(activity).toContainText('Investment recorded');
-  await overview.getByRole('button', { name: /Planned commitments/ }).click();
+  await overview.getByRole('button', { name: 'View monthly plan' }).click();
   await expect(page.getByRole('progressbar', { name: 'Essential living: completed' })).toHaveAttribute('aria-valuenow', '100');
 });
 
@@ -82,7 +107,8 @@ test('Today prioritizes dues and reviewing a commitment records its payment in t
       return route.fulfill({ json: commitment() });
     }
     const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
-      : path.endsWith('/calendar') ? { currency: 'INR', timezone: 'Asia/Kolkata', totalSpend: 300, transactionCount: 1, days: [] }
+      : path.endsWith('/calendar') ? { currency: 'INR', timezone: 'Asia/Kolkata', totalSpend: paid ? 5300 : 300, commitmentSpend: paid ? 5000 : 0, transactionCount: paid ? 2 : 1, days: [] }
+      : path.endsWith('/monthly-commitment') ? { commitment: { storyType: 'MONTHLY_COMMITMENT', cardFace: { heading: 'Monthly plan', displayValue: '₹15,000' } }, overview: { stillToPay: paid ? 10000 : 15000, plannedInvesting: 0, plannedSavings: 0 } }
       : path.endsWith('/recurring-commitments') ? { items: [commitment()] }
       : path.endsWith('/recurring-commitments/savings') ? []
       : path.endsWith('/recurring-commitments/1/history') ? { id: 1, label: 'Chit fund', planningAmount: 5000, history: [] }
@@ -118,7 +144,67 @@ test('Today prioritizes dues and reviewing a commitment records its payment in t
   await expect(rows.filter({ hasText: 'Chit fund' })).toHaveCount(1);
   await expect(chit).toContainText('Commitment paid');
   await expect(chit).not.toHaveClass(/due-commitment/);
+  const summary = page.getByRole('region', { name: 'Month overview' });
+  await expect(summary).toContainText('₹5,300');
+  await expect(summary).toContainText('₹10,000');
   await expect(rows.first()).toContainText('Home loan');
   await rows.first().getByRole('button', { name: 'Review Home loan' }).click();
   await expect(page.getByRole('dialog').filter({ hasText: 'LOAN DETAILS' })).toContainText('Home loan');
+});
+
+test('Historical month overview omits unavailable planning figures', async ({ page }) => {
+  await page.route('**/api/web/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
+      : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 850, days: [] }
+      : path.endsWith('/monthly-commitment') ? { commitment: null }
+      : { items: [], actions: [] };
+    return route.fulfill({ json });
+  });
+  await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
+  await page.goto('/dashboard?month=2026-08');
+  const overview = page.getByRole('region', { name: 'Month overview' });
+  await expect(overview).toContainText('₹850');
+  await expect(overview.getByText('Still to pay this month')).toHaveCount(0);
+  await expect(overview.getByText(/Next month planned/)).toHaveCount(0);
+  await expect(overview.getByRole('button', { name: 'View monthly plan' })).toHaveCount(0);
+});
+
+test('Paid can attach an expense already recorded without increasing spending again', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-01T09:00:00Z'));
+  let paid = false;
+  const item = () => ({ id: 1, label: 'Internet bill', status: 'ACTIVE', planningAmount: 1000, recurrenceUnit: 'MONTH', recurrenceInterval: 1, nextExpectedDate: paid ? '2026-11-01' : '2026-10-01', currentOccurrence: { month: '2026-10', dueDate: '2026-10-01', status: paid ? 'COMPLETED' : 'DUE' } });
+  await page.route('**/api/web/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/occurrences/complete')) {
+      expect(route.request().postDataJSON()).toMatchObject({ actualAmount: 900, completedAt: '2026-10-01', transactionId: 70 });
+      paid = true;
+      return route.fulfill({ json: { transactionId: 70 } });
+    }
+    const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
+      : path.endsWith('/calendar') ? { currency: 'INR', timezone: 'Asia/Kolkata', totalSpend: 900, commitmentSpend: paid ? 900 : 0, transactionCount: 1, days: [] }
+      : path.endsWith('/monthly-commitment') ? { commitment: { storyType: 'MONTHLY_COMMITMENT', cardFace: { heading: 'Monthly plan', displayValue: '₹1,000' } }, overview: { stillToPay: paid ? 0 : 1000, plannedInvesting: 0, plannedSavings: 0 } }
+      : path.endsWith('/recurring-commitments') ? { items: [item()] }
+      : path.endsWith('/recurring-commitments/1/history') ? { id: 1, label: 'Internet bill', planningAmount: 1000, history: [] }
+      : path.endsWith('/recurring-commitments/savings') ? []
+      : path.endsWith('/expenses') ? { items: [{ id: 70, amount: 900, merchant: 'Internet provider', transactionTime: '2026-10-01T00:00:00Z', commitmentPayment: paid }] }
+      : path.endsWith('/activity') ? { items: [{ type: paid ? 'COMMITMENT' : 'EXPENSE', id: 70, label: 'Internet provider', description: paid ? 'Commitment paid' : 'Recorded expense', amount: 900, date: '2026-10-01' }] }
+      : { items: [], loans: [], mutualFunds: [], stocks: [], actions: [] };
+    return route.fulfill({ json });
+  });
+  await page.route('**/health', route => route.fulfill({ json: { status: 'UP' } }));
+  await page.goto('/dashboard?month=2026-10');
+  const summary = page.getByRole('region', { name: 'Month overview' });
+  await expect(summary).toContainText('₹900');
+  await page.getByRole('button', { name: 'Review Internet bill', exact: true }).click();
+  await page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' }).getByRole('button', { name: 'Paid', exact: true }).click();
+  const completion = page.getByRole('dialog').filter({ hasText: 'COMPLETION' });
+  await completion.getByLabel('Payment record').selectOption('70');
+  await expect(completion.getByLabel('Actual amount')).toHaveValue('900');
+  await expect(completion).toContainText('without adding spending again');
+  await completion.getByRole('button', { name: 'Save completion' }).click();
+  await page.locator('.money-modal > .close').click();
+  await expect(summary).toContainText('Includes ₹900 in commitment payments');
+  await expect(summary.locator('.month-overview-stat').nth(1)).toContainText('₹0');
+  await expect(page.getByRole('region', { name: 'Activity', exact: true }).locator('.unified-activity-row')).toHaveCount(1);
 });

@@ -14,16 +14,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonthlyCommitmentPresentationService {
     private final MonthlyCommitmentCardService monthlyCommitment;
+    private final MonthlyPaymentOverviewService overview;
 
     public MonthlyCommitmentApiResponse monthlyForWeb(AppUserEntity user, YearMonth month) {
         CommitmentPresentation current = monthlyCommitment.currentFor(user);
         CommitmentPresentation selected = current != null && current.period() != null
                 && YearMonth.from(current.period().startDate()).equals(month) ? current : null;
-        return new MonthlyCommitmentApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), selected);
+        return new MonthlyCommitmentApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), selected, selected == null ? null : overview.forMonth(user, month));
     }
-    public record MonthlyCommitmentApiResponse(String month, String currency, String timezone, CommitmentPresentation commitment) {
+    public record MonthlyCommitmentApiResponse(String month, String currency, String timezone, CommitmentPresentation commitment, MonthlyPaymentOverviewService.Overview overview) {
+        public MonthlyCommitmentApiResponse(String month, String currency, String timezone, CommitmentPresentation commitment) { this(month, currency, timezone, commitment, null); }
         static MonthlyCommitmentApiResponse empty(YearMonth month, AppUserEntity user) {
-            return new MonthlyCommitmentApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), null);
+            return new MonthlyCommitmentApiResponse(month.toString(), user.getCurrency(), user.getTimezone(), null, null);
         }
     }
     public record CommitmentPresentation(String storyId, String storyType, int templateVersion, Instant generatedAt,

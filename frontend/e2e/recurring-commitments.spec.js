@@ -49,6 +49,10 @@ test('two first-day commitments become due and only paid chit fund appears in ac
     data: { instant: '2026-10-01T09:00:00Z' }
   })).ok()).toBeTruthy();
   await page.goto('/dashboard?month=2026-10');
+  const overview = page.getByRole('region', { name: 'Month overview' });
+  await expect(overview).toContainText('Still to pay this month');
+  await expect(overview).toContainText('₹6,000');
+  await expect(overview.getByRole('button', { name: 'View monthly plan' })).toBeVisible();
   await page.getByRole('button', { name: /Your money/ }).click();
   const octoberCard = page.getByTestId('commitments-section').locator('[data-testid^="commitment-"]', { hasText: 'Chit fund' });
   const octoberCommitments = page.getByTestId('commitments-section');

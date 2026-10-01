@@ -22,6 +22,9 @@ import java.time.LocalDate;
 @Service
 public class FinancialTransactionEditService {
     private final FinancialTransactionRepository transactions;
+    @Autowired private com.apps.deen_sa.repository.RecurringCommitmentOccurrenceRepository paymentOccurrences;
+    @Autowired private com.apps.deen_sa.repository.RecurringCommitmentExtraRepository paymentExtras;
+    @Autowired private com.apps.deen_sa.repository.UserRecurringCommitmentRepository paymentCommitments;
     private final UserReferenceEntityRepository references;
     private final ExpenseTaxonomyRegistry taxonomy;
     private final ExpenseDailyAggregateRepository aggregates;
@@ -51,11 +54,7 @@ public class FinancialTransactionEditService {
         if (request == null || request.hasNoChanges()) {
             throw badRequest("Provide at least one value to update");
         }
-        FinancialTransactionEntity transaction = transactions
-                .findOwnedVisibleById(transactionId, user.getId())
-                .orElseThrow(() -> new WebApiException(
-                        HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND",
-                        "Expense not found or no longer active"));
+        FinancialTransactionEntity transaction = lockedExpense(user, transactionId);
         LocalDate previousDate = transaction.getOccurredAt();
 
         if (request.amount() != null) {
@@ -87,6 +86,7 @@ public class FinancialTransactionEditService {
             transaction.setSourceAccount(account);
         }
         transaction.setUpdatedAt(Instant.now());
+        synchronizePayment(transaction);
         FinancialTransactionEntity saved = transactions.saveAndFlush(transaction);
         if (aggregates != null) {
             aggregates.markDateForRebuild(previousDate);
@@ -98,11 +98,11 @@ public class FinancialTransactionEditService {
 
     @Transactional
     public void delete(AppUserEntity user, Long transactionId) {
-        FinancialTransactionEntity transaction = transactions
-                .findOwnedVisibleById(transactionId, user.getId())
-                .orElseThrow(() -> new WebApiException(
-                        HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND",
-                        "Expense not found or no longer active"));
+        FinancialTransactionEntity transaction = lockedExpense(user, transactionId);
+        if (paymentOccurrences != null && (paymentOccurrences.findByPaymentTransactionId(transactionId).isPresent()
+                || paymentExtras.findByPaymentTransactionId(transactionId).isPresent()))
+            throw new WebApiException(HttpStatus.CONFLICT, "COMMITMENT_PAYMENT_LINKED",
+                    "This expense pays a commitment. You can correct its amount or date; undoing a commitment payment is not supported yet.");
         Instant now = Instant.now();
         transaction.setDeletedAt(now);
         transaction.setUpdatedAt(now);
@@ -111,6 +111,29 @@ public class FinancialTransactionEditService {
         if (snapshots != null) snapshots.refreshCurrent(user);
     }
 
+    private FinancialTransactionEntity lockedExpense(AppUserEntity user, Long id) {
+        // The same rule -> transaction lock order as completion prevents racing
+        // extra-payment corrections from losing their shared compatibility total.
+        if (paymentCommitments != null) transactions.findPaymentCommitmentId(id, user.getId())
+                .ifPresent(commitmentId -> paymentCommitments.findOwnedForUpdate(commitmentId, user.getId()));
+        return transactions.findOwnedForUpdate(id, user.getId()).orElseThrow(() -> new WebApiException(
+                HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND", "Expense not found or no longer active"));
+    }
+    private void synchronizePayment(FinancialTransactionEntity transaction) {
+        if (paymentOccurrences == null) return;
+        paymentOccurrences.findByPaymentTransactionId(transaction.getId()).ifPresent(occurrence -> {
+            if (occurrence.getSavingsUsed() != null && transaction.getAmount().compareTo(occurrence.getSavingsUsed()) < 0)
+                throw badRequest("Payment cannot be less than its recorded savings allocation");
+            occurrence.setActualAmount(transaction.getAmount()); occurrence.setCompletedAt(transaction.getOccurredAt());
+            occurrence.setUpdatedAt(Instant.now()); paymentOccurrences.saveAndFlush(occurrence);
+        });
+        paymentExtras.findByPaymentTransactionId(transaction.getId()).ifPresent(extra -> {
+            var occurrence = extra.getOccurrence();
+            occurrence.setExtraAmount(occurrence.getExtraAmount().subtract(extra.getAmount()).add(transaction.getAmount()));
+            extra.setAmount(transaction.getAmount()); paymentExtras.saveAndFlush(extra);
+            occurrence.setUpdatedAt(Instant.now()); paymentOccurrences.saveAndFlush(occurrence);
+        });
+    }
     private void updateClassification(
             FinancialTransactionEntity transaction,
             String requestedCategory,

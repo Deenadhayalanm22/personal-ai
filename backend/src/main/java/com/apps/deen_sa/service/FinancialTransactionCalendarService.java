@@ -64,7 +64,7 @@ public class FinancialTransactionCalendarService {
 
         return new CalendarResponse(
                 month.toString(), user.getCurrency(), timezone, recordedDays,
-                count, total, highest, INTENSITY_METHOD, days);
+                count, total, highest, INTENSITY_METHOD, days, money(transactions.sumCommitmentPayments(user.getId(), start, end)));
     }
 
     static int intensity(BigDecimal dailyTotal, BigDecimal highestSpend) {
@@ -86,7 +86,7 @@ public class FinancialTransactionCalendarService {
     }
 
     private BigDecimal money(BigDecimal amount) {
-        return amount.setScale(2, RoundingMode.HALF_UP);
+        return (amount == null ? BigDecimal.ZERO : amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     private record DailyAggregate(long transactionCount, BigDecimal totalSpend) {
@@ -103,7 +103,8 @@ public class FinancialTransactionCalendarService {
             BigDecimal totalSpend,
             BigDecimal highestSpend,
             String intensityMethod,
-            List<CalendarDay> days
+            List<CalendarDay> days,
+            BigDecimal commitmentSpend
     ) {
     }
 

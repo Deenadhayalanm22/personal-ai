@@ -71,3 +71,5 @@ The webhook accepts text, audio, and interactive WhatsApp payloads. Interactive 
 
 - Capture does not create account balances, transfers, income, or a general ledger movement.
 - The current product does not offer conversational edit/undo; portal correction is in FIN-EPIC-002.
+
+Explicit recurring-commitment payments (FIN-EPIC-006) may also create expense transactions without a capture draft. Their separate origin and payment reference preserve traceability; captured transactions still require their source draft and keep the capture confirmation invariants. The portal has no general raw-expense creation endpoint.

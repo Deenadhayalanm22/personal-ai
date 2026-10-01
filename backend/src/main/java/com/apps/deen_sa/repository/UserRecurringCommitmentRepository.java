@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRecurringCommitmentRepository extends JpaRepository<UserRecurringCommitmentEntity, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from UserRecurringCommitmentEntity c where c.id = :id and c.user.id = :userId")
+    Optional<UserRecurringCommitmentEntity> findOwnedForUpdate(@Param("id") Long id, @Param("userId") Long userId);
     @Query("select distinct c from UserRecurringCommitmentEntity c left join fetch c.merchant left join fetch c.linkedTransactions where c.user.id = :userId order by c.label")
     List<UserRecurringCommitmentEntity> findAllOwned(@Param("userId") Long userId);
     @Query("select distinct c from UserRecurringCommitmentEntity c left join fetch c.merchant left join fetch c.linkedTransactions where c.id = :id and c.user.id = :userId")

@@ -23,8 +23,8 @@ class FinancialActivityServiceTest {
                 eq(Date.valueOf("2026-10-01")), eq(Date.valueOf("2026-11-01"))))
                 .thenAnswer(call -> {
                     String sql = call.getArgument(0);
-                    if (sql.contains("recurring_commitment_occurrence")) {
-                        assertThat(sql).contains("o.status = 'COMPLETED'");
+                    if (sql.contains("LEFT JOIN recurring_commitment_occurrence")) {
+                        assertThat(sql).contains("o.payment_transaction_id = t.id");
                         return List.of(new FinancialActivityService.ActivityItem(
                                 "COMMITMENT", 7L, LocalDate.of(2026, 10, 5),
                                 new BigDecimal("5000.00"), "Internet bill", "Commitment paid"));

@@ -13,12 +13,17 @@ import com.apps.deen_sa.domain.SpendingNature;
 
 public interface FinancialTransactionRepository
         extends JpaRepository<FinancialTransactionEntity, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from FinancialTransactionEntity t where t.id = :id and t.user.id = :userId and t.deletedAt is null")
+    Optional<FinancialTransactionEntity> findOwnedForUpdate(@Param("id") Long id, @Param("userId") Long userId);
+    @Query("select t.recurringCommitment.id from FinancialTransactionEntity t where t.id = :id and t.user.id = :userId and t.deletedAt is null and t.paymentReference is not null")
+    Optional<Long> findPaymentCommitmentId(@Param("id") Long id, @Param("userId") Long userId);
     Optional<FinancialTransactionEntity> findBySourceDraftId(Long sourceDraftId);
 
     @Query("""
             SELECT transaction
             FROM FinancialTransactionEntity transaction
-            JOIN FETCH transaction.sourceDraft draft
+            LEFT JOIN FETCH transaction.sourceDraft draft
             LEFT JOIN FETCH transaction.merchant merchant
             LEFT JOIN FETCH transaction.sourceAccount sourceAccount
             WHERE transaction.id = :id
@@ -44,13 +49,16 @@ public interface FinancialTransactionRepository
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 
+    @Query("select coalesce(sum(t.amount), 0) from FinancialTransactionEntity t where t.user.id = :userId and t.occurredAt >= :start and t.occurredAt < :end and t.deletedAt is null and t.paymentReference is not null")
+    java.math.BigDecimal sumCommitmentPayments(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
     long countByUserIdAndOccurredAtGreaterThanEqualAndOccurredAtLessThanAndDeletedAtIsNull(
             Long userId, LocalDate start, LocalDate end);
 
     @Query("""
             SELECT transaction
             FROM FinancialTransactionEntity transaction
-            JOIN FETCH transaction.sourceDraft draft
+            LEFT JOIN FETCH transaction.sourceDraft draft
             LEFT JOIN FETCH transaction.merchant merchant
             LEFT JOIN FETCH transaction.sourceAccount sourceAccount
             WHERE transaction.user.id = :userId

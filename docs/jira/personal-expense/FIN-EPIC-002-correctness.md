@@ -63,3 +63,7 @@ This epic covers server-side invariants, browser corrections, soft deletion, and
 
 - Merge two merchant references attached to different transactions; assert both point at canonical reference and aliases are preserved.
 - Assert `MIXED_ENTITY_TYPES`, `REFERENCE_FORBIDDEN`, and `REFERENCE_NOT_ACTIVE` leave all inputs unchanged.
+
+## Linked commitment-payment corrections
+
+A recurring payment is an expense transaction with an explicit occurrence/extra link. Editing its amount/date updates the linked payment-history compatibility fields in the same transaction; changing a date does not change the scheduled occurrence. An amount below its savings allocation is rejected. Deleting a linked payment returns `409 COMMITMENT_PAYMENT_LINKED` because payment undo/allocation reversal is not implemented; the portal omits Delete for these items. Deleting a commitment rule retains its recorded expenses. Ordinary expense edits and soft deletion remain unchanged. Verified by `CommitmentPaymentsIT`.

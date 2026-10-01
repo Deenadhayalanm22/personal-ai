@@ -10,6 +10,10 @@ import java.time.Instant;
 @Table(name = "recurring_commitment_extra")
 @Getter @Setter
 public class RecurringCommitmentExtraEntity {
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "payment_transaction_id", unique = true)
+    private FinancialTransactionEntity paymentTransaction;
+    @Column(name = "request_id", length = 100)
+    private String requestId;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "occurrence_id", nullable = false) private RecurringCommitmentOccurrenceEntity occurrence;
     @Column(nullable = false, precision = 19, scale = 2) private BigDecimal amount;

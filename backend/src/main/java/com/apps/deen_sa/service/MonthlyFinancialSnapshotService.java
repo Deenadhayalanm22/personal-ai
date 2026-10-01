@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 9;
+    private static final int CALCULATION_VERSION = 10;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -150,7 +150,7 @@ public class MonthlyFinancialSnapshotService {
         // the recurrence rule advances to its next expected date.
         return outcomes.stream().filter(outcome -> outcome.getStatus()
                         == com.apps.deen_sa.domain.RecurringCommitmentOccurrenceStatus.COMPLETED)
-                .findFirst().map(outcome -> List.of(outcome.getCompletedAt()))
+                .findFirst().map(outcome -> List.of(month.atDay(Math.min(commitment.getDueDay() == null ? outcome.getCompletedAt().getDayOfMonth() : commitment.getDueDay(), month.lengthOfMonth()))))
                 .orElse(scheduled);
     }
 

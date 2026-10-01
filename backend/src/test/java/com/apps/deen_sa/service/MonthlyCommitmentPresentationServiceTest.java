@@ -20,11 +20,11 @@ class MonthlyCommitmentPresentationServiceTest {
                 java.util.List.of(), null);
         when(commitment.currentFor(user)).thenReturn(card);
 
-        var response = new MonthlyCommitmentPresentationService(commitment).monthlyForWeb(user, YearMonth.of(2026, 9));
+        var response = new MonthlyCommitmentPresentationService(commitment, mock(MonthlyPaymentOverviewService.class)).monthlyForWeb(user, YearMonth.of(2026, 9));
 
         assertThat(response.month()).isEqualTo("2026-09");
         assertThat(response.commitment()).isSameAs(card);
-        assertThat(new MonthlyCommitmentPresentationService(commitment).monthlyForWeb(user, YearMonth.of(2026, 8)).commitment()).isNull();
+        assertThat(new MonthlyCommitmentPresentationService(commitment, mock(MonthlyPaymentOverviewService.class)).monthlyForWeb(user, YearMonth.of(2026, 8)).commitment()).isNull();
         verify(commitment, org.mockito.Mockito.times(2)).currentFor(user);
     }
 }

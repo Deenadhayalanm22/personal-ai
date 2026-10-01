@@ -149,3 +149,19 @@ The Monthly Commitment story continues to render server-provided amounts only. I
 ## Read-only conversation about commitments
 
 The V1 money chat may inspect owned commitment rules and recorded occurrences, use the canonical current/next-month projection, and calculate next-month what-if reductions to an included recurring-commitment source. A plan reduction never updates its recurrence, effective date or payment history. A flexible schedule or Skip action does not prove a bill may be missed without consequences. The assistant describes any commitment reduction as conditional until the user confirms flexibility. Earmarked savings contributions and their later underlying bill remain separate sources; reducing a savings contribution cannot be described as reducing the bill.
+
+## Transaction-backed recurring payments
+
+Commitment rules and dated occurrences remain planning records. Explicit Paid/complete creates one `financial_transaction` for the actual amount and payment date, or attaches an explicitly selected existing owned expense with the same amount/date. The occurrence owns a unique payment link. Category/merchant matching to a rule alone never proves that a scheduled occurrence is paid. Extra payments have separate transaction links and their actual recording dates; they do not increase the recurring estimate. Base/extra actual amounts in payment responses are read from the linked transaction; occurrence/extra amount fields are retained as synchronized compatibility fields.
+
+Acceptance criteria:
+
+1. Paying a ₹1,000 planned bill for ₹900 adds ₹900 to calendar spending, removes the full ₹1,000 from unpaid bills, preserves the ₹1,000 planned source, and appears once in Activity. The next expected date remains explicitly selected by the user.
+2. Selecting an existing expense on the payment date links it rather than recording another expense. Foreign, deleted, amount/date-mismatched, or already allocated expenses fail atomically. A saved rule match alone does not allocate a payment.
+3. Concurrent/repeated completion of one occurrence cannot create another expense or allocate savings twice. Identical retries return the existing payment; changed payment details fail. Extra payments support a per-occurrence request ID; reusing it with different details fails.
+4. Payment, savings allocation, occurrence outcome, next reminder, dirty calendar date and current/next snapshots commit together. New extra payments refresh those views too.
+5. Amount/date corrections on a linked expense are reflected in payment history. Amount cannot fall below recorded savings used. Deleting a linked expense is rejected with `409 COMMITMENT_PAYMENT_LINKED`; payment undo and savings-allocation reversal are not implemented. Deleting the recurring rule preserves actual expense transactions.
+6. V37 backfills historical actual payments and extras. It reuses a unique existing explicitly rule-matched expense only when owner, payment date and actual amount agree; it never guesses from unrelated expenses. Ambiguous linked candidates and legacy aggregate extras without dated extra rows stop the migration transaction for manual reconciliation; no payment date is invented. Legacy acknowledgement-only completions without an actual amount remain acknowledgements and create no invented spending.
+7. Savings set aside, investments, loan payments and credit-card settlements retain their existing separate storage/counting rules. Only recurring expense payments join the expense transaction model in this change.
+
+Coverage: `CommitmentPaymentsIT`, `CommitmentPaymentMigrationIT`, `MonthlyPaymentOverviewServiceTest`, and the Home/recurring-commitment browser regressions.

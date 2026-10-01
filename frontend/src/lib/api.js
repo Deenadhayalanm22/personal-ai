@@ -55,7 +55,7 @@ export const getFinancialActivity = (month) => request(`/api/web/activity?month=
 export const getExpenseOptions = () => request('/api/web/expenses/options');
 export const getMonthlyCommitment = (month) => request(`/api/web/monthly-commitment?month=${encodeURIComponent(month)}`);
 export const createMissingDateContext = (date, timezone) => request('/api/web/expenses/calendar/context', { method: 'POST', body: JSON.stringify({ type: 'MISSING_TRANSACTION_DATE', date, timezone }) });
-export const getExpensesForDate = (month, date, limit = 50) => request(`/api/web/expenses?month=${encodeURIComponent(month)}&date=${encodeURIComponent(date)}&limit=${encodeURIComponent(limit)}`);
+export const getExpensesForDate = (month, date, limit = 50, beforeId = null) => request(`/api/web/expenses?month=${encodeURIComponent(month)}&date=${encodeURIComponent(date)}&limit=${encodeURIComponent(limit)}${beforeId==null?'':`&beforeId=${encodeURIComponent(beforeId)}`}`);
 export const updateExpense = (id, changes) => request(`/api/web/expenses/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteExpense = (id) => request(`/api/web/expenses/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const getRecurringCommitments = () => request('/api/web/recurring-commitments');
@@ -72,7 +72,7 @@ export const deleteRecurringCommitment = (id) => request(`/api/web/recurring-com
 export const completeRecurringCommitment = (id, month) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(month)}/done`, { method: 'POST' });
 export const recordRecurringCommitmentCompletion = (id, completion) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/complete`, { method: 'POST', body: JSON.stringify(completion) });
 export const skipRecurringCommitment = (id, month) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(month)}/skip`, { method: 'POST' });
-export const addRecurringCommitmentExtra = (id, month, amount, reason) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(month)}/extra`, { method: 'POST', body: JSON.stringify({ amount, reason }) });
+export const addRecurringCommitmentExtra = (id, month, amount, reason, requestId) => request(`/api/web/recurring-commitments/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(month)}/extra`, { method: 'POST', body: JSON.stringify({ amount, reason, requestId }) });
 export const getCommitmentReview = (month) => request(`/api/web/recurring-commitments/review?month=${encodeURIComponent(month)}`);
 export const resolveCommitmentReview = (transactionId, commitmentId) => request(`/api/web/recurring-commitments/review/${encodeURIComponent(transactionId)}`, { method: 'POST', body: JSON.stringify({ commitmentId }) });
 export const getCreditCards = () => request('/api/web/credit-cards');

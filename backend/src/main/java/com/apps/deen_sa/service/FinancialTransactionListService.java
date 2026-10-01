@@ -118,7 +118,8 @@ public class FinancialTransactionListService {
             Long merchantId,
             String merchant,
             Long accountId,
-            String sourceAccount
+            String sourceAccount,
+            boolean commitmentPayment
     ) {
         static ExpenseItem from(FinancialTransactionEntity transaction, AppUserEntity user) {
             String merchant = transaction.getMerchant() == null
@@ -129,7 +130,7 @@ public class FinancialTransactionListService {
                     : transaction.getSourceAccount().getCanonicalName();
             return new ExpenseItem(
                     transaction.getId(),
-                    transaction.getSourceDraft().getRawText(),
+                    transaction.getSourceDraft() == null ? transaction.getDescription() : transaction.getSourceDraft().getRawText(),
                     transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
                     user.getCurrency(),
                     transaction.getOccurredAt()
@@ -139,7 +140,7 @@ public class FinancialTransactionListService {
                     transaction.getMerchant() == null ? null : transaction.getMerchant().getId(),
                     merchant,
                     transaction.getSourceAccount() == null ? null : transaction.getSourceAccount().getId(),
-                    sourceAccount);
+                    sourceAccount, transaction.getPaymentReference() != null);
         }
     }
 }

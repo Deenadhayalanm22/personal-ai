@@ -17,6 +17,8 @@ public class RecurringCommitmentOccurrenceEntity {
     @Column(name = "scheduled_month", nullable = false) private LocalDate scheduledMonth;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private RecurringCommitmentOccurrenceStatus status;
     private LocalDate completedAt;
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "payment_transaction_id", unique = true)
+    private FinancialTransactionEntity paymentTransaction;
     @Column(name = "actual_amount", precision = 19, scale = 2) private BigDecimal actualAmount;
     @Column(name = "extra_amount", precision = 19, scale = 2) private BigDecimal extraAmount;
     @Column(name = "savings_used", precision = 19, scale = 2) private BigDecimal savingsUsed;
