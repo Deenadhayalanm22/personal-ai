@@ -23,6 +23,68 @@ async function addFlexibleCommitment(page, commitments, { label, amount, interva
   await page.getByRole('button', { name: 'Add commitment' }).click();
 }
 
+test('two first-day commitments become due and only paid chit fund appears in activity', async ({ page, request }) => {
+  const commitments = await openAuthenticatedMoney(page, request, '2026-09-25T09:00:00Z');
+  for (const [name, amount] of [['Chit fund', '5000'], ['Internet recharge', '1000']]) {
+    await commitments.getByRole('button', { name: '＋ Add a commitment' }).click();
+    await page.getByLabel('Name').fill(name);
+    await page.getByLabel('Planning amount').fill(amount);
+    await page.getByLabel('Frequency').selectOption('MONTH');
+    await page.getByLabel('Next expected date').fill('2026-10-01');
+    await page.getByRole('button', { name: 'Add commitment' }).click();
+  }
+
+  const card = commitments.locator('[data-testid^="commitment-"]', { hasText: 'Chit fund' });
+  await expect(card).toBeVisible();
+  await expect(card).not.toContainText('Due now');
+  await expect(commitments.locator('[data-testid^="commitment-"]', { hasText: 'Internet recharge' })).not.toContainText('Due now');
+  const token = (await page.context().cookies()).find(cookie => cookie.name === 'WEB_SESSION').value;
+  const headers = { Cookie: `WEB_SESSION=${token}` };
+  const list = async () => (await (await request.get('http://localhost:8080/api/web/recurring-commitments', { headers })).json()).items;
+  for (const item of (await list()).filter(item => ['Chit fund', 'Internet recharge'].includes(item.label))) {
+    expect(item.currentOccurrence.status).toBe('UPCOMING');
+  }
+
+  expect((await request.post('http://localhost:8080/test/e2e/clock', {
+    data: { instant: '2026-10-01T09:00:00Z' }
+  })).ok()).toBeTruthy();
+  await page.goto('/dashboard?month=2026-10');
+  await page.getByRole('button', { name: /Your money/ }).click();
+  const octoberCard = page.getByTestId('commitments-section').locator('[data-testid^="commitment-"]', { hasText: 'Chit fund' });
+  const octoberCommitments = page.getByTestId('commitments-section');
+  const rechargeCard = octoberCommitments.locator('[data-testid^="commitment-"]', { hasText: 'Internet recharge' });
+  await expect(octoberCard).toContainText('Due now');
+  await expect(rechargeCard).toContainText('Due now');
+  await expect(octoberCommitments.locator('[data-testid^="commitment-"]', { hasText: 'Due now' })).toHaveCount(2);
+  for (const item of (await list()).filter(item => ['Chit fund', 'Internet recharge'].includes(item.label))) {
+    expect(item.currentOccurrence.status).toBe('DUE');
+  }
+
+  await octoberCard.getByRole('button', { name: 'View details' }).click();
+  const details = page.getByRole('dialog').filter({ hasText: 'COMMITMENT DETAILS' });
+  await details.getByRole('button', { name: 'Paid' }).click();
+  const completion = page.getByRole('dialog').filter({ hasText: 'COMPLETION' });
+  await completion.getByLabel('Completed on').fill('2026-10-01');
+  await completion.getByRole('button', { name: 'Save completion' }).click();
+  await expect(octoberCard).toContainText('Completed');
+  await expect(octoberCard).not.toContainText('Due now');
+  await expect(rechargeCard).toContainText('Due now');
+  const saved = (await list()).find(item => item.label === 'Chit fund');
+  expect(saved.currentOccurrence.status).toBe('COMPLETED');
+  const history = await (await request.get(`http://localhost:8080/api/web/recurring-commitments/${saved.id}/history`, { headers })).json();
+  expect(history.history).toEqual(expect.arrayContaining([
+    expect.objectContaining({ dueDate: '2026-10-01', status: 'COMPLETED', actualAmount: 5000 })
+  ]));
+  expect((await list()).find(item => item.label === 'Internet recharge').currentOccurrence.status).toBe('DUE');
+
+  await page.locator('.money-modal > .close').click();
+  const activity = page.locator('.home-section').filter({ has: page.getByRole('heading', { name: 'Everything recorded' }) });
+  const paidActivity = activity.locator('.activity-entry', { hasText: 'Chit fund' });
+  await expect(paidActivity).toContainText('Commitment paid');
+  await expect(paidActivity).toContainText('₹5,000');
+  await expect(activity.locator('.activity-entry', { hasText: 'Internet recharge' })).toHaveCount(0);
+});
+
 test('weekly family support contributes every scheduled week and each due payment can be recorded', async ({ page, request }) => {
   test.setTimeout(120_000);
   const commitments = await openAuthenticatedMoney(page, request, '2026-09-01T09:00:00Z');

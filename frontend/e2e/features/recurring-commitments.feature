@@ -167,6 +167,18 @@ Feature: Manage commitments
     When the user reviews its details and marks the commitment paid
     Then the Manage commitments row and story evidence show it as completed
 
+  Scenario: Pay one of two monthly commitments due on the first of the next month
+    Given it is 25 September 2026
+    When the user adds a ₹5,000 Chit fund commitment every month starting 1 October
+    And adds a ₹1,000 Internet recharge commitment on the same schedule
+    Then both commitments are upcoming and not due in September
+    When the clock advances to 1 October 2026
+    Then Chit fund and Internet recharge are both due
+    When the user marks Chit fund's 1 October payment paid
+    Then Chit fund is completed and the ₹5,000 payment is retained in history
+    And Internet recharge remains due
+    And the main page Activity shows only Chit fund as a ₹5,000 commitment payment
+
   Scenario: Skip one month and retain the recurring rule
     Given Family support is an active ₹10,000 monthly commitment
     When the user opens View details and skips the current month

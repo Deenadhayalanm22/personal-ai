@@ -35,10 +35,11 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 1. The selected month comes from `?month=YYYY-MM` or defaults to the current local month. Changing it updates browser history and reloads calendar, recent activity, and monthly commitment.
 2. Each day button uses the API-provided `intensity` (0–4) as its visual spend-depth class. The frontend does not calculate or reinterpret intensity from transaction amounts.
 3. The month summary displays API totals: `totalSpend`, `transactionCount`, and `highestSpend`.
-4. **Recent** displays the latest five records loaded for the selected month. Selecting a calendar day switches to the date activity tab and requests up to 50 records for that selected date.
-5. The activity panel initially shows five items and can expand to all returned items. It is a presentation limit, not backend pagination.
-6. A future day cannot be selected. An empty past day can open the missing-transaction flow, which creates a date context and offers the returned WhatsApp URL.
-7. Editing or deleting an item refreshes calendar, recent activity, and monthly commitment so the views converge on the updated record. A dedicated calendar job drains dirty aggregate dates independently of story generation.
+4. Home combines the greeting, a compact expandable spending-and-commitment overview, the full monthly calendar, and activity below it. Each day keeps the expense API's intensity color and adds one marker when a recurring commitment, loan EMI, or mutual-fund SIP is scheduled or recorded on that date. The calendar can show the current and next month; future dates can be selected to inspect planned items.
+5. The activity section initially shows the latest five recorded items for the selected month. Selecting a calendar day filters actual activity to that date and also shows individually labelled due or upcoming commitments, EMIs, and SIPs. Completed plans appear as recorded activity rather than a duplicate planned row. Expense editing remains available through the date's transaction workspace.
+6. The activity panel can expand to all returned items. It is a presentation limit, not backend pagination.
+7. An empty past day can open the missing-transaction flow, which creates a date context and offers the returned WhatsApp URL.
+8. Editing or deleting an item refreshes calendar, recent activity, and monthly commitment so the views converge on the updated record. A dedicated calendar job drains dirty aggregate dates independently of story generation.
 
 ### Integration-test scenarios
 
@@ -46,6 +47,7 @@ Future optional planning-data enrichments for this feed follow [FIN-ARCH-001 —
 - Request a valid missing-date context, then assert a future date and invalid timezone fail.
 - Verify a session cannot read another profile's calendar or expense list.
 - Render a fixture with intensities 0–4 and assert each calendar day uses the matching visual class without recalculating it.
+- Render commitments, a loan EMI, and a mutual-fund SIP on one date; assert the calendar shows one planning marker and selecting the date lists each plan alongside that date's recorded expense.
 - Select a populated day and assert a date-scoped expense request; select an empty past day and assert context creation plus WhatsApp handoff; assert future days are disabled.
 - Edit/delete a displayed item and assert calendar, recent activity, and commitment fetches are requested again.
 
