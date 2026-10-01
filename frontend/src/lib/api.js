@@ -16,7 +16,7 @@ async function parseResponse(response) {
 }
 
 async function request(path, options = {}, authenticated = true) {
-  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', ...options, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
+  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', ...options, headers: { ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
   const data = await parseResponse(response);
   if (!response.ok) {
     const fallback = response.status === 401 ? 'Your session has expired.' : response.status === 409 ? 'This expense changed after you opened it.' : 'Something went wrong. Please try again.';
@@ -155,3 +155,10 @@ export const getPendingAiCredits = () => request('/api/web/ai-credits/admin/pend
 export const resolveAiCredits = (id, amount, note) => request(`/api/web/ai-credits/admin/pending/${id}/resolve`, { method: 'POST', body: JSON.stringify({ amount, note }) });
 
 export const getAiCreditPermissions = () => request('/api/web/ai-credits/permissions');
+
+export function transcribeMoneyVoice(audio, signal) {
+  const form = new FormData();
+  const extension = audio.type.startsWith('audio/mp4') ? 'mp4' : audio.type.startsWith('audio/ogg') ? 'ogg' : audio.type.startsWith('audio/wav') ? 'wav' : 'webm';
+  form.append('audio', audio, `question.${extension}`);
+  return request('/api/web/expense-chat/transcribe', { method: 'POST', body: form, signal });
+}

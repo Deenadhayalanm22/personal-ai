@@ -1,11 +1,22 @@
 <!-- FIN-EPIC-003: docs/jira/personal-expense/FIN-EPIC-003-insights.md -->
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
+  import VoiceQuestion from './VoiceQuestion.svelte';
   import FinancialEvidence from './FinancialEvidence.svelte';
   import { getAiCredits, askExpenseChat, getMoneyConversations, saveMoneyConversation } from '../lib/api.js';
   export let selectedMonth;
   export let connectionStatus;
   export let open = false;
+  let voiceControl;
+  let voiceBusy = false, voiceReview = false, beforeVoice = '';
+  function reviewVoice(text) {
+    beforeVoice = question;
+    if ((question.trim() + '\n' + text).trim().length > 2000) { error = 'Your typed draft and voice question exceed 2,000 characters. Shorten your draft, then record again.'; return; }
+    question = [question.trim(), text].filter(Boolean).join('\n');
+    voiceReview = true;
+    tick().then(() => input?.focus());
+  }
+  function discardVoice() { question = beforeVoice; voiceReview = false; scheduleDraftSave(); }
   let question = '', messages = [], pending = false, error = '', transcript, input;
   let conversations = [], activeId = null, conversationMonth = null;
   let loadingHistory = true, storageError = '', draftTimer;
@@ -47,20 +58,22 @@
     return current;
   }
   async function newChat() {
-    if (pending) return;
+    if (pending || voiceBusy) return;
     clearTimeout(draftTimer);
     try { await saveConversation(); storageError = ''; } catch { return; }
-    activeId = null; conversationMonth = null; messages = []; error = ''; question = ''; retryRequest = null;
+    voiceControl?.cancel();
+    activeId = null; conversationMonth = null; messages = []; error = ''; question = ''; retryRequest = null; voiceReview = false;
     input?.focus();
   }
   async function selectConversation(id) {
-    if (pending || id === activeId) return;
+    if (pending || voiceBusy || id === activeId) return;
     clearTimeout(draftTimer);
     try { await saveConversation(); storageError = ''; } catch { return; }
     const conversation = conversations.find(chat => chat.id === id);
     if (!conversation) return;
+    voiceControl?.cancel();
     activeId = conversation.id; conversationMonth = conversation.month;
-    messages = conversation.messages; question = conversation.draft; error = ''; retryRequest = null;
+    messages = conversation.messages; question = conversation.draft; error = ''; retryRequest = null; voiceReview = false;
     await scrollDown();
     input?.focus();
   }
@@ -90,13 +103,13 @@
   }
   async function send(text = question, recover = false) {
     const message = text.trim();
-    if (!message || pending || loadingHistory || connectionStatus !== 'online') return;
+    if (!message || voiceBusy || pending || loadingHistory || connectionStatus !== 'online') return;
     clearTimeout(draftTimer);
     const previous = history();
     const signature = JSON.stringify({ message, month: conversationMonth, history: previous });
     if (creditBlocked && !(recover && retryRequest?.signature === signature)) return;
     messages = [...messages, { role: 'user', content: message }];
-    question = ''; error = ''; pending = true;
+    question = ''; voiceReview = false; error = ''; pending = true;
     saveConversation();
     requestController = new AbortController();
     const timeout = setTimeout(() => requestController?.abort(), 95000);
@@ -128,7 +141,7 @@
       <div><span class="eyebrow">YOUR MONEY, IN CONTEXT</span><h2>Ask about your money</h2></div>
       <button class="icon-button" aria-label="Close money chat" on:click={close}>×</button>
     </header>
-    <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
+    <div class="chat-context"><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={voiceBusy || pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
     <div class="credit-status" aria-live="polite">
       <span>{credits ? `${formatCredits(credits.available)} credits available` : 'Credits unavailable'}{credits?.reserved > 0 ? ` · ${formatCredits(credits.reserved)} on hold` : ''}</span>
       <button on:click={refreshCredits} disabled={loadingCredits || pending}>Refresh credits</button>
@@ -142,7 +155,7 @@
       <nav class="chat-history" aria-label="Recent money chats">
         {#if !activeId}<span class="history-draft" aria-current="true">New conversation</span>{/if}
         {#each conversations as conversation (conversation.id)}
-          <button class:active={conversation.id === activeId} aria-current={conversation.id === activeId ? 'true' : undefined} title={conversation.title} disabled={pending || loadingHistory} on:click={() => selectConversation(conversation.id)}>
+          <button class:active={conversation.id === activeId} aria-current={conversation.id === activeId ? 'true' : undefined} title={conversation.title} disabled={voiceBusy || pending || loadingHistory} on:click={() => selectConversation(conversation.id)}>
             <span class="history-title">{conversation.title}</span><span class="history-month">{conversation.month}</span>
           </button>
         {/each}
@@ -151,7 +164,7 @@
     <div class="transcript" bind:this={transcript} role="log" aria-live="polite" aria-label="Money conversation" aria-busy={pending}>
       {#if !messages.length}
         <div class="welcome"><span class="spark">✦</span><h3>See how it all adds up.</h3><p>Ask a question, then dig deeper. Explore expenses, loans, investments and commitments, or compare a what-if plan. I won’t change your records.</p></div>
-        <div class="suggestions">{#each suggestions as suggestion}<button disabled={pending || loadingHistory || creditBlocked || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
+        <div class="suggestions">{#each suggestions as suggestion}<button disabled={voiceBusy || pending || loadingHistory || creditBlocked || connectionStatus !== 'online'} on:click={() => send(suggestion)}>{suggestion}<span aria-hidden="true">↗</span></button>{/each}</div>
       {/if}
       {#each messages as message}
         <article class:user={message.role === 'user'} class="message">
@@ -174,8 +187,10 @@
       {/if}
       {#if storageError}<p class="chat-error" role="alert">{storageError}</p>{/if}
       {#if connectionStatus !== 'online'}<p class="chat-error" role="status">Connect to the service to ask about your money.</p>{/if}
+      <VoiceQuestion bind:this={voiceControl} disabled={pending || loadingHistory || creditBlocked || connectionStatus !== 'online'} bind:busy={voiceBusy} onTranscript={reviewVoice} />
+      {#if voiceReview}<div class="voice-review"><span>Review your voice question below. Edit it, then tap Send.</span><button type="button" on:click={discardVoice}>Discard voice text</button></div>{/if}
       <label class="sr-only" for="expense-question">Your money question</label>
-      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={pending || loadingHistory || connectionStatus !== 'online'} on:input={scheduleDraftSave} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={pending || loadingHistory || creditBlocked || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
+      <div class="composer"><textarea id="expense-question" bind:this={input} bind:value={question} maxlength="2000" rows="2" placeholder="Ask about your money…" disabled={voiceBusy || pending || loadingHistory || connectionStatus !== 'online'} on:input={scheduleDraftSave} on:keydown={(event) => { if (event.key === 'Escape') close(); if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); } }}></textarea><button type="submit" aria-label="Send question" disabled={voiceBusy || pending || loadingHistory || creditBlocked || connectionStatus !== 'online' || !question.trim()}>↑</button></div>
       <small>AI credits are charged by usage, including follow-ups and scope checks.</small>
       <small>Based on recorded data. Scenarios are estimates, not changes.</small>
     </form>
@@ -183,6 +198,7 @@
 {/if}
 
 <style>
+  .voice-review{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:12px;line-height:1.5;color:#355d47}.voice-review button{border:0;background:none;color:inherit;text-decoration:underline;font:inherit;cursor:pointer}
   .recover-request{margin-bottom:8px;padding:7px 10px;border:1px solid #a6bba9;border-radius:8px;background:#eef4ed;color:#234c3c;cursor:pointer;font:inherit;font-size:12px}
   .credit-status{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 20px;font-size:11px;background:#f5f7f1}.credit-status button{border:0;background:none;text-decoration:underline;color:#355d47;cursor:pointer;font:inherit}.credit-notice{padding:6px 20px;margin:0;font-size:12px;color:#975336}
 

@@ -8,6 +8,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(basePackages = "com.apps.deen_sa.controller")
 public class WebApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> oversizedUpload() {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiError("VOICE_AUDIO_TOO_LARGE", "Record a shorter voice question (up to 8 MB)."));
+    }
+
     @ExceptionHandler(WebApiException.class)
     public ResponseEntity<ApiError> apiError(WebApiException error) {
         return ResponseEntity.status(error.status()).body(new ApiError(error.code(), error.getMessage()));

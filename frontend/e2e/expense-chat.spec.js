@@ -310,3 +310,147 @@ test('mobile question focus keeps readable text and fits narrow screens', async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toMatch(/user-scalable=no|maximum-scale=1/);
 });
+
+async function fakeMicrophone(page, denied = false) {
+  await page.addInitScript(({ denied }) => {
+    window.voiceTracksStopped = 0;
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+      getUserMedia: async () => {
+        if (denied) throw new DOMException('Denied', 'NotAllowedError');
+        return { getTracks: () => [{ stop: () => { window.voiceTracksStopped++; } }] };
+      }
+    } });
+    window.MediaRecorder = class {
+      static isTypeSupported(type) { return type.startsWith('audio/webm'); }
+      constructor(stream, options) { this.mimeType = options.mimeType; this.state = 'inactive'; }
+      start() { this.state = 'recording'; }
+      stop() {
+        this.state = 'inactive';
+        queueMicrotask(() => {
+          this.ondataavailable?.({ data: new Blob(['voice-example'], { type: this.mimeType }) });
+          this.onstop?.();
+        });
+      }
+    };
+  }, { denied });
+}
+
+test('voice uploads multipart audio and reviews editable text before sending', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await fakeMicrophone(page);
+  await dashboard(page);
+  let uploads = 0, questions = 0;
+  await page.route('**/api/web/expense-chat/transcribe', route => {
+    uploads++;
+    expect(route.request().headers()['content-type']).toContain('multipart/form-data; boundary=');
+    expect(route.request().postDataBuffer().toString()).toContain('question.webm');
+    return route.fulfill({ json: { text: 'Where did my money go?' } });
+  });
+  await page.route('**/api/web/expense-chat', route => {
+    questions++;
+    expect(route.request().postDataJSON().message).toBe('Which were my largest expenses?');
+    return route.fulfill({ json: answer });
+  });
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByText(/Recording ·/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Stop and transcribe' }).click();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Where did my money go?');
+  await expect(page.getByText('Review your voice question below. Edit it, then tap Send.')).toBeVisible();
+  expect(uploads).toBe(1); expect(questions).toBe(0);
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByLabel('Your money question').fill('Which were my largest expenses?');
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByText(answer.answer, { exact: true })).toBeVisible();
+  expect(questions).toBe(1);
+});
+
+test('voice cancellation and closing release microphone without uploading', async ({ page }) => {
+  await fakeMicrophone(page); await dashboard(page);
+  let uploads = 0;
+  await page.route('**/api/web/expense-chat/transcribe', route => { uploads++; return route.fulfill({ json: { text: 'Unexpected' } }); });
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByText(/Recording ·/)).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Record voice question' })).toBeVisible();
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(1);
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByText(/Recording ·/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close money chat' }).click();
+  await expect(page.getByRole('region', { name: 'Money assistant' })).toHaveCount(0);
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(2); expect(uploads).toBe(0);
+});
+
+test('voice permission denial keeps typed questions usable', async ({ page }) => {
+  await fakeMicrophone(page, true); await dashboard(page);
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByRole('alert')).toContainText('Microphone access was denied');
+  await page.getByLabel('Your money question').fill('My typed question');
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
+});
+
+test('voice retries failed transcription and discard restores the typed draft', async ({ page }) => {
+  await fakeMicrophone(page); await dashboard(page);
+  await page.getByLabel('Your money question').fill('Existing draft');
+  let uploads = 0;
+  await page.route('**/api/web/expense-chat/transcribe', route => {
+    uploads++;
+    return uploads === 1 ? route.fulfill({ status: 503, json: { code: 'VOICE_UNAVAILABLE', message: 'Could not transcribe this recording.' } })
+      : route.fulfill({ json: { text: 'Voice words' } });
+  });
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await page.getByRole('button', { name: 'Stop and transcribe' }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not transcribe');
+  await page.getByRole('button', { name: 'Retry transcription' }).click();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Existing draft\nVoice words');
+  await page.getByRole('button', { name: 'Discard voice text' }).click();
+  await expect(page.getByLabel('Your money question')).toHaveValue('Existing draft');
+  expect(uploads).toBe(2);
+});
+
+test('cancelled transcription ignores late words and preserves the draft', async ({ page }) => {
+  await fakeMicrophone(page); await dashboard(page);
+  await page.getByLabel('Your money question').fill('Keep this draft');
+  let upload;
+  await page.route('**/api/web/expense-chat/transcribe', route => { upload = route; });
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await page.getByRole('button', { name: 'Stop and transcribe' }).click();
+  await expect(page.getByText('Transcribing your voice…')).toBeVisible();
+  await expect.poll(() => !!upload).toBe(true);
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await upload.fulfill({ json: { text: 'Late transcript' } }).catch(() => {});
+  await expect(page.getByLabel('Your money question')).toHaveValue('Keep this draft');
+  await expect(page.getByRole('button', { name: 'Discard voice text' })).toHaveCount(0);
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(1);
+});
+
+test('30-second recording cutoff discards audio and asks for a fresh recording', async ({ page }) => {
+  await page.clock.install();
+  await fakeMicrophone(page); await dashboard(page);
+  const question = page.getByLabel('Your money question');
+  await question.fill('Keep my typed draft');
+  let uploads = 0;
+  await page.route('**/api/web/expense-chat/transcribe', route => {
+    uploads++; return route.fulfill({ json: { text: 'Short question' } });
+  });
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByText(/Recording · 0s \/ 30s/)).toBeVisible();
+  await page.clock.runFor(29_000);
+  await expect(page.getByText(/Recording · 29s \/ 30s/)).toBeVisible();
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(0);
+  await page.clock.runFor(1_000);
+  await expect(page.getByRole('alert')).toContainText('30-second limit. Please re-record a shorter question.');
+  await expect(page.getByRole('button', { name: 'Stop and transcribe' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retry transcription' })).toHaveCount(0);
+  await expect(question).toHaveValue('Keep my typed draft');
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(1);
+  expect(uploads).toBe(0);
+  await page.getByRole('button', { name: 'Record voice question' }).click();
+  await expect(page.getByText(/Recording · 0s \/ 30s/)).toBeVisible();
+  await page.clock.runFor(1_000);
+  await page.getByRole('button', { name: 'Stop and transcribe' }).click();
+  await expect(question).toHaveValue('Keep my typed draft\nShort question');
+  expect(uploads).toBe(1);
+  expect(await page.evaluate(() => window.voiceTracksStopped)).toBe(2);
+});
