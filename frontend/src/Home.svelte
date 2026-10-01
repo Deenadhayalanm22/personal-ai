@@ -395,7 +395,7 @@
     </div>
     {#if commitmentSection.status==='ready' && commitment}
       <div class="month-overview-footer">
-        {#if Number(paymentOverview?.plannedInvesting)>0 || Number(paymentOverview?.plannedSavings)>0}<span>{#if Number(paymentOverview?.plannedInvesting)>0}Investing planned {money(paymentOverview.plannedInvesting)}{/if}{#if Number(paymentOverview?.plannedSavings)>0}{#if Number(paymentOverview?.plannedInvesting)>0} · {/if}Savings planned {money(paymentOverview.plannedSavings)}{/if}</span>{/if}
+        {#if Number(paymentOverview?.plannedInvesting)>0 || Number(paymentOverview?.plannedSavings)>0}<span>{#if Number(paymentOverview?.plannedInvesting)>0}Includes investing {money(paymentOverview.plannedInvesting)}{/if}{#if Number(paymentOverview?.plannedSavings)>0}{#if Number(paymentOverview?.plannedInvesting)>0} · {/if}Savings planned {money(paymentOverview.plannedSavings)}{/if}</span>{/if}
         <button class="text-link" on:click={()=>openStory(commitment)}>View monthly plan <span aria-hidden="true">→</span></button>
       </div>
     {/if}

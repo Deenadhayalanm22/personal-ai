@@ -44,7 +44,7 @@ public class MonthlyPaymentOverviewService {
             else if (bucket.key().equals("COMMITMENT_SAVINGS")) savings = savings.add(source.plannedAmount());
             else bills = bills.add(source.plannedAmount());
         }
-        return new Overview(bills, investing, savings);
+        return new Overview(bills.add(investing), investing, savings);
     }
     public record Overview(BigDecimal stillToPay, BigDecimal plannedInvesting, BigDecimal plannedSavings) { }
 }

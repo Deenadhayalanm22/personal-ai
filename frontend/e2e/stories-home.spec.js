@@ -5,7 +5,7 @@ test('Home shares one compact card with calendar before spending and unpaid bill
     const path = new URL(route.request().url()).pathname;
     const json = path.endsWith('/demo-profile') ? { demoMode: false, canUseDemoMode: false }
       : path.endsWith('/calendar') ? { currency: 'INR', totalSpend: 5000, commitmentSpend: 5000, transactionCount: 1, days: [] }
-      : path.endsWith('/monthly-commitment') ? { overview: { stillToPay: 0, plannedInvesting: 2000, plannedSavings: 0 }, commitment: {
+      : path.endsWith('/monthly-commitment') ? { overview: { stillToPay: 2000, plannedInvesting: 2000, plannedSavings: 0 }, commitment: {
           storyId: 'monthly-commitment', storyType: 'MONTHLY_COMMITMENT',
           cardFace: { heading: 'Monthly commitment', displayValue: '₹1,000' },
           evidence: { byCard: { 'next-commitment': { totalAmount: { displayValue: '₹1,500' } } } },
@@ -31,7 +31,8 @@ test('Home shares one compact card with calendar before spending and unpaid bill
   await expect(page.getByText('Here’s how your month is unfolding.', { exact: true })).toHaveCount(0);
   await expect(page.getByText('MONTH AT A GLANCE', { exact: true })).toHaveCount(0);
   await expect(overview.locator('[aria-expanded]')).toHaveCount(0);
-  await expect(overview).toContainText('₹0');
+  await expect(overview).toContainText('₹2,000');
+  await expect(overview).toContainText('Includes investing ₹2,000');
   await expect(overview).toContainText('Includes ₹5,000 in commitment payments');
   await expect(overview).not.toContainText('₹1,500');
   await expect(overview.getByText('Spent so far', { exact: true })).toBeVisible();
