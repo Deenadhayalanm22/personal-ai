@@ -37,6 +37,7 @@ public class WebManager {
     private final WebCreditCardService creditCards;
     @Autowired private CommitmentSavingsService savings;
     @Autowired private FinancialActivityService activity;
+    @Autowired private CreditCardBillService cardBills;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -193,6 +194,13 @@ public class WebManager {
     public CommitmentSavingsService.PlanView createSavingsPlan(String token, Long id, CommitmentSavingsService.CreateRequest request) { return savings.create(authentication.authenticate(token), id, request); }
     public CommitmentSavingsService.PlanView recordSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.record(authentication.authenticate(token), id, request); }
     public CommitmentSavingsService.PlanView skipSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.skip(authentication.authenticate(token), id, request); }
+    public CreditCardBillService.BillList creditCardBills(String token, YearMonth month) {
+        var user = authentication.authenticate(token);
+        return cardBills.list(user, month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month);
+    }
+    public CreditCardBillService.Bill recordCardPayment(String token, Long id, CreditCardBillService.PaymentRequest request) {
+        return cardBills.record(authentication.authenticate(token), id, request);
+    }
     public WebCreditCardService.CardListResponse creditCards(String token) { return creditCards.list(authentication.authenticate(token)); }
     public WebCreditCardService.CardResponse createCreditCard(String token, WebCreditCardService.CardRequest request) { return creditCards.create(authentication.authenticate(token), request); }
     public WebCreditCardService.CardResponse updateCreditCard(String token, Long id, WebCreditCardService.CardRequest request) { return creditCards.update(authentication.authenticate(token), id, request); }

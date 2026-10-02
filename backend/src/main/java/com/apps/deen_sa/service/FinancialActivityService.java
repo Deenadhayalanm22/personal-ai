@@ -25,7 +25,10 @@ public class FinancialActivityService {
         LocalDate start = month.atDay(1), end = month.plusMonths(1).atDay(1);
         List<ActivityItem> expenses = rows("""
             SELECT t.id, t.occurred_at AS activity_date, t.amount,
-                   COALESCE(t.description, m.canonical_name, t.category, 'Expense') AS label
+                   COALESCE(t.description, m.canonical_name, t.category, 'Expense') AS label,
+                   CASE WHEN EXISTS (SELECT 1 FROM user_credit_card c
+                       WHERE c.user_id = t.user_id AND c.account_reference_id = t.source_account_id)
+                       THEN 'On credit card · bill paid separately' ELSE 'Recorded expense' END AS activity_description
               FROM financial_transaction t
               LEFT JOIN user_reference_entity m ON m.id = t.merchant_id
              WHERE t.user_id = ? AND t.deleted_at IS NULL
@@ -66,7 +69,12 @@ public class FinancialActivityService {
              WHERE c.user_id = ? AND e.status = 'SAVED'
                AND e.recorded_at >= ? AND e.recorded_at < ?
             """, user.getId(), start, end, "SAVINGS", "Savings set aside");
-        List<ActivityItem> items = Stream.of(expenses, commitments, loans, investments, savings)
+        List<ActivityItem> cardPayments = rows("""
+            SELECT p.id, p.paid_at AS activity_date, p.amount, c.card_name AS label
+              FROM credit_card_bill_payment p JOIN user_credit_card c ON c.id = p.card_id
+             WHERE c.user_id = ? AND p.paid_at >= ? AND p.paid_at < ?
+            """, user.getId(), start, end, "CARD_PAYMENT", "Card bill payment · purchases already counted in spending");
+        List<ActivityItem> items = Stream.of(expenses, commitments, loans, investments, savings, cardPayments)
                 .flatMap(List::stream)
                 .sorted(Comparator.comparing(ActivityItem::date).reversed()
                         .thenComparing(ActivityItem::type).thenComparing(ActivityItem::id, Comparator.reverseOrder()))
@@ -78,7 +86,7 @@ public class FinancialActivityService {
                                     String type, String description) {
         return jdbc.query(sql, (rs, row) -> new ActivityItem(type, rs.getLong("id"),
                 rs.getDate("activity_date").toLocalDate(), rs.getBigDecimal("amount"),
-                rs.getString("label"), description), userId, Date.valueOf(start), Date.valueOf(end));
+                rs.getString("label"), type.equals("EXPENSE") ? rs.getString("activity_description") : description), userId, Date.valueOf(start), Date.valueOf(end));
     }
 
     public record ActivityItem(String type, Long id, LocalDate date, BigDecimal amount,

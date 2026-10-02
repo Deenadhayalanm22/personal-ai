@@ -4,6 +4,7 @@ import com.apps.deen_sa.entity.FinancialTransactionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.math.BigDecimal;
 import java.util.List;
 import java.time.LocalDate;
 import org.springframework.data.jpa.repository.Query;
@@ -153,4 +154,10 @@ public interface FinancialTransactionRepository
 
     @Query("select coalesce(sum(t.amount), 0) from FinancialTransactionEntity t where t.user.id = :userId and t.sourceAccount.id = :accountId and t.occurredAt >= :start and t.occurredAt < :end and t.deletedAt is null")
     java.math.BigDecimal sumVisibleByAccountAndPeriod(@Param("userId") Long userId, @Param("accountId") Long accountId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransactionEntity t
+        WHERE t.user.id = :userId AND t.deletedAt IS NULL AND t.occurredAt >= :start AND t.occurredAt < :end
+          AND EXISTS (SELECT c.id FROM UserCreditCardEntity c WHERE c.user.id = :userId AND c.accountReference.id = t.sourceAccount.id)
+        """)
+    BigDecimal sumCreditCardSpend(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

@@ -39,6 +39,7 @@ public class MonthlyCommitmentCardService {
     private final InvestmentTransactionRepository investmentTransactions;
     private final LoanEmiOccurrenceRepository loanOccurrences;
     @Autowired(required = false) private RecurringCommitmentOccurrenceRepository commitmentOccurrences;
+    @Autowired(required = false) private CreditCardBillService cardBills;
 
     /** Retained for focused tests that exercise the commitment core without optional contributors. */
     public MonthlyCommitmentCardService(MonthlyFinancialSnapshotService snapshots, CommitmentCopyGenerator copyGenerator, Clock clock) {
@@ -81,6 +82,12 @@ public class MonthlyCommitmentCardService {
         if (cardBillTotal.signum() > 0) components.add(component("Credit-card bills", cardBillTotal, currency));
         if (recurring != null && recurring.plannedAmount().signum() > 0) components.add(component(recurring.label(), recurring.plannedAmount(), currency));
         if (savingsTotal.signum() > 0) components.add(component("Saving for upcoming bills", savingsTotal, currency));
+        if (cardBills != null && cardBillTotal.signum() > 0) {
+            BigDecimal cardPaid = snapshot.commitmentBuckets().stream().filter(b -> b.key().equals("CREDIT_CARD_BILLS"))
+                    .flatMap(b -> b.sources().stream()).map(source -> cardBills.paid(user, Long.valueOf(source.sourceId()), month).min(source.plannedAmount()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            components.add(component("Card bills settled", cardPaid, currency));
+        }
         BigDecimal completedSipTotal = completedSipTotal(investing, month);
         if (completedSipTotal.signum() > 0) components.add(component("SIP allocations complete", completedSipTotal, currency));
         BigDecimal completedRecurringTotal = recurring == null ? BigDecimal.ZERO : completedRecurringTotal(recurring, month);

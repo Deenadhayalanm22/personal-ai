@@ -49,7 +49,7 @@ class FinancialActivityServiceTest {
                 .containsExactly("INVESTMENT", "COMMITMENT");
         assertThat(response.items()).extracting(FinancialActivityService.ActivityItem::amount)
                 .containsExactly(new BigDecimal("2000.00"), new BigDecimal("5000.00"));
-        verify(jdbc, times(5)).query(anyString(), any(RowMapper.class), eq(42L),
+        verify(jdbc, times(6)).query(anyString(), any(RowMapper.class), eq(42L),
                 eq(Date.valueOf("2026-10-01")), eq(Date.valueOf("2026-11-01")));
     }
 }

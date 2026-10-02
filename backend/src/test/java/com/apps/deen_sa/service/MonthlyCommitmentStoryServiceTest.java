@@ -22,6 +22,33 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
 class MonthlyCommitmentCardServiceTest {
+    @Test void cardSettlementsAdvanceProgressWithoutReducingThePlannedTotal() {
+        var snapshots = mock(MonthlyFinancialSnapshotService.class);
+        var copy = mock(CommitmentCopyGenerator.class);
+        when(copy.generateCommitmentRunway(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(call -> call.getArgument(1));
+        var user = new AppUserEntity(); user.setId(7L); user.setCurrency("INR"); user.setTimezone("Asia/Kolkata");
+        var buckets = List.of(
+                new MonthlyFinancialSnapshotService.Bucket("DEBT_REPAYMENTS", "Debt repayments", BigDecimal.ZERO, List.of()),
+                new MonthlyFinancialSnapshotService.Bucket("PLANNED_INVESTING", "Planned investing", BigDecimal.ZERO, List.of()),
+                new MonthlyFinancialSnapshotService.Bucket("CREDIT_CARD_BILLS", "Credit-card bills", new BigDecimal("5000"), List.of(
+                        new MonthlyFinancialSnapshotService.Source("CREDIT_CARD_BILL", "4", "Millennia", new BigDecimal("5000"),
+                                java.time.LocalDate.of(2026,11,5), "Credit-card bill", "Purchases already counted", null,null,null))));
+        when(snapshots.current(user)).thenReturn(new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-11","INR",12,new BigDecimal("5000"),buckets));
+        when(snapshots.next(user)).thenReturn(new MonthlyFinancialSnapshotService.MonthlySnapshot("2026-12","INR",12,new BigDecimal("5000"),buckets));
+        var cardBills=mock(CreditCardBillService.class);
+        var service=new MonthlyCommitmentCardService(snapshots,copy,Clock.fixed(Instant.parse("2026-11-05T00:00:00Z"),ZoneId.of("Asia/Kolkata")));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"cardBills",cardBills);
+        for (String paid : List.of("0","2000","6000")) {
+            when(cardBills.paid(user,4L,java.time.YearMonth.of(2026,11))).thenReturn(new BigDecimal(paid));
+            var card=service.currentFor(user).cards().getFirst();
+            assertThat(card.components().stream().filter(c -> c.label().equals("Credit-card bills")).findFirst().orElseThrow().value())
+                    .isEqualByComparingTo("5000");
+            assertThat(card.components().stream().filter(c -> c.label().equals("Card bills settled")).findFirst().orElseThrow().value())
+                    .isEqualByComparingTo(new BigDecimal(paid).min(new BigDecimal("5000")));
+        }
+    }
+
     @Test
     void totalsOnlyCommitmentsActiveInTheCurrentMonth() {
         MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);

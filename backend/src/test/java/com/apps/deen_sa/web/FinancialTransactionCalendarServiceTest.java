@@ -28,12 +28,14 @@ class FinancialTransactionCalendarServiceTest {
                         new Object[]{LocalDate.of(2026, 9, 3), 2L, new BigDecimal("200.0000")},
                         new Object[]{LocalDate.of(2026, 9, 4), 1L, new BigDecimal("50.0000")}));
 
+        when(repository.sumCreditCardSpend(42L, LocalDate.of(2026,9,1), LocalDate.of(2026,10,1))).thenReturn(new BigDecimal("200"));
         var response = new FinancialTransactionCalendarService(repository)
                 .calendar(user, YearMonth.of(2026, 9));
 
         assertThat(response.days()).hasSize(30);
         assertThat(response.recordedDays()).isEqualTo(2);
         assertThat(response.transactionCount()).isEqualTo(3);
+        assertThat(response.creditCardSpend()).isEqualByComparingTo("200");
         assertThat(response.totalSpend()).isEqualByComparingTo("250.00");
         assertThat(response.highestSpend()).isEqualByComparingTo("200.00");
         assertThat(response.days().get(2).intensity()).isEqualTo(4);

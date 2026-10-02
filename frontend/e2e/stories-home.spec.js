@@ -35,7 +35,7 @@ test('Home shares one compact card with calendar before spending and unpaid bill
   await expect(overview).toContainText('Includes investing ₹2,000');
   await expect(overview).toContainText('Includes ₹5,000 in commitment payments');
   await expect(overview).not.toContainText('₹1,500');
-  await expect(overview.getByText('Spent so far', { exact: true })).toBeVisible();
+  await expect(overview.getByText('Spent this month', { exact: true })).toBeVisible();
   await expect(overview.getByText('Still to pay this month', { exact: true })).toBeVisible();
   await expect(overview).toContainText('₹5,000');
   expect(await overview.evaluate(widget => {

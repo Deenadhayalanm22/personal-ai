@@ -108,3 +108,9 @@
 .legend .overdue-key{display:flex;align-items:center;gap:4px}
 .legend .overdue-key i{background:#f6d8d3;border:1px solid #d58d82}
 .unified-calendar .legend{flex-wrap:wrap}
+
+.card-bill-row { display:flex; justify-content:space-between; gap:1rem; padding:1rem 0; border-bottom:1px solid #dce4df; }
+.card-bill-row > div { display:flex; flex-direction:column; gap:.4rem; min-width:0; }
+.card-bill-row small { display:block; color:#647269; overflow-wrap:anywhere; }
+.card-bill-row > div:last-child { align-items:flex-end; text-align:right; }
+@media(max-width:600px) { .card-bill-row { flex-direction:column; } .card-bill-row > div:last-child { align-items:flex-start; text-align:left; } }

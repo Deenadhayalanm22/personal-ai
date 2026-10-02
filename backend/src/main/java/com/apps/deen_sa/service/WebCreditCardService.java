@@ -15,13 +15,21 @@ import java.util.List;
 /** FIN-022 — user-configured statement cycles for named credit-card account references. */
 @Service
 public class WebCreditCardService {
+    @org.springframework.beans.factory.annotation.Autowired(required = false) private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final UserCreditCardRepository cards; private final UserReferenceEntityRepository references; private final MonthlyFinancialSnapshotService snapshots;
     public WebCreditCardService(UserCreditCardRepository cards, UserReferenceEntityRepository references, MonthlyFinancialSnapshotService snapshots) { this.cards = cards; this.references = references; this.snapshots = snapshots; }
     @Transactional(readOnly = true) public CardListResponse list(AppUserEntity user) { return new CardListResponse(cards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId()).stream().map(this::response).toList()); }
     @Transactional public CardResponse create(AppUserEntity user, CardRequest request) { UserCreditCardEntity card = new UserCreditCardEntity(); card.setUser(user); apply(user, card, request, true); cards.saveAndFlush(card); snapshots.refreshCurrent(user); return response(card); }
-    @Transactional public CardResponse update(AppUserEntity user, Long id, CardRequest request) { UserCreditCardEntity card = cards.findByIdAndUserId(id, user.getId()).orElseThrow(() -> notFound()); apply(user, card, request, false); cards.saveAndFlush(card); snapshots.refreshCurrent(user); return response(card); }
+    @Transactional public CardResponse update(AppUserEntity user, Long id, CardRequest request) { UserCreditCardEntity card = cards.findOwnedForUpdate(id, user.getId()).orElseThrow(() -> notFound()); apply(user, card, request, false); cards.saveAndFlush(card); snapshots.refreshCurrent(user); return response(card); }
     private void apply(AppUserEntity user, UserCreditCardEntity card, CardRequest r, boolean create) {
         if (r == null) throw invalid("Credit-card details are required");
+        if (!create && jdbc != null) {
+            boolean changesCycle = (r.accountReferenceId() != null && !r.accountReferenceId().equals(card.getAccountReference().getId()))
+                    || (r.statementDay() != null && r.statementDay() != card.getStatementDay())
+                    || (r.dueDay() != null && r.dueDay() != card.getDueDay());
+            if (changesCycle && jdbc.queryForObject("SELECT COUNT(*) FROM credit_card_bill_payment WHERE card_id = ?", Long.class, card.getId()) > 0)
+                throw invalid("Billing account and cycle cannot change after payments have been recorded");
+        }
         if (r.accountReferenceId() != null) card.setAccountReference(references.findByIdAndUserIdAndEntityTypeAndActiveTrue(r.accountReferenceId(), user.getId(), UserReferenceEntityType.ACCOUNT).orElseThrow(() -> invalid("Choose an existing account reference for this card"))); else if (create) throw invalid("Choose the account used in your expense messages");
         if (r.cardName() != null) card.setCardName(text(r.cardName(), "Card name")); else if (create) throw invalid("Card name is required");
         if (r.issuerName() != null) card.setIssuerName(text(r.issuerName(), "Issuer")); else if (create) throw invalid("Issuer is required");

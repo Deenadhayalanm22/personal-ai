@@ -19,6 +19,7 @@ public class MonthlyPaymentOverviewService {
     private final LoanEmiOccurrenceRepository loans;
     private final InvestmentTransactionRepository investments;
     private final Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired(required = false) CreditCardBillService cardBills;
 
     @Transactional(readOnly = true)
     public Overview forMonth(AppUserEntity user, YearMonth month) {
@@ -40,6 +41,10 @@ public class MonthlyPaymentOverviewService {
                 default -> true;
             };
             if (!unpaid) continue;
+            if (source.sourceType().equals("CREDIT_CARD_BILL") && cardBills != null) {
+                bills = bills.add(source.plannedAmount().subtract(cardBills.paid(user, id, month)).max(BigDecimal.ZERO));
+                continue;
+            }
             if (bucket.key().equals("PLANNED_INVESTING")) investing = investing.add(source.plannedAmount());
             else if (bucket.key().equals("COMMITMENT_SAVINGS")) savings = savings.add(source.plannedAmount());
             else bills = bills.add(source.plannedAmount());

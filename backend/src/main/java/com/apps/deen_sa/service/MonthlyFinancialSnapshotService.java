@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 11;
+    private static final int CALCULATION_VERSION = 12;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -208,12 +208,11 @@ public class MonthlyFinancialSnapshotService {
     }
     /** A due-month projection is the statement ending before that due date; transaction rows remain actual spending, never another expense. */
     private Source creditCardSource(AppUserEntity user, com.apps.deen_sa.entity.UserCreditCardEntity card, YearMonth dueMonth) {
-        YearMonth statementMonth = card.getDueDay() > card.getStatementDay() ? dueMonth : dueMonth.minusMonths(1);
-        LocalDate statementEnd = statementMonth.atDay(card.getStatementDay());
-        LocalDate periodStart = statementMonth.minusMonths(1).atDay(card.getStatementDay()).plusDays(1);
+        LocalDate statementEnd = CreditCardBillService.statementEnd(card, dueMonth);
+        LocalDate periodStart = statementEnd.minusMonths(1).plusDays(1);
         BigDecimal amount = transactions.sumVisibleByAccountAndPeriod(user.getId(), card.getAccountReference().getId(), periodStart, statementEnd.plusDays(1));
         return new Source("CREDIT_CARD_BILL", String.valueOf(card.getId()), card.getCardName(), amount,
-                dueMonth.atDay(card.getDueDay()), "Credit-card bill", card.getIssuerName() + " · statement " + statementEnd + " · " + periodStart + " to " + statementEnd, null, null, null);
+                dueMonth.atDay(card.getDueDay()), "Credit-card bill", card.getIssuerName() + " · statement " + statementEnd + " · " + periodStart + " to " + statementEnd + " · purchases already counted in spending; bill payment is separate", null, null, null);
     }
     private YearMonth currentMonth(AppUserEntity user) { return YearMonth.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))); }
     private String write(MonthlySnapshot value) { try { return mapper.writeValueAsString(value); } catch (Exception e) { throw new IllegalStateException("Could not save monthly financial snapshot", e); } }
