@@ -54,8 +54,9 @@
     try {
       await getHealth();
       if (requestId !== connectionRequest) return;
-      connectionStatus = 'online';
       await Promise.allSettled([loadCalendar(), loadRecent(), loadCommitment(), loadActivity()]);
+      if (requestId !== connectionRequest) return;
+      connectionStatus = 'online';
     } catch {
       if (requestId !== connectionRequest) return;
       connectionStatus = 'offline';

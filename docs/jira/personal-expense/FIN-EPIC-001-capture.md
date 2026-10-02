@@ -97,3 +97,5 @@ Verification: `WebExpenseCaptureServiceTest`, `WebExpenseCaptureControllerTest`,
 5. Edit cancels the old preview and restores entered form values; a replacement uses a new request ID. Either entry method can be selected before preparing a preview. Successful recording refreshes activity/calendar/commitments and View expense opens the actual recorded date.
 
 Verification: `ManualExpenseCaptureServiceTest`, manual controller scenarios in `WebExpenseCaptureControllerTest`, real PostgreSQL concurrent manual preparation/conflict/cancel/confirmation scenarios in `WebExpenseCapturePostgresTest`, and frontend desktop/mobile manual scenarios with AI disabled or credits unavailable. Interface: [free manual preparation](../../contracts/expenses.md#free-manual-expense-preparation).
+
+AI expense preparation is disabled while the app connection is checking or offline, with an explicit “App is not online” notice. A pending initial service/dashboard response is not an online state. Disconnecting preserves the expense draft and disables preparation and confirmation until reconnection completes. Covered by `assistant-connection.spec.js`.

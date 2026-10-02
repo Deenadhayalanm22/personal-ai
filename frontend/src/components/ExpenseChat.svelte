@@ -150,7 +150,8 @@
       <div><span class="eyebrow">YOUR MONEY, IN CONTEXT</span><h2>Ask about your money</h2></div>
       <button class="icon-button" aria-label="Close money chat" on:click={close}>×</button>
     </header>
-    <div class="chat-context"><button disabled={pending || voiceBusy} on:click={() => { captureDate = defaultCaptureDate; onCaptureChange(captureDate); }}>Add expense</button><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={voiceBusy || pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
+    <div class="chat-context"><button disabled={pending || voiceBusy || connectionStatus!=='online'} on:click={() => { captureDate = defaultCaptureDate; onCaptureChange(captureDate); }}>Add expense</button><span>Exploring {conversationMonth || selectedMonth}</span><button on:click={newChat} disabled={voiceBusy || pending || loadingHistory || (!messages.length && !question.trim())}>New chat</button></div>
+    {#if connectionStatus!=='online'}<p class="credit-notice" role="status">{connectionStatus==='checking'?'App is not online yet. Waiting for the service to respond. AI sending is disabled.':'App is not online. Reconnect to use the AI assistant.'}</p>{/if}
     <div class="credit-status" aria-live="polite">
       <span>{credits ? `${formatCredits(credits.available)} credits available` : 'Credits unavailable'}{credits?.reserved > 0 ? ` · ${formatCredits(credits.reserved)} on hold` : ''}</span>
       <button on:click={refreshCredits} disabled={loadingCredits || pending}>Refresh credits</button>

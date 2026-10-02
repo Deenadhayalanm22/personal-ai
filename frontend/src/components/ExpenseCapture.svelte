@@ -4,7 +4,7 @@
   import { getExpenseOptions, prepareManualExpense, getAiCredits, prepareExpenseCapture, confirmExpenseCapture, cancelExpenseCapture } from '../lib/api.js';
   import VoiceQuestion from './VoiceQuestion.svelte';
   export let date;
-  export let connectionStatus = 'online';
+  export let connectionStatus = 'checking';
   export let onExit = () => {};
   export let onRecorded = () => {};
   export let onViewExpense = () => {};
@@ -106,7 +106,7 @@
     {#if !extractionId}
       <div class="mode-choice" aria-label="Expense entry method">
         <button aria-pressed={mode==='manual'} on:click={()=>chooseMode('manual')} disabled={pending || voiceBusy}>Enter manually</button>
-        <button aria-pressed={mode==='ai'} on:click={()=>chooseMode('ai')} disabled={pending || voiceBusy}>Describe with AI</button>
+        <button aria-pressed={mode==='ai'} on:click={()=>chooseMode('ai')} disabled={pending || voiceBusy || connectionStatus!=='online'}>Describe with AI</button>
       </div>
     {/if}
     {#if mode==='ai'}
@@ -152,7 +152,7 @@
     <button class="primary" on:click={()=>onViewExpense(recordedDate)}>View expense</button><button on:click={onExit}>Back to Ask AI</button>
   {/if}
   {#if pending && !recordedDate}<p role="status">{extractionId?'Saving your choice…':'Checking the expense and your saved names…'}</p>{/if}
-  {#if connectionStatus!=='online'}<p class="notice">Connect to the service to record an expense.</p>{/if}
+  {#if connectionStatus!=='online'}<p class="notice" role="status">{connectionStatus==='checking'?'App is not online yet. Waiting for the service to respond. AI sending is disabled.':'App is not online. Reconnect to record an expense or use AI.'}</p>{/if}
   {#if error}<p role="alert" class="notice">{error}</p>{/if}
 </section>
 <style>
