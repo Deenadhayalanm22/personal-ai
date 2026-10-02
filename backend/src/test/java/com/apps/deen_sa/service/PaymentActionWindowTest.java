@@ -9,6 +9,8 @@ class PaymentActionWindowTest {
   LocalDate due=LocalDate.of(2026,10,15);
   assertFalse(window.available(due,due.minusDays(6)));
   assertTrue(window.available(due,due.minusDays(5)));
+  assertFalse(window.due(due,due.minusDays(5)));
+  assertTrue(window.due(due,due));
   assertTrue(window.available(due,due));
   assertTrue(window.available(due,LocalDate.of(2026,10,31)));
   assertFalse(window.available(due,LocalDate.of(2026,11,1)));

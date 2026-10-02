@@ -48,7 +48,8 @@ class WebLoanServiceTest {
                         Clock.fixed(Instant.parse(today + "T09:00:00Z"), ZoneId.of("Asia/Kolkata")), occurrences, null);
                 boolean enabled = today.equals("2026-10-01");
                 assertThat(service.list(owner).loans().get(0).emiOccurrences().get(0).status())
-                        .isEqualTo(enabled ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING);
+                        .isEqualTo(LoanEmiOccurrenceStatus.UPCOMING);
+                assertThat(service.list(owner).loans().get(0).emiOccurrences().get(0).actionAvailable()).isEqualTo(enabled);
                 Runnable action = () -> {
                     if (skip) service.skip(owner, 8L, YearMonth.of(2026, 10), null);
                     else service.markPaid(owner, 8L, YearMonth.of(2026, 10));

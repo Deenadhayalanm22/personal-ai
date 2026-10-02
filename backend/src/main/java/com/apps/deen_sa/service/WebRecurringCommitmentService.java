@@ -142,8 +142,8 @@ public class WebRecurringCommitmentService {
         LocalDate scheduledDate = RecurringCommitmentSchedule.dated(commitment) ? LocalDate.parse(month) : scheduled.atDay(1);
         if (commitment.getStatus() != RecurringCommitmentStatus.ACTIVE || !scheduled.equals(YearMonth.from(today))
                 || !(RecurringCommitmentSchedule.dated(commitment)
-                    ? datedOccurrences(user, commitment, scheduled, today).stream().anyMatch(item -> scheduledDate.equals(item.dueDate()) && "DUE".equals(item.status()))
-                    : "DUE".equals(occurrenceResponse(user, commitment, scheduled, today).status())))
+                    ? datedOccurrences(user, commitment, scheduled, today).stream().anyMatch(item -> scheduledDate.equals(item.dueDate()) && item.actionAvailable())
+                    : occurrenceResponse(user, commitment, scheduled, today).actionAvailable()))
             throw invalid("Only a due current-month occurrence can be skipped");
         RecurringCommitmentOccurrenceEntity occurrence = occurrences.findByCommitmentIdAndScheduledMonth(id, scheduledDate).orElseGet(RecurringCommitmentOccurrenceEntity::new);
         if (occurrence.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED) throw invalid("A paid occurrence cannot be skipped");
@@ -270,11 +270,11 @@ public class WebRecurringCommitmentService {
         return java.util.stream.Stream.concat(RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream(),
                 recorded.stream().map(RecurringCommitmentOccurrenceEntity::getScheduledMonth)).distinct().sorted().map(date -> {
             var saved = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), date).orElse(null);
-            String status = saved != null ? saved.getStatus().name() : paymentWindow.available(date, today) ? "DUE" : "UPCOMING";
+            String status = saved != null && saved.getStatus() != RecurringCommitmentOccurrenceStatus.DUE ? saved.getStatus().name() : paymentWindow.due(date, today) ? "DUE" : "UPCOMING";
             return new OccurrenceResponse(month.toString(), date, status, saved == null ? null : paymentDate(saved),
                     saved == null ? null : paymentAmount(saved), saved == null ? null : saved.getExtraAmount(),
                     saved == null ? List.of() : extras.findByOccurrenceIdOrderByCreatedAtAsc(saved.getId()).stream()
-                            .map(extra -> extraResponse(extra)).toList(), saved == null ? null : saved.getSavingsUsed(), saved == null || saved.getPaymentTransaction() == null ? null : saved.getPaymentTransaction().getId());
+                            .map(extra -> extraResponse(extra)).toList(), saved == null ? null : saved.getSavingsUsed(), saved == null || saved.getPaymentTransaction() == null ? null : saved.getPaymentTransaction().getId(), ("DUE".equals(status) || "UPCOMING".equals(status)) && paymentWindow.available(date, today));
         }).toList();
     }
     private OccurrenceResponse occurrenceResponse(AppUserEntity user, UserRecurringCommitmentEntity c, YearMonth month, LocalDate today) {
@@ -282,9 +282,9 @@ public class WebRecurringCommitmentService {
         var saved = occurrences.findByCommitmentIdAndScheduledMonth(c.getId(), month.atDay(1)).orElse(null);
         String status = saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED ? "COMPLETED"
                 : saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.SKIPPED ? "SKIPPED"
-                : dueDate != null && paymentWindow.available(dueDate, today) && !createdAfterDueDate(user, c, month, dueDate) ? "DUE" : "UPCOMING";
+                : dueDate != null && paymentWindow.due(dueDate, today) && !createdAfterDueDate(user, c, month, dueDate) ? "DUE" : "UPCOMING";
         return new OccurrenceResponse(month.toString(), dueDate, status, saved == null ? null : paymentDate(saved), saved == null ? null : paymentAmount(saved), saved == null ? null : saved.getExtraAmount(),
-                saved == null ? List.of() : extras.findByOccurrenceIdOrderByCreatedAtAsc(saved.getId()).stream().map(extra -> extraResponse(extra)).toList(), saved == null ? null : saved.getSavingsUsed(), saved == null || saved.getPaymentTransaction() == null ? null : saved.getPaymentTransaction().getId());
+                saved == null ? List.of() : extras.findByOccurrenceIdOrderByCreatedAtAsc(saved.getId()).stream().map(extra -> extraResponse(extra)).toList(), saved == null ? null : saved.getSavingsUsed(), saved == null || saved.getPaymentTransaction() == null ? null : saved.getPaymentTransaction().getId(), ("DUE".equals(status) || "UPCOMING".equals(status)) && paymentWindow.available(dueDate, today) && !createdAfterDueDate(user, c, month, dueDate));
     }
     private boolean createdAfterDueDate(AppUserEntity user, UserRecurringCommitmentEntity commitment, YearMonth scheduled, LocalDate dueDate) {
         java.time.ZoneId userZone = java.time.ZoneId.of(user.getTimezone());
@@ -319,7 +319,8 @@ public class WebRecurringCommitmentService {
                 extras.findByOccurrenceIdOrderByCreatedAtAsc(item.getId()).stream().map(extra -> extraResponse(extra)).toList(),
                 item.getSavingsUsed(), item.getPaymentTransaction() == null ? null : item.getPaymentTransaction().getId());
     }
-    public record OccurrenceResponse(String month, LocalDate dueDate, String status, LocalDate completedAt, BigDecimal actualAmount, BigDecimal extraAmount, List<ExtraResponse> extras, BigDecimal savingsUsed, Long transactionId) {
+    public record OccurrenceResponse(String month, LocalDate dueDate, String status, LocalDate completedAt, BigDecimal actualAmount, BigDecimal extraAmount, List<ExtraResponse> extras, BigDecimal savingsUsed, Long transactionId, boolean actionAvailable) {
+        public OccurrenceResponse(String month, LocalDate due, String status, LocalDate completed, BigDecimal actual, BigDecimal extra, List<ExtraResponse> extras, BigDecimal savings, Long transactionId) { this(month, due, status, completed, actual, extra, extras, savings, transactionId, false); }
         public OccurrenceResponse(String month, LocalDate due, String status, LocalDate completed, BigDecimal actual, BigDecimal extra, List<ExtraResponse> extras, BigDecimal savings) { this(month, due, status, completed, actual, extra, extras, savings, null); }
     }
 }

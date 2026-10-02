@@ -127,3 +127,9 @@ Add expense defaults to the manual form in FIN-EPIC-001. Users may choose Descri
 Stock/ETF monthly plans join loan, recurring-bill and mutual-fund plans in calendar markers and Activity. A due purchase appears without opening Your money first; selecting its scheduled date shows the plan amount, and Review opens the owning stock details. Confirmed and skipped purchases leave the pending Activity list; skipped purchases lose their planning marker. Future plans appear on their configured day from their start month.
 
 Still-to-pay acceptance: a pending ₹10,000 stock/ETF purchase adds ₹10,000 to Still to pay and its included investing subtotal. Confirming or skipping that occurrence removes its planned amount from both figures. Pending mutual-fund SIPs follow the same rule. Completed payments and skipped occurrences are excluded by status, and earmarked savings remain separate.
+
+### Overdue calendar dates
+
+A calendar date earlier than the profile's local today turns red when any scheduled commitment, loan EMI, mutual-fund SIP or stock/ETF monthly-plan occurrence on that date is still server-reported `DUE`. This warning overrides the green spending intensity or neutral background while preserving the server intensity and recorded totals. Its accessible label includes the overdue payment count, and the legend explains “Overdue payment”. Selecting the red date opens the same date-filtered Activity with its pending payments and Review actions. Today and upcoming dates, including early actionable payments, do not receive the overdue warning. After all payments on that date are paid or skipped, the warning clears and the original spending intensity returns; one unresolved payment keeps the date red.
+
+Browser acceptance: `payment-advance-window.spec.js` verifies upcoming and due-today dates stay normal, past due dates turn red across all four source types, and mixed/final outcomes restore intensity only after the last unresolved payment clears.

@@ -183,8 +183,8 @@ public class WebLoanService {
         java.util.Map<LocalDate, LoanEmiOccurrenceEntity> saved = occurrences.findByLoanIdOrderByDueMonthAsc(loan.getId()).stream().collect(java.util.stream.Collectors.toMap(LoanEmiOccurrenceEntity::getDueMonth, value -> value));
         return java.util.stream.IntStream.range(0, loan.getTotalTenureMonths()).mapToObj(index -> {
             LocalDate due = loan.getFirstEmiDueDate().plusMonths(index); LocalDate month = due.withDayOfMonth(1); LoanEmiOccurrenceEntity entity = saved.get(month);
-            LoanEmiOccurrenceStatus status = entity == null ? (paymentWindow.available(due, today) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
-            return new EmiOccurrenceResponse(month.toString().substring(0, 7), due, status, entity != null && entity.getPlannedAmount() != null ? entity.getPlannedAmount() : loan.getMonthlyEmiAmount(), entity == null ? null : entity.getPaidAmount(), entity == null ? null : entity.getPaidAt(), entity == null ? null : entity.getBankPenaltyAmount(), entity != null && entity.isPreClosureSettlement());
+            LoanEmiOccurrenceStatus status = (entity == null || entity.getStatus() == LoanEmiOccurrenceStatus.DUE || entity.getStatus() == LoanEmiOccurrenceStatus.UPCOMING) ? (paymentWindow.due(due, today) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
+            return new EmiOccurrenceResponse(month.toString().substring(0, 7), due, status, entity != null && entity.getPlannedAmount() != null ? entity.getPlannedAmount() : loan.getMonthlyEmiAmount(), entity == null ? null : entity.getPaidAmount(), entity == null ? null : entity.getPaidAt(), entity == null ? null : entity.getBankPenaltyAmount(), entity != null && entity.isPreClosureSettlement(), (status == LoanEmiOccurrenceStatus.DUE || status == LoanEmiOccurrenceStatus.UPCOMING) && paymentWindow.available(due, today));
         }).toList();
     }
     private void seedHistoricalOccurrences(UserLoanEntity loan) {
@@ -272,7 +272,11 @@ public class WebLoanService {
                     loan.getFirstEmiDueDate(), loan.getStatus(), loan.getNotes(), completed, loan.getTotalTenureMonths() - completed, occurrences, hasRecordedOutcome, loan.getRestructuredFrom());
         }
     }
-    public record EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt, BigDecimal bankPenaltyAmount, boolean preClosureSettlement) { }
+    public record EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt, BigDecimal bankPenaltyAmount, boolean preClosureSettlement, boolean actionAvailable) {
+        public EmiOccurrenceResponse(String month, LocalDate dueDate, LoanEmiOccurrenceStatus status, BigDecimal plannedAmount, BigDecimal paidAmount, LocalDate paidAt, BigDecimal bankPenaltyAmount, boolean preClosureSettlement) {
+            this(month, dueDate, status, plannedAmount, paidAmount, paidAt, bankPenaltyAmount, preClosureSettlement, false);
+        }
+    }
 
     public record SkipRequest(BigDecimal bankPenaltyAmount) { }
     public record PreCloseRequest(BigDecimal settlementAmount) { }

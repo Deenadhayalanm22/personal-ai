@@ -11,6 +11,10 @@ public class PaymentActionWindow {
     @Value("${app.payments.advance-days:5}")
     private int advanceDays = 5;
 
+    public boolean due(LocalDate dueDate, LocalDate today) {
+        return dueDate != null && !today.isBefore(dueDate);
+    }
+
     public boolean available(LocalDate dueDate, LocalDate today) {
         return dueDate != null && YearMonth.from(dueDate).equals(YearMonth.from(today))
                 && !today.isBefore(dueDate.minusDays(Math.max(0, advanceDays)));

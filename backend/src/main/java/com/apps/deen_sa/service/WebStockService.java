@@ -116,7 +116,7 @@ public class WebStockService {
         tx.setStatus(InvestmentTransactionStatus.CONFIRMED); tx.setAmount(amount); tx.setTransactionDate(request.transactionDate() == null ? LocalDate.now(clock) : request.transactionDate());
         tx.setUnitPrice(price); tx.setUnits(units); tx.setCalculationSource(InvestmentCalculationSource.USER_ENTERED); transactions.save(tx);
         if (snapshots != null) snapshots.refreshCurrent(user);
-        return MonthlyPlanOccurrenceResponse.from(tx);
+        return monthlyPlanResponse(tx, investment);
     }
 
     @Transactional
@@ -127,7 +127,7 @@ public class WebStockService {
         if ((tx.getStatus() != InvestmentTransactionStatus.DUE && tx.getStatus() != InvestmentTransactionStatus.SCHEDULED) || !paymentWindow.available(month.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))))) throw invalid("Only a due monthly plan can be skipped");
         tx.setStatus(InvestmentTransactionStatus.SKIPPED); tx.setTransactionDate(LocalDate.now(clock)); transactions.save(tx);
         if (snapshots != null) snapshots.refreshCurrent(user);
-        return MonthlyPlanOccurrenceResponse.from(tx);
+        return monthlyPlanResponse(tx, investment);
     }
 
     @Transactional
@@ -186,18 +186,23 @@ public class WebStockService {
         if (investment.getSipStatus() != InvestmentSipStatus.ACTIVE || investment.getSipStartMonth() == null) return;
         YearMonth current = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))); if (current.isBefore(YearMonth.from(investment.getSipStartMonth()))) return;
         var existing = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, current.atDay(1));
-        InvestmentTransactionStatus status = !paymentWindow.available(current.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())))) ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
+        InvestmentTransactionStatus status = !paymentWindow.due(current.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())))) ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
         if (existing.isEmpty()) { InvestmentTransactionEntity tx = new InvestmentTransactionEntity(); tx.setInvestment(investment); tx.setTransactionKind(InvestmentTransactionKind.SIP); tx.setScheduledMonth(current.atDay(1)); tx.setStatus(status); tx.setAmount(investment.getSipAmount()); transactions.save(tx); }
         else if ((existing.get().getStatus() == InvestmentTransactionStatus.SCHEDULED || existing.get().getStatus() == InvestmentTransactionStatus.DUE) && existing.get().getStatus() != status) { existing.get().setStatus(status); transactions.save(existing.get()); }
     }
     private MonthlyPlanResponse monthlyPlan(UserInvestmentEntity investment) { return investment.getSipStatus() != InvestmentSipStatus.ACTIVE ? null : new MonthlyPlanResponse(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth()), investment.getSipStatus().name()); }
-    private MonthlyPlanOccurrenceResponse currentMonthlyPlanOccurrence(UserInvestmentEntity investment) { return transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))).atDay(1)).map(MonthlyPlanOccurrenceResponse::from).orElse(null); }
+    private MonthlyPlanOccurrenceResponse currentMonthlyPlanOccurrence(UserInvestmentEntity investment) { return transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))).atDay(1)).map(tx -> monthlyPlanResponse(tx, investment)).orElse(null); }
     private String required(String value, String field) { String text = optional(value); if (text == null) throw invalid(field + " is required"); return text; }
     private String optional(String value) { return value == null || value.trim().isEmpty() ? null : value.trim(); }
     private BigDecimal positive(BigDecimal value, String field, int scale) { if (value == null || value.signum() <= 0) throw invalid(field + " must be greater than zero"); return value.setScale(scale, RoundingMode.HALF_UP); }
     private WebApiException invalid(String message) { return new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_STOCK", message); }
 
     public record StockCreateRequest(String symbol, String name, String exchange, BigDecimal quantity, BigDecimal totalInvestedAmount) { }
+    private MonthlyPlanOccurrenceResponse monthlyPlanResponse(InvestmentTransactionEntity tx, UserInvestmentEntity investment) {
+        boolean available = (tx.getStatus() == InvestmentTransactionStatus.DUE || tx.getStatus() == InvestmentTransactionStatus.SCHEDULED)
+                && paymentWindow.available(tx.getScheduledMonth().withDayOfMonth(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))));
+        return new MonthlyPlanOccurrenceResponse(YearMonth.from(tx.getScheduledMonth()), tx.getStatus().name(), tx.getAmount(), tx.getTransactionDate(), tx.getUnitPrice(), tx.getUnits(), available);
+    }
     public record StockResponse(Long id, String symbol, String name, String exchange, BigDecimal quantity, BigDecimal invested,
                                 BigDecimal latestPrice, BigDecimal currentValue, BigDecimal profitOrLoss, BigDecimal profitOrLossPercent,
                                 MonthlyPlanResponse activeMonthlyPlan, MonthlyPlanOccurrenceResponse currentMonthlyPlan) { }
@@ -208,5 +213,5 @@ public class WebStockService {
     public record MonthlyPlanRequest(BigDecimal amount, Integer day, YearMonth startMonth) { }
     public record MonthlyPlanConfirmation(BigDecimal amount, LocalDate transactionDate, BigDecimal executionPrice, BigDecimal units) { }
     public record MonthlyPlanResponse(BigDecimal amount, Integer day, YearMonth startMonth, String status) { }
-    public record MonthlyPlanOccurrenceResponse(YearMonth month, String status, BigDecimal amount, LocalDate transactionDate, BigDecimal executionPrice, BigDecimal units) { static MonthlyPlanOccurrenceResponse from(InvestmentTransactionEntity tx) { return new MonthlyPlanOccurrenceResponse(YearMonth.from(tx.getScheduledMonth()), tx.getStatus().name(), tx.getAmount(), tx.getTransactionDate(), tx.getUnitPrice(), tx.getUnits()); } }
+    public record MonthlyPlanOccurrenceResponse(YearMonth month, String status, BigDecimal amount, LocalDate transactionDate, BigDecimal executionPrice, BigDecimal units, boolean actionAvailable) { static MonthlyPlanOccurrenceResponse from(InvestmentTransactionEntity tx) { return new MonthlyPlanOccurrenceResponse(YearMonth.from(tx.getScheduledMonth()), tx.getStatus().name(), tx.getAmount(), tx.getTransactionDate(), tx.getUnitPrice(), tx.getUnits(), false); } }
 }

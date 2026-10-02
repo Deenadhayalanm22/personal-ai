@@ -100,3 +100,11 @@
 .activity-header-actions{display:flex;align-items:flex-end;flex-direction:column;gap:8px;flex-shrink:0}.calendar-activity .section-title{flex-wrap:wrap}
 
 .expense-icon-actions{display:flex;gap:4px}.expense-icon-button{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);cursor:pointer}.expense-icon-button.danger{color:#b13c36}.expense-icon-button:hover{background:#f2f0e8}.expense-icon-button:focus-visible{outline:2px solid #2672b8;outline-offset:2px}.expense-icon-button:disabled{opacity:.5;cursor:default}
+
+/* Missed payments take visual priority over the recorded spending intensity. */
+.calendar button.overdue{background:#f6d8d3;color:#8e3027;border:1px solid #d58d82}
+.calendar button.overdue.selected{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #a64538}
+.calendar button.overdue .plan-dot{background:#8e3027}
+.legend .overdue-key{display:flex;align-items:center;gap:4px}
+.legend .overdue-key i{background:#f6d8d3;border:1px solid #d58d82}
+.unified-calendar .legend{flex-wrap:wrap}

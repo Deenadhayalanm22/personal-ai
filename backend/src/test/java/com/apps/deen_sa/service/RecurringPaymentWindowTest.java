@@ -24,7 +24,8 @@ class RecurringPaymentWindowTest {
    var service=new WebRecurringCommitmentService(rules,null,null,mock(RecurringCommitmentOccurrenceRepository.class),null,
       Clock.fixed(Instant.parse("2026-10-01T09:00:00Z"),ZoneId.of("Asia/Kolkata")),null);
    var response=service.list(user).items().get(0);
-   assertEquals("DUE",response.currentOccurrence().status());
+   assertEquals("UPCOMING",response.currentOccurrence().status());
+   assertTrue(response.currentOccurrence().actionAvailable());
    assertEquals(LocalDate.of(2026,10,5),response.currentOccurrence().dueDate());
    if(unit==CommitmentRecurrenceUnit.WEEK) assertEquals("UPCOMING",response.currentOccurrences().get(1).status());
   }

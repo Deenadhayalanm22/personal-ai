@@ -258,7 +258,7 @@ public class WebMutualFundService {
 
     private InvestmentTransactionStatus statusFor(UserInvestmentEntity investment, YearMonth month) {
         LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
-        return !paymentWindow.available(month.atDay(investment.getSipDay()), today)
+        return !paymentWindow.due(month.atDay(investment.getSipDay()), today)
                 ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
     }
 
@@ -327,7 +327,7 @@ public class WebMutualFundService {
                 ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth()), investment.getSipFrequency(), nextSipDate(investment)) : null;
         SipOccurrence currentSip = activeSip == null ? null : transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
                         investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))).atDay(1))
-                .map(SipOccurrence::from).orElse(null);
+                .map(tx -> SipOccurrence.from(tx, (tx.getStatus() == InvestmentTransactionStatus.DUE || tx.getStatus() == InvestmentTransactionStatus.SCHEDULED) && paymentWindow.available(tx.getScheduledMonth().withDayOfMonth(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())))))).orElse(null);
         return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
                 holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip, currentSip);
     }
@@ -384,11 +384,11 @@ public class WebMutualFundService {
     public record ActiveSip(BigDecimal amount, Integer day, YearMonth startMonth, String frequency, LocalDate nextDueDate) { }
     public record PlanUpdateRequest(String frequency, YearMonth effectiveMonth, BigDecimal currentNav) { }
     public record SipOccurrence(String scheduledMonth, String status, BigDecimal amount, LocalDate transactionDate,
-                                BigDecimal nav, BigDecimal units, String calculationSource) {
-        static SipOccurrence from(InvestmentTransactionEntity value) {
+                                BigDecimal nav, BigDecimal units, String calculationSource, boolean actionAvailable) {
+        static SipOccurrence from(InvestmentTransactionEntity value, boolean actionAvailable) {
             return new SipOccurrence(value.getScheduledMonth().toString().substring(0, 7), value.getStatus().name(),
                     value.getAmount(), value.getTransactionDate(), value.getUnitPrice(), value.getUnits(),
-                    value.getCalculationSource() == null ? null : value.getCalculationSource().name());
+                    value.getCalculationSource() == null ? null : value.getCalculationSource().name(), actionAvailable);
         }
     }
     public record MutualFundDetailResponse(Long id, String schemeName, BigDecimal invested, BigDecimal currentValue,
