@@ -49,6 +49,8 @@ test('selected calendar date opens Ask AI and records only after review',async({
 test('You exposes existing merchant and account name cleanup',async({page})=>{
   await dashboard(page);
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'You',exact:true}).click();
+  await expect(page.getByRole('button',{name:/Expense capture/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/Optional money modules/})).toBeVisible();
   await page.getByRole('button',{name:/Manage names/}).click();
   await expect(page.getByRole('dialog')).toContainText('Manage names');
   await expect(page.getByRole('button',{name:/M Saravana Bhavan Merchant/})).toBeVisible();

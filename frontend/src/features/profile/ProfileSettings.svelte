@@ -14,7 +14,7 @@
 </script>
 
 <section class="workspace-heading"><div><p class="micro-label">YOUR DATA, YOUR CHOICE</p><h1>You</h1><p>Manage your expense data and optional money details.</p></div></section>
-<section class="settings-card"><p class="micro-label">YOUR DATA</p><button on:click={() => onNavigate('transactions')}><span>▤</span><div><strong>Expense capture</strong><small>AI-captured expenses and cleanup</small></div><b>On ›</b></button><button on:click={onManageNames}><span>✦</span><div><strong>Manage names</strong><small>Merge merchants, accounts and beneficiary aliases</small></div><b>Open ›</b></button><button on:click={onOpenMoney}><span>↗</span><div><strong>Optional money modules</strong><small>Goals, investing, safety and budgets</small></div><b>Manage ›</b></button></section>
+<section class="settings-card"><p class="micro-label">YOUR DATA</p><button on:click={onManageNames}><span>✦</span><div><strong>Manage names</strong><small>Merge merchants, accounts and beneficiary aliases</small></div><b>Open ›</b></button><button on:click={onOpenMoney}><span>↗</span><div><strong>Optional money modules</strong><small>Goals, investing, safety and budgets</small></div><b>Manage ›</b></button></section>
 
 {#if canUseDemoMode}<section class="settings-card"><p class="micro-label">PRESENTATION</p><label class="demo-mode-toggle"><span><strong>Demo mode</strong><small>Use a separate profile while presenting. Your real data stays hidden.</small></span><input type="checkbox" checked={demoMode} disabled={demoSwitching} on:change={onDemoModeChange}/></label>{#if demoError}<p class="form-error">{demoError}</p>{/if}</section>{/if}
 {#key demoMode}<AiCredits />{/key}
