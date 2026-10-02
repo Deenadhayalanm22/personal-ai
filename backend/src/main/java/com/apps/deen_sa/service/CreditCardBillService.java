@@ -27,8 +27,17 @@ public class CreditCardBillService {
                 .stream().map(card -> bill(user, card, month)).toList());
     }
 
+    /** The bill is generated on statementDay for purchases strictly before that day. */
     public static LocalDate statementEnd(UserCreditCardEntity card, YearMonth month) {
+        return statementGeneratedAt(card, month).minusDays(1);
+    }
+
+    public static LocalDate statementGeneratedAt(UserCreditCardEntity card, YearMonth month) {
         return (card.getDueDay() > card.getStatementDay() ? month : month.minusMonths(1)).atDay(card.getStatementDay());
+    }
+
+    public static LocalDate periodStart(UserCreditCardEntity card, YearMonth month) {
+        return statementGeneratedAt(card, month).minusMonths(1);
     }
 
     @Transactional(readOnly = true)
@@ -43,13 +52,13 @@ public class CreditCardBillService {
     }
 
     private Bill bill(AppUserEntity user, UserCreditCardEntity card, YearMonth month) {
-        LocalDate end = statementEnd(card, month), start = end.minusMonths(1).plusDays(1);
+        LocalDate end = statementEnd(card, month), start = periodStart(card, month);
         BigDecimal projected = transactions.sumVisibleByAccountAndPeriod(user.getId(), card.getAccountReference().getId(), start, end.plusDays(1));
         BigDecimal paid = paidForStatement(card.getId(), end);
         var history = jdbc.query("SELECT id, paid_at, amount FROM credit_card_bill_payment WHERE card_id = ? AND statement_end = ? ORDER BY paid_at DESC, id DESC",
                 (rs, row) -> new Payment(rs.getLong("id"), rs.getDate("paid_at").toLocalDate(), rs.getBigDecimal("amount")), card.getId(), java.sql.Date.valueOf(end));
         return new Bill(card.getId(), card.getCardName(), month.toString(), start, end, month.atDay(card.getDueDay()),
-                projected, paid, projected.subtract(paid).max(BigDecimal.ZERO), !end.isAfter(today(user)), history);
+                projected, paid, projected.subtract(paid).max(BigDecimal.ZERO), end.isBefore(today(user)), history, end.plusDays(1));
     }
 
     @Transactional
@@ -74,7 +83,7 @@ public class CreditCardBillService {
             return bill(user, card, month);
         }
         var current = bill(user, card, month);
-        if (end.isAfter(today(user)) || request.paidAt().isBefore(end)) throw invalid("Record a payment on or after the statement closing date");
+        if (!end.isBefore(today(user)) || !request.paidAt().isAfter(end)) throw invalid("Record a payment on or after the bill generation date");
         if (amount.compareTo(current.remaining()) > 0) throw invalid("Payment cannot exceed the remaining captured bill amount");
         jdbc.update("INSERT INTO credit_card_bill_payment(card_id, due_month, statement_end, paid_at, amount, request_id) VALUES (?, ?, ?, ?, ?, ?)",
                 id, java.sql.Date.valueOf(month.atDay(1)), java.sql.Date.valueOf(end), java.sql.Date.valueOf(request.paidAt()), amount, request.requestId());
@@ -92,6 +101,6 @@ public class CreditCardBillService {
     public record Payment(Long id, LocalDate paidAt, BigDecimal amount) {}
     public record Bill(Long cardId, String cardName, String month, LocalDate periodStart, LocalDate statementEnd,
                        LocalDate dueDate, BigDecimal projectedAmount, BigDecimal paidAmount, BigDecimal remaining,
-                       boolean statementClosed, List<Payment> payments) {}
+                       boolean statementClosed, List<Payment> payments, LocalDate statementGeneratedAt) {}
     public record BillList(String month, List<Bill> bills) {}
 }

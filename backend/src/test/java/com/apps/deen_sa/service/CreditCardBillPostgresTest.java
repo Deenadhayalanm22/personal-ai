@@ -58,8 +58,8 @@ class CreditCardBillPostgresTest {
     }
     @BeforeEach void reset() {
         jdbc.update("DELETE FROM credit_card_bill_payment");jdbc.update("DELETE FROM financial_transaction");jdbc.update("DELETE FROM transaction_draft");
-        purchase("2026-10-01", "2000");purchase("2026-10-28", "3000");
-        purchase("2026-10-29", "700"); // next statement, excluded from November bill
+        purchase("2026-10-01", "2000");purchase("2026-10-27", "3000");
+        purchase("2026-10-28", "700"); // next statement, excluded from November bill
     }
     static void purchase(String date, String amount) {
         long draft=jdbc.queryForObject("INSERT INTO transaction_draft(user_id,input_type,source,source_message_id,status) VALUES (?, 'TEXT','WEB_APP',?,'CONSUMED') RETURNING id",Long.class,owner.getId(),UUID.randomUUID().toString());
@@ -76,7 +76,7 @@ class CreditCardBillPostgresTest {
         var partial=record(first);
         assertThat(partial.projectedAmount()).isEqualByComparingTo("5000");
         assertThat(partial.remaining()).isEqualByComparingTo("3000");
-        assertThat(partial.statementEnd()).isEqualTo(LocalDate.parse("2026-10-28"));
+        assertThat(partial.statementEnd()).isEqualTo(LocalDate.parse("2026-10-27"));
         assertThat(record(first).payments()).hasSize(1);
         var full=record(request("2026-11","3000","2026-11-05"));
         assertThat(full.remaining()).isEqualByComparingTo("0");assertThat(full.payments()).hasSize(2);
@@ -94,7 +94,7 @@ class CreditCardBillPostgresTest {
         assertThat(feed.items()).extracting(FinancialActivityService.ActivityItem::date).containsExactly(LocalDate.parse("2026-11-05"),LocalDate.parse("2026-11-01"));
         assertThat(new FinancialActivityService(jdbc).list(other,NOVEMBER).items()).isEmpty();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM financial_transaction",Long.class)).isEqualTo(3L);
-        jdbc.update("UPDATE financial_transaction SET amount=100 WHERE occurred_at=date '2026-10-28'");
+        jdbc.update("UPDATE financial_transaction SET amount=100 WHERE occurred_at=date '2026-10-27'");
         var corrected=tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst();
         assertThat(corrected.paidAmount()).isEqualByComparingTo("5000");assertThat(corrected.remaining()).isZero();
     }
@@ -124,6 +124,45 @@ class CreditCardBillPostgresTest {
             assertThat(competitors.stream().map(f->{try{return f.get();}catch(Exception e){throw new RuntimeException(e);}}).toList()).containsExactlyInAnyOrder(true,false);
             assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM credit_card_bill_payment",BigDecimal.class)).isEqualByComparingTo("5000");
         } finally {executor.shutdownNow();}
+    }
+    @Test void generationDayPurchaseIsProjectedForNextMonth() {
+        jdbc.update("DELETE FROM financial_transaction"); jdbc.update("DELETE FROM transaction_draft");
+        jdbc.update("UPDATE user_credit_card SET statement_day=1, due_day=21 WHERE id=?",cardId);
+        purchase("2026-10-01","480");
+        try {
+            tx.executeWithoutResult(status -> {
+                var october=service.list(owner,YearMonth.of(2026,10)).bills().getFirst();
+                var november=service.list(owner,NOVEMBER).bills().getFirst();
+                assertThat(october.projectedAmount()).isZero();
+                assertThat(november.projectedAmount()).isEqualByComparingTo("480");
+                assertThat(november.periodStart()).isEqualTo(LocalDate.of(2026,10,1));
+                assertThat(november.statementEnd()).isEqualTo(LocalDate.of(2026,10,31));
+                assertThat(november.statementGeneratedAt()).isEqualTo(LocalDate.of(2026,11,1));
+                assertThat(november.dueDate()).isEqualTo(LocalDate.of(2026,11,21));
+            });
+        } finally { jdbc.update("UPDATE user_credit_card SET statement_day=28, due_day=5 WHERE id=?",cardId); }
+    }
+    @Test void boundaryMigrationPreservesExistingPaymentAmountsDatesAndDueMonth() {
+        String migrationSchema="card_boundary_"+UUID.randomUUID().toString().replace("-","");
+        var ds=new DriverManagerDataSource(System.getenv("EXPENSE_CHAT_TEST_DB_URL"),System.getenv("EXPENSE_CHAT_TEST_DB_USER"),System.getenv("EXPENSE_CHAT_TEST_DB_PASSWORD"));
+        var migrationJdbc=new JdbcTemplate(ds);
+        try {
+            Flyway.configure().dataSource(ds).schemas(migrationSchema).defaultSchema(migrationSchema).locations("classpath:db/migration").target("38").load().migrate();
+            // JdbcTemplate opens a new connection per call, so qualify the fixture tables.
+            long user=migrationJdbc.queryForObject("INSERT INTO "+migrationSchema+".app_user(channel,external_user_id) VALUES ('WEB_DEMO','migration') RETURNING id",Long.class);
+            long ref=migrationJdbc.queryForObject("INSERT INTO "+migrationSchema+".user_reference_entity(user_id,entity_type,canonical_name) VALUES (?, 'ACCOUNT','Card') RETURNING id",Long.class,user);
+            long card=migrationJdbc.queryForObject("INSERT INTO "+migrationSchema+".user_credit_card(user_id,account_reference_id,card_name,issuer_name,statement_day,due_day) VALUES (?,?,'Card','Bank',1,21) RETURNING id",Long.class,user,ref);
+            UUID requestId=UUID.randomUUID();
+            migrationJdbc.update("INSERT INTO "+migrationSchema+".credit_card_bill_payment(card_id,due_month,statement_end,paid_at,amount,request_id) VALUES (?,date '2026-10-01',date '2026-10-01',date '2026-10-02',480,?)",card,requestId);
+            Flyway.configure().dataSource(ds).schemas(migrationSchema).defaultSchema(migrationSchema).locations("classpath:db/migration").load().migrate();
+            migrationJdbc.query("SELECT statement_end,due_month,paid_at,amount,request_id FROM "+migrationSchema+".credit_card_bill_payment",rs -> {
+                assertThat(rs.getDate("statement_end").toLocalDate()).isEqualTo(LocalDate.of(2026,9,30));
+                assertThat(rs.getDate("due_month").toLocalDate()).isEqualTo(LocalDate.of(2026,10,1));
+                assertThat(rs.getDate("paid_at").toLocalDate()).isEqualTo(LocalDate.of(2026,10,2));
+                assertThat(rs.getBigDecimal("amount")).isEqualByComparingTo("480");
+                assertThat(rs.getObject("request_id")).isEqualTo(requestId);
+            });
+        } finally {migrationJdbc.execute("DROP SCHEMA IF EXISTS "+migrationSchema+" CASCADE");}
     }
     @Test void paidStatementsKeepTheirBillingIdentity() {
         record(request("2026-11","100","2026-11-01"));
