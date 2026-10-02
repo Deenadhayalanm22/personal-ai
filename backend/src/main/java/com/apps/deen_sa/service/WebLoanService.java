@@ -27,6 +27,8 @@ import java.util.List;
 /** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Service
 public class WebLoanService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private PaymentActionWindow paymentWindow = new PaymentActionWindow();
     private final UserLoanRepository loans;
     private final MonthlyFinancialSnapshotService snapshots;
     private final Clock clock;
@@ -108,7 +110,7 @@ public class WebLoanService {
         LocalDate dueMonth = month.atDay(1);
         if (loan.getStatus() != LoanStatus.ACTIVE || !isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this active loan's tenure");
         LoanEmiOccurrenceEntity occurrence = occurrence(loan, dueMonth);
-        if (occurrence.getDueDate().isAfter(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
+        if (!paymentWindow.available(occurrence.getDueDate(), LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
         if (occurrence.getStatus() == LoanEmiOccurrenceStatus.SKIPPED) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_RECORDED", "This EMI was skipped");
         if (occurrence.getStatus() == LoanEmiOccurrenceStatus.PAID) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_PAID", "This EMI has already been paid");
         occurrence.setStatus(LoanEmiOccurrenceStatus.PAID); occurrence.setPlannedAmount(loan.getMonthlyEmiAmount()); occurrence.setPaidAmount(loan.getMonthlyEmiAmount());
@@ -128,7 +130,7 @@ public class WebLoanService {
         UserLoanEntity loan = owned(user, loanId); LocalDate dueMonth = month.atDay(1);
         if (loan.getStatus() != LoanStatus.ACTIVE || !isScheduledMonth(loan, dueMonth)) throw invalid("EMI month is outside this active loan's tenure");
         LoanEmiOccurrenceEntity occurrence = occurrence(loan, dueMonth);
-        if (occurrence.getDueDate().isAfter(LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
+        if (!paymentWindow.available(occurrence.getDueDate(), LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone()))))) throw invalid("EMI is not due yet");
         if (occurrence.getStatus() == LoanEmiOccurrenceStatus.PAID || occurrence.getStatus() == LoanEmiOccurrenceStatus.SKIPPED) throw new WebApiException(HttpStatus.CONFLICT, "EMI_ALREADY_RECORDED", "This EMI already has an outcome");
         if (request != null && request.bankPenaltyAmount() != null) occurrence.setBankPenaltyAmount(positiveAmount(request.bankPenaltyAmount(), "bankPenaltyAmount"));
         occurrence.setPlannedAmount(loan.getMonthlyEmiAmount()); occurrence.setStatus(LoanEmiOccurrenceStatus.SKIPPED); occurrence.setUpdatedAt(Instant.now(clock)); occurrences.save(occurrence);
@@ -181,7 +183,7 @@ public class WebLoanService {
         java.util.Map<LocalDate, LoanEmiOccurrenceEntity> saved = occurrences.findByLoanIdOrderByDueMonthAsc(loan.getId()).stream().collect(java.util.stream.Collectors.toMap(LoanEmiOccurrenceEntity::getDueMonth, value -> value));
         return java.util.stream.IntStream.range(0, loan.getTotalTenureMonths()).mapToObj(index -> {
             LocalDate due = loan.getFirstEmiDueDate().plusMonths(index); LocalDate month = due.withDayOfMonth(1); LoanEmiOccurrenceEntity entity = saved.get(month);
-            LoanEmiOccurrenceStatus status = entity == null ? (!due.isAfter(today) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
+            LoanEmiOccurrenceStatus status = entity == null ? (paymentWindow.available(due, today) ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING) : entity.getStatus();
             return new EmiOccurrenceResponse(month.toString().substring(0, 7), due, status, entity != null && entity.getPlannedAmount() != null ? entity.getPlannedAmount() : loan.getMonthlyEmiAmount(), entity == null ? null : entity.getPaidAmount(), entity == null ? null : entity.getPaidAt(), entity == null ? null : entity.getBankPenaltyAmount(), entity != null && entity.isPreClosureSettlement());
         }).toList();
     }

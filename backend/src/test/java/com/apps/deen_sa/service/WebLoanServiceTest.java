@@ -31,6 +31,35 @@ import static org.mockito.Mockito.*;
 class WebLoanServiceTest {
 
     @Test
+    void advanceWindowEnablesPayAndSkipInDueMonthOnly() {
+        for (String today : List.of("2026-09-28", "2026-10-01")) {
+            for (boolean skip : List.of(false, true)) {
+                UserLoanRepository repository = mock(UserLoanRepository.class);
+                LoanEmiOccurrenceRepository occurrences = mock(LoanEmiOccurrenceRepository.class);
+                AppUserEntity owner = user();
+                UserLoanEntity loan = loan(owner);
+                loan.setFirstEmiDueDate(LocalDate.of(2026, 10, 5));
+                loan.setTotalTenureMonths(6);
+                when(repository.findByIdAndUserId(8L, 42L)).thenReturn(Optional.of(loan));
+                when(repository.findByUserIdOrderByCreatedAtDesc(42L)).thenReturn(List.of(loan));
+                when(occurrences.findByLoanIdOrderByDueMonthAsc(8L)).thenReturn(List.of());
+                when(occurrences.save(any())).thenAnswer(call -> call.getArgument(0));
+                WebLoanService service = new WebLoanService(repository, null,
+                        Clock.fixed(Instant.parse(today + "T09:00:00Z"), ZoneId.of("Asia/Kolkata")), occurrences, null);
+                boolean enabled = today.equals("2026-10-01");
+                assertThat(service.list(owner).loans().get(0).emiOccurrences().get(0).status())
+                        .isEqualTo(enabled ? LoanEmiOccurrenceStatus.DUE : LoanEmiOccurrenceStatus.UPCOMING);
+                Runnable action = () -> {
+                    if (skip) service.skip(owner, 8L, YearMonth.of(2026, 10), null);
+                    else service.markPaid(owner, 8L, YearMonth.of(2026, 10));
+                };
+                if (enabled) action.run();
+                else assertThatThrownBy(action::run).isInstanceOf(WebApiException.class);
+            }
+        }
+    }
+
+    @Test
     void loanProgressAdvancesOnlyWhenDueEmiIsPaid() {
         UserLoanRepository repository = mock(UserLoanRepository.class);
         LoanEmiOccurrenceRepository occurrences = mock(LoanEmiOccurrenceRepository.class);

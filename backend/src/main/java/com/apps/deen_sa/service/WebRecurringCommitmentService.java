@@ -27,6 +27,8 @@ import java.util.Comparator;
 /** FIN-020 — explicit recurring commitments and opt-in recent-bill projections. */
 @Service
 public class WebRecurringCommitmentService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private PaymentActionWindow paymentWindow = new PaymentActionWindow();
     private final UserRecurringCommitmentRepository commitments;
     private final FinancialTransactionRepository transactions;
     private final MonthlyFinancialSnapshotService snapshots;
@@ -82,7 +84,7 @@ public class WebRecurringCommitmentService {
         LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
         LocalDate dueDate = commitment.getDueDay() == null ? null : scheduled.atDay(Math.min(commitment.getDueDay(), scheduled.lengthOfMonth()));
         if (commitment.getStatus() != RecurringCommitmentStatus.ACTIVE || scheduled.atDay(1).isBefore(commitment.getEffectiveMonth())
-                || dueDate == null || !scheduled.equals(YearMonth.from(today)) || today.isBefore(dueDate) || createdAfterDueDate(user, commitment, scheduled, dueDate)) throw invalid("Commitment is not due this month");
+                || dueDate == null || !scheduled.equals(YearMonth.from(today)) || !paymentWindow.available(dueDate, today) || createdAfterDueDate(user, commitment, scheduled, dueDate)) throw invalid("Commitment is not due this month");
         RecurringCommitmentOccurrenceEntity occurrence = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), scheduled.atDay(1)).orElseGet(RecurringCommitmentOccurrenceEntity::new);
         if (occurrence.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED) return savedResponse(occurrence);
         if (occurrence.getStatus() == RecurringCommitmentOccurrenceStatus.SKIPPED) throw invalid("This month already has an outcome");
@@ -107,7 +109,7 @@ public class WebRecurringCommitmentService {
         LocalDate scheduledDate = RecurringCommitmentSchedule.dated(commitment) ? request.occurrenceDate() : request.occurrenceDate() == null ? completed.withDayOfMonth(1) : request.occurrenceDate().withDayOfMonth(1);
         if (!RecurringCommitmentSchedule.dated(commitment) && !YearMonth.from(scheduledDate).equals(YearMonth.from(completed)))
             throw invalid("Monthly occurrence must be in the payment month");
-        if (RecurringCommitmentSchedule.dated(commitment) && (scheduledDate == null || completed.isBefore(scheduledDate)
+        if (RecurringCommitmentSchedule.dated(commitment) && (scheduledDate == null || !paymentWindow.available(scheduledDate, completed)
                 || !RecurringCommitmentSchedule.dates(commitment, YearMonth.from(scheduledDate), java.time.ZoneId.of(user.getTimezone())).contains(scheduledDate)
                 || !request.nextExpectedDate().isAfter(scheduledDate))) throw invalid("Choose a scheduled payment and a later next date");
         RecurringCommitmentOccurrenceEntity occurrence = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), scheduledDate).orElseGet(RecurringCommitmentOccurrenceEntity::new);
@@ -268,7 +270,7 @@ public class WebRecurringCommitmentService {
         return java.util.stream.Stream.concat(RecurringCommitmentSchedule.dates(commitment, month, java.time.ZoneId.of(user.getTimezone())).stream(),
                 recorded.stream().map(RecurringCommitmentOccurrenceEntity::getScheduledMonth)).distinct().sorted().map(date -> {
             var saved = occurrences.findByCommitmentIdAndScheduledMonth(commitment.getId(), date).orElse(null);
-            String status = saved != null ? saved.getStatus().name() : today.isBefore(date) ? "UPCOMING" : "DUE";
+            String status = saved != null ? saved.getStatus().name() : paymentWindow.available(date, today) ? "DUE" : "UPCOMING";
             return new OccurrenceResponse(month.toString(), date, status, saved == null ? null : paymentDate(saved),
                     saved == null ? null : paymentAmount(saved), saved == null ? null : saved.getExtraAmount(),
                     saved == null ? List.of() : extras.findByOccurrenceIdOrderByCreatedAtAsc(saved.getId()).stream()
@@ -280,7 +282,7 @@ public class WebRecurringCommitmentService {
         var saved = occurrences.findByCommitmentIdAndScheduledMonth(c.getId(), month.atDay(1)).orElse(null);
         String status = saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.COMPLETED ? "COMPLETED"
                 : saved != null && saved.getStatus() == RecurringCommitmentOccurrenceStatus.SKIPPED ? "SKIPPED"
-                : dueDate != null && !today.isBefore(dueDate) && !createdAfterDueDate(user, c, month, dueDate) ? "DUE" : "UPCOMING";
+                : dueDate != null && paymentWindow.available(dueDate, today) && !createdAfterDueDate(user, c, month, dueDate) ? "DUE" : "UPCOMING";
         return new OccurrenceResponse(month.toString(), dueDate, status, saved == null ? null : paymentDate(saved), saved == null ? null : paymentAmount(saved), saved == null ? null : saved.getExtraAmount(),
                 saved == null ? List.of() : extras.findByOccurrenceIdOrderByCreatedAtAsc(saved.getId()).stream().map(extra -> extraResponse(extra)).toList(), saved == null ? null : saved.getSavingsUsed(), saved == null || saved.getPaymentTransaction() == null ? null : saved.getPaymentTransaction().getId());
     }

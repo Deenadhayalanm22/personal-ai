@@ -20,6 +20,8 @@ import java.util.List;
 /** FIN-EPIC-005 — Loans and mutual-fund planning. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Service
 public class WebMutualFundService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private PaymentActionWindow paymentWindow = new PaymentActionWindow();
     private static final String MFAPI = "MFAPI";
     private final UserInvestmentRepository investments;
     private final InvestmentTransactionRepository transactions;
@@ -101,7 +103,7 @@ public class WebMutualFundService {
         UserInvestmentEntity investment = owned(user, id);
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(id, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "SIP_OCCURRENCE_NOT_FOUND", "SIP occurrence not found"));
-        if (tx.getStatus() != InvestmentTransactionStatus.DUE || LocalDate.now(clock).isBefore(month.atDay(investment.getSipDay()))) throw invalid("Only a due SIP can be skipped");
+        if ((tx.getStatus() != InvestmentTransactionStatus.DUE && tx.getStatus() != InvestmentTransactionStatus.SCHEDULED) || !paymentWindow.available(month.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))))) throw invalid("Only a due SIP can be skipped");
         tx.setStatus(InvestmentTransactionStatus.SKIPPED);
         tx.setTransactionDate(LocalDate.now(clock));
         TransactionResponse response = TransactionResponse.from(transactions.save(tx));
@@ -127,7 +129,7 @@ public class WebMutualFundService {
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
                         investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "SIP_OCCURRENCE_NOT_FOUND", "SIP occurrence not found"));
-        if (tx.getStatus() != InvestmentTransactionStatus.DUE || LocalDate.now(clock).isBefore(month.atDay(investment.getSipDay()))) {
+        if ((tx.getStatus() != InvestmentTransactionStatus.DUE && tx.getStatus() != InvestmentTransactionStatus.SCHEDULED) || !paymentWindow.available(month.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))))) {
             throw invalid("This SIP occurrence can no longer be confirmed");
         }
         InvestmentTransactionEntity confirmed = confirmed(investment, InvestmentTransactionKind.SIP, request.amount(),
@@ -226,22 +228,22 @@ public class WebMutualFundService {
 
     private void createInitialSipOccurrenceIfNeeded(UserInvestmentEntity investment) {
         if (investment.getSipStatus() == null) return;
-        YearMonth current = YearMonth.now(clock);
+        YearMonth current = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
         YearMonth start = YearMonth.from(investment.getSipStartMonth());
         createSipOccurrence(investment, start.isAfter(current) ? start : current,
                 start.isAfter(current) ? InvestmentTransactionStatus.SCHEDULED : statusFor(investment, current));
     }
 
-    /** A SIP is upcoming until its configured day, even when the monthly source is already planned. */
+    /** A SIP is upcoming until its same-month advance window opens, even when the monthly source is already planned. */
     private void ensureCurrentSipOccurrence(UserInvestmentEntity investment) {
         if (investment.getSipStatus() != InvestmentSipStatus.ACTIVE) return;
-        YearMonth current = YearMonth.now(clock);
+        YearMonth current = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
         if (!hasSipIn(investment, current)) return;
         var existing = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, current.atDay(1));
         if (existing.isEmpty()) {
             createSipOccurrence(investment, current, statusFor(investment, current));
-        } else if (existing.get().getStatus() == InvestmentTransactionStatus.SCHEDULED && statusFor(investment, current) == InvestmentTransactionStatus.DUE) {
-            existing.get().setStatus(InvestmentTransactionStatus.DUE);
+        } else if ((existing.get().getStatus() == InvestmentTransactionStatus.SCHEDULED || existing.get().getStatus() == InvestmentTransactionStatus.DUE) && existing.get().getStatus() != statusFor(investment, current)) {
+            existing.get().setStatus(statusFor(investment, current));
             transactions.save(existing.get());
         }
     }
@@ -255,8 +257,8 @@ public class WebMutualFundService {
     }
 
     private InvestmentTransactionStatus statusFor(UserInvestmentEntity investment, YearMonth month) {
-        LocalDate today = LocalDate.now(clock);
-        return YearMonth.from(today).equals(month) && today.getDayOfMonth() < investment.getSipDay()
+        LocalDate today = LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
+        return !paymentWindow.available(month.atDay(investment.getSipDay()), today)
                 ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
     }
 
@@ -281,7 +283,7 @@ public class WebMutualFundService {
         // A plan added during a month is an upcoming commitment, not a retroactive allocation.
         // Its first confirmable SIP is therefore the following month.
         YearMonth requested = startMonth;
-        YearMonth current = YearMonth.now(clock);
+        YearMonth current = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
         investment.setSipStartMonth((!requested.isAfter(current) ? current.plusMonths(1) : requested).atDay(1));
         investment.setSipStatus(InvestmentSipStatus.ACTIVE);
         investment.setSipFrequency("MONTHLY");
@@ -324,14 +326,14 @@ public class WebMutualFundService {
         ActiveSip activeSip = investment.getSipStatus() == InvestmentSipStatus.ACTIVE
                 ? new ActiveSip(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth()), investment.getSipFrequency(), nextSipDate(investment)) : null;
         SipOccurrence currentSip = activeSip == null ? null : transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(
-                        investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock).atDay(1))
+                        investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))).atDay(1))
                 .map(SipOccurrence::from).orElse(null);
         return new MutualFundResponse(investment.getId(), investment.getExternalInstrumentId(), investment.getDisplayNameSnapshot(),
                 holding.invested(), currentValue, profitOrLoss, profitOrLossPercent, latestNav, activeSip, currentSip);
     }
 
     private LocalDate nextSipDate(UserInvestmentEntity investment) {
-        YearMonth now = YearMonth.now(clock);
+        YearMonth now = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())));
         for (int offset = 0; offset < 36; offset++) {
             YearMonth month = now.plusMonths(offset);
             if (!hasSipIn(investment, month)) continue;

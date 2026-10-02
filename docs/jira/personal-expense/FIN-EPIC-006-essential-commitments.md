@@ -50,7 +50,7 @@ This feature is planning data. It is not a bank balance, a payment mandate, an a
 15. **Given** a paid commitment occurrence, **when** the user adds a positive extra amount (for example ₹2,000 beyond ₹10,000 family support), **then** history shows the paid amount and extra separately, while the usual planning amount remains ₹10,000. An unpaid or skipped occurrence cannot receive an extra amount.
 16. **Given** a commitment is due, **when** it appears in Money or the Monthly Commitment included-sources sheet, **then** the included-source row has a red border and the Money card has a compact red border around only `Due now` and `View details` on the right. After Paid or Skip, the due treatment clears.
 17. **Given** a paid month, **when** the user selects `Add extra` above the current occurrence, **then** a popup collects the paid month, positive amount, and required reason. Each extra is saved separately and its amount and reason appear in payment history.
-18. **Given** a commitment occurrence is upcoming, **when** the user opens View details, **then** its Paid and Skip buttons are disabled until the server reports it as due. Once due, both are enabled. For an infrequent commitment that genuinely happens early, a separate `Record an early payment` action retains the actual-payment flow without presenting the scheduled occurrence as due. The API rejects skipping an occurrence before its due date.
+18. **Given** a commitment occurrence is upcoming, **when** the user opens View details, **then** its Paid and Skip buttons are disabled until the server reports it as actionable (`DUE`) in the configured same-month advance window. In that window, both are enabled. For an infrequent commitment that genuinely happens early, a separate `Record an early payment` action retains the actual-payment flow without presenting the scheduled occurrence as due. The API rejects skipping an occurrence before its same-month advance window.
 
 ### Commitment projection choices
 
@@ -165,3 +165,9 @@ Acceptance criteria:
 Coverage: `CommitmentPaymentsIT`, `CommitmentPaymentMigrationIT`, `MonthlyPaymentOverviewServiceTest`, and the Home/recurring-commitment browser regressions.
 
 The main dashboard owns the Money dialog: Home → Your money opens the existing source forms, and closing returns to the dashboard. `frontend/e2e/expense-capture.spec.js` verifies opening and closing on desktop and phone.
+
+## Configurable advance payment window
+
+Pay and Skip for recurring commitments (including daily/weekly dates), loan EMIs, mutual-fund SIPs, and stock monthly plans open five days before the scheduled due date by default, clamped to the first day of that same calendar month. `PAYMENT_ADVANCE_DAYS` configures `app.payments.advance-days`; zero restores due-day eligibility. The server reports eligible unresolved occurrences as `DUE`, so Monthly Commitment evidence, Money details and Home Activity share the same eligibility. Saved completed/skipped outcomes remain final; scheduled due dates and planning amounts are unchanged. Actual payment dates remain the dates the user records.
+
+Acceptance coverage: due October 15 is disabled October 9 and enabled October 10; due October 5 is enabled October 1; due October 1 is disabled September 28. The same rule blocks December-to-January early actions and supports configured two-day and zero-day windows. Covered by `PaymentActionWindowTest` and the source service tests.

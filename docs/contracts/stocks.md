@@ -17,8 +17,14 @@ Stock holdings support add, view, manual purchases, investment corrections, mont
 
 An optional monthly plan requires a positive amount, day 1–28, and a start month. Its due occurrence is confirmed with the actual execution price; it automatically contributes to Monthly Commitment as Planned investing. The chart-derived latest price is read at list time. If the provider cannot supply a price, `latestPrice`, `currentValue`, `profitOrLoss`, and `profitOrLossPercent` are `null`; the recorded quantity and invested amount remain available. Errors: `400 INVALID_STOCK`, `400 INVALID_STOCK_SEARCH`, `404 STOCK_NOT_FOUND`, `409 STOCK_EXISTS`, and `502 STOCK_LOOKUP_FAILED`.
 
-The compact card shows valuation and a due strip. Plan setup, due confirmation or skip, direct history, manual purchase, investment correction, and delete are in View details. Scheduled purchases cannot be confirmed or skipped before their due date; completed and skipped purchases cannot be acted on again.
+The compact card shows valuation and a due strip. Plan setup, due confirmation or skip, direct history, manual purchase, investment correction, and delete are in View details. Scheduled purchases cannot be confirmed or skipped before their configured same-month advance window; completed and skipped purchases cannot be acted on again.
 
 The stock detail layout places the title above right-aligned Edit stock and Delete stock actions. Add stock purchase is beside total P&L above the holding grid. Individual history rows are read-only in the portal. A due stock commitment uses the same red row treatment as due funds and loans, and the card combines Due now with View details in one red-bordered strip.
 
 Home also reads the stock list at startup to render active monthly-plan calendar markers and pending Activity. It uses activeMonthlyPlan amount/day/startMonth and currentMonthlyPlan month/status; Review opens stock details. Confirmed/skipped purchases are omitted from pending Activity, and skipped plans are omitted from calendar markers for that month.
+
+## Configurable advance payment window
+
+Pay and Skip for recurring commitments (including daily/weekly dates), loan EMIs, mutual-fund SIPs, and stock monthly plans open five days before the scheduled due date by default, clamped to the first day of that same calendar month. `PAYMENT_ADVANCE_DAYS` configures `app.payments.advance-days`; zero restores due-day eligibility. The server reports eligible unresolved occurrences as `DUE`, so Monthly Commitment evidence, Money details and Home Activity share the same eligibility. Saved completed/skipped outcomes remain final; scheduled due dates and planning amounts are unchanged. Actual payment dates remain the dates the user records.
+
+Acceptance coverage: due October 15 is disabled October 9 and enabled October 10; due October 5 is enabled October 1; due October 1 is disabled September 28. The same rule blocks December-to-January early actions and supports configured two-day and zero-day windows. Covered by `PaymentActionWindowTest` and the source service tests.

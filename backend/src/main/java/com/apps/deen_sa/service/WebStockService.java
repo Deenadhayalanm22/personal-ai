@@ -25,6 +25,8 @@ import java.util.List;
 /** FIN-EPIC-005 — Listed-stock add and view flow. See docs/jira/personal-expense/FIN-EPIC-005-planning.md. */
 @Service
 public class WebStockService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private PaymentActionWindow paymentWindow = new PaymentActionWindow();
     private static final String YAHOO_FINANCE = "YAHOO_FINANCE";
     private final UserInvestmentRepository investments;
     private final InvestmentTransactionRepository transactions;
@@ -106,9 +108,9 @@ public class WebStockService {
         if (month == null || request == null) throw invalid("Monthly plan confirmation details are required");
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_MONTHLY_PLAN_OCCURRENCE_NOT_FOUND", "Monthly plan occurrence not found"));
-        if (tx.getStatus() != InvestmentTransactionStatus.DUE) throw invalid("This monthly plan occurrence can no longer be confirmed");
+        if ((tx.getStatus() != InvestmentTransactionStatus.DUE && tx.getStatus() != InvestmentTransactionStatus.SCHEDULED) || !paymentWindow.available(month.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))))) throw invalid("This monthly plan occurrence can no longer be confirmed");
         BigDecimal amount = positive(request.amount(), "amount", 2);
-        if (request.transactionDate() != null && request.transactionDate().isBefore(tx.getScheduledMonth().withDayOfMonth(investment.getSipDay()))) throw invalid("Payment date must be on or after the due date");
+        if (request.transactionDate() != null && (!paymentWindow.available(tx.getScheduledMonth().withDayOfMonth(investment.getSipDay()), request.transactionDate()) || request.transactionDate().isAfter(LocalDate.now(clock)))) throw invalid("Payment date must be within the same-month payment window and cannot be future");
         BigDecimal price = positive(request.executionPrice(), "executionPrice", 6);
         BigDecimal units = request.units() == null ? amount.divide(price, 6, RoundingMode.HALF_UP) : positive(request.units(), "units", 6);
         tx.setStatus(InvestmentTransactionStatus.CONFIRMED); tx.setAmount(amount); tx.setTransactionDate(request.transactionDate() == null ? LocalDate.now(clock) : request.transactionDate());
@@ -122,7 +124,7 @@ public class WebStockService {
         UserInvestmentEntity investment = owned(user, investmentId);
         InvestmentTransactionEntity tx = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investmentId, InvestmentTransactionKind.SIP, month.atDay(1))
                 .orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_MONTHLY_PLAN_OCCURRENCE_NOT_FOUND", "Monthly plan occurrence not found"));
-        if (tx.getStatus() != InvestmentTransactionStatus.DUE) throw invalid("Only a due monthly plan can be skipped");
+        if ((tx.getStatus() != InvestmentTransactionStatus.DUE && tx.getStatus() != InvestmentTransactionStatus.SCHEDULED) || !paymentWindow.available(month.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone()))))) throw invalid("Only a due monthly plan can be skipped");
         tx.setStatus(InvestmentTransactionStatus.SKIPPED); tx.setTransactionDate(LocalDate.now(clock)); transactions.save(tx);
         if (snapshots != null) snapshots.refreshCurrent(user);
         return MonthlyPlanOccurrenceResponse.from(tx);
@@ -182,14 +184,14 @@ public class WebStockService {
     private UserInvestmentEntity owned(AppUserEntity user, Long investmentId) { return investments.findByIdAndUserId(investmentId, user.getId()).filter(candidate -> candidate.getAssetType() == InvestmentAssetType.STOCK).orElseThrow(() -> new WebApiException(HttpStatus.NOT_FOUND, "STOCK_NOT_FOUND", "Stock holding not found")); }
     private void ensureCurrentMonthlyPlanOccurrence(UserInvestmentEntity investment) {
         if (investment.getSipStatus() != InvestmentSipStatus.ACTIVE || investment.getSipStartMonth() == null) return;
-        YearMonth current = YearMonth.now(clock); if (current.isBefore(YearMonth.from(investment.getSipStartMonth()))) return;
+        YearMonth current = YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))); if (current.isBefore(YearMonth.from(investment.getSipStartMonth()))) return;
         var existing = transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, current.atDay(1));
-        InvestmentTransactionStatus status = LocalDate.now(clock).getDayOfMonth() < investment.getSipDay() ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
+        InvestmentTransactionStatus status = !paymentWindow.available(current.atDay(investment.getSipDay()), LocalDate.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone())))) ? InvestmentTransactionStatus.SCHEDULED : InvestmentTransactionStatus.DUE;
         if (existing.isEmpty()) { InvestmentTransactionEntity tx = new InvestmentTransactionEntity(); tx.setInvestment(investment); tx.setTransactionKind(InvestmentTransactionKind.SIP); tx.setScheduledMonth(current.atDay(1)); tx.setStatus(status); tx.setAmount(investment.getSipAmount()); transactions.save(tx); }
-        else if (existing.get().getStatus() == InvestmentTransactionStatus.SCHEDULED && status == InvestmentTransactionStatus.DUE) { existing.get().setStatus(status); transactions.save(existing.get()); }
+        else if ((existing.get().getStatus() == InvestmentTransactionStatus.SCHEDULED || existing.get().getStatus() == InvestmentTransactionStatus.DUE) && existing.get().getStatus() != status) { existing.get().setStatus(status); transactions.save(existing.get()); }
     }
     private MonthlyPlanResponse monthlyPlan(UserInvestmentEntity investment) { return investment.getSipStatus() != InvestmentSipStatus.ACTIVE ? null : new MonthlyPlanResponse(investment.getSipAmount(), investment.getSipDay(), YearMonth.from(investment.getSipStartMonth()), investment.getSipStatus().name()); }
-    private MonthlyPlanOccurrenceResponse currentMonthlyPlanOccurrence(UserInvestmentEntity investment) { return transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock).atDay(1)).map(MonthlyPlanOccurrenceResponse::from).orElse(null); }
+    private MonthlyPlanOccurrenceResponse currentMonthlyPlanOccurrence(UserInvestmentEntity investment) { return transactions.findByInvestmentIdAndTransactionKindAndScheduledMonth(investment.getId(), InvestmentTransactionKind.SIP, YearMonth.now(clock.withZone(java.time.ZoneId.of(investment.getUser().getTimezone()))).atDay(1)).map(MonthlyPlanOccurrenceResponse::from).orElse(null); }
     private String required(String value, String field) { String text = optional(value); if (text == null) throw invalid(field + " is required"); return text; }
     private String optional(String value) { return value == null || value.trim().isEmpty() ? null : value.trim(); }
     private BigDecimal positive(BigDecimal value, String field, int scale) { if (value == null || value.signum() <= 0) throw invalid(field + " must be greater than zero"); return value.setScale(scale, RoundingMode.HALF_UP); }
