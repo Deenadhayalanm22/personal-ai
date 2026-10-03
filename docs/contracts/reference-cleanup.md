@@ -12,3 +12,5 @@ Reference cleanup standardizes conversationally captured merchant, beneficiary, 
 Merge selects an existing active reference with the requested canonical name when possible, otherwise a selected reference. It preserves names and aliases, deactivates other selected references, and repoints expense records for `MERCHANT` and `ACCOUNT`. `BENEFICIARY` has no expense link today. Key failures: `400 INVALID_REFERENCE_MERGE`, `404 REFERENCE_NOT_FOUND`, `403 REFERENCE_FORBIDDEN`, `409 REFERENCE_NOT_ACTIVE`, `422 MIXED_ENTITY_TYPES`.
 
 The workflow is reachable through **You → Manage names** in the frontend, and the existing V1 transaction cleanup shortcut. Capture preparation reads owned active names/aliases without creating names; confirmation resolves active aliases again, including a name merged after preview. Beneficiary cleanup remains alias-only.
+
+Account merges touching any configured bank or credit-card reference (including the named canonical target) return `409 CONFIGURED_ACCOUNT_MERGE`; keep these identities and add aliases instead. Unconfigured account merges remain supported.

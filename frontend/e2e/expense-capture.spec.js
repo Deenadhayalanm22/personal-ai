@@ -86,3 +86,25 @@ test('Money opens and closes within the main dashboard',async({page})=>{
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Home',exact:true}).click();
   await expect(page.getByRole('button',{name:'Add expense',exact:true})).toBeVisible();
 });
+
+for(const width of [1280,375]){
+  test(`expense capture matches portal typography at ${width}px`,async({page})=>{
+    await page.setViewportSize({width,height:900});
+    await dashboard(page);
+    await page.getByRole('button',{name:'Add expense',exact:true}).click();
+    const capture=page.getByRole('region',{name:'Add expense conversation'});
+    await expect(capture.getByRole('heading',{name:'Add an expense'})).toHaveCSS('font-family','Manrope, sans-serif');
+    const bodyFont=await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily);
+    for(const label of ['Amount','Date','Category','Subcategory'])expect(await capture.getByLabel(label,{exact:true}).evaluate(el=>getComputedStyle(el).fontFamily)).toBe(bodyFont);
+    await capture.getByLabel('Amount',{exact:true}).fill('450');
+    await capture.getByLabel('Category',{exact:true}).selectOption('Food');
+    await capture.getByLabel('Subcategory',{exact:true}).selectOption('Dining');
+    await capture.screenshot({path:`/tmp/expense-style-${width}.png`});
+    await capture.getByRole('button',{name:'Describe with AI'}).click();
+    expect(await capture.getByLabel('Expense description').evaluate(el=>getComputedStyle(el).fontFamily)).toBe(bodyFont);
+    await capture.getByLabel('Expense description').fill('Paid 450 for dinner');
+    await capture.getByRole('button',{name:'Prepare expense'}).click();
+    await expect(capture.getByRole('heading',{name:'Review expense'})).toHaveCSS('font-family','Manrope, sans-serif');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  });
+}

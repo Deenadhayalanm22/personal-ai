@@ -63,11 +63,11 @@ public class FinancialRecordsTool {
                     : new Dataset("p.id, c.label AS name, p.target_date, p.target_amount, p.monthly_amount, p.final_amount, p.start_month, p.used_amount, coalesce((SELECT sum(x.amount) FROM commitment_savings_entry x WHERE x.plan_id=p.id AND x.status='SAVED'),0) AS recorded_saved", "FROM commitment_savings_plan p JOIN user_recurring_commitment c ON c.id=p.commitment_id", "c.user_id", "p.id", "c.label", "", "p.id DESC", "Recorded savings are earmarked, not free cash. Deduct used_amount when describing unallocated savings; do not add savings contributions and bill payment twice.");
             case "credit_cards" -> {
                 if (history) throw ExpenseQueryTool.invalid("Card payment history is unavailable. Query recorded expenses or the monthly bill projection.");
-                yield new Dataset("c.id, c.card_name AS name, c.issuer_name, c.statement_day, c.due_day, c.active", "FROM user_credit_card c", "c.user_id", "c.id", "c.card_name", "", "c.id DESC", "Billing configuration only. Projected card bills use recorded card spending, not a bank statement or balance.");
+                yield new Dataset("c.id, c.card_name AS name, c.issuer_name, c.statement_day, c.due_day, to_char(c.start_month,'YYYY-MM') AS start_month, c.active", "FROM user_credit_card c", "c.user_id", "c.id", "c.card_name", "", "c.id DESC", "Billing configuration only. Projected card bills use recorded card spending, not a bank statement or balance.");
             }
             case "accounts" -> {
                 if (history) throw ExpenseQueryTool.invalid("Use query_expenses with an account filter for recorded expense history.");
-                yield new Dataset("a.id, a.canonical_name AS name, a.active", "FROM user_reference_entity a", "a.user_id", "a.id", "a.canonical_name", " AND a.entity_type='ACCOUNT'", "a.id DESC", "Account labels only; no balances or bank reconciliation are available.");
+                yield new Dataset("a.id, a.canonical_name AS name, a.active, CASE WHEN EXISTS (SELECT 1 FROM user_credit_card c WHERE c.account_reference_id=a.id AND c.user_id=a.user_id AND c.active=true) THEN 'CREDIT_CARD' WHEN EXISTS (SELECT 1 FROM bank_account_profile b WHERE b.account_reference_id=a.id) THEN 'BANK' ELSE 'UNCONFIGURED' END AS account_type", "FROM user_reference_entity a", "a.user_id", "a.id", "a.canonical_name", " AND a.entity_type='ACCOUNT'", "a.id DESC", "Saved account labels and types only; no balances or bank reconciliation are available.");
             }
             default -> throw ExpenseQueryTool.invalid("Unknown module.");
         };

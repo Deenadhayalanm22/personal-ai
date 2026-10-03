@@ -21,6 +21,7 @@ public class WebReferenceMergeService {
     private final UserReferenceEntityRepository references;
     private final UserReferenceAliasRepository aliases;
     private final FinancialTransactionRepository transactions;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Transactional
     public MergeResponse merge(AppUserEntity user, MergeRequest request) {
@@ -40,6 +41,11 @@ public class WebReferenceMergeService {
         if (selected.stream().anyMatch(r -> !r.isActive())) throw error(
                 HttpStatus.CONFLICT, "REFERENCE_NOT_ACTIVE", "All selected references must be active and unmerged");
 
+        if(valid.entityType()==UserReferenceEntityType.ACCOUNT && jdbc!=null) {
+            var ids=new java.util.HashSet<Long>(valid.referenceIds());ids.add(canonical.getId());
+            for(Long id:ids)if(jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM bank_account_profile WHERE account_reference_id=?) + (SELECT COUNT(*) FROM user_credit_card WHERE account_reference_id=?)",Long.class,id,id)>0)
+                throw error(HttpStatus.CONFLICT,"CONFIGURED_ACCOUNT_MERGE","Configured accounts cannot be merged; keep their expense links and add aliases instead");
+        }
         List<FinancialTransactionEntity> affected = matchingTransactions(user, valid);
         Instant now = Instant.now();
         for (FinancialTransactionEntity tx : affected) {

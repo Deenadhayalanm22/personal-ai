@@ -32,12 +32,12 @@ public class WebIncomeService {
     @Transactional
     public SalaryResponse saveProfile(AppUserEntity u, ProfileRequest r) {
         if (r == null || !Set.of("RANGE", "EXACT", "SKIPPED").contains(r.salaryVisibility()))
-            throw invalid("Choose how you would like to share your salary");
-        if (!SALARY_FREQUENCIES.contains(r.salaryFrequency())) throw invalid("Choose a salary frequency");
+            throw invalid("Choose how you would like to share your income");
+        if (!SALARY_FREQUENCIES.contains(r.salaryFrequency())) throw invalid("Choose an income frequency");
         if ("RANGE".equals(r.salaryVisibility()) && !RANGES.contains(r.salaryRange()))
-            throw invalid("Choose a salary range");
+            throw invalid("Choose a monthly income range");
         if ("EXACT".equals(r.salaryVisibility()) && positive(r.exactMonthlySalary(), "exactMonthlySalary") == null)
-            throw invalid("Enter a positive salary");
+            throw invalid("Enter a positive monthly income");
         UserIncomeProfileEntity p = profiles.findById(u.getId()).orElseGet(UserIncomeProfileEntity::new);
         // Authentication supplies a detached user in web requests; the shared primary key is all this profile needs.
         p.setUserId(u.getId());

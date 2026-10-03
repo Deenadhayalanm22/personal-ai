@@ -47,7 +47,7 @@ class ExpenseQueryPostgresTest {
         ownerCommitmentId = jdbc.queryForObject("INSERT INTO user_recurring_commitment(user_id,label,amount_mode,planning_amount,effective_month,status,created_at,updated_at) VALUES (?,?, 'FIXED',25000,date '2026-09-01','ACTIVE',now(),now()) RETURNING id", Long.class, owner.getId(), "Rent");
         ownerSavingsId = jdbc.queryForObject("INSERT INTO commitment_savings_plan(commitment_id,target_date,target_amount,start_month,monthly_amount,final_amount,used_amount,created_at) VALUES (?,date '2027-09-01',20000,date '2026-10-01',2000,2000,0,now()) RETURNING id", Long.class, ownerCommitmentId);
         long account = jdbc.queryForObject("INSERT INTO user_reference_entity(user_id,entity_type,canonical_name) VALUES (?, 'ACCOUNT', 'Primary account') RETURNING id", Long.class, owner.getId());
-        jdbc.update("INSERT INTO user_credit_card(user_id,account_reference_id,card_name,issuer_name,statement_day,due_day) VALUES (?,?,'Visa card','Example Bank',5,20)", owner.getId(), account);
+        jdbc.update("INSERT INTO user_credit_card(user_id,account_reference_id,card_name,issuer_name,statement_day,due_day,start_month) VALUES (?,?,'Visa card','Example Bank',5,20,date '2026-10-01')", owner.getId(), account);
 
     }
     @AfterAll static void cleanup() { if (jdbc != null) jdbc.execute("DROP SCHEMA " + schema + " CASCADE"); }
@@ -77,6 +77,8 @@ class ExpenseQueryPostgresTest {
         assertThat(records.read(owner, read("commitments", "records", null)).rows()).hasSize(1);
         assertThat(records.read(owner, read("savings", "records", null)).rows()).hasSize(1);
         assertThat(records.read(owner, read("credit_cards", "records", null)).rows()).hasSize(1);
+        assertThat(records.read(owner,read("credit_cards","records",null)).rows().getFirst()).containsEntry("start_month","2026-10");
+        assertThat(records.read(owner,read("accounts","records",null)).rows().getFirst()).containsEntry("account_type","CREDIT_CARD").doesNotContainKeys("balance","trackedBalance","moneyReceived");
         assertThat(records.read(owner, read("accounts", "records", null)).rows()).hasSize(1);
     }
     @Test void confirmedHoldingsExcludeScheduledAmountsAndPagingIsExplicit() {

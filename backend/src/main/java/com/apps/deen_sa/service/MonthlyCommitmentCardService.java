@@ -148,9 +148,9 @@ public class MonthlyCommitmentCardService {
         List<MonthlyCommitmentPresentationService.CardDto> cards = new ArrayList<>(List.of(card, nextCard));
         if (context.insights().isEmpty() && total.signum() > 0) {
             cards.add(new MonthlyCommitmentPresentationService.CardDto("commitment-context", cards.size() + 1, "CONTEXT", "CALM_CONTEXT",
-                    "OPTIONAL · PRIVATE", "Want a clearer monthly view?", "Add a salary range to see a private affordability lens for your commitments. "
+                    "OPTIONAL · PRIVATE", "Want a clearer monthly view?", "Add an income range to see a private affordability lens for your commitments. "
                     + "It never changes your balance or records an income transaction.", List.of(),
-                    List.of(new MonthlyCommitmentPresentationService.Action("OPEN_SALARY_OUTLOOK", "Add salary context"))));
+                    List.of(new MonthlyCommitmentPresentationService.Action("OPEN_SALARY_OUTLOOK", "Add income context"))));
         }
         var period = new MonthlyCommitmentPresentationService.PeriodDto("MONTH", month.atDay(1), month.atEndOfMonth(), monthLabel(month));
         var face = new MonthlyCommitmentPresentationService.CardFace(copy.heading(), value, copy.faceTheme());
@@ -178,14 +178,14 @@ public class MonthlyCommitmentCardService {
         if ("COMMITMENT_INCOME_EXACT".equals(insight.key())) {
             BigDecimal salary = (BigDecimal) insight.facts().get("monthlySalary");
             BigDecimal percent = commitment.multiply(BigDecimal.valueOf(100)).divide(salary, 1, java.math.RoundingMode.HALF_UP);
-            components.add(new MonthlyCommitmentPresentationService.Component("PERCENTAGE", "Of monthly salary", percent, null,
+            components.add(new MonthlyCommitmentPresentationService.Component("PERCENTAGE", "Of monthly income", percent, null,
                     percent.stripTrailingZeros().toPlainString() + "%"));
             BigDecimal difference = salary.subtract(commitment);
-            components.add(new MonthlyCommitmentPresentationService.Component("MONEY", "Salary after planned commitments", difference, currency,
+            components.add(new MonthlyCommitmentPresentationService.Component("MONEY", "Income after planned commitments", difference, currency,
                     CommitmentMoneyFormatter.money(difference.abs(), currency)));
             return;
         }
-        components.add(new MonthlyCommitmentPresentationService.Component("PRIVATE", "Salary context", null, null, "Range shared privately"));
+        components.add(new MonthlyCommitmentPresentationService.Component("PRIVATE", "Income context", null, null, "Range shared privately"));
     }
 
     private CommitmentCopyGenerator.Copy nextFallback(MonthlyFinancialSnapshotService.MonthlySnapshot snapshot, String currency) {

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
+import java.time.LocalDate;
 
 /** FIN-022 — a card billing cycle attached to the existing ACCOUNT reference used by expense capture. */
 @Entity
@@ -17,6 +18,7 @@ public class UserCreditCardEntity {
     @Column(name = "issuer_name", nullable = false, length = 120) private String issuerName;
     @Column(name = "statement_day", nullable = false) private int statementDay;
     @Column(name = "due_day", nullable = false) private int dueDay;
+    @Column(name = "start_month") private LocalDate startMonth;
     @Column(nullable = false) private boolean active = true;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt = Instant.now();
     @Column(name = "updated_at", nullable = false) private Instant updatedAt = Instant.now();

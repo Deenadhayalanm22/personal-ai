@@ -1,6 +1,6 @@
 {
   "name": "read_monthly_plan",
-  "description": "Read the canonical current/next month intended commitment plan across loans, SIPs, stock plans, commitments, credit cards and savings. Returns source keys, due dates and totals plus a backend-calculated salary surplus (positive) or shortfall (negative). Income amount stays masked: do not derive or disclose it. Range/missing/irregular salary yields null comparison. This is not remaining unpaid cash flow; do not sum other datasets into these totals. Get this plan before simulating adjustments.",
+  "description": "Read the canonical current/next month intended commitment plan across loans, SIPs, stock plans, commitments, credit cards and savings. Returns source keys, due dates and totals plus a backend-calculated income surplus (positive) or shortfall (negative). Income amount stays masked: do not derive or disclose it. Range/missing/irregular income yields null comparison. This is not remaining unpaid cash flow; do not sum other datasets into these totals. Get this plan before simulating adjustments.",
   "inputSchema": {
     "type": "object",
     "additionalProperties": false,

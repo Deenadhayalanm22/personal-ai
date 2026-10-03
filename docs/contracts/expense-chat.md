@@ -38,7 +38,7 @@ Read recorded, non-deleted expenses across a 1–366-day inclusive/exclusive ran
 
 Arguments: `{module,view,id,search,limit,offset}`. Modules: `loans`, `mutual_funds`, `stocks`, `commitments`, `credit_cards`, `savings`, `accounts`. `view` is `records` or `history`; history requires an owned parent ID and is unavailable for cards and account labels. `id` may be null for records. `search` is a literal case-insensitive name substring. `limit` is 1–50; `offset` is 0–10,000. Result: `{kind:"records",module,view,currency,matchingCount,rows,truncated,nextOffset,note}`. Page when truncated; do not treat one page as the whole portfolio.
 
-Investment record totals count only `CONFIRMED` transactions. Scheduled SIPs and stock plans are future allocations. These records expose saved invested amounts/units and plans, with no live market valuation, sale proceeds or available cash. Original loan principal is not the remaining loan balance. Account labels are not balances. Savings marked `SAVED` reflect user-recorded amounts set aside, not bank reconciliation. Do not sum these module records into the canonical monthly plan, which already contains their eligible planned sources.
+Investment record totals count only `CONFIRMED` transactions. Scheduled SIPs and stock plans are future allocations. These records expose saved invested amounts/units and plans, with no live market valuation, sale proceeds or available cash. Original loan principal is not the remaining loan balance. Account records provide saved labels and `account_type` (BANK, CREDIT_CARD or UNCONFIGURED); card records include issuer, generation/due days and optional `start_month` (YYYY-MM). These are user-supplied facts, not bank balances. Savings marked `SAVED` reflect user-recorded amounts set aside, not bank reconciliation. Do not sum these module records into the canonical monthly plan, which already contains their eligible planned sources.
 
 ### `read_monthly_plan`
 
@@ -102,3 +102,5 @@ No body. Uses a pessimistically locked owned `WEB_APP` extraction. ACTIVE/PENDIN
 ### POST /api/web/expense-chat/capture/{extractionId}/cancel
 
 No body. ACTIVE/PENDING becomes REJECTED/CANCELLED; returns `{status:"CANCELLED"}`. Repeating cancellation succeeds without effects. Confirming a cancelled preview or cancelling a recorded one returns `409 CAPTURE_CLOSED`. Foreign/profile-switched/WhatsApp IDs return `404 CAPTURE_NOT_FOUND` for either action. Confirmation always uses persisted preview fields, never browser/model-supplied replacement fields.
+
+Income comparisons now describe the user’s combined monthly income estimate, including any income sources they choose to include. The legacy salary-named stored fields remain compatible; the numeric difference and masking rules are unchanged.

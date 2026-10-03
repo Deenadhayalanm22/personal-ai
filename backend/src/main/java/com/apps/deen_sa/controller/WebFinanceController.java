@@ -201,6 +201,13 @@ public class WebFinanceController {
     @PostMapping("/recurring-commitments/{id}/savings/skip")
     public CommitmentSavingsService.PlanView skipSavings(@CookieValue(name = SESSION_COOKIE, required = false) String token, @PathVariable Long id, @RequestBody CommitmentSavingsService.EntryRequest request) { return webManager.skipSavings(token, id, request); }
 
+    @GetMapping("/accounts")
+    public WebAccountService.AccountList accounts(@CookieValue(name=SESSION_COOKIE,required=false) String token) { return webManager.accounts(token); }
+    @PostMapping("/accounts")
+    public WebAccountService.AccountView createAccount(@CookieValue(name=SESSION_COOKIE,required=false) String token,@RequestBody WebAccountService.AccountRequest request) { return webManager.createAccount(token,request); }
+    @PatchMapping("/accounts/{id}")
+    public WebAccountService.AccountView configureAccount(@CookieValue(name=SESSION_COOKIE,required=false) String token,@PathVariable Long id,@RequestBody WebAccountService.AccountRequest request) { return webManager.configureAccount(token,id,request); }
+
     @GetMapping("/credit-card-bills")
     public CreditCardBillService.BillList creditCardBills(@CookieValue(name = SESSION_COOKIE, required = false) String token,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) { return webManager.creditCardBills(token, month); }

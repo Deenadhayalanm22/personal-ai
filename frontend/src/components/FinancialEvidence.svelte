@@ -24,7 +24,7 @@
       <tbody><tr><th>Planned total</th><td>{money(source.baselineTotal)}</td>{#if source.kind === 'scenario'}<td>{money(source.proposedTotal)}</td>{/if}</tr>
       <tr><th>Against salary estimate</th><td>{gap(source.baselineAfterIncome)}</td>{#if source.kind === 'scenario'}<td>{gap(source.proposedAfterIncome)}</td>{/if}</tr></tbody>
     </table></div>
-    {#if source.incomeStatus !== 'EXACT_MONTHLY_ESTIMATE'}<span>Share an exact, regular monthly salary estimate in Your money to compare it with this plan.</span>{/if}
+    {#if source.incomeStatus !== 'EXACT_MONTHLY_ESTIMATE'}<span>Share an exact, monthly income estimate in Your money to compare it with this plan.</span>{/if}
     {#each source.items as item}
       <div class="plan-item"><strong>{item.label}</strong><span>{item.dueDate || 'Date not recorded'} · {money(item.baseline)}{#if item.reduction > 0} → {money(item.proposed)}{/if}</span><small>{item.condition}</small></div>
     {/each}

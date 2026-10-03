@@ -76,3 +76,7 @@ A recurring payment is an expense transaction with an explicit occurrence/extra 
 **You → Manage names** exposes the existing reference list, add-alias and same-type merge workflow in the frontend. The V1 transaction-workspace cleanup shortcut remains available. Merchant/account merges repoint historical expenses; beneficiary merges consolidate aliases only. Confirmation resolves active canonical names and preserved aliases again so a name merged after preview does not attach a new expense to an inactive reference. Verify profile-scoped lookup and merge-during-preview with `CaptureReferenceMergeTest` and browser name-management access checks.
 
 Name management uses its dedicated stylesheet. Beneficiary labels and merge notices explicitly describe aliases rather than claiming expense reassignment.
+
+## Configured account identity
+
+FIN-025 reuses the expense ACCOUNT reference for bank/debit or credit-card configuration. Generic account merging rejects configured bank or card references with `409 CONFIGURED_ACCOUNT_MERGE`, including a configured named canonical target, preserving account identity, billing cycle and expense links. Unconfigured account and merchant/beneficiary merge rules stay as specified above; aliases may still be added to configured accounts. `WebAccountsPostgresTest` verifies configured references cannot be merged and foreign account IDs cannot be used in account configuration.

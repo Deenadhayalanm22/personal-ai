@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 @Service
 public class MonthlyFinancialSnapshotService {
-    private static final int CALCULATION_VERSION = 13;
+    private static final int CALCULATION_VERSION = 14;
     private final MonthlyFinancialSnapshotRepository snapshots;
     private final UserLoanRepository loans;
     private final UserInvestmentRepository investments;
@@ -115,6 +115,7 @@ public class MonthlyFinancialSnapshotService {
                                 due, commitment.getCategory() == null ? "Essential living" : commitment.getCategory(),
                                 savingsDetail(commitment), null, null, null))).toList();
         List<Source> cardBills = (creditCards == null || transactions == null ? List.<com.apps.deen_sa.entity.UserCreditCardEntity>of() : creditCards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(user.getId())).stream()
+                .filter(card -> CreditCardBillService.includesMonth(card,month))
                 .map(card -> creditCardSource(user, card, month)).filter(source -> source.plannedAmount().signum() > 0).toList();
         List<Source> saving = (savingsPlans == null || savingsEntries == null ? List.<com.apps.deen_sa.entity.CommitmentSavingsPlanEntity>of() : savingsPlans.findByCommitmentUserId(user.getId())).stream()
                 .filter(plan -> plan.getCommitment().getStatus() == com.apps.deen_sa.domain.RecurringCommitmentStatus.ACTIVE)

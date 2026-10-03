@@ -1,6 +1,6 @@
 <script>
   export let card;
-  const hidden = new Set(['Loan payment progress', 'This month', 'SIP allocations complete', 'Recurring commitments complete', 'Card bills settled', 'Of monthly salary', 'Salary context', 'Salary after planned commitments']);
+  const hidden = new Set(['Loan payment progress', 'This month', 'SIP allocations complete', 'Recurring commitments complete', 'Card bills settled', 'Of monthly salary', 'Salary context', 'Salary after planned commitments', 'Of monthly income', 'Income context', 'Income after planned commitments']);
   const colors = ['#507d68', '#678a9c', '#b39a53', '#ae7963', '#8577a1', '#71937f'];
   const clamp = value => Math.min(100, Math.max(0, value));
   $: components = card?.components || [];
@@ -12,9 +12,9 @@
   $: sipPaid = Number(components.find(item => item.label === 'SIP allocations complete')?.value || 0);
   $: cardPaid = Number(components.find(item => item.label === 'Card bills settled')?.value || 0);
   $: recurringPaid = Number(components.find(item => item.label === 'Recurring commitments complete')?.value || 0);
-  $: salary = components.find(item => item.label === 'Of monthly salary' || item.label === 'Salary context');
-  $: salaryPercent = salary?.label === 'Of monthly salary' ? Number(salary.value) : null;
-  $: salaryDifference = components.find(item => item.label === 'Salary after planned commitments');
+  $: salary = components.find(item => ['Of monthly salary','Salary context','Of monthly income','Income context'].includes(item.label));
+  $: salaryPercent = ['Of monthly salary','Of monthly income'].includes(salary?.label) ? Number(salary.value) : null;
+  $: salaryDifference = components.find(item => ['Salary after planned commitments','Income after planned commitments'].includes(item.label));
   $: remaining = salaryPercent === null ? null : Math.max(0, 100 - salaryPercent);
   $: shortage = salaryPercent === null ? null : Math.max(0, salaryPercent - 100);
   $: estimatedDifference = salaryPercent > 0 ? total * (100 / salaryPercent - 1) : null;
@@ -25,10 +25,10 @@
 {#if buckets.length}
   {#if total > 0}
     <div class="salary-allocation">
-      <div class="salary-allocation-heading"><strong>{salaryPercent === null ? "Monthly plan breakdown" : "Monthly salary estimate"}</strong><span>100%</span></div>
-      <div class="salary-allocation-track" role="img" aria-label={salaryPercent === null ? "Planned commitment breakdown totaling 100%" : `Planned commitments use ${salaryPercent}% of monthly salary estimate`}>
+      <div class="salary-allocation-heading"><strong>{salaryPercent === null ? "Monthly plan breakdown" : "Monthly income estimate"}</strong><span>100%</span></div>
+      <div class="salary-allocation-track" role="img" aria-label={salaryPercent === null ? "Planned commitment breakdown totaling 100%" : `Planned commitments use ${salaryPercent}% of monthly income estimate`}>
         {#each buckets as item, index}
-          <i style={`width:${Number(item.value) / total * (salaryPercent === null ? 100 : salaryPercent / Math.max(100, salaryPercent) * 100)}%;background:${colors[index % colors.length]}`} title={`${item.label}: ${Math.round(Number(item.value) / total * (salaryPercent === null ? 100 : salaryPercent))}% of ${salaryPercent === null ? "plan" : "salary"}`}></i>
+          <i style={`width:${Number(item.value) / total * (salaryPercent === null ? 100 : salaryPercent / Math.max(100, salaryPercent) * 100)}%;background:${colors[index % colors.length]}`} title={`${item.label}: ${Math.round(Number(item.value) / total * (salaryPercent === null ? 100 : salaryPercent))}% of ${salaryPercent === null ? "plan" : "income"}`}></i>
         {/each}
         {#if remaining !== null && remaining > 0}<i class="salary-unallocated" style={`width:${remaining}%`} title={`${remaining.toFixed(1)}% unallocated`}></i>{/if}
       </div>
@@ -38,9 +38,9 @@
         {/each}
       </div>
       {#if salaryPercent !== null}<p>
-        {#if salaryDifference && Number(salaryDifference.value) < 0}<strong class="salary-shortage">Short by {salaryDifference.displayValue} ({shortage.toFixed(1)}% of salary)</strong>
+        {#if salaryDifference && Number(salaryDifference.value) < 0}<strong class="salary-shortage">Short by {salaryDifference.displayValue} ({shortage.toFixed(1)}% of income)</strong>
         {:else if salaryDifference}<strong>{salaryDifference.displayValue} left after planned commitments</strong>
-        {:else if estimatedDifference !== null && estimatedDifference < 0}<strong class="salary-shortage">Short by about {estimateCurrency.format(Math.abs(estimatedDifference))} ({shortage.toFixed(1)}% of salary)</strong>
+        {:else if estimatedDifference !== null && estimatedDifference < 0}<strong class="salary-shortage">Short by about {estimateCurrency.format(Math.abs(estimatedDifference))} ({shortage.toFixed(1)}% of income)</strong>
         {:else if estimatedDifference !== null}<strong>About {estimateCurrency.format(estimatedDifference)} left after planned commitments</strong>{/if}
         <span>Salary is an estimate, not an account balance.</span>
       </p>{/if}
@@ -54,10 +54,10 @@
       <div class:complete={hasCompletion && percent >= 100} class:started={hasCompletion && percent > 0 && percent < 100} class:planned={!hasCompletion} class="commitment-progress-row">
         <div class="commitment-progress-heading"><span>{item.label}</span><strong>{item.displayValue}</strong></div>
         <div class="commitment-progress-track" role="progressbar" aria-label={`${item.label}: ${hasCompletion ? 'completed' : 'planned amount'}`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(percent)}><i style={`width:${percent}%`}></i></div>
-        {#if item.label === 'Credit-card bills'}<small>Purchases already counted in spending · record bill payment on Home</small>{/if}
-        <small>{hasCompletion ? `${Math.round(percent)}% completed` : item.label === 'Credit-card bills' ? '100% planned · see recorded payments on Home' : '100% planned · payment not tracked'}</small>
+        {#if item.label === 'Credit-card bills'}<small>Purchases already counted in spending · record bill payment in Accounts</small>{/if}
+        <small>{hasCompletion ? `${Math.round(percent)}% completed` : item.label === 'Credit-card bills' ? '100% planned · see recorded payments in Accounts' : '100% planned · payment not tracked'}</small>
       </div>
     {/each}
   </div>
-  {#if salary && salaryPercent === null}<p class="commitment-salary">{salary.label}: <strong>{salary.displayValue}</strong></p>{/if}
+  {#if salary && salaryPercent === null}<p class="commitment-salary">Income context: <strong>{salary.displayValue}</strong></p>{/if}
 {/if}

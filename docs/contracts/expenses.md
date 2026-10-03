@@ -45,3 +45,5 @@ Add expense defaults to Enter manually in the frontend. The form provides amount
 `creditCardSpend` is the included subtotal of visible purchase transactions against configured card accounts (including inactive configurations for historical labelling). It is not added to totalSpend. Card bill payments live in separate storage and are excluded from spending counts, category totals and calendar intensity. CARD_PAYMENT activity uses the actual payment date and explains that purchases were already counted in spending.
 
 Configured-card purchase Activity rows say “On credit card · bill paid separately”; ordinary purchases retain “Recorded expense”.
+
+Unified Accounts reuses account IDs/names returned by expense options; configured names are immediately selectable. Setup provides identity/type and card-cycle context, without recording received money or computing bank balances. Card settlements remain separate from expense totals and counts.

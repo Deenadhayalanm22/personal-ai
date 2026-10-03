@@ -87,7 +87,7 @@ public class MonthlyPlanningTool {
                 List.copyOf(buckets), List.copyOf(items), List.of(
                 "Monthly intended plan, not unpaid balance or a bank cash-flow forecast. Paid and planned items follow the existing Monthly Commitment calculation.",
                 "Additional living costs and unrecorded obligations are not included. Do not add historic expenses, card charges, holdings or savings balances to this total.",
-                "Income comparison uses a private monthly estimate, not confirmed salary receipt. No exact comparison is available for a range, missing or irregular income.",
+                "Income comparison uses a private monthly estimate, not confirmed money received. No exact comparison is available for a range, missing or irregular income.",
                 scenario ? "Hypothetical only: no records changed. Reduced savings or investing affect future targets; deferred commitments remain obligations." : "Review source details before treating a planned allocation as adjustable."));
     }
     private YearMonth current(AppUserEntity user) { return YearMonth.now(clock.withZone(ZoneId.of(user.getTimezone()))); }

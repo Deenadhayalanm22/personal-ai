@@ -58,6 +58,7 @@ class CreditCardBillPostgresTest {
     }
     @BeforeEach void reset() {
         jdbc.update("DELETE FROM credit_card_bill_payment");jdbc.update("DELETE FROM financial_transaction");jdbc.update("DELETE FROM transaction_draft");
+        jdbc.update("UPDATE user_credit_card SET start_month=NULL WHERE id=?",cardId);
         purchase("2026-10-01", "2000");purchase("2026-10-27", "3000");
         purchase("2026-10-28", "700"); // next statement, excluded from November bill
     }
@@ -71,6 +72,23 @@ class CreditCardBillPostgresTest {
     CreditCardBillService.Bill record(CreditCardBillService.PaymentRequest r) {
         return tx.execute(status->service.record(owner,cardId,r));
     }
+    @Test void startMonthScopesBillsButNotPurchaseMonthSpending() {
+        purchase("2026-11-01","900");
+        jdbc.update("UPDATE user_credit_card SET start_month=date '2026-11-01' WHERE id=?",cardId);
+        var october=tx.execute(status->service.list(owner,YearMonth.of(2026,10)));
+        assertThat(october.bills()).isEmpty();
+        var november=tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst();
+        assertThat(november.projectedAmount()).isEqualByComparingTo("5000");
+        assertThat(november.monthlyPurchaseAmount()).isEqualByComparingTo("900");
+        assertThatThrownBy(()->record(request("2026-10","1","2026-10-05"))).isInstanceOf(WebApiException.class).hasMessageContaining("start month");
+        record(request("2026-11","2000","2026-11-01"));
+        assertThat(tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst().monthlyPurchaseAmount()).isEqualByComparingTo("900");
+        var repos=new JpaRepositoryFactory(SharedEntityManagerCreator.createSharedEntityManager(emf));
+        var profiles=new WebCreditCardService(repos.getRepository(UserCreditCardRepository.class),repos.getRepository(UserReferenceEntityRepository.class),mock(MonthlyFinancialSnapshotService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(profiles,"jdbc",jdbc);
+        assertThatThrownBy(()->tx.execute(status->profiles.update(owner,cardId,new WebCreditCardService.CardRequest(null,null,null,null,null,null,"2026-12")))).isInstanceOf(WebApiException.class).hasMessageContaining("cannot change");
+    }
+
     @Test void partialThenFullSettlementChangesDueAmountButNeverSpending() {
         var first=request("2026-11","2000","2026-11-01");
         var partial=record(first);

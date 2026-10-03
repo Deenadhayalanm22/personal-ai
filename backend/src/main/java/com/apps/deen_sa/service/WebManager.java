@@ -38,6 +38,7 @@ public class WebManager {
     @Autowired private CommitmentSavingsService savings;
     @Autowired private FinancialActivityService activity;
     @Autowired private CreditCardBillService cardBills;
+    @Autowired private WebAccountService accounts;
 
     @Autowired
     public WebManager(WebAuthenticationService authentication, WebLoginRequestService loginRequests,
@@ -194,6 +195,9 @@ public class WebManager {
     public CommitmentSavingsService.PlanView createSavingsPlan(String token, Long id, CommitmentSavingsService.CreateRequest request) { return savings.create(authentication.authenticate(token), id, request); }
     public CommitmentSavingsService.PlanView recordSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.record(authentication.authenticate(token), id, request); }
     public CommitmentSavingsService.PlanView skipSavings(String token, Long id, CommitmentSavingsService.EntryRequest request) { return savings.skip(authentication.authenticate(token), id, request); }
+    public WebAccountService.AccountList accounts(String token) { return accounts.list(authentication.authenticate(token)); }
+    public WebAccountService.AccountView createAccount(String token, WebAccountService.AccountRequest request) { return accounts.create(authentication.authenticate(token),request); }
+    public WebAccountService.AccountView configureAccount(String token,Long id, WebAccountService.AccountRequest request) { return accounts.configure(authentication.authenticate(token),id,request); }
     public CreditCardBillService.BillList creditCardBills(String token, YearMonth month) {
         var user = authentication.authenticate(token);
         return cardBills.list(user, month == null ? YearMonth.now(ZoneId.of(user.getTimezone())) : month);

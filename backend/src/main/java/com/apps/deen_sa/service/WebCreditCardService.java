@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.time.YearMonth;
+import java.time.LocalDate;
 import java.util.List;
 
 /** FIN-022 — user-configured statement cycles for named credit-card account references. */
@@ -23,26 +25,38 @@ public class WebCreditCardService {
     @Transactional public CardResponse update(AppUserEntity user, Long id, CardRequest request) { UserCreditCardEntity card = cards.findOwnedForUpdate(id, user.getId()).orElseThrow(() -> notFound()); apply(user, card, request, false); cards.saveAndFlush(card); snapshots.refreshCurrent(user); return response(card); }
     private void apply(AppUserEntity user, UserCreditCardEntity card, CardRequest r, boolean create) {
         if (r == null) throw invalid("Credit-card details are required");
+        LocalDate startMonth=r.startMonth()==null?card.getStartMonth():parseStartMonth(r.startMonth());
         if (!create && jdbc != null) {
             boolean changesCycle = (r.accountReferenceId() != null && !r.accountReferenceId().equals(card.getAccountReference().getId()))
                     || (r.statementDay() != null && r.statementDay() != card.getStatementDay())
-                    || (r.dueDay() != null && r.dueDay() != card.getDueDay());
+                    || (r.dueDay() != null && r.dueDay() != card.getDueDay())
+                    || !java.util.Objects.equals(startMonth,card.getStartMonth());
             if (changesCycle && jdbc.queryForObject("SELECT COUNT(*) FROM credit_card_bill_payment WHERE card_id = ?", Long.class, card.getId()) > 0)
                 throw invalid("Billing account and cycle cannot change after payments have been recorded");
         }
         if (r.accountReferenceId() != null) card.setAccountReference(references.findByIdAndUserIdAndEntityTypeAndActiveTrue(r.accountReferenceId(), user.getId(), UserReferenceEntityType.ACCOUNT).orElseThrow(() -> invalid("Choose an existing account reference for this card"))); else if (create) throw invalid("Choose the account used in your expense messages");
+        if(jdbc!=null && jdbc.queryForObject("SELECT COUNT(*) FROM bank_account_profile WHERE account_reference_id=?",Long.class,card.getAccountReference().getId())>0)
+            throw invalid("This account is configured as bank/debit; choose a credit-card account");
         if (r.cardName() != null) card.setCardName(text(r.cardName(), "Card name")); else if (create) throw invalid("Card name is required");
         if (r.issuerName() != null) card.setIssuerName(text(r.issuerName(), "Issuer")); else if (create) throw invalid("Issuer is required");
         if (r.statementDay() != null) card.setStatementDay(day(r.statementDay(), "Statement day")); else if (create) throw invalid("Statement day is required");
         if (r.dueDay() != null) card.setDueDay(day(r.dueDay(), "Due day")); else if (create) throw invalid("Due day is required");
+        card.setStartMonth(startMonth);
         if (r.active() != null) card.setActive(r.active()); card.setUpdatedAt(Instant.now());
+    }
+    public static LocalDate parseStartMonth(String value) {
+        if(value.isEmpty())return null; // Explicit clear; null on a partial update preserves the saved fact.
+        try {if(!value.matches("[0-9]{4}-[0-9]{2}"))throw new IllegalArgumentException();var month=YearMonth.parse(value);if(month.getYear()<1)throw new IllegalArgumentException();return month.atDay(1);}
+        catch(RuntimeException cause){throw new WebApiException(HttpStatus.BAD_REQUEST,"INVALID_CREDIT_CARD","Start month must be YYYY-MM");}
     }
     private String text(String value, String label) { if (value == null || value.trim().isEmpty() || value.trim().length() > 120) throw invalid(label + " must be 1 to 120 characters"); return value.trim(); }
     private int day(int value, String label) { if (value < 1 || value > 28) throw invalid(label + " must be between 1 and 28"); return value; }
-    private CardResponse response(UserCreditCardEntity c) { return new CardResponse(c.getId(), c.getAccountReference().getId(), c.getAccountReference().getCanonicalName(), c.getCardName(), c.getIssuerName(), c.getStatementDay(), c.getDueDay(), c.isActive()); }
+    private CardResponse response(UserCreditCardEntity c) { return new CardResponse(c.getId(), c.getAccountReference().getId(), c.getAccountReference().getCanonicalName(), c.getCardName(), c.getIssuerName(), c.getStatementDay(), c.getDueDay(), c.isActive(), c.getStartMonth()==null?null:YearMonth.from(c.getStartMonth()).toString()); }
     private WebApiException invalid(String message) { return new WebApiException(HttpStatus.BAD_REQUEST, "INVALID_CREDIT_CARD", message); }
     private WebApiException notFound() { return new WebApiException(HttpStatus.NOT_FOUND, "CREDIT_CARD_NOT_FOUND", "Credit card not found"); }
-    public record CardRequest(Long accountReferenceId, String cardName, String issuerName, Integer statementDay, Integer dueDay, Boolean active) { }
-    public record CardResponse(Long id, Long accountReferenceId, String accountName, String cardName, String issuerName, int statementDay, int dueDay, boolean active) { }
+    public record CardRequest(Long accountReferenceId, String cardName, String issuerName, Integer statementDay, Integer dueDay, Boolean active, String startMonth) {
+        public CardRequest(Long accountReferenceId,String cardName,String issuerName,Integer statementDay,Integer dueDay,Boolean active){this(accountReferenceId,cardName,issuerName,statementDay,dueDay,active,null);}
+    }
+    public record CardResponse(Long id, Long accountReferenceId, String accountName, String cardName, String issuerName, int statementDay, int dueDay, boolean active, String startMonth) { }
     public record CardListResponse(List<CardResponse> cards) { }
 }

@@ -76,4 +76,19 @@ class MonthlyFinancialSnapshotCreditCardTest {
         assertThat(CreditCardBillService.statementEnd(card,YearMonth.of(2026,12))).isEqualTo(LocalDate.of(2026,11,30));
         assertThat(CreditCardBillService.statementEnd(card,YearMonth.of(2028,3))).isEqualTo(LocalDate.of(2028,2,29));
     }
+    @Test void startsIncludingBillsInTheConfiguredDueMonth() {
+        var snapshots=mock(MonthlyFinancialSnapshotRepository.class);
+        var cards=mock(UserCreditCardRepository.class);var transactions=mock(FinancialTransactionRepository.class);
+        var user=new AppUserEntity();user.setId(9L);user.setCurrency("INR");user.setTimezone("Asia/Kolkata");
+        var ref=new UserReferenceEntity();ref.setId(31L);
+        var card=new UserCreditCardEntity();card.setId(4L);card.setAccountReference(ref);card.setCardName("Visa");card.setIssuerName("HDFC");card.setStatementDay(1);card.setDueDay(21);card.setStartMonth(LocalDate.of(2026,11,1));
+        when(cards.findByUserIdAndActiveTrueOrderByCreatedAtDesc(9L)).thenReturn(List.of(card));
+        when(transactions.sumVisibleByAccountAndPeriod(eq(9L),eq(31L),any(),any())).thenReturn(new BigDecimal("480"));
+        var service=new MonthlyFinancialSnapshotService(snapshots,mock(UserLoanRepository.class),mock(UserInvestmentRepository.class),mock(UserRecurringCommitmentRepository.class),cards,transactions,Clock.fixed(Instant.parse("2026-10-02T00:00:00Z"),ZoneOffset.UTC));
+        assertThat(service.current(user).fullIntendedCommitment()).isZero();
+        verifyNoInteractions(transactions);
+        assertThat(service.next(user).fullIntendedCommitment()).isEqualByComparingTo("480");
+        verify(transactions).sumVisibleByAccountAndPeriod(9L,31L,LocalDate.of(2026,10,1),LocalDate.of(2026,11,1));
+    }
+
 }
