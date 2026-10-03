@@ -16,11 +16,11 @@
   <section class="home-section" aria-label="Credit-card bills"><div class="section-title"><h2>Credit-card bills · {monthLabel(month)}</h2></div>
     <p class="module-reassurance">For purchases already counted in spending. Recording a bill payment adds no new expense.</p>
     {#if status==='error'}<p class="form-error">{error}</p><button class="secondary" on:click={onRetry}>Retry card bills</button>{/if}
-    {#if status==='loading'}<p>Loading card bills…</p>{:else if status!=='error'&&!bills.some(bill=>Number(bill.projectedAmount)>0||Number(bill.paidAmount)>0||Number(bill.monthlyPurchaseAmount)>0)}<p>No captured bills for this month.</p>{/if}
-    {#each bills.filter(bill=>Number(bill.projectedAmount)>0||Number(bill.paidAmount)>0||Number(bill.monthlyPurchaseAmount)>0) as bill}
-      <article class="card-bill-panel"><header class="card-bill-heading"><div><p class="micro-label">{bill.statementClosed?'BILL PAYMENT':'UPCOMING BILL'}</p><h3>{bill.cardName}</h3></div><span class="card-bill-state">{!bill.statementClosed?'Projected':Number(bill.remaining)>0?'Payment pending':'Settled'}</span></header>
+    {#if status==='loading'}<p>Loading card bills…</p>{:else if status!=='error'&&!bills.length}<p>No captured bills for this month.</p>{/if}
+    {#each bills as bill}
+      <article class="card-bill-panel"><header class="card-bill-heading"><div><p class="micro-label">{bill.statementClosed?'BILL PAYMENT':'UPCOMING BILL'}</p><h3>{bill.cardName}</h3></div><span class="card-bill-state">{!bill.statementClosed?'Projected':Number(bill.remaining)>0?'Payment pending':Number(bill.paidAmount)>0?'Captured purchases covered':'No purchases captured'}</span></header>
       <CardBillVisual {bill} {currency}/>
-      <div class="card-bill-actions"><strong>{moneyDecimal(bill.remaining)} remaining</strong>{#if Number(bill.remaining)>0}<button class="primary" disabled={connectionStatus!=='online'||!bill.statementClosed} on:click={()=>onPay(bill)}>Record bill payment</button>{:else}<span>Settled</span>{/if}</div>
+      <div class="card-bill-actions"><strong>{moneyDecimal(bill.remaining)} remaining</strong><button class="primary" disabled={connectionStatus!=='online'||!bill.statementClosed} on:click={()=>onPay(bill)}>Record bill payment</button></div>
       {#if !bill.statementClosed}<small>Projection · statement not closed yet</small>{/if}
       {#if bill.payments?.length}<details class="card-bill-history"><summary>Payment history</summary>{#each bill.payments as payment}<p>{dateLabel(payment.paidAt)} · {moneyDecimal(payment.amount)} paid</p>{/each}</details>{/if}</article>
     {/each}

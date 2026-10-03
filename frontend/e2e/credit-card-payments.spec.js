@@ -63,9 +63,9 @@ for (const width of [1280, 375]) {
     await expect(activity.getByRole('button',{name:/Edit Millennia|Delete Millennia/})).toHaveCount(0);
     await bills.getByRole('button',{name:'Record bill payment'}).click();
     await dialog.getByRole('button',{name:'Confirm bill payment'}).click();
-    await expect(bills).toContainText('Settled');
+    await expect(bills).toContainText('Captured purchases covered');
     await expect(bills.getByRole('progressbar')).toHaveAttribute('aria-valuenow','100');
-    await expect(bills.getByRole('button',{name:'Record bill payment'})).toHaveCount(0);
+    await expect(bills.getByRole('button',{name:'Record bill payment'})).toBeEnabled();
     await bills.getByText('Payment history',{exact:true}).click();
     await expect(bills).toContainText('₹2,000.00 paid');
     await expect(bills).toContainText('₹3,000.00 paid');
@@ -99,3 +99,43 @@ test('open statement remains a projection with settlement disabled',async({page}
   await expect(bills).toContainText('Amount can change until this date');
   await expect(bills.getByRole('button',{name:'Record bill payment'})).toBeDisabled();
 });
+
+for (const width of [1280,375]) {
+  test(`actual payment above captured purchases retains difference at ${width}px`,async({page})=>{
+    await page.setViewportSize({width,height:900});
+    await page.clock.install({time:new Date('2026-11-05T06:00:00Z')});
+    const payments=[];
+    const bill=()=>{const paid=payments.reduce((sum,p)=>sum+p.amount,0);return {cardId:4,cardName:'Millennia',month:'2026-11',periodStart:'2026-10-01',statementEnd:'2026-10-31',statementGeneratedAt:'2026-11-01',dueDate:'2026-11-21',projectedAmount:75000,monthlyPurchaseAmount:0,paidAmount:paid,remaining:Math.max(75000-paid,0),unmatchedPaymentAmount:Math.max(paid-75000,0),statementClosed:true,payments};};
+    await page.route('**/api/web/**',async route=>{
+      const path=new URL(route.request().url()).pathname;
+      let json={items:[],actions:[],loans:[],mutualFunds:[],stocks:[],cards:[],accounts:[]};
+      if(path.endsWith('/demo-profile'))json={demoMode:false,canUseDemoMode:false};
+      if(path.endsWith('/calendar'))json={month:'2026-11',currency:'INR',timezone:'Asia/Kolkata',totalSpend:0,days:[]};
+      if(path.endsWith('/monthly-commitment'))json={commitment:null};
+      if(path.endsWith('/credit-card-bills'))json={bills:[bill()]};
+      if(path.endsWith('/payments')){const body=route.request().postDataJSON();payments.push({id:payments.length+1,amount:body.amount,paidAt:body.paidAt});json=bill();}
+      await route.fulfill({json});
+    });
+    await page.route('**/health',route=>route.fulfill({json:{status:'UP'}}));
+    await page.goto('/dashboard?month=2026-11');
+    await page.getByRole('button',{name:'View credit-card bills →'}).click();
+    const bills=page.getByRole('region',{name:'Credit-card bills',exact:true});
+    await bills.getByRole('button',{name:'Record bill payment'}).click();
+    const dialog=page.getByRole('dialog',{name:'Record bill payment'});
+    await dialog.getByLabel('Amount paid').fill('88000');
+    await dialog.getByRole('button',{name:'Confirm bill payment'}).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(bills.getByRole('note')).toContainText('Unmatched payment · ₹13,000.00');
+    await expect(bills.getByRole('progressbar')).toHaveAttribute('aria-valuenow','100');
+    await expect(bills).toContainText('₹0.00 remaining');
+    await bills.getByText('Payment history',{exact:true}).click();
+    await expect(bills).toContainText('₹88,000.00 paid');
+    expect(payments[0].amount).toBe(88000);
+    await bills.getByRole('button',{name:'Record bill payment'}).click();
+    await expect(dialog.getByLabel('Amount paid')).toHaveValue('');
+    await dialog.getByLabel('Amount paid').fill('500');
+    await dialog.getByRole('button',{name:'Confirm bill payment'}).click();
+    await expect(bills.getByRole('note')).toContainText('₹13,500.00');
+    expect(payments).toHaveLength(2);
+  });
+}

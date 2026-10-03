@@ -63,7 +63,7 @@ public class CreditCardBillService {
         var history = jdbc.query("SELECT id, paid_at, amount FROM credit_card_bill_payment WHERE card_id = ? AND statement_end = ? ORDER BY paid_at DESC, id DESC",
                 (rs, row) -> new Payment(rs.getLong("id"), rs.getDate("paid_at").toLocalDate(), rs.getBigDecimal("amount")), card.getId(), java.sql.Date.valueOf(end));
         return new Bill(card.getId(), card.getCardName(), month.toString(), start, end, month.atDay(card.getDueDay()),
-                projected, paid, projected.subtract(paid).max(BigDecimal.ZERO), end.isBefore(today(user)), history, end.plusDays(1), monthlyPurchases);
+                projected, paid, projected.subtract(paid).max(BigDecimal.ZERO), end.isBefore(today(user)), history, end.plusDays(1), monthlyPurchases, paid.subtract(projected).max(BigDecimal.ZERO));
     }
 
     @Transactional
@@ -88,9 +88,7 @@ public class CreditCardBillService {
             return bill(user, card, month);
         }
         if(!includesMonth(card,month))throw invalid("This bill is before the card’s start month");
-        var current = bill(user, card, month);
         if (!end.isBefore(today(user)) || !request.paidAt().isAfter(end)) throw invalid("Record a payment on or after the bill generation date");
-        if (amount.compareTo(current.remaining()) > 0) throw invalid("Payment cannot exceed the remaining captured bill amount");
         jdbc.update("INSERT INTO credit_card_bill_payment(card_id, due_month, statement_end, paid_at, amount, request_id) VALUES (?, ?, ?, ?, ?, ?)",
                 id, java.sql.Date.valueOf(month.atDay(1)), java.sql.Date.valueOf(end), java.sql.Date.valueOf(request.paidAt()), amount, request.requestId());
         return bill(user, card, month);
@@ -107,6 +105,6 @@ public class CreditCardBillService {
     public record Payment(Long id, LocalDate paidAt, BigDecimal amount) {}
     public record Bill(Long cardId, String cardName, String month, LocalDate periodStart, LocalDate statementEnd,
                        LocalDate dueDate, BigDecimal projectedAmount, BigDecimal paidAmount, BigDecimal remaining,
-                       boolean statementClosed, List<Payment> payments, LocalDate statementGeneratedAt, BigDecimal monthlyPurchaseAmount) {}
+                       boolean statementClosed, List<Payment> payments, LocalDate statementGeneratedAt, BigDecimal monthlyPurchaseAmount, BigDecimal unmatchedPaymentAmount) {}
     public record BillList(String month, List<Bill> bills) {}
 }

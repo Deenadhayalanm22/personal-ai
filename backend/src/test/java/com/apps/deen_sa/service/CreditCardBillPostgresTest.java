@@ -116,11 +116,36 @@ class CreditCardBillPostgresTest {
         var corrected=tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst();
         assertThat(corrected.paidAmount()).isEqualByComparingTo("5000");assertThat(corrected.remaining()).isZero();
     }
+    @Test void actualPaymentRetainsDifferenceAndLaterPurchasesReconcileIt() {
+        jdbc.update("UPDATE financial_transaction SET amount=72000 WHERE occurred_at=date '2026-10-27'");
+        purchase("2026-10-15","1000");
+        var request=request("2026-11","88000","2026-11-01");
+        var paid=record(request);
+        assertThat(paid.projectedAmount()).isEqualByComparingTo("75000");
+        assertThat(paid.paidAmount()).isEqualByComparingTo("88000");
+        assertThat(paid.unmatchedPaymentAmount()).isEqualByComparingTo("13000");
+        assertThat(paid.remaining()).isZero();
+        assertThat(record(request).payments()).hasSize(1);
+        purchase("2026-10-16","10000");
+        var corrected=tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst();
+        assertThat(corrected.unmatchedPaymentAmount()).isEqualByComparingTo("3000");
+        assertThat(corrected.paidAmount()).isEqualByComparingTo("88000");
+        assertThat(new FinancialActivityService(jdbc).list(owner,NOVEMBER).items()).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM financial_transaction WHERE occurred_at >= date '2026-11-01'",Long.class)).isZero();
+        jdbc.update("DELETE FROM financial_transaction");
+        var additional=record(request("2026-11","500","2026-11-02"));
+        assertThat(additional.unmatchedPaymentAmount()).isEqualByComparingTo("88500");
+        assertThat(additional.payments()).hasSize(2);
+        jdbc.update("DELETE FROM credit_card_bill_payment");
+        var uncaptured=record(request("2026-11","85000","2026-11-02"));
+        assertThat(uncaptured.projectedAmount()).isZero();
+        assertThat(uncaptured.unmatchedPaymentAmount()).isEqualByComparingTo("85000");
+    }
     @Test void rejectsForeignInvalidAndChangedRetryWithoutSideEffects() {
         assertThatThrownBy(()->tx.execute(status->service.record(other,cardId,request("2026-11","100","2026-11-01"))))
                 .isInstanceOf(WebApiException.class).hasMessageContaining("not found");
         for (var r : List.of(request("2026-11","0","2026-11-01"),request("2026-11","-1","2026-11-01"),
-                request("2026-11","1.001","2026-11-01"),request("2026-11","5001","2026-11-01"),
+                request("2026-11","1.001","2026-11-01"),
                 request("2026-11","1","2026-11-06"),request("2026-11","1","2026-10-27"),
                 request("2026-12","1","2026-11-05")))
             assertThatThrownBy(()->record(r)).isInstanceOf(WebApiException.class);
@@ -139,8 +164,9 @@ class CreditCardBillPostgresTest {
             var competitors=executor.invokeAll(List.<Callable<Boolean>>of(
                 ()->{try{record(request("2026-11","2000","2026-11-02"));return true;}catch(WebApiException e){return false;}},
                 ()->{try{record(request("2026-11","2000","2026-11-02"));return true;}catch(WebApiException e){return false;}}));
-            assertThat(competitors.stream().map(f->{try{return f.get();}catch(Exception e){throw new RuntimeException(e);}}).toList()).containsExactlyInAnyOrder(true,false);
-            assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM credit_card_bill_payment",BigDecimal.class)).isEqualByComparingTo("5000");
+            assertThat(competitors.stream().map(f->{try{return f.get();}catch(Exception e){throw new RuntimeException(e);}}).toList()).containsExactly(true,true);
+            assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM credit_card_bill_payment",BigDecimal.class)).isEqualByComparingTo("7000");
+            assertThat(tx.execute(status->service.list(owner,NOVEMBER)).bills().getFirst().unmatchedPaymentAmount()).isEqualByComparingTo("2000");
         } finally {executor.shutdownNow();}
     }
     @Test void generationDayPurchaseIsProjectedForNextMonth() {

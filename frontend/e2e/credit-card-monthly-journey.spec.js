@@ -125,8 +125,8 @@ test('May card purchases become the June bill; paying it clears the due without 
       expect((await read('monthly-commitment?month=2026-06')).overview.stillToPay).toBe(remaining);
       expect((await read('expenses/calendar?month=2026-06'))).toMatchObject({ totalSpend: 900, transactionCount: 1 });
     }
-    await expect(bills).toContainText('Settled');
-    await expect(bills.getByRole('button', { name: 'Record bill payment' })).toHaveCount(0);
+    await expect(bills).toContainText('Captured purchases covered');
+    await expect(bills.getByRole('button', { name: 'Record bill payment' })).toBeEnabled();
     await bills.getByText('Payment history', { exact: true }).click();
     await expect(bills).toContainText('₹1,000.00 paid');
     await expect(bills).toContainText('₹3,000.00 paid');
@@ -139,7 +139,7 @@ test('May card purchases become the June bill; paying it clears the due without 
     await page.reload();
     await expect(page.getByRole('region',{name:'Credit-card bills',exact:true})).toHaveCount(0);
     await page.getByRole('button',{name:'View credit-card bills →'}).click();
-    await expect(page.getByRole('region', { name: 'Credit-card bills', exact: true })).toContainText('Settled');
+    await expect(page.getByRole('region', { name: 'Credit-card bills', exact: true })).toContainText('Captured purchases covered');
     expect((await read('expenses/calendar?month=2026-05'))).toMatchObject({ totalSpend: 4600, transactionCount: 4, creditCardSpend: 4000 });
     const june = (await read('credit-card-bills?month=2026-06')).bills.find(b => b.cardName === cardName);
     expect(june).toMatchObject({ projectedAmount: 4000, paidAmount: 4000, remaining: 0 });
