@@ -138,7 +138,8 @@ test('May card purchases become the June bill; paying it clears the due without 
   await test.step('Reload retains settlements and May spending; July still carries the June purchase', async () => {
     await page.reload();
     await expect(page.getByRole('region',{name:'Credit-card bills',exact:true})).toHaveCount(0);
-    await page.getByRole('button',{name:'View credit-card bills →'}).click();
+    await expect(page.getByRole('region',{name:'Credit-card summary'})).toHaveCount(0);
+    await page.getByRole('button',{name:/Your money.*Explore/}).click();
     await expect(page.getByRole('region', { name: 'Credit-card bills', exact: true })).toContainText('Captured purchases covered');
     expect((await read('expenses/calendar?month=2026-05'))).toMatchObject({ totalSpend: 4600, transactionCount: 4, creditCardSpend: 4000 });
     const june = (await read('credit-card-bills?month=2026-06')).bills.find(b => b.cardName === cardName);

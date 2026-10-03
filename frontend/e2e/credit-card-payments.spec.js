@@ -71,7 +71,12 @@ for (const width of [1280, 375]) {
     await expect(bills).toContainText('₹3,000.00 paid');
     await expect(overview).toContainText('₹700');
     await page.locator('.money-modal > .close').click();
-    await expect(page.getByRole('region',{name:'Credit-card summary'})).toContainText('₹0.00 remaining');
+    await expect(page.getByRole('region',{name:'Credit-card summary'})).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('region',{name:'Credit-card summary'})).toHaveCount(0);
+    await page.getByRole('button',{name:/Your money.*Explore/}).click();
+    await expect(page.getByRole('region',{name:'Credit-card bills',exact:true})).toContainText('Captured purchases covered');
+    await page.locator('.money-modal > .close').click();
     await expect(page.getByRole('region',{name:'Credit-card bills',exact:true})).toHaveCount(0);
     await expect(page.getByRole('button',{name:'Record bill payment'})).toHaveCount(0);
     await expect(page.getByRole('progressbar')).toHaveCount(0);

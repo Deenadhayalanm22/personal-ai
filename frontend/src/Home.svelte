@@ -419,7 +419,7 @@
       </div>
     {/if}
   </section>
-  {#if cardBills.some(bill=>Number(bill.projectedAmount)>0||Number(bill.paidAmount)>0||Number(bill.monthlyPurchaseAmount)>0)||cardBillStatus==='error'}
+  {#if cardBills.some(bill=>Number(bill.remaining)>0)||cardBillStatus==='error'}
     <section class="home-card-summary" aria-label="Credit-card summary"><div><span>Credit-card bills · {monthLabel(selectedMonth)}</span>{#if cardBillStatus==='error'}<strong>Couldn’t load bills</strong>{:else}<strong>{moneyDecimal(cardBills.reduce((total,bill)=>total+Number(bill.remaining||0),0))} remaining</strong>{/if}</div><button class="text-link" on:click={reviewCardBills}>View credit-card bills →</button></section>
   {/if}
 
