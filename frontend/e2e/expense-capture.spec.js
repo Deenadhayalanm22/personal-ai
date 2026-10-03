@@ -108,3 +108,28 @@ for(const width of [1280,375]){
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   });
 }
+
+
+test('incomplete AI capture reports not recorded without a follow-up or confirmation',async({page})=>{
+  await dashboard(page);
+  const captures=[];
+  await page.route('**/api/web/expense-chat/capture',async route=>{
+    const body=route.request().postDataJSON();captures.push(body);
+    await route.fulfill({json:{status:'NEEDS_DETAILS',answer:'Expense not recorded: the available information does not identify one expense with a positive amount, a clear purpose, and a past or current date.',extractionId:null,preview:null}});
+  });
+  await page.getByRole('button',{name:'Add expense',exact:true}).click();
+  await page.getByRole('button',{name:'Describe with AI'}).click();
+  const capture=page.getByRole('region',{name:'Add expense conversation'});
+  await expect(capture).not.toContainText('ask for any missing details');
+  await page.getByLabel('Expense description').fill('Bought groceries');
+  await page.getByRole('button',{name:'Prepare expense',exact:true}).click();
+  await expect(capture.getByRole('log')).toContainText('Expense not recorded:');
+  await expect(capture.getByRole('log')).not.toContainText('?');
+  await expect(capture.getByRole('button',{name:'Record expense',exact:true})).toHaveCount(0);
+  await expect(page.getByLabel('Expense description')).toBeVisible();
+  expect(captures).toHaveLength(1);
+  await page.getByLabel('Expense description').fill('Paid 450 for groceries');
+  await page.getByRole('button',{name:'Prepare expense',exact:true}).click();
+  await expect.poll(()=>captures.length).toBe(2);
+  expect(captures[1].turns).toEqual(['Bought groceries']);
+});

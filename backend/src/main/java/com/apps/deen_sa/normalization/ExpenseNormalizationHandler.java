@@ -6,7 +6,9 @@ import com.apps.deen_sa.domain.InputType;
 import com.apps.deen_sa.dto.NormalizedExpense;
 import com.apps.deen_sa.service.TransactionDraftExtractionWriter;
 import com.apps.deen_sa.service.MissingTransactionDateContextService;
-import org.springframework.beans.factory.annotation.Value;
+import com.apps.deen_sa.service.AppUserService;
+import com.apps.deen_sa.insights.WebExpenseCaptureService;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,29 +18,28 @@ import java.time.ZoneId;
 
 @Service
 public class ExpenseNormalizationHandler {
-    private static final ZoneId DEFAULT_USER_ZONE = ZoneId.of("Asia/Kolkata");
 
-    private final ExpenseNormalizationPort normalizer;
+    private final WebExpenseCaptureService capture;
     private final TransactionDraftExtractionWriter extractionWriter;
     private final ExpenseConfirmationPort confirmation;
     private final Clock clock;
+    private final AppUserService users;
     private final MissingTransactionDateContextService dateContexts;
-    private final BigDecimal minimumExpenseConfidence;
 
     public ExpenseNormalizationHandler(
-            ExpenseNormalizationPort normalizer,
+            WebExpenseCaptureService capture,
             TransactionDraftExtractionWriter extractionWriter,
             ExpenseConfirmationPort confirmation,
             Clock clock,
-            MissingTransactionDateContextService dateContexts,
-            @Value("${openai.escalation-confidence:0.55}") BigDecimal minimumExpenseConfidence
+            AppUserService users,
+            MissingTransactionDateContextService dateContexts
     ) {
-        this.normalizer = normalizer;
+        this.capture = capture;
         this.extractionWriter = extractionWriter;
         this.confirmation = confirmation;
         this.clock = clock;
+        this.users = users;
         this.dateContexts = dateContexts;
-        this.minimumExpenseConfidence = minimumExpenseConfidence;
     }
 
     public void handle(DraftWriteResult draft, InboundMessage message) {
@@ -46,53 +47,22 @@ public class ExpenseNormalizationHandler {
             return;
         }
 
-        LocalDate today = LocalDate.now(clock.withZone(DEFAULT_USER_ZONE));
-        ExpenseNormalizationPort.ExpenseFacts facts =
-                normalizer.normalize(message.externalUserId(), message.rawContent(), today);
-        if (isLowConfidenceNonExpense(facts)) {
+        var user = users.resolve("WHATSAPP", message.externalUserId());
+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())));
+        var prepared = capture.prepare(user, today, List.of(message.rawContent()));
+        if (!prepared.ready()) {
             extractionWriter.cancelWithoutExtraction(draft.draftId());
-            confirmation.sendExpenseInstruction(message.externalUserId());
+            confirmation.sendCaptureInstruction(message.externalUserId(), WebExpenseCaptureService.captureInstruction(prepared));
             return;
         }
-
-        LocalDate transactionDate = facts.transactionDate() == null
-                ? today
-                : facts.transactionDate();
-        transactionDate = dateContexts.applyToDraft(
-                draft.draftId(), message.rawContent(), transactionDate);
-
-        NormalizedExpense normalized = new NormalizedExpense(
-                draft.draftId(),
-                message.externalUserId(),
-                facts.amount(),
-                facts.category(),
-                facts.subcategory(),
-                facts.merchant(),
-                facts.sourceAccount(),
-                transactionDate,
-                facts.confidence());
-
-        // A confirmation for these facts would fail in FinancialTransactionWriter.
-        // Ask for a new message instead of leaving an unusable ACTIVE extraction.
-        if (facts.amount() == null || facts.amount().signum() <= 0
-                || facts.category() == null || facts.subcategory() == null) {
-            extractionWriter.cancelWithoutExtraction(draft.draftId());
-            confirmation.sendIncompleteExpenseInstruction(message.externalUserId());
-            return;
-        }
+        var facts = prepared.facts();
+        LocalDate transactionDate = dateContexts.applyToDraft(draft.draftId(), message.rawContent(), facts.date());
+        NormalizedExpense normalized = new NormalizedExpense(draft.draftId(), message.externalUserId(),
+                facts.amount(), facts.category(), facts.subcategory(), facts.merchant(), facts.account(),
+                transactionDate, BigDecimal.ONE);
 
         var committedExtraction = extractionWriter.saveActive(normalized);
         confirmation.requestConfirmation(committedExtraction);
     }
 
-    private boolean isLowConfidenceNonExpense(ExpenseNormalizationPort.ExpenseFacts facts) {
-        boolean hasExpenseDetails = facts.amount() != null
-                || facts.category() != null
-                || facts.subcategory() != null
-                || facts.merchant() != null
-                || facts.sourceAccount() != null;
-        boolean isLowConfidence = facts.confidence() == null
-                || facts.confidence().compareTo(minimumExpenseConfidence) < 0;
-        return !hasExpenseDetails && isLowConfidence;
-    }
 }

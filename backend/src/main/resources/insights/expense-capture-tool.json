@@ -1,0 +1,63 @@
+{
+  "name": "prepare_expense",
+  "description": "Finish preparing one expense preview from supported facts. Never writes a transaction. Use null for missing facts and optional ambiguous names. Explicit user confirmation is separate.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "amount": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "date": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "category": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "subcategory": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "merchant": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "account": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "eligible": {
+        "type": "boolean",
+        "description": "True only for one actual ordinary expense supported by the user statements; false for unclear, unrelated or unsupported input."
+      }
+    },
+    "required": [
+      "amount",
+      "date",
+      "category",
+      "subcategory",
+      "merchant",
+      "account",
+      "eligible"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false
+  }
+}

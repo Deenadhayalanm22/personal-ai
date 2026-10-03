@@ -1,149 +1,80 @@
 package com.apps.deen_sa.normalization;
 
-import com.apps.deen_sa.dto.DraftWriteResult;
-import com.apps.deen_sa.dto.InboundMessage;
-import com.apps.deen_sa.domain.InputType;
-import com.apps.deen_sa.domain.MessageSource;
-import com.apps.deen_sa.dto.NormalizedExpense;
-import com.apps.deen_sa.dto.StoredDraftExtraction;
-import com.apps.deen_sa.service.TransactionDraftExtractionWriter;
-import com.apps.deen_sa.service.MissingTransactionDateContextService;
+import com.apps.deen_sa.domain.*;
+import com.apps.deen_sa.dto.*;
+import com.apps.deen_sa.entity.AppUserEntity;
+import com.apps.deen_sa.insights.WebExpenseCaptureService;
+import com.apps.deen_sa.service.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.time.*;
+import java.util.List;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 class ExpenseNormalizationHandlerTest {
-    private final ExpenseNormalizationPort normalizer = mock(ExpenseNormalizationPort.class);
-    private final TransactionDraftExtractionWriter extractionWriter =
-            mock(TransactionDraftExtractionWriter.class);
-    private final ExpenseConfirmationPort confirmation = mock(ExpenseConfirmationPort.class);
-    private final Clock clock = Clock.fixed(Instant.parse("2026-09-02T10:00:00Z"), ZoneOffset.UTC);
-    private final MissingTransactionDateContextService dateContexts =
-            mock(MissingTransactionDateContextService.class);
-    private final ExpenseNormalizationHandler handler =
-            new ExpenseNormalizationHandler(
-                    normalizer, extractionWriter, confirmation, clock, dateContexts,
-                    new BigDecimal("0.55"));
-
-    @Test
-    void normalizesCommittedTextAndRequestsConfirmationWithoutPersistingIt() {
-        InboundMessage message = new InboundMessage(
-                "9198", "wamid.1", InputType.TEXT, MessageSource.WHATSAPP,
-                "Paid ₹250 at Swiggy");
-        when(normalizer.normalize("9198", "Paid ₹250 at Swiggy", LocalDate.of(2026, 9, 2)))
-                .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(
-                        new BigDecimal("250"),
-                        "Food & Dining",
-                        "Eating Out",
-                        "Swiggy",
-                        "HDFC Salary Account",
-                        LocalDate.of(2026, 9, 2),
-                        new BigDecimal("0.94")));
-        when(dateContexts.applyToDraft(
-                42L, "Paid ₹250 at Swiggy", LocalDate.of(2026, 9, 2)))
-                .thenReturn(LocalDate.of(2026, 9, 2));
-        StoredDraftExtraction stored = new StoredDraftExtraction(
-                5001L, 42L, "9198", new BigDecimal("250"), "Swiggy",
-                "HDFC Salary Account",
-                "Food & Dining", "Eating Out", LocalDate.of(2026, 9, 2),
-                new BigDecimal("0.94"));
-        when(extractionWriter.saveActive(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(stored);
-
-        handler.handle(new DraftWriteResult(42L, true), message);
-
-        ArgumentCaptor<NormalizedExpense> normalized =
-                ArgumentCaptor.forClass(NormalizedExpense.class);
-        verify(extractionWriter).saveActive(normalized.capture());
-        assertThat(normalized.getValue()).isEqualTo(new NormalizedExpense(
-                42L,
-                "9198",
-                new BigDecimal("250"),
-                "Food & Dining",
-                "Eating Out",
-                "Swiggy",
-                "HDFC Salary Account",
-                LocalDate.of(2026, 9, 2),
-                new BigDecimal("0.94")));
+    final WebExpenseCaptureService capture = mock(WebExpenseCaptureService.class);
+    final AppUserService users = mock(AppUserService.class);
+    final AppUserEntity user = new AppUserEntity();
+    final TransactionDraftExtractionWriter writer = mock(TransactionDraftExtractionWriter.class);
+    final ExpenseConfirmationPort confirmation = mock(ExpenseConfirmationPort.class);
+    final MissingTransactionDateContextService dates = mock(MissingTransactionDateContextService.class);
+    final Clock clock = Clock.fixed(Instant.parse("2026-09-02T01:00:00Z"), ZoneOffset.UTC);
+    final ExpenseNormalizationHandler handler = new ExpenseNormalizationHandler(capture, writer, confirmation, clock, users, dates);
+    final LocalDate today = LocalDate.of(2026,9,2);
+    ExpenseNormalizationHandlerTest() { user.setId(42L); when(users.resolve("WHATSAPP", "9198")).thenReturn(user); }
+    InboundMessage text() { return new InboundMessage("9198", "wamid.1", InputType.TEXT, MessageSource.WHATSAPP, "Paid 250 for groceries"); }
+    WebExpenseCaptureService.Prepared facts(boolean ready, LocalDate date) {
+        return new WebExpenseCaptureService.Prepared(new WebExpenseCaptureService.Facts(new BigDecimal("250.00"), date,
+                "Food & Dining", "Groceries", "Shop", "Cash", ready), ready);
+    }
+    @Test void whatsappCallsExistingPortalCaptureAndConfirmsPersistedFacts() {
+        when(capture.prepare(user,today,List.of(text().rawContent()))).thenReturn(facts(true,today));
+        when(dates.applyToDraft(42L,text().rawContent(),today)).thenReturn(today.minusDays(1));
+        var stored = new StoredDraftExtraction(5001L,42L,"9198",new BigDecimal("250.00"),"Shop","Cash",
+                "Food & Dining","Groceries",today.minusDays(1),BigDecimal.ONE);
+        when(writer.saveActive(any())).thenReturn(stored);
+        handler.handle(new DraftWriteResult(42L,true),text());
+        var normalized=ArgumentCaptor.forClass(NormalizedExpense.class);
+        verify(writer).saveActive(normalized.capture());
+        assertThat(normalized.getValue().amount()).isEqualByComparingTo("250");
+        assertThat(normalized.getValue().transactionDate()).isEqualTo(today.minusDays(1));
         verify(confirmation).requestConfirmation(stored);
     }
-
-    @Test
-    void doesNotRepeatAiWorkForDuplicateWebhook() {
-        handler.handle(new DraftWriteResult(42L, false), textMessage());
-
-        verify(normalizer, never()).normalize("9198", "Paid ₹250", LocalDate.of(2026, 9, 2));
-        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+    @Test void duplicateWebhookDoesNotRunCaptureAgain() {
+        handler.handle(new DraftWriteResult(42L,false),text());
+        verifyNoInteractions(capture,users,writer,confirmation);
     }
-
-    @Test
-    void waitsForAudioTranscriptionBeforeNormalization() {
-        InboundMessage audio = new InboundMessage(
-                "9198", "wamid.audio", InputType.AUDIO, MessageSource.WHATSAPP,
-                "media_id=1;mime_type=audio/ogg");
-
-        handler.handle(new DraftWriteResult(42L, true), audio);
-
-        verify(normalizer, never()).normalize(
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any());
-        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+    @Test void audioWaitsForWordReviewBeforeUsingSharedCapture() {
+        handler.handle(new DraftWriteResult(42L,true),new InboundMessage("9198","audio",InputType.AUDIO,MessageSource.WHATSAPP,"media_id=1"));
+        verifyNoInteractions(capture,users,writer,confirmation);
     }
-
-    @Test
-    void sendsOneInstructionForLowConfidenceMessageWithoutExpenseDetails() {
-        InboundMessage greeting = new InboundMessage(
-                "9198", "wamid.greeting", InputType.TEXT, MessageSource.WHATSAPP, "HI");
-        when(normalizer.normalize("9198", "HI", LocalDate.of(2026, 9, 2)))
-                .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(
-                        null, null, null, null, null, LocalDate.of(2026, 9, 2),
-                        new BigDecimal("0.10")));
-
-        handler.handle(new DraftWriteResult(42L, true), greeting);
-
-        verify(extractionWriter).cancelWithoutExtraction(42L);
-        verify(confirmation).sendExpenseInstruction("9198");
-        verify(extractionWriter, never()).saveActive(org.mockito.ArgumentMatchers.any());
-        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
-        verify(dateContexts, never()).applyToDraft(
-                org.mockito.ArgumentMatchers.anyLong(),
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.any());
+    @Test void incompleteOrIneligibleResultCancelsWithoutConfirmationOrDateHandoff() {
+        when(capture.prepare(user,today,List.of(text().rawContent()))).thenReturn(facts(false,today));
+        handler.handle(new DraftWriteResult(42L,true),text());
+        verify(writer).cancelWithoutExtraction(42L);
+        verify(confirmation).sendCaptureInstruction("9198", WebExpenseCaptureService.PORTAL_UPDATE);
+        verify(writer,never()).saveActive(any());
+        verifyNoInteractions(dates);
+        verify(confirmation,never()).requestConfirmation(any());
     }
-
-    @Test
-    void asksForRetryWhenAnExpenseHasNoConfirmableSubcategory() {
-        InboundMessage message = new InboundMessage("9198", "wamid.lunch", InputType.TEXT,
-                MessageSource.WHATSAPP, "Bought lunch for 300");
-        when(normalizer.normalize("9198", message.rawContent(), LocalDate.of(2026, 9, 2)))
-                .thenReturn(new ExpenseNormalizationPort.ExpenseFacts(new BigDecimal("300"),
-                        "Food & Dining", null, null, null, LocalDate.of(2026, 9, 2),
-                        new BigDecimal("0.80")));
-        when(dateContexts.applyToDraft(42L, message.rawContent(), LocalDate.of(2026, 9, 2)))
-                .thenReturn(LocalDate.of(2026, 9, 2));
-
-        handler.handle(new DraftWriteResult(42L, true), message);
-
-        verify(extractionWriter).cancelWithoutExtraction(42L);
-        verify(confirmation).sendIncompleteExpenseInstruction("9198");
-        verify(extractionWriter, never()).saveActive(org.mockito.ArgumentMatchers.any());
-        verify(confirmation, never()).requestConfirmation(org.mockito.ArgumentMatchers.any());
+    @Test void whatsappUsesTheSameOwnerLocalTodayAsPortal() {
+        user.setTimezone("America/Los_Angeles");
+        LocalDate localToday=today.minusDays(1);
+        when(capture.prepare(user,localToday,List.of(text().rawContent()))).thenReturn(facts(false,localToday));
+        handler.handle(new DraftWriteResult(42L,true),text());
+        verify(capture).prepare(user,localToday,List.of(text().rawContent()));
     }
-
-    private InboundMessage textMessage() {
-        return new InboundMessage(
-                "9198", "wamid.1", InputType.TEXT, MessageSource.WHATSAPP, "Paid ₹250");
+    @Test void incompleteOrdinaryExpenseDirectsToPortalForDetailsWithoutConfirmation() {
+        var prepared=new WebExpenseCaptureService.Prepared(new WebExpenseCaptureService.Facts(null,today,
+                "Food & Dining","Groceries",null,null,true),false);
+        when(capture.prepare(user,today,List.of(text().rawContent()))).thenReturn(prepared);
+        handler.handle(new DraftWriteResult(42L,true),text());
+        verify(confirmation).sendCaptureInstruction("9198",WebExpenseCaptureService.INCOMPLETE);
+        verify(writer).cancelWithoutExtraction(42L);
+        verify(writer,never()).saveActive(any());
+        verify(confirmation,never()).requestConfirmation(any());
     }
 }

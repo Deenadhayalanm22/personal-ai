@@ -54,6 +54,41 @@ class OpenAiExpenseChatModelTest {
         assertThat(messages.get(messages.size() - 1).path("role").asText()).isEqualTo("tool");
         assertThat(messages.get(messages.size() - 1).path("content").asText()).contains("750");
     }
+    @Test void actualSdkSharedCaptureUsesTerminalToolWithoutClassifierOrWalletCall() throws Exception {
+        var requests = new ArrayList<JsonNode>();
+        String arguments = "{\"amount\":25,\"date\":null,\"category\":\"Food & Dining\",\"subcategory\":\"Groceries\",\"merchant\":\"KK kadai\",\"account\":null,\"eligible\":true}";
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            requests.add(mapper.readTree(exchange.getRequestBody()));
+            var message = Map.of("role", "assistant", "tool_calls", List.of(Map.of("id", "capture", "type", "function",
+                    "function", Map.of("name", "prepare_expense", "arguments", arguments))));
+            byte[] body = mapper.writeValueAsBytes(Map.of("id", "capture_1", "object", "chat.completion", "created", 1,
+                    "usage", Map.of("prompt_tokens",100,"completion_tokens",10,"total_tokens",110), "model", "gpt-4.1-mini",
+                    "choices", List.of(Map.of("index", 0, "finish_reason", "tool_calls", "message", message))));
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length); exchange.getResponseBody().write(body); exchange.close();
+        });
+        server.start();
+        var credits = mock(com.apps.deen_sa.credits.CreditStore.class);
+        var store = mock(com.apps.deen_sa.service.WebExpenseCaptureStore.class);
+        var tools = new ExpenseMcpTools(mock(ExpenseQueryTool.class), mock(FinancialRecordsTool.class),
+                mock(MonthlyPlanningTool.class), mock(CreditCardBillsTool.class), mapper);
+        var service = new WebExpenseCaptureService(model(), credits, new com.apps.deen_sa.credits.CreditPolicy("test",BigDecimal.ONE,BigDecimal.ZERO,BigDecimal.TEN,BigDecimal.TEN,BigDecimal.ONE,6,true), mapper,
+                new com.apps.deen_sa.service.ExpenseTaxonomyRegistry(), mock(com.apps.deen_sa.repository.UserReferenceEntityRepository.class),
+                mock(com.apps.deen_sa.repository.UserReferenceAliasRepository.class), tools, store, Clock.systemUTC());
+        var user = new AppUserEntity(); user.setId(42L); user.setChannel("WHATSAPP");
+        var date = java.time.LocalDate.of(2026,9,25);
+        var prepared = service.prepare(user, date, List.of("KK kadai la 25 selavu panninen"));
+        assertThat(prepared.ready()).isTrue();
+        assertThat(prepared.facts().amount()).isEqualByComparingTo("25");
+        assertThat(prepared.facts().date()).isEqualTo(date);
+        assertThat(requests).hasSize(1);
+        var definition = requests.getFirst().path("tools").get(5).path("function");
+        assertThat(definition.path("name").asText()).isEqualTo("prepare_expense");
+        assertThat(definition.path("parameters").path("additionalProperties").asBoolean()).isFalse();
+        assertThat(requests.getFirst().path("messages").get(0).path("content").asText()).contains("Never ask follow-up questions");
+        verifyNoInteractions(credits, store);
+    }
     @Test void providerFailureHasNoInternalDetailsAndNoAutomaticRetry() throws Exception {
         var count = new java.util.concurrent.atomic.AtomicInteger();
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

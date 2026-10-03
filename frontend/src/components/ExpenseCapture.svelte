@@ -76,7 +76,7 @@
       await cancelExpenseCapture(extractionId,signal);
       if (destroyed) return;
       extractionId=null;preview=null;manualRetry=null;
-      messages=[...messages,{role:'assistant',text:'Tell me what to change. I’ll prepare a new preview.'}];
+      messages=[...messages,{role:'assistant',text:'Update the description to prepare a new preview.'}];
     });
   }
   async function record() {
@@ -110,7 +110,7 @@
       </div>
     {/if}
     {#if mode==='ai'}
-    <p class="intro">Tell me what you paid for. I’ll check your saved names, ask for any missing details, and show a preview before recording.</p>
+    <p class="intro">Tell me what you paid for. I’ll use the available details and your saved names, then show a preview before recording.</p>
     {#if credits}<p class="credits">Available AI credits: {Number(credits.available).toLocaleString()} <button on:click={refreshCredits}>Refresh</button></p>{/if}
     {#if blocked}<p class="notice">AI capture needs available credits and enabled AI access. You can enter this expense manually without credits.</p>{/if}
     <div role="log" aria-live="polite">{#each messages as message}<article class:user={message.role==='user'}><strong>{message.role==='user'?'You':'Money assistant'}</strong><p>{message.text}</p></article>{/each}</div>
@@ -140,11 +140,11 @@
       </form>
     {:else}
       <form on:submit|preventDefault={send}>
-        <label for="capture-description">{turns.length?'Your reply':'Expense description'}</label>
+        <label for="capture-description">Expense description</label>
         {#if voiceReview}<p>Review your voice text below. <button type="button" on:click={()=>{question=beforeVoice;voiceReview=false}}>Discard voice text</button></p>{/if}
         <div class="composer"><textarea id="capture-description" bind:this={input} bind:value={question} rows="3" maxlength="2000" placeholder="For example: paid 450 for dinner at Saravana Bhavan" disabled={pending || voiceBusy || connectionStatus!=='online'}></textarea><VoiceQuestion bind:this={voiceControl} bind:busy={voiceBusy} disabled={pending || blocked || connectionStatus!=='online'} onTranscript={reviewVoice}/></div>
         <button class="primary" type="submit" disabled={pending || voiceBusy || (!reusableRetry && blocked) || !question.trim() || connectionStatus!=='online'}>{pending?'Preparing…':retry?'Retry expense preview':'Prepare expense'}</button>
-        <small>AI credits are charged for each preparation and follow-up. Nothing is recorded until you confirm.</small>
+        <small>AI credits are charged for each preparation. Nothing is recorded until you confirm.</small>
       </form>
     {/if}
   {:else}

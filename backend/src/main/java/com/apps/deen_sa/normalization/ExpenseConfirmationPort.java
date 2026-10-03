@@ -5,7 +5,5 @@ import com.apps.deen_sa.dto.StoredDraftExtraction;
 public interface ExpenseConfirmationPort {
     void requestConfirmation(StoredDraftExtraction extraction);
 
-    void sendExpenseInstruction(String externalUserId);
-
-    void sendIncompleteExpenseInstruction(String externalUserId);
+    void sendCaptureInstruction(String externalUserId, String message);
 }

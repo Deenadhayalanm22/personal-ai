@@ -1,6 +1,7 @@
 package com.apps.deen_sa.whatsapp;
 
 import com.apps.deen_sa.service.WhatsAppReplySender;
+import com.apps.deen_sa.insights.WebExpenseCaptureService;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
@@ -9,26 +10,18 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 class WhatsAppExpenseConfirmationAdapterTest {
     @Test
-    void sendsOneTextInstructionForANonExpenseMessage() {
+    void incompleteExpenseReturnsSameStatementWithoutFollowup() {
         WhatsAppReplySender replies = mock(WhatsAppReplySender.class);
-        WhatsAppExpenseConfirmationAdapter adapter =
-                new WhatsAppExpenseConfirmationAdapter(replies);
+        new WhatsAppExpenseConfirmationAdapter(replies).sendCaptureInstruction("9198", WebExpenseCaptureService.INCOMPLETE);
+        verify(replies).sendTextReply("9198", WebExpenseCaptureService.INCOMPLETE);
+        verifyNoMoreInteractions(replies);
+    }
 
-        adapter.sendExpenseInstruction("9198");
-
-        verify(replies).sendTextReply(
-                "9198",
-                """
-                I couldn't identify that as an expense.
-
-                Use this format:
-                Spent ₹[amount] for [purpose or merchant] using [account]
-
-                Example:
-                Spent ₹922 for electricity using HDFC credit card.
-
-                Amount and purpose are required. Account is optional. The date defaults to today.
-                """.strip());
+    @Test
+    void unsupportedRequestPolitelyDirectsUserToPortal() {
+        WhatsAppReplySender replies = mock(WhatsAppReplySender.class);
+        new WhatsAppExpenseConfirmationAdapter(replies).sendCaptureInstruction("9198", WebExpenseCaptureService.PORTAL_UPDATE);
+        verify(replies).sendTextReply("9198", WebExpenseCaptureService.PORTAL_UPDATE);
         verifyNoMoreInteractions(replies);
     }
 }

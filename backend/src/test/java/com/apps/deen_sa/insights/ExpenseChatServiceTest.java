@@ -158,4 +158,14 @@ class ExpenseChatServiceTest {
         assertThat(response.answer()).contains("could not verify").doesNotContain("no loans", "loan again");
     }
 
+    @Test void nonExpenseWritesPolitelyRedirectToPortalWithoutReadToolsOrFollowups() throws Exception {
+        var usage=new ExpenseChatModel.Usage(100,0,10);
+        when(model.complete(anyString(),anyList(),any())).thenReturn(new ExpenseChatModel.Reply("PORTAL_UPDATE",List.of(),usage));
+        var response=service().chat(user,new ExpenseChatService.Request("Update my income to 75000", "2026-09", List.of()));
+        assertThat(response.answer()).isEqualTo(WebExpenseCaptureService.PORTAL_UPDATE).doesNotContain("?");
+        assertThat(response.evidence()).isEmpty();
+        verify(model).complete(contains("PORTAL_UPDATE means"),anyList(),eq(List.of()));
+        verifyNoInteractions(query);
+        verify(credits).settle(nullable(UUID.class),eq(usage));
+    }
 }

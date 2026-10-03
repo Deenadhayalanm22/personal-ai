@@ -44,28 +44,8 @@ public class WhatsAppExpenseConfirmationAdapter implements ExpenseConfirmationPo
     }
 
     @Override
-    public void sendExpenseInstruction(String externalUserId) {
-        replySender.sendTextReply(
-                externalUserId,
-                """
-                I couldn't identify that as an expense.
-
-                Use this format:
-                Spent ₹[amount] for [purpose or merchant] using [account]
-
-                Example:
-                Spent ₹922 for electricity using HDFC credit card.
-
-                Amount and purpose are required. Account is optional. The date defaults to today.
-                """.strip());
-    }
-
-    @Override
-    public void sendIncompleteExpenseInstruction(String externalUserId) {
-        replySender.sendTextReply(externalUserId,
-                "I found part of an expense, but I couldn't classify it safely. "
-                        + "Please send it again with the amount and what you bought. "
-                        + "For a mixed purchase, send separate amounts for each item if you know them.");
+    public void sendCaptureInstruction(String externalUserId, String message) {
+        replySender.sendTextReply(externalUserId, message);
     }
 
     private String displayAmount(StoredDraftExtraction extraction) {
