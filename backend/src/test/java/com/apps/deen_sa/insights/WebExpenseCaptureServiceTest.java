@@ -136,6 +136,22 @@ class WebExpenseCaptureServiceTest {
         reply(facts("450","null"));
         assertThat(service.capture(user,request("Paid 450 at SB",List.of())).preview().merchant()).isEqualTo("SB");
     }
+    @Test void savedUpiAliasResolvesOnBothChannelsWithoutModelAccount() {
+        var alias=new UserReferenceAliasEntity(); alias.setAliasText("UPI");
+        when(refs.findByUserIdAndEntityTypeAndActiveTrue(42L,UserReferenceEntityType.ACCOUNT))
+                .thenReturn(List.of(reference(1,"HDFC bank account")));
+        when(aliases.findByReferenceEntityId(1L)).thenReturn(List.of(alias));
+        reply(facts("170","null"));
+        String message="Yesterday spent around 170 on chicken for dinner cooking paid from upi";
+        assertThat(service.capture(user,request(message,List.of())).preview().account()).isEqualTo("HDFC bank account");
+        assertThat(service.prepare(user,LocalDate.parse("2026-10-01"),List.of(message)).facts().account()).isEqualTo("HDFC bank account");
+        assertThat(service.capture(user,request("Paid 170 for chicken from upington",List.of())).preview().account()).isNull();
+        assertThat(service.capture(user,request("Paid 170 for chicken",List.of())).preview().account()).isNull();
+        when(refs.findByUserIdAndEntityTypeAndActiveTrue(42L,UserReferenceEntityType.ACCOUNT))
+                .thenReturn(List.of(reference(1,"HDFC bank account"),reference(2,"ICICI bank account")));
+        when(aliases.findByReferenceEntityId(2L)).thenReturn(List.of(alias));
+        assertThat(service.capture(user,request(message,List.of())).preview().account()).isNull();
+    }
     @Test void genericCardDoesNotGuessBetweenAccountsEvenIfModelChoosesOne() {
         when(refs.findByUserIdAndEntityTypeAndActiveTrue(42L,UserReferenceEntityType.ACCOUNT))
                 .thenReturn(List.of(reference(1,"HDFC credit card"),reference(2,"ICICI credit card")));

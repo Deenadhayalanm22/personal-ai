@@ -218,10 +218,24 @@ public class WebExpenseCaptureService {
         String type = text.matches("(?s).*\\b(?:using|from|via|on)\\s+(?:my\\s+)?credit\\s+card\\b.*")
                 ? "credit card" : text.matches("(?s).*\\b(?:using|from|via)\\s+(?:my\\s+)?bank\\s+accou?j?nt\\b.*")
                 ? "bank account" : null;
-        if (type == null) return resolveName(userId, UserReferenceEntityType.ACCOUNT, value);
+        if (type == null) {
+            var mentioned = references.findByUserIdAndEntityTypeAndActiveTrue(userId, UserReferenceEntityType.ACCOUNT)
+                    .stream().filter(ref -> aliases.findByReferenceEntityId(ref.getId()).stream()
+                            .anyMatch(alias -> paymentAliasMentioned(text, alias.getAliasText()))).toList();
+            if (!mentioned.isEmpty()) return mentioned.size() == 1 ? mentioned.getFirst().getCanonicalName() : null;
+            return resolveName(userId, UserReferenceEntityType.ACCOUNT, value);
+        }
         var matches = references.findByUserIdAndEntityTypeAndActiveTrue(userId, UserReferenceEntityType.ACCOUNT)
                 .stream().filter(ref -> ref.getCanonicalName().toLowerCase(Locale.ROOT).contains(type)).toList();
         return matches.size() == 1 ? matches.getFirst().getCanonicalName() : null;
+    }
+
+    private boolean paymentAliasMentioned(String text, String alias) {
+        if (alias == null || alias.isBlank()) return false;
+        String pattern = "(?s).*\\b(?:from|via|using|through|with)\\s+(?:my\\s+)?"
+                + java.util.regex.Pattern.quote(alias.trim().toLowerCase(Locale.ROOT))
+                + "(?![\\p{L}\\p{N}_]).*";
+        return text.matches(pattern);
     }
 
     private String prompt(AppUserEntity user, LocalDate today, LocalDate defaultDate) {
@@ -252,7 +266,9 @@ public class WebExpenseCaptureService {
                 Account type is part of identity: credit card, debit card and bank account are distinct even at the
                 same institution. Resolve generic credit card/bank account wording (including bank accoujnt) only
                 when one saved account matches that type; otherwise use null. Never infer an account solely because
-                it is saved. UPI/payment apps and bank transfer are payment methods, not account identities.
+                it is saved. UPI/payment apps and bank transfer alone do not identify accounts.
+                Explicit unambiguous saved account aliases take precedence: paid from upi resolves the account
+                with alias upi. Without a matching saved alias, use null.
                 Understand any language or transliterated mix such as Tanglish. Return classification labels in English
                 exactly from the taxonomy; merchant/account proper names stay recognizable, transliterated when needed.
                 Classify what was bought: raw meat for cooking is Meat, Fish & Eggs; a prepared meal is Home-Cooked Meals.

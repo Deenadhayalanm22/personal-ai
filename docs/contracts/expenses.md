@@ -47,3 +47,5 @@ Add expense defaults to Enter manually in the frontend. The form provides amount
 Configured-card purchase Activity rows say “On credit card · bill paid separately”; ordinary purchases retain “Recorded expense”.
 
 Unified Accounts reuses account IDs/names returned by expense options; configured names are immediately selectable. Setup provides identity/type and card-cycle context, without recording received money or computing bank balances. Card settlements remain separate from expense totals and counts.
+
+AI capture account-alias acceptance: explicit payment wording such as “paid from upi” resolves an unambiguous active account alias owned by the current profile, even when the model omits the account. An unsaved payment method does not imply an account; aliases shared by multiple accounts remain blank. Matching uses the complete alias, not a prefix. Applies to WhatsApp and web; verification: `WebExpenseCaptureServiceTest`.
