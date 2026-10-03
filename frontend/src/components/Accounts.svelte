@@ -29,12 +29,13 @@
   {:else}<div class="account-list">{#each accounts as account}
     <article class="account-card" class:credit={account.type==='CREDIT_CARD'}>
       <div class="account-card-heading"><span class="account-symbol" aria-hidden="true">{account.type==='CREDIT_CARD'?'▣':'◉'}</span><div><h4>{account.name}</h4><span class="account-type">{account.type==='CREDIT_CARD'?'Credit card':account.type==='BANK'?'Bank / debit':'Choose account type'}</span></div><button class="account-edit" disabled={connectionStatus!=='online'} aria-label={`Configure ${account.name}`} on:click={()=>open(account)}>🔧</button></div>
-      {#if account.type==='CREDIT_CARD'}<div class="account-facts"><div><span>Bill generates</span><strong>Day {account.statementDay}</strong></div><div><span>Payment due</span><strong>Day {account.dueDay}</strong></div></div><p>{#if account.startMonth}Bills included from {account.startMonth} · {/if}{account.issuerName} · Purchases count as spending. Review and settle the bill below.</p>
+      {#if account.type==='CREDIT_CARD'}<div class="account-facts"><div><span>Bill generates</span><strong>Day {account.statementDay}</strong></div><div><span>Payment due</span><strong>Day {account.dueDay}</strong></div></div><p>{#if account.startMonth}Bills included from {account.startMonth} · {/if}{account.issuerName} · Purchases count as spending. Review and settle payments here.</p>
+      <slot name="bills" cardId={account.cardId} embedded={true} accountCardIds={[]} />
       {:else if account.type==='BANK'}<p>Use this account name when recording expenses.</p>
       {:else}<p>Already linked to recorded expenses. Choose bank/debit or credit card to configure it.</p><button class="account-receive" disabled={connectionStatus!=='online'} on:click={()=>open(account)}>Set account type</button>{/if}
     </article>
   {/each}</div>{/if}
-  <slot name="bills" />
+  <slot name="bills" cardId={null} embedded={false} accountCardIds={accounts.filter(a=>a.type==='CREDIT_CARD').map(a=>a.cardId)} />
   <p class="accounts-note">Account details help organize expenses and provide context for planning and AI insights.</p>
 
 </section>

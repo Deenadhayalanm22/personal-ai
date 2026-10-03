@@ -23,3 +23,6 @@ An explicit empty `startMonth` clears a saved start month before any settlement;
 Accounts owns selected-month Credit-card bills: purchase/bill comparison, cycle timeline, payment progress, dated history and Record bill payment. Home provides only a compact remaining-total summary linking to this section. API and payment arithmetic are unchanged.
 
 Income context is labeled Monthly income and combines all sources into one optional range or exact monthly estimate. No source tags or individual receipts are collected. Existing private salary-named API fields persist the combined monthly estimate compatibly.
+
+
+The Accounts caller joins account `cardId` to bill `cardId` to render each selected-month bill inside its owning credit-card account. Names may differ and are not join keys. Unmatched bills remain accessible when account metadata is unavailable; no API payload or settlement behavior changes.

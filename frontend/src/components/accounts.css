@@ -26,3 +26,10 @@
 .card-bill-history{font-size:11px;color:var(--muted)}
 .card-bill-history summary{color:var(--ink);font-weight:700}
 .card-bill-panel>small{font-size:10px;color:var(--muted)}
+
+/* Keep billing and account configuration in one card, with room for the timeline. */
+.account-list{align-items:start}
+.account-card.credit{grid-column:1/-1}
+.account-card .home-section.embedded{margin:1rem 0 0;border-top:1px solid var(--line);padding-top:1rem}
+.account-card .embedded .section-title h2{font:700 13px/1.4 Manrope,sans-serif;margin:0}
+.account-card .embedded .card-bill-panel{padding:0;margin:1rem 0 0;border:0;border-radius:0;background:transparent}

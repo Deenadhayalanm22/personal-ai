@@ -1,9 +1,10 @@
 import {test,expect} from '@playwright/test';
 
-async function setup(page) {
+async function setup(page, withBills=false) {
   const commands=[];
   let salary=null;
   let accounts=[{id:31,name:'HDFC credit card',type:'CREDIT_CARD',cardId:4,issuerName:'HDFC',statementDay:1,dueDay:21,linkedSpending:480},{id:32,name:'Salary account',type:'UNCONFIGURED',linkedSpending:100}];
+  if(withBills)accounts.push({id:33,name:'ICICI credit account',type:'CREDIT_CARD',cardId:5,issuerName:'ICICI',statementDay:1,dueDay:21});
   await page.clock.install({time:new Date('2026-10-02T06:00:00Z')});
   await page.route('**/api/web/**',async route=>{
     const req=route.request(),path=new URL(req.url()).pathname;
@@ -14,6 +15,7 @@ async function setup(page) {
     else if(path.endsWith('/income-outlook'))json={salary};
     else if(path.endsWith('/income-outlook/salary')&&req.method()==='PUT'){const body=req.postDataJSON();commands.push({path,body});salary=body.salaryVisibility==='SKIPPED'?null:{maskedValue:'**'};json=salary||{};}
     else if(path.endsWith('/expenses/options'))json={categories:[{name:'Food',subcategories:['Groceries']}],merchants:[],accounts:accounts.map(a=>({id:a.id,name:a.name}))};
+    else if(path.endsWith('/credit-card-bills')&&withBills)json={bills:[4,5].map(cardId=>({cardId,cardName:cardId===4?'Regalia card':'ICICI Visa',month:'2026-10',periodStart:'2026-09-01',statementEnd:'2026-09-30',dueDate:'2026-10-21',monthlyPurchaseAmount:480,projectedAmount:cardId===4?5000:2000,paidAmount:1000,remaining:cardId===4?4000:1000,statementClosed:true,payments:[{id:cardId,paidAt:'2026-10-01',amount:1000}]}))};
     else if(path.endsWith('/accounts')&&req.method()==='GET')json={currency:'INR',accounts};
     else if(path.endsWith('/accounts')&&req.method()==='POST'){
       const body=req.postDataJSON();commands.push({path,body});
@@ -102,5 +104,34 @@ for (const mode of ['RANGE','EXACT','SKIPPED']) {
     else {await expect(section).toContainText('Income saved');await expect(section.getByRole('button',{name:'Update monthly income'})).toBeVisible();await expect(section).not.toContainText('85000');}
     expect(commands).toHaveLength(1);
     expect(commands[0].path).toBe('/api/web/income-outlook/salary');
+  });
+}
+
+
+for(const width of [1280,375]) {
+  test(`credit-card bills stay inside their matching account at ${width}px`,async({page})=>{
+    await page.setViewportSize({width,height:900});
+    await setup(page,true);
+    const section=page.getByRole('region',{name:'Accounts',exact:true});
+    const hdfc=section.locator('.account-card').filter({has:page.getByRole('heading',{name:'HDFC credit card',exact:true})});
+    const icici=section.locator('.account-card').filter({has:page.getByRole('heading',{name:'ICICI credit account',exact:true})});
+    await expect(hdfc).toContainText('Regalia card');
+    await expect(hdfc).toContainText('₹4,000.00 remaining');
+    await expect(hdfc.getByRole('button',{name:'Configure HDFC credit card'})).toBeVisible();
+    await expect(hdfc.getByRole('button',{name:'Record bill payment'})).toBeEnabled();
+    await expect(hdfc).not.toContainText('ICICI Visa');
+    await expect(icici).toContainText('ICICI Visa');
+    await expect(icici).toContainText('₹1,000.00 remaining');
+    await expect(icici).not.toContainText('Regalia card');
+    await expect(section.locator('.card-bill-panel')).toHaveCount(2);
+    await expect(section.locator('.account-card .card-bill-panel')).toHaveCount(2);
+    await hdfc.getByText('Payment history',{exact:true}).click();
+    await expect(hdfc).toContainText('₹1,000.00 paid');
+    await hdfc.getByRole('button',{name:'Record bill payment'}).click();
+    await expect(page.getByRole('dialog',{name:'Record bill payment'})).toContainText('Regalia card');
+    await page.getByRole('dialog',{name:'Record bill payment'}).getByRole('button',{name:'Cancel',exact:true}).click();
+    await expect(section.locator('.account-card').filter({has:page.getByRole('heading',{name:'Salary account',exact:true})}).getByRole('region',{name:'Credit-card bills',exact:true})).toHaveCount(0);
+    expect(await section.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+    await section.screenshot({path:`/tmp/merged-card-accounts-${width}.png`});
   });
 }

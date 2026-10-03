@@ -2,6 +2,7 @@
 <script>
   import CardBillVisual from './CardBillVisual.svelte';
   export let bills=[];
+  export let embedded=false;
   export let month;
   export let status='ready';
   export let error='';
@@ -13,7 +14,8 @@
   const monthLabel=value=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(`${value}-01T00:00:00Z`));
   const dateLabel=value=>new Intl.DateTimeFormat('en-IN',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${value}T00:00:00Z`));
 </script>
-  <section class="home-section" aria-label="Credit-card bills"><div class="section-title"><h2>Credit-card bills · {monthLabel(month)}</h2></div>
+  {#if embedded || bills.length || status!=='ready'}
+  <section class="home-section" class:embedded aria-label="Credit-card bills"><div class="section-title"><h2>Credit-card bills · {monthLabel(month)}</h2></div>
     <p class="module-reassurance">For purchases already counted in spending. Recording a bill payment adds no new expense.</p>
     {#if status==='error'}<p class="form-error">{error}</p><button class="secondary" on:click={onRetry}>Retry card bills</button>{/if}
     {#if status==='loading'}<p>Loading card bills…</p>{:else if status!=='error'&&!bills.length}<p>No captured bills for this month.</p>{/if}
@@ -25,3 +27,5 @@
       {#if bill.payments?.length}<details class="card-bill-history"><summary>Payment history</summary>{#each bill.payments as payment}<p>{dateLabel(payment.paidAt)} · {moneyDecimal(payment.amount)} paid</p>{/each}</details>{/if}</article>
     {/each}
   </section>
+
+  {/if}
