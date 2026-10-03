@@ -75,3 +75,29 @@ Run it against local test PostgreSQL with `./mvnw -Dtest=FlywayUpgradeIT test`. 
 temporary schemas and drops only those schemas afterwards. Connection overrides are
 `-Dmigration.test.url=...`, `-Dmigration.test.username=...`, and `-Dmigration.test.password=...`;
 defaults match the local integration database on port 5433.
+
+### In-memory financial response cache (Render)
+
+This release caches financial GET responses inside the backend process. No Redis service, credentials, cache connection, additional container, or paid Render resource is required. The cache defaults on automatically. PostgreSQL remains the source of truth; restarts clear only disposable response JSON, and the next request reloads it.
+
+Caching covers the financial GETs in `WebFinanceController`; session/profile checks always run. Auth, AI credit/admin, mutation and conversation endpoints remain live. Committed writable application transactions and repository saves/deletes/bulk modifications invalidate the instance's generation. Snapshot lookups `current`/`next` invalidate only when their repositories write, keeping unchanged story reads cacheable. A stale in-flight result cannot be stored after invalidation.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_READ_CACHE_ENABLED` | `true` | Set `false` to bypass response caching. |
+| `APP_READ_CACHE_TTL` | `60s` | Bounds clock-dependent views, market data and changes outside this instance. |
+| `APP_READ_CACHE_MAX_ENTRIES` | `2048` | Maximum retained responses. |
+| `APP_READ_CACHE_MAX_BYTES` | `33554432` | Maximum UTF-8 key/value bytes (32 MiB); Java object overhead is additional. |
+| `APP_READ_CACHE_MAX_ENTRY_BYTES` | `1048576` | Larger serialized response values bypass caching. |
+
+The store evicts least-recently-used entries when a bound is reached. Expired entries are removed on access and reclaimed before inserting new responses. Identical concurrent requests share bounded local locks. Timezone-local date participates in each identity. Failed responses and errors are not cached.
+
+Invalidation is deliberately broad for this release, preserving correctness across dependent financial views. Each process has independent memory: writes served by another replica and out-of-band SQL changes become visible within TTL. The first uncached request still performs the original work, and caching cannot eliminate Render cold-start time.
+
+`PortalReadCache` is a storage-independent JSON/cache-policy wrapper. `CacheStore` defines generation/get/put/evict/invalidate, and `InMemoryCacheStore` is its only implementation. To migrate tomorrow, add a Redis implementation and select it as the `CacheStore` bean; controllers, authentication scoping and invalidation callers need no changes. A Redis adapter must provide unique shared generations, expiry, bounded server memory, and never expose old-generation entries. The wrapper already falls back to uncached reads if storage fails, with a five-second retry interval and invalidation on recovery.
+
+Run cache and web regressions with Java 21:
+
+```bash
+./mvnw -Dtest='Portal*Cache*Test,PortalCacheTransactionTest,InMemoryCacheStoreTest,WebFinanceControllerTest,WebAuthenticationServiceTest' test
+```

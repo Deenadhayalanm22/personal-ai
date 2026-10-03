@@ -37,6 +37,12 @@ management:
           - metrics
 
 app:
+  read-cache:
+    enabled: ${APP_READ_CACHE_ENABLED:true}
+    max-entries: ${APP_READ_CACHE_MAX_ENTRIES:2048}
+    max-bytes: ${APP_READ_CACHE_MAX_BYTES:33554432}
+    ttl: ${APP_READ_CACHE_TTL:60s}
+    max-entry-bytes: ${APP_READ_CACHE_MAX_ENTRY_BYTES:1048576}
   payments:
     # Advance Pay/Skip decisions are limited to the scheduled calendar month.
     advance-days: ${PAYMENT_ADVANCE_DAYS:5}

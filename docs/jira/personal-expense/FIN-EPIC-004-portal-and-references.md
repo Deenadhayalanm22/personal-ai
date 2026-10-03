@@ -68,3 +68,22 @@ The **You** menu does not show an Expense capture shortcut. Its Your data sectio
 You → Manage names exposes existing reference hygiene in the frontend, with merchant/account historical merges and beneficiary alias-only behavior (FIN-EPIC-002). Browser capture/confirmation resolve the active profile on every endpoint; real/demo drafts cannot be confirmed across a profile switch.
 
 Core manual expense preparation and saved-name options remain available independently of AI credit balances/configuration. Both capture methods authenticate the active real/demo profile; no caller-selected owner is accepted. Manual controller and PostgreSQL scenarios verify profile scoping.
+
+## FIN-014 — In-memory acceleration of online financial reads
+
+### Acceptance criteria
+
+6. **Given** a successful financial GET on `WebFinanceController`, **when** the same authenticated session, active profile and parameters are requested again before expiry, **then** its response is reused from application memory. Session validation still runs on every request; auth, AI-credit/admin, conversation, and mutation endpoints are not response-cached. This release requires no Redis service or Redis dependency.
+7. **Given** a successful application write (including WhatsApp capture, corrections, reference merges and scheduled writes), **when** its transaction commits, **then** the instance's cached financial responses become unreachable. Rollbacks do not invalidate responses. A read already in progress cannot publish its old result into the new generation.
+8. **Given** logout, expiry, a profile switch, changed role, or a different session, **when** data is requested, **then** cached financial reads cannot bypass current authentication or cross profiles/sessions. Cache identity includes the profile-local calendar date so implicit month/payment-window reads refresh at midnight.
+9. **Given** an instance restart, expiry or eviction, **when** a financial read is made, **then** normal database-backed loading resumes. Default response TTL is 60 seconds to bound time-dependent views, market-data changes, external SQL changes and writes on other instances. The cache has configurable entry and byte bounds, with LRU eviction. PostgreSQL remains the source of truth.
+10. **Given** a future move to Redis, **when** a Redis implementation of `CacheStore` replaces `InMemoryCacheStore`, **then** controllers, cache identities, response serialization and invalidation callers remain unchanged. The current implementation performs no network cache calls.
+
+### Verification scenarios
+
+- Repeat a financial read and assert its loader runs once while authentication runs twice; vary query/session/profile and assert separate loads.
+- Cache data, revoke authentication, and assert the next request fails without returning the cached response.
+- Commit a writer transaction and assert generation invalidation; roll back and assert no invalidation. Concurrent invalidation during a load must prevent publication of the old result.
+- Round-trip generic DTO lists and dates; advance an injected monotonic clock past expiry and assert fresh loading. Failed/null/oversized responses must not be retained.
+- Fill the cache past entry/UTF-8 byte bounds and assert least-recently-used eviction; create a fresh store and assert no data survives a restart.
+- Simulate storage failures and corrupt JSON; assert normal reads succeed and failed storage is not retried on every request.
