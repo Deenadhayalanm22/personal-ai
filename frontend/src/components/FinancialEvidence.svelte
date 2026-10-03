@@ -22,11 +22,17 @@
     <div class="table-wrap"><table aria-label={source.kind === 'scenario' ? 'Scenario comparison' : 'Monthly plan totals'}>
       <thead><tr><th>Measure</th><th>Recorded plan</th>{#if source.kind === 'scenario'}<th>What-if</th>{/if}</tr></thead>
       <tbody><tr><th>Planned total</th><td>{money(source.baselineTotal)}</td>{#if source.kind === 'scenario'}<td>{money(source.proposedTotal)}</td>{/if}</tr>
-      <tr><th>Against salary estimate</th><td>{gap(source.baselineAfterIncome)}</td>{#if source.kind === 'scenario'}<td>{gap(source.proposedAfterIncome)}</td>{/if}</tr></tbody>
+      <tr><th>Against monthly income estimate</th><td>{gap(source.baselineAfterIncome)}</td>{#if source.kind === 'scenario'}<td>{gap(source.proposedAfterIncome)}</td>{/if}</tr>{#if source.kind === 'plan' && source.stillToPay != null}
+      <tr><th>Still to pay (includes investing)</th><td>{money(source.stillToPay)}</td></tr>
+      <tr><th>Pending investing (included)</th><td>{money(source.pendingInvesting)}</td></tr>
+      <tr><th>Pending earmarked savings (separate)</th><td>{money(source.pendingSavings)}</td></tr>
+      {/if}</tbody>
     </table></div>
     {#if source.incomeStatus !== 'EXACT_MONTHLY_ESTIMATE'}<span>Share an exact, monthly income estimate in Your money to compare it with this plan.</span>{/if}
     {#each source.items as item}
-      <div class="plan-item"><strong>{item.label}</strong><span>{item.dueDate || 'Date not recorded'} · {money(item.baseline)}{#if item.reduction > 0} → {money(item.proposed)}{/if}</span><small>{item.condition}</small></div>
+      <div class="plan-item"><strong>{item.label}</strong><span>{item.dueDate || 'Date not recorded'} · {money(item.baseline)}{#if item.reduction > 0} → {money(item.proposed)}{/if}</span><small>{item.condition}</small>
+        {#if item.detail}<small>{item.detail}</small>{/if}
+        {#if item.remainingPayments != null}<small>{item.remainingPayments} scheduled payments remaining{#if item.endsInMonth} · ends {item.endsInMonth}{/if}{#if item.freesFromMonth} · allocation frees from {item.freesFromMonth}{/if}</small>{/if}</div>
     {/each}
     {#each source.limitations as note}<p class="note">{note}</p>{/each}
   {:else}

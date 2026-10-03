@@ -194,8 +194,9 @@ test('shows monthly plan, conditional scenario and cross-module evidence', async
   await dashboard(page);
   const nextMonth = { kind: 'plan', month: '2026-10', currency: 'INR', baselineTotal: 75000, proposedTotal: 75000,
     incomeStatus: 'EXACT_MONTHLY_ESTIMATE', baselineAfterIncome: -15000, proposedAfterIncome: -15000,
+    stillToPay: 45000, pendingInvesting: 20000, pendingSavings: 2000,
     items: [{ label: 'Home EMI', dueDate: '2026-10-05', baseline: 30000, proposed: 30000, reduction: 0,
-      condition: 'Obligation: preserve payment.' }, { label: 'Index SIP', dueDate: '2026-10-12', baseline: 20000, proposed: 20000,
+      condition: 'Obligation: preserve payment.', remainingPayments: 4, endsInMonth: '2027-01', freesFromMonth: '2027-02', detail: 'Recorded schedule' }, { label: 'Index SIP', dueDate: '2026-10-12', baseline: 20000, proposed: 20000,
       reduction: 0, condition: 'Review provider terms.' }], limitations: ['Additional living costs are not included.'] };
   const scenario = { ...nextMonth, kind: 'scenario', proposedTotal: 60000, proposedAfterIncome: 0,
     items: [nextMonth.items[0], { ...nextMonth.items[1], proposed: 5000, reduction: 15000 }] };
@@ -203,16 +204,26 @@ test('shows monthly plan, conditional scenario and cross-module evidence', async
     rows: [{ name: 'Index fund', invested_amount: 1000, units: 10 }], truncated: false,
     note: 'Stored holdings only. No live market value.' };
   await page.route('**/api/web/expense-chat', route => route.fulfill({ json: {
-    answer: 'The recorded plan is ₹75,000 against your salary estimate, a ₹15,000 shortfall. Reducing the SIP is only a hypothetical option.',
-    evidence: [nextMonth, scenario, portfolio]
+    answer: 'The recorded plan is ₹75,000 against your monthly income estimate, a ₹15,000 shortfall. Reducing the SIP is only a hypothetical option.',
+    evidence: [nextMonth, scenario, portfolio, {kind: 'records', module: 'credit_card_bills', view: 'records',
+      currency: 'INR', matchingCount: 1, rows: [{card_id: 7, name: 'Travel card', captured_bill_amount: 4000,
+      paid_amount: 4500, remaining_amount: 0, monthly_purchase_amount: 900, unmatched_payment_amount: 500}],
+      truncated: false, note: 'Captured bills and recorded settlements only.'}]
   } }));
-  await page.getByRole('button', { name: 'Can I cover next month’s commitments with my salary?' }).click();
+  await page.getByRole('button', { name: 'Can I cover next month’s commitments with my monthly income?' }).click();
   await expect(page.getByText(/₹15,000 shortfall/)).toBeVisible();
-  await page.getByText('Based on 3 data queries').click();
+  await page.getByText('Based on 4 data queries').click();
   await expect(page.getByRole('table', { name: 'Scenario comparison' })).toBeVisible();
   await expect(page.getByText('Hypothetical only · No records changed')).toBeVisible();
   await expect(page.getByText('Obligation: preserve payment.', { exact: true })).toHaveCount(2);
   await expect(page.getByText('Stored holdings only. No live market value.')).toBeVisible();
+  await expect(page.getByText('Travel card', { exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Unmatched payment amount' })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Still to pay/ })).toHaveCount(1);
+  await expect(page.getByRole('row', { name: /Pending investing/ })).toHaveCount(1);
+  await expect(page.getByRole('row', { name: /Pending earmarked savings/ })).toHaveCount(1);
+  await expect(page.getByText(/4 scheduled payments remaining/)).toHaveCount(2);
+  await expect(page.getByRole('row', { name: /Against monthly income estimate/ })).toHaveCount(2);
   await page.screenshot({ path: 'test-results/money-chat-scenario.png' });
 });
 

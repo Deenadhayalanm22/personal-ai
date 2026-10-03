@@ -15,8 +15,9 @@ public class MonthlyPlanningTool {
     private final MonthlyFinancialSnapshotService snapshots;
     private final UserIncomeProfileRepository income;
     private final Clock clock;
-    public MonthlyPlanningTool(MonthlyFinancialSnapshotService snapshots, UserIncomeProfileRepository income, Clock clock) {
-        this.snapshots = snapshots; this.income = income; this.clock = clock;
+    private final com.apps.deen_sa.service.MonthlyPaymentOverviewService overview;
+    public MonthlyPlanningTool(MonthlyFinancialSnapshotService snapshots, UserIncomeProfileRepository income, Clock clock, com.apps.deen_sa.service.MonthlyPaymentOverviewService overview) {
+        this.snapshots = snapshots; this.income = income; this.clock = clock; this.overview = overview;
     }
     @Transactional(readOnly = true)
     public Plan read(AppUserEntity user, MonthRequest request) {
@@ -61,7 +62,8 @@ public class MonthlyPlanningTool {
                     default -> "Payment flexibility is unverified. Confirm whether this item can be reduced or deferred.";
                 };
                 items.add(new Item(key, source.sourceType(), source.sourceId(), source.label(), bucket.key(), source.dueDate(),
-                        source.plannedAmount(), proposed, source.plannedAmount().subtract(proposed), condition));
+                        source.plannedAmount(), proposed, source.plannedAmount().subtract(proposed), condition, source.category(), source.detail(),
+                        source.remainingPayments(), source.endsInMonth(), source.freesFromMonth()));
                 bucketTotal = bucketTotal.add(proposed);
             }
             buckets.add(new Bucket(bucket.label(), bucket.plannedAmount(), bucketTotal));
@@ -82,13 +84,16 @@ public class MonthlyPlanningTool {
         }
         BigDecimal baselineDifference = salary == null ? null : salary.subtract(snapshot.fullIntendedCommitment());
         BigDecimal proposedDifference = salary == null ? null : salary.subtract(total);
+        var unpaid = scenario ? null : overview.forMonth(user, month);
         return new Plan(scenario ? "scenario" : "plan", month.toString(), user.getCurrency(), snapshot.fullIntendedCommitment(), total,
                 snapshot.fullIntendedCommitment().subtract(total), incomeStatus, baselineDifference, proposedDifference,
                 List.copyOf(buckets), List.copyOf(items), List.of(
                 "Monthly intended plan, not unpaid balance or a bank cash-flow forecast. Paid and planned items follow the existing Monthly Commitment calculation.",
                 "Additional living costs and unrecorded obligations are not included. Do not add historic expenses, card charges, holdings or savings balances to this total.",
                 "Income comparison uses a private monthly estimate, not confirmed money received. No exact comparison is available for a range, missing or irregular income.",
-                scenario ? "Hypothetical only: no records changed. Reduced savings or investing affect future targets; deferred commitments remain obligations." : "Review source details before treating a planned allocation as adjustable."));
+                scenario ? "Hypothetical only: no records changed. Reduced savings or investing affect future targets; deferred commitments remain obligations." : "Review source details before treating a planned allocation as adjustable."),
+                unpaid == null ? null : unpaid.stillToPay(), unpaid == null ? null : unpaid.plannedInvesting(),
+                unpaid == null ? null : unpaid.plannedSavings());
     }
     private YearMonth current(AppUserEntity user) { return YearMonth.now(clock.withZone(ZoneId.of(user.getTimezone()))); }
     private YearMonth month(AppUserEntity user, String value) {
@@ -103,8 +108,17 @@ public class MonthlyPlanningTool {
     public record ScenarioRequest(String month, List<Adjustment> adjustments) {}
     public record Bucket(String label, BigDecimal baseline, BigDecimal proposed) {}
     public record Item(String sourceKey, String sourceType, String sourceId, String label, String bucket, LocalDate dueDate,
-                       BigDecimal baseline, BigDecimal proposed, BigDecimal reduction, String condition) {}
+                       BigDecimal baseline, BigDecimal proposed, BigDecimal reduction, String condition,
+                       String category, String detail, Integer remainingPayments, String endsInMonth, String freesFromMonth) {}
     public record Plan(String kind, String month, String currency, BigDecimal baselineTotal, BigDecimal proposedTotal,
                        BigDecimal reduction, String incomeStatus, BigDecimal baselineAfterIncome, BigDecimal proposedAfterIncome,
-                       List<Bucket> buckets, List<Item> items, List<String> limitations) {}
+                       List<Bucket> buckets, List<Item> items, List<String> limitations,
+                       BigDecimal stillToPay, BigDecimal pendingInvesting, BigDecimal pendingSavings) {
+        public Plan(String kind, String month, String currency, BigDecimal baselineTotal, BigDecimal proposedTotal,
+                    BigDecimal reduction, String incomeStatus, BigDecimal baselineAfterIncome, BigDecimal proposedAfterIncome,
+                    List<Bucket> buckets, List<Item> items, List<String> limitations) {
+            this(kind, month, currency, baselineTotal, proposedTotal, reduction, incomeStatus, baselineAfterIncome,
+                    proposedAfterIncome, buckets, items, limitations, null, null, null);
+        }
+    }
 }

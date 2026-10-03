@@ -27,6 +27,19 @@ public class CreditCardBillService {
                 .stream().filter(card -> includesMonth(card,month)).map(card -> bill(user, card, month)).toList());
     }
 
+    /** Bounded read-only summaries for chat; dated history has its own paginated tool. */
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public SummaryList summaries(AppUserEntity user, YearMonth month, int limit, int offset) {
+        if (limit < 1 || limit > 50 || offset < 0 || offset > 10000)
+            throw invalid("Use limit 1–50 and offset 0–10000");
+        String where = " FROM user_credit_card WHERE user_id=? AND active=true AND (start_month IS NULL OR start_month<=?)";
+        var date = java.sql.Date.valueOf(month.atDay(1));
+        long count = jdbc.queryForObject("SELECT count(*)" + where, Long.class, user.getId(), date);
+        var ids = jdbc.queryForList("SELECT id" + where + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+                Long.class, user.getId(), date, limit, offset);
+        return new SummaryList(count, ids.stream().map(id -> bill(user, owned(user,id), month, false)).toList());
+    }
+
     /** The bill is generated on statementDay for purchases strictly before that day. */
     public static LocalDate statementEnd(UserCreditCardEntity card, YearMonth month) {
         return statementGeneratedAt(card, month).minusDays(1);
@@ -56,12 +69,15 @@ public class CreditCardBillService {
     }
 
     private Bill bill(AppUserEntity user, UserCreditCardEntity card, YearMonth month) {
+        return bill(user,card,month,true);
+    }
+    private Bill bill(AppUserEntity user, UserCreditCardEntity card, YearMonth month, boolean includeHistory) {
         LocalDate end = statementEnd(card, month), start = periodStart(card, month);
         BigDecimal projected = includesMonth(card,month)?transactions.sumVisibleByAccountAndPeriod(user.getId(), card.getAccountReference().getId(), start, end.plusDays(1)):BigDecimal.ZERO;
         BigDecimal monthlyPurchases = transactions.sumVisibleByAccountAndPeriod(user.getId(), card.getAccountReference().getId(), month.atDay(1), month.plusMonths(1).atDay(1));
         BigDecimal paid = paidForStatement(card.getId(), end);
-        var history = jdbc.query("SELECT id, paid_at, amount FROM credit_card_bill_payment WHERE card_id = ? AND statement_end = ? ORDER BY paid_at DESC, id DESC",
-                (rs, row) -> new Payment(rs.getLong("id"), rs.getDate("paid_at").toLocalDate(), rs.getBigDecimal("amount")), card.getId(), java.sql.Date.valueOf(end));
+        var history = includeHistory ? jdbc.query("SELECT id, paid_at, amount FROM credit_card_bill_payment WHERE card_id = ? AND statement_end = ? ORDER BY paid_at DESC, id DESC",
+                (rs, row) -> new Payment(rs.getLong("id"), rs.getDate("paid_at").toLocalDate(), rs.getBigDecimal("amount")), card.getId(), java.sql.Date.valueOf(end)) : List.<Payment>of();
         return new Bill(card.getId(), card.getCardName(), month.toString(), start, end, month.atDay(card.getDueDay()),
                 projected, paid, projected.subtract(paid).max(BigDecimal.ZERO), end.isBefore(today(user)), history, end.plusDays(1), monthlyPurchases, paid.subtract(projected).max(BigDecimal.ZERO));
     }
@@ -106,5 +122,6 @@ public class CreditCardBillService {
     public record Bill(Long cardId, String cardName, String month, LocalDate periodStart, LocalDate statementEnd,
                        LocalDate dueDate, BigDecimal projectedAmount, BigDecimal paidAmount, BigDecimal remaining,
                        boolean statementClosed, List<Payment> payments, LocalDate statementGeneratedAt, BigDecimal monthlyPurchaseAmount, BigDecimal unmatchedPaymentAmount) {}
+    public record SummaryList(long matchingCount, List<Bill> bills) {}
     public record BillList(String month, List<Bill> bills) {}
 }

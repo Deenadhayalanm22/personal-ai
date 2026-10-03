@@ -18,11 +18,12 @@ public class ExpenseMcpTools {
     private final List<JsonNode> definitions;
     private final FinancialRecordsTool records;
     private final MonthlyPlanningTool planning;
+    private final CreditCardBillsTool bills;
 
-    public ExpenseMcpTools(ExpenseQueryTool query, FinancialRecordsTool records, MonthlyPlanningTool planning, ObjectMapper mapper) throws IOException {
-        this.query = query; this.records = records; this.planning = planning; this.mapper = mapper;
+    public ExpenseMcpTools(ExpenseQueryTool query, FinancialRecordsTool records, MonthlyPlanningTool planning, CreditCardBillsTool bills, ObjectMapper mapper) throws IOException {
+        this.query = query; this.records = records; this.planning = planning; this.mapper = mapper; this.bills = bills;
         var catalog = new java.util.ArrayList<JsonNode>();
-        for (String name : List.of("expense-query", "financial-records", "monthly-plan", "monthly-scenario")) {
+        for (String name : List.of("expense-query", "financial-records", "monthly-plan", "monthly-scenario", "credit-card-bills")) {
             try (var input = new ClassPathResource("insights/" + name + "-tool.json").getInputStream()) {
                 catalog.add(mapper.readTree(input));
             }
@@ -34,6 +35,7 @@ public class ExpenseMcpTools {
         return switch (name) {
             case "query_expenses" -> query.execute(user, parse(arguments, ExpenseQueryTool.Query.class));
             case "read_financial_records" -> records.read(user, parse(arguments, FinancialRecordsTool.Request.class));
+            case "read_credit_card_bills" -> bills.read(user, parse(arguments, CreditCardBillsTool.Request.class));
             case "read_monthly_plan" -> planning.read(user, parse(arguments, MonthlyPlanningTool.MonthRequest.class));
             case "simulate_monthly_plan" -> planning.simulate(user, parse(arguments, MonthlyPlanningTool.ScenarioRequest.class));
             default -> throw ExpenseQueryTool.invalid("Unknown tool.");

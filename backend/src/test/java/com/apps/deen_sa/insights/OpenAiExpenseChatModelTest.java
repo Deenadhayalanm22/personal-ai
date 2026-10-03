@@ -42,7 +42,7 @@ class OpenAiExpenseChatModelTest {
         server.start();
         var query = mock(ExpenseQueryTool.class);
         when(query.execute(any(), any())).thenReturn(new ExpenseQueryTool.Result(mapper.readValue(arguments, ExpenseQueryTool.Query.class), "INR", 2, new BigDecimal("750"), List.of(), false));
-        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.systemUTC(), mock(com.apps.deen_sa.credits.CreditStore.class),
+        var service = new ExpenseChatService(model(), new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mock(CreditCardBillsTool.class), mapper), Clock.systemUTC(), mock(com.apps.deen_sa.credits.CreditStore.class),
                 new com.apps.deen_sa.credits.CreditPolicy("gpt-4.1-mini",new BigDecimal("100"),new BigDecimal("25"),new BigDecimal("400"),new BigDecimal("1000"),new BigDecimal("10"),6,true), mapper);
         var user = new AppUserEntity(); user.setId(1L);
         var result = service.chat(user, new ExpenseChatService.Request("How much did I spend?", "2026-09", List.of()));
@@ -61,7 +61,7 @@ class OpenAiExpenseChatModelTest {
             count.incrementAndGet(); exchange.sendResponseHeaders(503, -1); exchange.close();
         });
         server.start();
-        var tools = new ExpenseMcpTools(mock(ExpenseQueryTool.class), mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper);
+        var tools = new ExpenseMcpTools(mock(ExpenseQueryTool.class), mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mock(CreditCardBillsTool.class), mapper);
         assertThatThrownBy(() -> model().complete("system", List.of(new ExpenseChatModel.Message("user", "Hi")), tools.definitions()))
                 .isInstanceOfSatisfying(WebApiException.class, ex -> assertThat(ex.code()).isEqualTo("CHAT_UNAVAILABLE"));
         assertThat(count.get()).isEqualTo(1);

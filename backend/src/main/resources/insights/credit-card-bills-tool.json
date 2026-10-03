@@ -1,0 +1,35 @@
+{
+  "name": "read_credit_card_bills",
+  "description": "Read owned captured credit-card bills for a due month using the canonical Accounts calculation. Returns statement dates, calendar-month purchases, captured bill, paid, remaining and unmatched payment amounts, and open/closed state. Honors card start month; supports historical months. No bank balances or verified issuer debt. Page through nextOffset. For dated payment history use read_financial_records credit_cards history with card_id.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "month": {
+        "type": "string",
+        "description": "YYYY-MM bill due month, not purchase month."
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 50
+      },
+      "offset": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10000
+      }
+    },
+    "required": [
+      "month",
+      "limit",
+      "offset"
+    ]
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

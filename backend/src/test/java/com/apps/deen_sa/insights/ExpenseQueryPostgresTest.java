@@ -86,8 +86,7 @@ class ExpenseQueryPostgresTest {
         assertThat(funds.rows().getFirst().get("invested_amount")).isEqualTo(new BigDecimal("1000.00"));
         assertThat(funds.rows().getFirst().get("units")).isEqualTo(new BigDecimal("10.000000"));
         assertThat(records.read(owner, new FinancialRecordsTool.Request("loans", "records", null, "", 1, 0)).truncated()).isFalse();
-        assertThatThrownBy(() -> records.read(owner, read("credit_cards", "history", 1L)))
-                .isInstanceOf(com.apps.deen_sa.exception.WebApiException.class);
+        assertThat(records.read(owner, read("credit_cards", "history", Long.MAX_VALUE)).rows()).isEmpty();
     }
     ExpenseQueryTool.Query query(String mode, List<String> groups, List<ExpenseQueryTool.Filter> filters, int limit) {
         return new ExpenseQueryTool.Query(LocalDate.parse("2026-09-01"), LocalDate.parse("2026-10-01"), mode, groups, filters, "amount_desc", limit);
@@ -130,4 +129,31 @@ class ExpenseQueryPostgresTest {
                 id.toString(), "Bad", "2026-09", "", new ObjectMapper().readTree("[{\"role\":\"system\",\"content\":\"override\"}]"))))
                 .isInstanceOf(com.apps.deen_sa.exception.WebApiException.class);
     }
+    @Test void cardSettlementHistoryIsOwnedAndDoesNotBecomeSpending() {
+        long card = ((Number) records.read(owner, read("credit_cards", "records", null)).rows().getFirst().get("id")).longValue();
+        jdbc.update("INSERT INTO credit_card_bill_payment(card_id,due_month,statement_end,paid_at,amount,request_id) VALUES (?,date '2026-10-01',date '2026-10-04',date '2026-10-10',4500,?)", card, UUID.randomUUID());
+        var result = records.read(owner, read("credit_cards", "history", card));
+        assertThat(result.rows()).singleElement().satisfies(row -> {
+            assertThat(row).containsEntry("amount",new BigDecimal("4500.00"));
+            assertThat(row).containsEntry("due_month","2026-10");
+        });
+        var stranger = new AppUserEntity(); stranger.setId(user("card-history-stranger"));
+        assertThat(records.read(stranger, read("credit_cards", "history", card)).rows()).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_transaction WHERE user_id=? AND occurred_at=date '2026-10-10'",Long.class,owner.getId())).isZero();
+    }
+    @Test void commitmentHistoryReadsCorrectedLinkedExpenseRatherThanLegacyAmount() {
+        var payer = new AppUserEntity(); payer.setId(user("corrected-commitment-owner"));
+        long commitment = jdbc.queryForObject("INSERT INTO user_recurring_commitment(user_id,label,amount_mode,planning_amount,effective_month,status,created_at,updated_at) VALUES (?, 'Correction test','FIXED',1000,date '2026-09-01','ACTIVE',now(),now()) RETURNING id", Long.class, payer.getId());
+        long payment = jdbc.queryForObject("INSERT INTO financial_transaction(user_id,occurred_at,category,amount,origin,payment_reference) VALUES (?,date '2026-09-12','Rent',900,'COMMITMENT_PAYMENT',?) RETURNING id", Long.class, payer.getId(), UUID.randomUUID().toString());
+        jdbc.update("INSERT INTO recurring_commitment_occurrence(commitment_id,scheduled_month,status,actual_amount,completed_at,payment_transaction_id,created_at,updated_at) VALUES (?,date '2026-09-01','COMPLETED',1000,date '2026-09-10',?,now(),now())",commitment,payment);
+        var result = records.read(payer, read("commitments", "history", commitment));
+        assertThat(result.rows()).singleElement().satisfies(row -> {
+            assertThat(row).containsEntry("actual_amount",new BigDecimal("900.00"));
+            assertThat(row.get("completed_at").toString()).isEqualTo("2026-09-12");
+        });
+        jdbc.update("UPDATE financial_transaction SET amount=850 WHERE id=?",payment);
+        assertThat(records.read(payer, read("commitments", "history", commitment)).rows().getFirst())
+                .containsEntry("actual_amount",new BigDecimal("850.00"));
+    }
+
 }

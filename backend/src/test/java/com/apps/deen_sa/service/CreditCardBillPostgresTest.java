@@ -72,6 +72,22 @@ class CreditCardBillPostgresTest {
     CreditCardBillService.Bill record(CreditCardBillService.PaymentRequest r) {
         return tx.execute(status->service.record(owner,cardId,r));
     }
+    @Test void boundedChatSummariesUseCanonicalAmountsAndOwnedStartMonth() {
+        jdbc.update("UPDATE user_credit_card SET start_month=date '2026-11-01' WHERE id=?",cardId);
+        assertThat(tx.execute(status->service.summaries(owner,YearMonth.of(2026,10),1,0)).matchingCount()).isZero();
+        record(request("2026-11","5500","2026-11-01"));
+        var page=tx.execute(status->service.summaries(owner,NOVEMBER,1,0));
+        assertThat(page.matchingCount()).isEqualTo(1);
+        var bill=page.bills().getFirst();
+        assertThat(bill.projectedAmount()).isEqualByComparingTo("5000");
+        assertThat(bill.paidAmount()).isEqualByComparingTo("5500");
+        assertThat(bill.remaining()).isZero();
+        assertThat(bill.unmatchedPaymentAmount()).isEqualByComparingTo("500");
+        assertThat(bill.payments()).isEmpty();
+        assertThat(tx.execute(status->service.summaries(owner,NOVEMBER,1,1)).bills()).isEmpty();
+        assertThat(tx.execute(status->service.summaries(other,NOVEMBER,1,0)).matchingCount()).isZero();
+    }
+
     @Test void startMonthScopesBillsButNotPurchaseMonthSpending() {
         purchase("2026-11-01","900");
         jdbc.update("UPDATE user_credit_card SET start_month=date '2026-11-01' WHERE id=?",cardId);

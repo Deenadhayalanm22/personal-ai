@@ -15,8 +15,9 @@ class MonthlyPlanningToolTest {
     private final AppUserEntity user = new AppUserEntity();
     private final MonthlyFinancialSnapshotService snapshots = mock(MonthlyFinancialSnapshotService.class);
     private final UserIncomeProfileRepository incomes = mock(UserIncomeProfileRepository.class);
+    private final com.apps.deen_sa.service.MonthlyPaymentOverviewService overview = mock(com.apps.deen_sa.service.MonthlyPaymentOverviewService.class);
     private final MonthlyPlanningTool tool = new MonthlyPlanningTool(snapshots, incomes,
-            Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC), overview);
     MonthlyPlanningToolTest() { user.setId(42L); }
     private void fixture(String salaryVisibility) {
         var loan = new MonthlyFinancialSnapshotService.Source("LOAN", "1", "Home loan", new BigDecimal("30000"),
@@ -78,4 +79,20 @@ class MonthlyPlanningToolTest {
         assertThat(result.incomeStatus()).isEqualTo("RANGE_ONLY");
         assertThat(result.baselineAfterIncome()).isNull();
     }
+    @Test void exposesCanonicalUnpaidAmountsSeparatelyFromIntendedPlan() {
+        fixture("EXACT");
+        when(overview.forMonth(user, YearMonth.of(2026, 10))).thenReturn(
+                new com.apps.deen_sa.service.MonthlyPaymentOverviewService.Overview(new BigDecimal("45000"),
+                        new BigDecimal("20000"), new BigDecimal("2000")));
+        var result = tool.read(user, new MonthlyPlanningTool.MonthRequest("2026-10"));
+        assertThat(result.baselineTotal()).isEqualByComparingTo("75000");
+        assertThat(result.stillToPay()).isEqualByComparingTo("45000");
+        assertThat(result.pendingInvesting()).isEqualByComparingTo("20000");
+        assertThat(result.pendingSavings()).isEqualByComparingTo("2000");
+        var scenario = tool.simulate(user, new MonthlyPlanningTool.ScenarioRequest("2026-10", List.of(
+                new MonthlyPlanningTool.Adjustment("MUTUAL_FUND_SIP:2:2026-10-12", BigDecimal.ZERO))));
+        assertThat(scenario.stillToPay()).isNull();
+        verify(overview).forMonth(user, YearMonth.of(2026, 10));
+    }
+
 }

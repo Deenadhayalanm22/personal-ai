@@ -21,7 +21,7 @@ class ExpenseChatServiceTest {
     private final com.apps.deen_sa.credits.CreditPolicy policy = new com.apps.deen_sa.credits.CreditPolicy("test", new BigDecimal("100"),new BigDecimal("25"),new BigDecimal("400"),new BigDecimal("1000"),new BigDecimal("10"),6,true);
     private AppUserEntity user() { var value = new AppUserEntity(); value.setId(7L); return value; }
     private ExpenseChatService service() throws Exception {
-        return new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mapper), Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC), credits, policy, mapper);
+        return new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), mock(MonthlyPlanningTool.class), mock(CreditCardBillsTool.class), mapper), Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC), credits, policy, mapper);
     }
     private ExpenseChatService.Request request() { return new ExpenseChatService.Request("And excluding rent?", "2026-09",
             List.of(new ExpenseChatService.History("user", "Where did my money go?"), new ExpenseChatService.History("assistant", "Let us inspect it."))); }
@@ -58,7 +58,7 @@ class ExpenseChatServiceTest {
         assertThatThrownBy(() -> service.chat(user, request())).isInstanceOfSatisfying(WebApiException.class,
                 ex -> assertThat(ex.code()).isEqualTo("CHAT_QUERY_LIMIT"));
         when(model.complete(anyString(), anyList(), any())).thenReturn(new ExpenseChatModel.Reply("IN_SCOPE", List.of()), new ExpenseChatModel.Reply("Try a shorter period.", List.of()));
-        assertThat(service.chat(user, request()).answer()).contains("shorter");
+        assertThat(service.chat(user, request()).answer()).contains("could not verify");
     }
     @Test void composesPlanAndScenarioToolsInOneFollowUpWithoutNewIntent() throws Exception {
         var plan = mock(MonthlyPlanningTool.class);
@@ -68,7 +68,7 @@ class ExpenseChatServiceTest {
                 new BigDecimal("60000"), new BigDecimal("15000"), "EXACT_MONTHLY_ESTIMATE", new BigDecimal("-15000"), BigDecimal.ZERO, List.of(), List.of(), List.of());
         when(plan.read(eq(user), any())).thenReturn(data);
         when(plan.simulate(eq(user), any())).thenReturn(scenario);
-        var service = new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), plan, mapper),
+        var service = new ExpenseChatService(model, new ExpenseMcpTools(query, mock(FinancialRecordsTool.class), plan, mock(CreditCardBillsTool.class), mapper),
                 Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneOffset.UTC), credits, policy, mapper);
         when(model.complete(anyString(), anyList(), any())).thenReturn(
                 new ExpenseChatModel.Reply("IN_SCOPE", List.of()),
@@ -116,8 +116,46 @@ class ExpenseChatServiceTest {
         var usage = new ExpenseChatModel.Usage(100,20,10);
         when(model.complete(anyString(),anyList(),any())).thenReturn(new ExpenseChatModel.Reply("IN_SCOPE",List.of(),usage),new ExpenseChatModel.Reply("Done",List.of(),usage));
         service().chat(user,request());
-        verify(credits,times(2)).reserve(eq(7L),any(),any());
-        verify(credits,times(2)).settle(any(),eq(usage));
+        verify(credits,times(3)).reserve(eq(7L),any(),any());
+        verify(credits,times(3)).settle(any(),eq(usage));
+    }
+
+    @Test void withholdsUnsupportedAdviceDespiteConversationHistory() throws Exception {
+        when(model.complete(anyString(), anyList(), any())).thenReturn(
+                new ExpenseChatModel.Reply("IN_SCOPE", List.of()),
+                new ExpenseChatModel.Reply("You have enough savings; invest INR 5000.", List.of()));
+        var response = service().chat(user, request());
+        assertThat(response.answer()).contains("could not verify", "Add expense", "Optional money modules")
+                .doesNotContain("5000", "enough savings");
+        assertThat(response.evidence()).isEmpty();
+        verify(model, times(3)).complete(anyString(), anyList(), any());
+        verify(model).complete(contains("Your previous attempt returned no successful tool evidence"), anyList(), any());
+    }
+    @Test void evidenceRetryRecoversWithAnEmptySuccessfulQuery() throws Exception {
+        var result = new ExpenseQueryTool.Result(mapper.readValue(ARGS, ExpenseQueryTool.Query.class), "INR", 0,
+                BigDecimal.ZERO, List.of(), false);
+        when(query.execute(eq(user), any())).thenReturn(result);
+        when(model.complete(anyString(), anyList(), any())).thenReturn(
+                new ExpenseChatModel.Reply("IN_SCOPE", List.of()),
+                new ExpenseChatModel.Reply("You spent nothing.", List.of()),
+                new ExpenseChatModel.Reply("", List.of(new ExpenseChatModel.Call("q", "query_expenses", ARGS))),
+                new ExpenseChatModel.Reply("No recorded expenses matched. Add missing expenses using Add expense in Ask AI.", List.of()));
+        var response = service().chat(user, request());
+        assertThat(response.evidence()).containsExactly(result);
+        assertThat(response.answer()).contains("No recorded expenses matched", "Add expense").doesNotContain("spent nothing");
+        verify(model, atLeastOnce()).complete(argThat(system -> system.contains("every relevant")
+                && system.contains("Accounts for bank-account labels")
+                && system.contains("Tool errors mean the")
+                && system.contains("never invent a feature")), anyList(), any());
+    }
+    @Test void failedToolLookupsDoNotAuthorizeAdvice() throws Exception {
+        when(model.complete(anyString(), anyList(), any())).thenReturn(
+                new ExpenseChatModel.Reply("IN_SCOPE", List.of()),
+                new ExpenseChatModel.Reply("", List.of(new ExpenseChatModel.Call("q", "unknown", "{}"))),
+                new ExpenseChatModel.Reply("There are no loans. Add your loan again.", List.of()));
+        var response = service().chat(user, request());
+        assertThat(response.evidence()).isEmpty();
+        assertThat(response.answer()).contains("could not verify").doesNotContain("no loans", "loan again");
     }
 
 }

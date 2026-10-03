@@ -1,6 +1,6 @@
 {
   "name": "read_financial_records",
-  "description": "Read owned loans, mutual funds, stocks, commitments, credit cards, savings or account labels. Use records view to discover IDs and history view with an ID for recorded payment/allocation history. No writes or live market valuation; holdings are not cash. Search matches names literally, case-insensitively. Page through nextOffset; do not treat a limited page as the whole portfolio. For monthly totals and income comparison use read_monthly_plan, not sums of these records.",
+  "description": "Read owned loans, mutual funds, stocks, commitments, credit cards, savings or account labels. Use records view to discover IDs and history view with an ID for recorded payment/allocation history. No writes or live market valuation; holdings are not cash. Search matches names literally, case-insensitively. Page through nextOffset; do not treat a limited page as the whole portfolio. For monthly totals and income comparison use read_monthly_plan, not sums of these records. Credit-card history now returns dated settlements by card ID; records include account_reference_id to join accounts by identity. Commitment history reads linked actual expense amounts/dates and corrected extras, already included in expense totals. Accounts are labels/types only; unused receipt/balance migration tables are not product features.",
   "inputSchema": {
     "type": "object",
     "additionalProperties": false,

@@ -253,3 +253,11 @@ FIN-019/FIN-025 combined-income acceptance: Accounts presents Monthly income, wi
 
 
 Unified credit-card presentation acceptance (FIN-022/FIN-025): Each credit-card account contains its selected-month bill comparison, timeline, progress, payment recording and history in the same account card as configuration and billing days. Match account `cardId` to bill `cardId`, never display names; legacy card names may differ from the expense-account name. Bank/debit cards have no bill controls. A card without an included bill shows the selected-month empty state. Loading/errors allow retry within the card. Bills whose account metadata is unavailable remain accessible in an Accounts fallback section. Home's bill link focuses the first bill region within Accounts. Desktop/mobile browser coverage verifies distinct names and multiple cards do not mix payments or duplicate bill panels.
+
+### FIN-024 — Alignment with current Accounts and payment logic
+
+Read-only chat now exposes `read_credit_card_bills` with due-month selection and bounded server pagination, using the same Accounts bill calculator without unbounded payment-history loading. It preserves card start-month inclusion, generation-day boundaries, calendar-month purchases, recorded settlement totals, floored remaining and unmatched payment amounts. Paginated credit-card history exposes dated settlements with ownership joins. Card records include account-reference IDs for identity-based joins. No bank-balance/receipt migration storage is exposed; current Accounts has no such flow.
+
+Monthly-plan evidence adds the canonical Home unpaid overview separately from intended amounts, and canonical calculation detail/payoff facts per source. Pending investing is included in still-to-pay; savings remains separate. Simulations omit unpaid overview fields. Monthly income remains a masked combined estimate. Users review or record card payments within Home → Your money → Accounts, and savings within the owning commitment details.
+
+Acceptance coverage: `CreditCardBillsToolTest`, `MonthlyPlanningToolTest`, `ExpenseQueryPostgresTest` and `CreditCardBillPostgresTest` verify bounded dispatch, due-month arithmetic, identity/ownership, dated history and separation of spending, settlement and unpaid/intended totals.

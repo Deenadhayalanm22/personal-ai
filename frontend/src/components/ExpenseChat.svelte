@@ -38,7 +38,7 @@
     finally { if (!destroyed) loadingCredits = false; }
   }
   let destroyed = false;
-  const suggestions = ['Can I cover next month’s commitments with my salary?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
+  const suggestions = ['Can I cover next month’s commitments with my monthly income?', 'Where did my money go?', 'Show my loans and planned investments', 'Which were my largest expenses?'];
   async function scrollDown() { await tick(); if (transcript) transcript.scrollTop = transcript.scrollHeight; }
   $: if (open && !captureDate) { refreshCredits(); tick().then(() => input?.focus()); }
   async function close() { open = false; await tick(); document.querySelector('[data-nav-chat]')?.focus(); }
