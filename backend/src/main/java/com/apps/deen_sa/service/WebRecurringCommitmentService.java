@@ -117,6 +117,7 @@ public class WebRecurringCommitmentService {
             var payment = occurrence.getPaymentTransaction();
             if (payment != null && payment.getAmount().compareTo(request.actualAmount().setScale(2, RoundingMode.HALF_UP)) == 0
                     && payment.getOccurredAt().equals(completed)
+                    && sameAccount(payment, request.sourceAccountId())
                     && java.util.Objects.equals(commitment.getNextExpectedDate(), request.nextExpectedDate())
                     && (occurrence.getSavingsUsed() == null ? request.savingsUsed() == null : request.savingsUsed() != null && occurrence.getSavingsUsed().compareTo(request.savingsUsed()) == 0)
                     && (request.transactionId() == null || payment.getId().equals(request.transactionId())))
@@ -129,7 +130,7 @@ public class WebRecurringCommitmentService {
         occurrence.setSavingsUsed(request.savingsUsed());
         occurrence.setCompletedAt(completed); occurrence.setActualAmount(request.actualAmount().setScale(2, RoundingMode.HALF_UP)); occurrence.setUpdatedAt(java.time.Instant.now(clock)); occurrences.saveAndFlush(occurrence);
         occurrence.setPaymentTransaction(payments.record(commitment, request.actualAmount(), completed,
-                request.transactionId(), "occurrence:" + occurrence.getId(), commitment.getLabel()));
+                request.transactionId(), "occurrence:" + occurrence.getId(), commitment.getLabel(), request.sourceAccountId()));
         occurrences.saveAndFlush(occurrence);
         commitment.setNextExpectedDate(request.nextExpectedDate()); commitments.saveAndFlush(commitment); snapshots.refreshCurrent(user);
         return savedResponse(occurrence);
@@ -172,6 +173,7 @@ public class WebRecurringCommitmentService {
             if (previous.isPresent()) {
                 if (previous.get().getAmount().compareTo(request.amount().setScale(2, RoundingMode.HALF_UP)) != 0
                         || !previous.get().getReason().equals(request.reason().trim())
+                        || !sameAccount(previous.get().getPaymentTransaction(), request.sourceAccountId())
                         || (request.transactionId() != null && !request.transactionId().equals(previous.get().getPaymentTransaction().getId())))
                     throw invalid("Payment request ID was already used with different details");
                 return savedResponse(occurrence);
@@ -183,7 +185,7 @@ public class WebRecurringCommitmentService {
         extra.setOccurrence(occurrence); extra.setAmount(request.amount().setScale(2, RoundingMode.HALF_UP)); extra.setReason(request.reason().trim()); extra.setCreatedAt(java.time.Instant.now(clock)); extra.setRequestId(request.requestId()); extras.saveAndFlush(extra);
         LocalDate paidOn = LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())));
         extra.setPaymentTransaction(payments.record(commitment, request.amount(), paidOn, request.transactionId(),
-                "extra:" + extra.getId(), commitment.getLabel() + " · " + request.reason().trim()));
+                "extra:" + extra.getId(), commitment.getLabel() + " · " + request.reason().trim(), request.sourceAccountId()));
         extras.saveAndFlush(extra); snapshots.refreshCurrent(user);
         return RecurringCommitmentSchedule.dated(commitment)
                 ? datedOccurrences(user, commitment, scheduled, LocalDate.now(clock.withZone(java.time.ZoneId.of(user.getTimezone())))).stream()
@@ -292,10 +294,12 @@ public class WebRecurringCommitmentService {
                 && commitment.getCreatedAt().atZone(userZone).toLocalDate().isAfter(dueDate);
     }
     public record CommitmentRequest(String label, String amountMode, BigDecimal planningAmount, Integer dueDay, String effectiveMonth, String status, String category, String subcategory, Long sourceTransactionId, List<Long> transactionIds, String recurrenceUnit, Integer recurrenceInterval, Boolean flexibleSchedule, LocalDate nextExpectedDate) { }
-    public record CompletionRequest(BigDecimal actualAmount, LocalDate completedAt, LocalDate nextExpectedDate, BigDecimal savingsUsed, LocalDate occurrenceDate, Long transactionId) {
+    public record CompletionRequest(BigDecimal actualAmount, LocalDate completedAt, LocalDate nextExpectedDate, BigDecimal savingsUsed, LocalDate occurrenceDate, Long transactionId, Long sourceAccountId) {
+        public CompletionRequest(BigDecimal amount, LocalDate date, LocalDate next, BigDecimal savings, LocalDate occurrence, Long transaction) { this(amount, date, next, savings, occurrence, transaction, null); }
         public CompletionRequest(BigDecimal amount, LocalDate date, LocalDate next, BigDecimal savings, LocalDate occurrence) { this(amount, date, next, savings, occurrence, null); }
     }
-    public record ExtraRequest(BigDecimal amount, String reason, String requestId, Long transactionId) {
+    public record ExtraRequest(BigDecimal amount, String reason, String requestId, Long transactionId, Long sourceAccountId) {
+        public ExtraRequest(BigDecimal amount, String reason, String requestId, Long transaction) { this(amount, reason, requestId, transaction, null); }
         public ExtraRequest(BigDecimal amount, String reason) { this(amount, reason, null, null); }
     }
     public record ExtraResponse(BigDecimal amount, String reason, Long transactionId, LocalDate paidOn) { }
@@ -307,6 +311,9 @@ public class WebRecurringCommitmentService {
     public record CandidateResponse(Long transactionId, BigDecimal amount, LocalDate transactionDate, String category, String subcategory, List<CommitmentResponse> choices) { }
     public record CommitmentReviewResponse(List<CandidateResponse> items) { }
     public record ResolveRequest(Long commitmentId) { }
+    private static boolean sameAccount(FinancialTransactionEntity payment, Long accountId) {
+        return accountId == null || payment != null && payment.getSourceAccount() != null && accountId.equals(payment.getSourceAccount().getId());
+    }
     private LocalDate paymentDate(RecurringCommitmentOccurrenceEntity occurrence) { return occurrence.getPaymentTransaction() == null ? occurrence.getCompletedAt() : occurrence.getPaymentTransaction().getOccurredAt(); }
     private BigDecimal paymentAmount(RecurringCommitmentOccurrenceEntity occurrence) { return occurrence.getPaymentTransaction() == null ? occurrence.getActualAmount() : occurrence.getPaymentTransaction().getAmount(); }
     private ExtraResponse extraResponse(RecurringCommitmentExtraEntity extra) {

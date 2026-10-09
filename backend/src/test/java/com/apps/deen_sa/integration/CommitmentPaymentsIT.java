@@ -41,6 +41,30 @@ class CommitmentPaymentsIT {
     @Autowired TransactionDraftRepository drafts;
     @Autowired CommitmentSavingsPlanRepository savingPlans;
     @Autowired CommitmentSavingsEntryRepository savingEntries;
+    @Autowired UserReferenceEntityRepository references;
+    @Autowired UserCreditCardRepository cards;
+    @Autowired CreditCardBillService bills;
+    @Test void cardFundedPaymentAndExtraIncreaseNextBillOnce() {
+        var u = user(); var c = commitment(u);
+        var account = new UserReferenceEntity(); account.setUser(u); account.setEntityType(UserReferenceEntityType.ACCOUNT);
+        account.setCanonicalName("Commitment card"); references.saveAndFlush(account);
+        var card = new UserCreditCardEntity(); card.setUser(u); card.setAccountReference(account);
+        card.setCardName("Commitment card"); card.setIssuerName("Issuer"); card.setStatementDay(1); card.setDueDay(21); cards.saveAndFlush(card);
+        var request = new WebRecurringCommitmentService.CompletionRequest(new BigDecimal("900"), today(), today().plusMonths(1), null, today().withDayOfMonth(1), null, account.getId());
+        var paid = service.complete(u, c.getId(), request);
+        service.complete(u, c.getId(), request);
+        var extra = new WebRecurringCommitmentService.ExtraRequest(new BigDecimal("100"), "Extra", "card-extra", null, account.getId());
+        service.addExtra(u, c.getId(), YearMonth.from(today()).toString(), extra);
+        service.addExtra(u, c.getId(), YearMonth.from(today()).toString(), extra);
+        assertThat(transactions.findById(paid.transactionId()).orElseThrow().getSourceAccount().getId()).isEqualTo(account.getId());
+        assertThat(calendar.calendar(u, YearMonth.from(today())).totalSpend()).isEqualByComparingTo("1000");
+        assertThat(bills.list(u, YearMonth.from(today())).bills().getFirst().projectedAmount()).isZero();
+        assertThat(bills.list(u, YearMonth.from(today()).plusMonths(1)).bills().getFirst().projectedAmount()).isEqualByComparingTo("1000");
+        var other = commitment(u);
+        var foreign = new UserReferenceEntity(); foreign.setUser(user()); foreign.setEntityType(UserReferenceEntityType.ACCOUNT); foreign.setCanonicalName("Foreign"); references.saveAndFlush(foreign);
+        assertThatThrownBy(() -> service.complete(u, other.getId(), new WebRecurringCommitmentService.CompletionRequest(new BigDecimal("900"), today(), today().plusMonths(1), null, today().withDayOfMonth(1), null, foreign.getId()))).isInstanceOf(WebApiException.class);
+        assertThatThrownBy(() -> service.complete(u, c.getId(), new WebRecurringCommitmentService.CompletionRequest(new BigDecimal("900"), today(), today().plusMonths(1), null, today().withDayOfMonth(1), null, foreign.getId()))).isInstanceOf(WebApiException.class);
+    }
     private LocalDate today() { return LocalDate.now(clock.withZone(ZoneId.of("Asia/Kolkata"))); }
     private AppUserEntity user() {
         var u = new AppUserEntity(); u.setChannel("WHATSAPP"); u.setExternalUserId(UUID.randomUUID().toString());

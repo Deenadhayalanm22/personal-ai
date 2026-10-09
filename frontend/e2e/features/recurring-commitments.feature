@@ -229,3 +229,14 @@ Feature: Manage commitments
     Then its history records the ₹699 actual payment on 21 September 2026
     And it shows 21 November 2026 as the next expected date
     And the usual 3-month recurrence remains unchanged for future suggestions
+
+  Scenario: Pay a commitment and an extra from a credit card
+    Given an owned credit card generates bills on day 1 due on day 21
+    And an October commitment has a usual planning amount of ₹1,000
+    When the user records ₹900 Paid using that Source account
+    And records ₹100 Add extra using the same Source account
+    Then October spending increases by ₹1,000 across exactly two expenses
+    And the November captured card bill increases by ₹1,000 with no settlement
+    And the October card bill and recurring planning estimate remain unchanged
+    And retrying either command creates no additional expense or extra
+    And November Accounts shows ₹1,000 remaining after reload
